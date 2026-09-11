@@ -1,0 +1,7 @@
+{
+  "name": "MarblesECS.Rules",
+  "rootNamespace": "MarblesECS",
+  "references": [],
+  "autoReferenced": true,
+  "noEngineReferences": true
+}

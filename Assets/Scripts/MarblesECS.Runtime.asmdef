@@ -1,0 +1,6 @@
+{
+  "name": "MarblesECS.Runtime",
+  "rootNamespace": "MarblesECS",
+  "references": ["MarblesECS.Rules", "Unity.Entities", "Unity.Collections"],
+  "autoReferenced": true
+}

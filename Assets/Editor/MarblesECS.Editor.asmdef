@@ -1,0 +1,12 @@
+{
+  "name": "MarblesECS.Editor",
+  "rootNamespace": "MarblesECS.Editor",
+  "references": [
+    "MarblesECS.Runtime",
+    "MarblesECS.Rules"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true
+}
