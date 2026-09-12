@@ -116,8 +116,8 @@ namespace MarblesECS.PhysX
             submittedFireHeld = false;
             if (IsReady) simulation.ClearFireInput();
         }
-        private void OnApplicationFocus(bool focused) { if (!focused) SetPaused(true); }
-        private void OnApplicationPause(bool paused) { if (paused) SetPaused(true); }
+        // private void OnApplicationFocus(bool focused) { if (!focused) SetPaused(true); }
+        // private void OnApplicationPause(bool paused) { if (paused) SetPaused(true); }
         private void OnApplicationQuit() { quitting = true; Cleanup(); }
         private void OnDestroy() { UnregisterQuitHandler(); Cleanup(); }
 

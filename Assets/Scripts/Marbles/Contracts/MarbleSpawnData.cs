@@ -8,7 +8,7 @@ namespace MarblesECS
         public Vector3 Position;
         public Quaternion Rotation;
         public ShotQuote Quote;
-        public float Speed;
+        public Vector3 LinearVelocity;
         public bool HasRestitution;
         public float Restitution;
     }

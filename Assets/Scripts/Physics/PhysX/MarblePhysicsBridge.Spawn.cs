@@ -9,7 +9,7 @@ namespace MarblesECS.PhysX
         public bool TrySpawn(MarbleSpawnData data)
         {
             if (disposed || bodies.ContainsKey(data.Key) || data.Key.RoundId <= 0 || data.Key.Sequence <= 0 ||
-                !Finite(data.Position) || !MarbleRules.IsFinite(data.Speed) || data.Speed <= 0 ||
+                !Finite(data.Position) || !Finite(data.LinearVelocity) || data.LinearVelocity.sqrMagnitude <= 0 ||
                 !MarbleRules.IsFinite(data.Rotation.x) || !MarbleRules.IsFinite(data.Rotation.y) ||
                 !MarbleRules.IsFinite(data.Rotation.z) || !MarbleRules.IsFinite(data.Rotation.w) ||
                 ((double)data.Rotation.x * data.Rotation.x + (double)data.Rotation.y * data.Rotation.y +
@@ -75,7 +75,7 @@ namespace MarblesECS.PhysX
                 instance.SetActive(true);
                 body.position = data.Position;
                 body.rotation = data.Rotation;
-                body.velocity = data.Rotation * Vector3.forward * data.Speed;
+                body.velocity = data.LinearVelocity;
                 body.angularVelocity = Vector3.zero;
                 body.WakeUp();
                 return true;

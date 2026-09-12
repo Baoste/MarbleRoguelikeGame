@@ -18,6 +18,8 @@ namespace MarblesECS
             if (player.Blood < quote.Cost) return;
 
             var key = new MarbleKey(round.RoundId, checked(context.NextSpawnSequence + 1));
+            Quaternion launchRotation = rotation.normalized;
+            Vector3 launchVelocity = launchRotation * Vector3.down * context.Tuning.LaunchSpeed;
             Entity entity = Entity.Null;
             bool committed = false;
             try
@@ -25,13 +27,13 @@ namespace MarblesECS
                 entity = MarbleFactory.Create(context, key, quote);
                 if (!physics.TrySpawn(new MarbleSpawnData
                 {
-                    Key = key, Position = position, Rotation = rotation, Quote = quote,
-                    Speed = context.Tuning.LaunchSpeed, HasRestitution = true,
+                    Key = key, Position = position, Rotation = launchRotation, Quote = quote,
+                    LinearVelocity = launchVelocity, HasRestitution = true,
                     Restitution = context.Manager.GetComponentData<MarblePhysicsProperties>(entity).Restitution
                 })) return;
 
-                context.Manager.SetComponentData(entity, new Transform3D { Position = position, Rotation = rotation.normalized });
-                context.Manager.SetComponentData(entity, new Motion3D { LinearVelocity = rotation.normalized * Vector3.forward * context.Tuning.LaunchSpeed });
+                context.Manager.SetComponentData(entity, new Transform3D { Position = position, Rotation = launchRotation });
+                context.Manager.SetComponentData(entity, new Motion3D { LinearVelocity = launchVelocity });
                 // Publish the mapping before committing resources. A failed bridge never consumes blood or cooldown.
                 context.Marbles.Add(key, entity);
                 player.Blood -= quote.Cost;

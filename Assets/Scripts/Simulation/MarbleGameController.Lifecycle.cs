@@ -11,8 +11,8 @@ namespace MarblesECS.PhysX
         {
             try
             {
-                if (Tuning == null) throw new InvalidOperationException("请配置 Tuning。");
-                if (EnableCampaign) Balance = Balance ?? GameBalanceLoader.Load(BalanceJson);
+                Balance = Balance ?? GameBalanceLoader.Load(BalanceJson);
+                Tuning = Balance.Marble.Copy();
                 MarbleTuning runtimeTuning = EnableCampaign ? Balance.Marble.Copy() : CreateRuntimeTuning();
                 if (PhysicsRoot == null || PhysicsRoot.parent != null || transform.IsChildOf(PhysicsRoot))
                     throw new InvalidOperationException("PhysicsRoot必须是独立根对象，且不能包含controller。");

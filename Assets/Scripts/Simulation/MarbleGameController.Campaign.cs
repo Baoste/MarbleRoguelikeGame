@@ -5,9 +5,10 @@ namespace MarblesECS.PhysX
 {
     public sealed partial class MarbleGameController
     {
+        [Header("Configuration")]
+        public TextAsset BalanceJson;
         [Header("Campaign")]
         public bool EnableCampaign;
-        public TextAsset BalanceJson;
         public GameBalance Balance { get; private set; }
         public SessionSnapshot Session => !IsReady ? default : simulation.Session;
 

@@ -5,7 +5,7 @@ Unity **2022.3.55f1c1 + Entities 1.0.16 + URP 14** 的三维弹珠游戏首版�
 ## 开始游戏
 
 1. 使用 Unity 2022.3 打开本项目，等待导入完成。
-2. 打开 **`Assets/Demo/Game/MarbleGame.unity`**，点击 Play。也可通过 **Marbles ECS → Create Game Scene** 创建新场景。
+2. 在场景中配置 `MarbleGameController`、场地、Launcher、摄像机和 HUD；Campaign 模式由 Controller 读取并校验 `GameBalance.json`。
 3. 在库存选中赠送的钉子，左键点击盘面放置；开始回合后按住空格发射，用 A / D 或滑条移动发射口。
 4. 达到累计目标后可提现；或者继续发射直到血量不足以发射。已有血珠全部回收后，统一开奖并进入商店或结束整局。
 
