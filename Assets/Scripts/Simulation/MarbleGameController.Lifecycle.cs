@@ -25,6 +25,7 @@ namespace MarblesECS.PhysX
                     throw new InvalidOperationException("FixedStep应在0.002到0.03秒之间。");
                 if (MaxStepsPerFrame < 1 || MaxStepsPerFrame > 16)
                     throw new InvalidOperationException("MaxStepsPerFrame应在1到16之间。");
+                TargetIdAllocator.EnsureUniqueUnder(PhysicsRoot);
                 ValidateZones();
                 step = FixedStep;
                 maxSteps = MaxStepsPerFrame;
@@ -50,6 +51,10 @@ namespace MarblesECS.PhysX
                 bridge = new MarblePhysicsBridge(localScene, MarblePrefab, material, simulation.EnqueueContact);
                 if (EnableCampaign) simulation.StartSession(bridge);
                 else simulation.StartRound(bridge);
+                BeginRoundWhenInventoryIsEmpty();
+                publishedGamblingRoundId = int.MinValue;
+                gamblingRevealDeadline = -1f;
+                PublishBloodIfChanged();
                 Paused = !AutoStart;
                 Physics.SyncTransforms();
                 RegisterQuitHandler();
@@ -100,6 +105,8 @@ namespace MarblesECS.PhysX
             var releasedSimulation = simulation;
             bridge = null;
             simulation = null;
+            publishedBlood = float.NaN;
+            gamblingRevealDeadline = -1f;
             try { releasedBridge?.Dispose(); }
             finally
             {

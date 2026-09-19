@@ -26,7 +26,8 @@ namespace MarblesECS
             if (isPending) round.PendingScore = MarbleRules.AddScore(round.PendingScore, score, context.Tuning.MaxRoundScore);
             else round.Score = MarbleRules.AddScore(round.Score, score, context.Tuning.MaxRoundScore);
 
-            double probability = MarbleRules.RushProbability(chance.BaseRushChance, chance.RushChanceBonus, modifiers.RushChanceAdd);
+            double probability = MarbleRules.RushProbability(contact.BaseRushChance, chance.RushChanceBonus,
+                modifiers.RushChanceAdd);
             if (!contact.RushDisabled && MarbleRules.Roll(ref round.RandomState, probability))
                 ExtendRush(context, ref round);
             context.Round = round;
@@ -44,9 +45,10 @@ namespace MarblesECS
 
         private static void ExtendRush(SimulationContext context, ref RoundData round)
         {
-            long duration = (long)System.Math.Ceiling(context.Tuning.RushDurationSeconds / (double)context.StepSeconds);
+            double rushSecondsPerTick = context.StepSeconds * context.Tuning.RushTimeScale;
+            long duration = (long)System.Math.Ceiling(context.Tuning.RushDurationSeconds / rushSecondsPerTick);
             long start = context.Tuning.RushExtendsDuration ? System.Math.Max(round.Tick, round.RushEndTick) : round.Tick;
-            long maximum = checked(round.Tick + (long)System.Math.Ceiling(context.Tuning.MaxRushSeconds / (double)context.StepSeconds));
+            long maximum = checked(round.Tick + (long)System.Math.Ceiling(context.Tuning.MaxRushSeconds / rushSecondsPerTick));
             round.RushEndTick = System.Math.Min(maximum, checked(start + duration));
         }
     }

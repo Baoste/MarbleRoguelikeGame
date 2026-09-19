@@ -22,7 +22,8 @@ namespace MarblesECS
                     RoundId = round.RoundId, Tick = round.Tick, Phase = (RoundPhase)round.Phase,
                     Blood = player.Blood, Score = round.Score, TargetScore = round.TargetScore,
                     ActiveMarbles = round.ActiveMarbleCount, TimeSeconds = round.Time,
-                    RushSecondsRemaining = Math.Max(0, round.RushEndTick - round.Tick) * (double)context.StepSeconds,
+                    RushSecondsRemaining = Math.Max(0, round.RushEndTick - round.Tick) *
+                        (double)context.StepSeconds * context.Tuning.RushTimeScale,
                     DrugSecondsRemaining = Math.Max(0, drugRemaining),
                     DrugMultiplier = player.DrugScoreMultiplier, Flow = context.Launcher.Flow,
                     NextMarbleRestitution = restitution, ActiveBounceDrugs = doseCount,

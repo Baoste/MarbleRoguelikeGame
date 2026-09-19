@@ -20,5 +20,15 @@ namespace MarblesECS.PhysX
             Kind = ScoreMultiplier == 1 ? MarbleContactKind.RushPin : MarbleContactKind.Multiplier,
             Multiplier = ScoreMultiplier, RushChanceAdd = RushChanceAdd, RushDisabled = true
         };
+
+        private void Reset()
+        {
+            TargetId = TargetIdAllocator.ForPin(this, 0);
+        }
+
+        private void OnValidate()
+        {
+            TargetId = TargetIdAllocator.ForPin(this, TargetId);
+        }
     }
 }

@@ -8,6 +8,7 @@ namespace MarblesECS.PhysX
         private void Update()
         {
             if (!IsReady) return;
+            CompleteRandomScoreRevealIfDue();
             UpdateFireInput();
             if (Paused) return;
             if (!IsSimulationRunning) return;
@@ -22,9 +23,11 @@ namespace MarblesECS.PhysX
                     if (LaunchPoint == null) throw new InvalidOperationException("LaunchPoint在运行中被销毁。");
                     StepLauncher(step);
                     simulation.BeforePhysics(step, bridge, LaunchPoint.position, LaunchPoint.rotation);
+                    PublishBloodIfChanged();
                     Physics.SyncTransforms();
                     bridge.Simulate(step);
                     simulation.AfterPhysics(bridge);
+                    PublishRandomScoreResultIfReady();
                 }
                 catch (Exception error)
                 {

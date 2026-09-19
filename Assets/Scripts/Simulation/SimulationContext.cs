@@ -83,6 +83,9 @@ namespace MarblesECS
                 }
             }
             Marbles.Clear();
+            var round = Round;
+            round.ActiveMarbleCount = 0;
+            Round = round;
         }
 
         internal bool TryGetFlying(MarbleKey key, out Entity entity)

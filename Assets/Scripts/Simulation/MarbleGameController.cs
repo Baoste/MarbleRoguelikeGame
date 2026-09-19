@@ -8,7 +8,7 @@ namespace MarblesECS.PhysX
     [DisallowMultipleComponent]
     public sealed partial class MarbleGameController : MonoBehaviour
     {
-        public MarbleTuning Tuning = new MarbleTuning();
+        [HideInInspector] public MarbleTuning Tuning = new MarbleTuning();
         [Header("Gameplay")]
         [Min(0f)] public float StartingBlood = 100f;
         [Min(0.01f)] public float BallsPerSecond = 6.666667f;
@@ -25,12 +25,15 @@ namespace MarblesECS.PhysX
         public bool AutoMoveLauncher = true;
         [Min(0f)] public float LauncherMoveHalfWidth = 5.2f;
         [Min(0f)] public float LauncherMoveSpeed = 2.5f;
+        [Min(0.1f)] public float RandomScoreRevealDelay = 3f;
 
         public bool Paused { get; private set; }
         public bool RequiresRestart { get; private set; }
         public bool IsReady => simulation != null && simulation.IsAlive;
         public MarbleSnapshot Snapshot => !IsReady ? default : simulation.Snapshot;
         public event Action<MarbleScoreEvent> Scored;
+        public event Action<float> BloodChanged;
+        public event Action<RandomScoreResult> RandomScoreSettled;
 
         private MarbleSimulation simulation;
         private MarblePhysicsBridge bridge;
@@ -44,6 +47,9 @@ namespace MarblesECS.PhysX
         private float step;
         private int maxSteps;
         private bool quitting;
+        private float publishedBlood = float.NaN;
+        private int publishedGamblingRoundId = int.MinValue;
+        private float gamblingRevealDeadline = -1f;
 
 
         public void SetFireHeld(bool held)
@@ -76,6 +82,10 @@ namespace MarblesECS.PhysX
             if (simulation == null || bridge == null) return;
             if (EnableCampaign) simulation.StartSession(bridge);
             else simulation.StartRound(bridge);
+            BeginRoundWhenInventoryIsEmpty();
+            PublishBloodIfChanged();
+            publishedGamblingRoundId = int.MinValue;
+            gamblingRevealDeadline = -1f;
             externalFireHeld = submittedFireHeld = false;
             SyncLauncherTransform();
             accumulator = 0;
@@ -106,6 +116,42 @@ namespace MarblesECS.PhysX
                 try { Scored?.Invoke(score); }
                 catch (Exception error) { Debug.LogException(error, this); }
             }
+        }
+
+        private void PublishBloodIfChanged()
+        {
+            if (!IsReady) return;
+
+            float blood = simulation.Snapshot.Blood;
+            if (!float.IsNaN(publishedBlood) && Mathf.Approximately(publishedBlood, blood)) return;
+
+            publishedBlood = blood;
+            try { BloodChanged?.Invoke(blood); }
+            catch (Exception error) { Debug.LogException(error, this); }
+        }
+
+        private void PublishRandomScoreResultIfReady()
+        {
+            if (!IsReady || !EnableCampaign) return;
+
+            MarbleSnapshot marble = simulation.Snapshot;
+            SessionSnapshot session = simulation.Session;
+            if (!session.GamblingResolved || session.GamblingStake <= 0 ||
+                publishedGamblingRoundId == marble.RoundId) return;
+
+            publishedGamblingRoundId = marble.RoundId;
+            var result = new RandomScoreResult(session.GamblingStake, session.GamblingWon,
+                session.GamblingPayout);
+            gamblingRevealDeadline = Time.unscaledTime + RandomScoreRevealDelay;
+            try { RandomScoreSettled?.Invoke(result); }
+            catch (Exception error) { Debug.LogException(error, this); }
+        }
+
+        private void CompleteRandomScoreRevealIfDue()
+        {
+            if (gamblingRevealDeadline < 0f || Time.unscaledTime < gamblingRevealDeadline) return;
+            gamblingRevealDeadline = -1f;
+            simulation?.CompleteRandomScoreReveal();
         }
 
 

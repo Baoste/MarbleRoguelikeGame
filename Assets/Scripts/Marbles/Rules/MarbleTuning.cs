@@ -27,6 +27,7 @@ namespace MarblesECS
         public float WorldBoundsExtent = 200f;
         public float RushDurationSeconds = 5f;
         public float MaxRushSeconds = 20f;
+        public float RushTimeScale = 1f;
         public bool RushExtendsDuration;
         public float BaseRestitution = 0.45f;
         public int MaxActiveBounceDrugs = 16;
@@ -57,6 +58,7 @@ namespace MarblesECS
             Positive(MaxLifeSeconds, nameof(MaxLifeSeconds)); Positive(DrainTimeoutSeconds, nameof(DrainTimeoutSeconds));
             Positive(WorldBoundsExtent, nameof(WorldBoundsExtent)); Positive(RushDurationSeconds, nameof(RushDurationSeconds));
             Positive(MaxRushSeconds, nameof(MaxRushSeconds));
+            Positive(RushTimeScale, nameof(RushTimeScale));
             if (MaxRushSeconds < RushDurationSeconds) throw new ArgumentOutOfRangeException(nameof(MaxRushSeconds));
             if (!MarbleRules.IsFinite(BaseRestitution) || BaseRestitution < 0 || BaseRestitution > 1)
                 throw new ArgumentOutOfRangeException(nameof(BaseRestitution));

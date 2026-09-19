@@ -1,27 +1,28 @@
 {
     "Marble": {
-        "InitialBlood": 100.0,
-        "BloodCapacity": 100.0,
+        "InitialBlood": 10.0,
+        "BloodCapacity": 10.0,
         "MinInvestment": 1.0,
         "MaxInvestment": 5.0,
-        "MinRadius": 0.11999999731779099,
-        "MaxRadius": 0.2199999988079071,
-        "MassPerBlood": 0.10000000149011612,
+        "MinRadius": 0.08,
+        "MaxRadius": 0.08,
+        "MassPerBlood": 0.1,
         "MarbleDefinitionId": 1,
-        "BaseScore": 10.0,
+        "BaseScore": 1.0,
         "BaseRushChance": 0.06,
         "BloodCostMultiplier": 1.0,
-        "FireIntervalSeconds": 0.30000001192092898,
-        "LaunchSpeed": 5.0,
+        "FireIntervalSeconds": 0.3,
+        "LaunchSpeed": 1.0,
         "LauncherScoreMultiplier": 1.0,
         "MaxActiveMarbles": 256,
         "MaxLifeSeconds": 45.0,
         "DrainTimeoutSeconds": 15.0,
         "DespawnBelowY": -10.0,
         "WorldBoundsExtent": 200.0,
-        "RushDurationSeconds": 5.0,
-        "MaxRushSeconds": 20.0,
-        "RushExtendsDuration": true,
+        "RushDurationSeconds": 2.0,
+        "MaxRushSeconds": 2.0,
+        "RushTimeScale": 1.0,
+        "RushExtendsDuration": false,
         "BaseRestitution": 0.0,
         "MaxActiveBounceDrugs": 16,
         "MaxPerMarbleScore": 1000000000,
@@ -44,14 +45,14 @@
     "Stages": [
         {
             "Id": 1,
-            "TargetScore": 150,
+            "TargetScore": 15,
             "RewardCoins": 30,
             "SkipRewardCoins": 15,
             "CashoutRate": 1.0
         },
         {
             "Id": 2,
-            "TargetScore": 1000,
+            "TargetScore": 100,
             "RewardCoins": 40,
             "SkipRewardCoins": 20,
             "CashoutRate": 1.1
@@ -88,27 +89,27 @@
     "Devices": [
         {
             "Id": 1,
-            "Name": "倍分钉",
+            "Name": "Multi Ding",
             "Price": 25,
             "ScoreMultiplier": 2.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.18000000715255738,
-            "StartingCount": 2
+            "StartingCount": 1
         },
         {
             "Id": 2,
-            "Name": "Rush 钉",
+            "Name": "Rush Ding",
             "Price": 20,
             "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.08,
             "Radius": 0.18000000715255738,
-            "StartingCount": 1
+            "StartingCount": 0
         }
     ],
     "Drugs": [
         {
             "Id": 1,
-            "Name": "弹性剂",
+            "Name": "Up Restitution",
             "Price": 10,
             "RestitutionMultiplier": 1.5,
             "DurationSeconds": 12.0,
@@ -116,7 +117,7 @@
         },
         {
             "Id": 2,
-            "Name": "缓弹剂",
+            "Name": "Down Restitution",
             "Price": 8,
             "RestitutionMultiplier": 0.6499999761581421,
             "DurationSeconds": 12.0,

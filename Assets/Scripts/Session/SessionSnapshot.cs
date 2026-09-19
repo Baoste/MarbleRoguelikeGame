@@ -14,6 +14,7 @@ namespace MarblesECS
         public long RoundScore;
         public long TargetScore;
         public long Coins;
+        public long GamblingStake;
         public long GamblingPayout;
         public long LastRewardCoins;
         public long LastCashoutCoins;

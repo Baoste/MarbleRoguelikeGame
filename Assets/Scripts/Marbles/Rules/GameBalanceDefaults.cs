@@ -9,7 +9,7 @@ namespace MarblesECS
                 Marble = new MarbleTuning
                 {
                     BaseRushChance = 0.06, BaseScore = 10, TargetScore = 350,
-                    FireIntervalSeconds = 0.3f, LaunchSpeed = 5, RushExtendsDuration = true
+                    FireIntervalSeconds = 0.3f, LaunchSpeed = 5, RushExtendsDuration = false
                 },
                 Campaign = new CampaignTuning(), Board = new BoardTuning(),
                 Stages = new[]

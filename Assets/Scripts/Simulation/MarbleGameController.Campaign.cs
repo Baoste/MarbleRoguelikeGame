@@ -30,11 +30,37 @@ namespace MarblesECS.PhysX
             accumulator = 0;
             externalFireHeld = submittedFireHeld = false;
             Paused = false;
+            publishedGamblingRoundId = int.MinValue;
+            gamblingRevealDeadline = -1f;
+            PublishBloodIfChanged();
             return true;
         }
 
-        public bool EnterBuild() => simulation != null && simulation.EnterBuild();
-        public bool CashOut() => simulation != null && !Paused && simulation.CashOut();
+        public bool EnterBuild()
+        {
+            if (simulation == null || !simulation.EnterBuild()) return false;
+            return HasUnplacedDevices() || BeginRound();
+        }
+
+        private bool HasUnplacedDevices()
+        {
+            if (simulation == null) return false;
+            foreach (OwnedDeviceSnapshot device in simulation.GetOwnedDevices())
+                if (!device.Placed) return true;
+            return false;
+        }
+
+        private void BeginRoundWhenInventoryIsEmpty()
+        {
+            if (EnableCampaign && simulation != null && !HasUnplacedDevices())
+                simulation.BeginRound();
+        }
+        public bool CashOut()
+        {
+            if (simulation == null || Paused || !simulation.CashOut()) return false;
+            PublishBloodIfChanged();
+            return true;
+        }
         public bool BuyOffer(int index) => simulation != null && simulation.BuyOffer(index);
         public bool RefreshShop() => simulation != null && simulation.RefreshShop();
         public bool SellDevice(int id) => simulation != null && simulation.SellDevice(id);

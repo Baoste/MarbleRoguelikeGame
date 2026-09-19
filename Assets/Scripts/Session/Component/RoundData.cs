@@ -11,9 +11,12 @@ namespace MarblesECS
         public double DrainStartedAt;
         public long Score;
         public long PendingScore;
+        public long GamblingStake;
         public long GamblingPayout;
         public bool SettlementComplete;
+        public bool GamblingResolved;
         public bool GamblingWon;
+        public bool GamblingRevealComplete;
         public long TargetScore;
         public int ActiveMarbleCount;
         public byte Phase;
