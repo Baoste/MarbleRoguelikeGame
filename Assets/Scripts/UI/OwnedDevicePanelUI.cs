@@ -17,12 +17,14 @@ public sealed class OwnedDevicePanelUI : MonoBehaviour
 
     private readonly List<OwnedDeviceButtonUI> deviceItems = new List<OwnedDeviceButtonUI>();
     private int displayedLayoutRevision = -1;
+    private RoundPhase displayedPhase = (RoundPhase)byte.MaxValue;
 
     private void OnEnable()
     {
         if (ContinueButton != null)
             ContinueButton.onClick.AddListener(HandleContinueClicked);
         displayedLayoutRevision = -1;
+        displayedPhase = (RoundPhase)byte.MaxValue;
         Refresh();
     }
 
@@ -44,7 +46,8 @@ public sealed class OwnedDevicePanelUI : MonoBehaviour
         if (ContinueButton != null)
             ContinueButton.interactable = Controller.Session.Phase == RoundPhase.Build;
 
-        if (displayedLayoutRevision != Controller.Session.LayoutRevision)
+        if (displayedLayoutRevision != Controller.Session.LayoutRevision ||
+            displayedPhase != Controller.Session.Phase)
             Refresh();
     }
 
@@ -54,6 +57,8 @@ public sealed class OwnedDevicePanelUI : MonoBehaviour
             return;
 
         OwnedDeviceSnapshot[] devices = Controller.GetOwnedDevices();
+        RoundPhase phase = Controller.Session.Phase;
+        bool canSelect = phase == RoundPhase.Build;
         int visibleCount = 0;
 
         for (int i = 0; i < devices.Length; i++)
@@ -63,7 +68,7 @@ public sealed class OwnedDevicePanelUI : MonoBehaviour
                 continue;
 
             OwnedDeviceButtonUI item = GetOrCreateItem(visibleCount++);
-            item.Bind(device, PlacementUI != null ? PlacementUI.BeginPlacement : null);
+            item.Bind(device, canSelect, PlacementUI != null ? PlacementUI.BeginPlacement : null);
             item.gameObject.SetActive(true);
         }
 
@@ -71,6 +76,7 @@ public sealed class OwnedDevicePanelUI : MonoBehaviour
             deviceItems[i].gameObject.SetActive(false);
 
         displayedLayoutRevision = Controller.Session.LayoutRevision;
+        displayedPhase = phase;
     }
 
     private OwnedDeviceButtonUI GetOrCreateItem(int index)

@@ -28,8 +28,11 @@ public sealed class DevicePlacementUI : MonoBehaviour
     [Tooltip("装置沿 PlacementPlane 法线方向与平面的距离。")]
     public float DevicePlaneDistance;
     public bool SnapToGrid;
+    [Tooltip("仅当 Canvas 没有全屏透明 Raycast 遮罩时开启。")]
+    public bool BlockClicksOverUI;
 
     public int SelectedInstanceId { get; private set; }
+    public string LastFeedback { get; private set; }
 
     private readonly Dictionary<int, GameObject> placedObjects = new Dictionary<int, GameObject>();
     private GameObject previewObject;
@@ -39,11 +42,15 @@ public sealed class DevicePlacementUI : MonoBehaviour
     public void BeginPlacement(int instanceId)
     {
         if (!TryGetDevice(instanceId, out OwnedDeviceSnapshot device) || device.Placed)
+        {
+            LastFeedback = "Device can only be selected during Build.";
             return;
+        }
         GameObject prefab = FindPrefab(device.DefinitionId);
         if (prefab == null)
         {
             Debug.LogError("No device prefab is bound for DefinitionId " + device.DefinitionId, this);
+            LastFeedback = "Missing prefab for DefinitionId " + device.DefinitionId + ".";
             return;
         }
 
@@ -52,6 +59,7 @@ public sealed class DevicePlacementUI : MonoBehaviour
         previewObject = Instantiate(prefab, BoardRoot);
         previewObject.name = prefab.name + " Preview";
         SetPreviewPhysics(false);
+        LastFeedback = "Move the pointer over the placement plane and left-click to place.";
     }
 
     public void CancelPlacement()
@@ -100,11 +108,20 @@ public sealed class DevicePlacementUI : MonoBehaviour
             CancelPlacement();
             return;
         }
-        if (Input.GetMouseButtonDown(0) &&
-            (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()))
+        bool pointerBlocked = BlockClicksOverUI && EventSystem.current != null &&
+            EventSystem.current.IsPointerOverGameObject();
+        if (Input.GetMouseButtonDown(0) && !pointerBlocked)
         {
             if (Controller.PlaceDevice(SelectedInstanceId, localPoint.x, localPoint.z))
+            {
+                LastFeedback = "Device placed.";
                 CancelPlacement();
+            }
+            else
+            {
+                LastFeedback = "Placement rejected: overlaps a fixed pin or another device.";
+                Debug.LogWarning(LastFeedback, this);
+            }
         }
 #endif
     }

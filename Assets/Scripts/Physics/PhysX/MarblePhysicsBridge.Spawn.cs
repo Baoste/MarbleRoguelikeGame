@@ -70,6 +70,7 @@ namespace MarblesECS.PhysX
                 view.Bridge = this;
                 view.Radius = data.Quote.Radius;
                 view.PreviousPosition = data.Position;
+                view.PrepareForSpawn();
                 ConfigureMaterial(view, collider, data);
                 bodies.Add(data.Key, view);
                 instance.SetActive(true);

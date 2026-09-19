@@ -12,15 +12,14 @@ namespace MarblesECS
             var definition = CampaignStateUtility.Device(context, device.DefinitionId);
             var board = context.Balance.Board;
             float radius = definition.Radius;
-            if (x - radius < board.PlacementMinX || x + radius > board.PlacementMaxX ||
-                z - radius < board.PlacementMinZ || z + radius > board.PlacementMaxZ) return false;
             if (OverlapsFixedPin(board, x, z, radius)) return false;
             using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
                 for (int i = 0; i < entities.Length; i++)
                 {
                     var other = context.Manager.GetComponentData<OwnedDeviceData>(entities[i]);
                     if (!other.Placed || other.InstanceId == instanceId) continue;
-                    float distance = radius + CampaignStateUtility.Device(context, other.DefinitionId).Radius + board.PlacementClearance;
+                    float distance = radius + CampaignStateUtility.Device(context, other.DefinitionId).Radius +
+                        board.PlacementClearance;
                     if (Overlaps(x, z, other.X, other.Z, distance)) return false;
                 }
             device.X = x;

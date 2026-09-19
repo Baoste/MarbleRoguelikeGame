@@ -2,7 +2,7 @@ namespace MarblesECS
 {
     public sealed partial class MarbleSimulation
     {
-        /// <summary>Free placement in board-local X/Z, respecting borders and solid pin clearance.</summary>
+        /// <summary>Stores a placement accepted by the presentation's Inspector-configured placement plane.</summary>
         public bool PlaceDevice(int instanceId, float x, float z)
         {
             return CanCampaignAct(RoundPhase.Build) && DevicePlacementSystem.Place(context, instanceId, x, z);

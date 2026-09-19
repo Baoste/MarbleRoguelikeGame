@@ -33,14 +33,14 @@ public sealed class OwnedDeviceButtonUI : MonoBehaviour
             SelectButton.onClick.RemoveListener(HandleClicked);
     }
 
-    public void Bind(OwnedDeviceSnapshot device, Action<int> onSelected)
+    public void Bind(OwnedDeviceSnapshot device, bool canSelect, Action<int> onSelected)
     {
         instanceId = device.InstanceId;
         selected = onSelected;
         if (NameText != null)
             NameText.text = device.Name;
         if (SelectButton != null)
-            SelectButton.interactable = !device.Placed;
+            SelectButton.interactable = canSelect && !device.Placed;
     }
 
     private void HandleClicked()

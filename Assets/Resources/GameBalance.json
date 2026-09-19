@@ -103,7 +103,7 @@
             "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.08,
             "Radius": 0.18000000715255738,
-            "StartingCount": 0
+            "StartingCount": 1
         }
     ],
     "Drugs": [

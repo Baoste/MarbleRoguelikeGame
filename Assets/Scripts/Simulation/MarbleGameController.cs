@@ -118,6 +118,7 @@ namespace MarblesECS.PhysX
             }
         }
 
+
         private void PublishBloodIfChanged()
         {
             if (!IsReady) return;
