@@ -6,6 +6,7 @@ namespace MarblesECS
     {
         internal static void Settle(SimulationContext context, Entity entity, MarbleContact contact)
         {
+            if (AttributeRuntime.Enabled(context)) { ContentSettlementSystem.Settle(context, entity, contact); return; }
             var manager = context.Manager;
             // Close the reward window before changing shared player resources.
             manager.SetComponentData(entity, new SettlementState { IsSettled = true });

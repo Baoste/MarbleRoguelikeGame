@@ -19,7 +19,7 @@ namespace MarblesECS
                     RoundScore = round.Score, TargetScore = round.TargetScore, Coins = campaign.Coins,
                     GamblingStake = round.GamblingStake, GamblingPayout = round.GamblingPayout,
                     GamblingResolved = round.GamblingResolved,
-                    GamblingWon = round.GamblingWon, LastRewardCoins = campaign.LastRewardCoins,
+                    GamblingWon = round.GamblingWon, GamblingMultiplier = round.GamblingMultiplier, LastRewardCoins = campaign.LastRewardCoins,
                     LastCashoutCoins = campaign.LastCashoutCoins, StagesCleared = campaign.StagesCleared,
                     LastSkippedStages = campaign.LastSkippedStages, ShopRefreshCount = campaign.ShopRefreshCount,
                     LayoutRevision = campaign.LayoutRevision, CanCashOut = CampaignStateUtility.CanCashOut(context)
@@ -54,7 +54,9 @@ namespace MarblesECS
                         Placed = item.Placed, X = item.X, Z = item.Z, Radius = definition.Radius,
                         PurchasePrice = item.PurchasePrice,
                         SellPrice = MarbleRules.RoundScore(item.PurchasePrice * context.Balance.Campaign.SellRatio, CampaignStateUtility.MaxCoins),
-                        ScoreMultiplier = definition.ScoreMultiplier, RushChanceAdd = definition.RushChanceAdd
+                        ScoreMultiplier = definition.ScoreMultiplier, RushChanceAdd = definition.RushChanceAdd,
+                        Kind = definition.Kind, Description = definition.Description, Angle = item.Angle,
+                        PairId = item.PairId, Range = definition.Range * (context.Content?.CentimetersToUnits ?? .01f) / .01f, Strength = definition.Strength
                     };
                 }
                 Array.Sort(result, (a, b) => a.InstanceId.CompareTo(b.InstanceId));

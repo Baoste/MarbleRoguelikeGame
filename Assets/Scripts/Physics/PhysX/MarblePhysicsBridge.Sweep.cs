@@ -14,6 +14,7 @@ namespace MarblesECS.PhysX
             if (disposed) throw new ObjectDisposedException(nameof(MarblePhysicsBridge));
             if (!MarbleRules.IsFinite(seconds) || seconds <= 0) throw new ArgumentOutOfRangeException(nameof(seconds));
             float subdivisions = 1;
+            RefreshContentDevices();
             foreach (var view in bodies.Values)
                 if (view != null && view.Body != null)
                     subdivisions = Mathf.Max(subdivisions, view.Body.velocity.magnitude * seconds /
@@ -22,8 +23,10 @@ namespace MarblesECS.PhysX
             for (int i = 0; i < steps; i++)
             {
                 CaptureBeforeStep();
+                BeforeContentSubstep(seconds / steps);
                 physicsScene.Simulate(seconds / steps);
                 ReportSweptZones();
+                AfterContentSubstep();
             }
         }
 
@@ -72,9 +75,14 @@ namespace MarblesECS.PhysX
         private void ReportSensor(MarbleBody view, Collider collider)
         {
             if (collider == null || !collider.isTrigger) return;
+            var device = collider.GetComponentInParent<MarbleDevice>();
+            if (device != null) { ReportDevice(view, device); return; }
             var zone = collider.GetComponentInParent<MarbleZone>();
             if (zone != null && zone.isActiveAndEnabled && zone.IsValid)
-                Report(zone.CreateContact(view.Key, view.Body.position));
+            {
+                var contact = zone.CreateContact(view.Key, view.Body.position); contact.Speed = view.Body.velocity.magnitude;
+                Report(contact);
+            }
         }
     }
 }

@@ -59,7 +59,7 @@ public sealed class ShopUI : MonoBehaviour
         }
 
         SessionSnapshot session = Controller.Session;
-        long refreshCost = Controller.Balance.Campaign.ShopRefreshCost;
+        long refreshCost = Controller.ShopRefreshPrice;
 
         if (CoinsText != null)
             CoinsText.text = session.Coins.ToString();

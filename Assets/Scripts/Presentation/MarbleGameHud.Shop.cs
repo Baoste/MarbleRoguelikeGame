@@ -11,13 +11,13 @@ namespace MarblesECS.Presentation
             GUILayout.Label("商店 SHOP · 每个货位本次刷新只能买一次");
             foreach (var offer in Controller.GetShopOffers())
             {
-                string kind = offer.Kind == ShopItemKind.Device ? "钉子" : "药物";
+                string kind = offer.Kind == ShopItemKind.Device ? "装置" : "药物";
                 GUI.enabled = !offer.Sold && Controller.Session.Coins >= offer.Price;
                 if (GUILayout.Button((offer.Sold ? "已售出 " : "购买 " + kind + " ") + offer.Name + "　" + offer.Price + " 金"))
                     feedback = Controller.BuyOffer(offer.Index) ? "购买成功，已加入库存。" : "购买失败：金币不足、货位已售出或库存已满。";
                 GUI.enabled = true;
             }
-            long cost = Controller.Balance.Campaign.ShopRefreshCost;
+            long cost = Controller.ShopRefreshPrice;
             GUI.enabled = Controller.Session.Coins >= cost;
             if (GUILayout.Button("刷新商品　" + cost + " 金币"))
                 feedback = Controller.RefreshShop() ? "商品已刷新并扣除金币。" : "刷新失败，金币不足。";
@@ -52,9 +52,10 @@ namespace MarblesECS.Presentation
             {
                 GUILayout.BeginVertical(GUI.skin.box);
                 GUILayout.Label(device.Name + " #" + device.InstanceId + (device.Placed ? " · 已布置" : " · 库存中"));
-                GUILayout.Label(device.RushChanceAdd > 0 ? "入区 Rush 概率 +" + (device.RushChanceAdd * 100).ToString("0") + "%" :
+                GUILayout.Label(device.Kind != DeviceKind.LegacyPin ? device.Description : device.RushChanceAdd > 0 ? "入区 Rush 概率 +" + (device.RushChanceAdd * 100).ToString("0") + "%" :
                     "碰撞后本珠得分倍率 ×" + device.ScoreMultiplier.ToString("0.##"));
                 GUILayout.BeginHorizontal();
+                if (editable && GUILayout.Button("旋转 45°")) Controller.RotateDevice(device.InstanceId, 45);
                 if (editable && Board != null && GUILayout.Button(Board.SelectedDeviceId == device.InstanceId ? "已选中" : "选择 / 移动"))
                     Board.Select(device.InstanceId);
                 if (editable && device.Placed && GUILayout.Button("收回"))

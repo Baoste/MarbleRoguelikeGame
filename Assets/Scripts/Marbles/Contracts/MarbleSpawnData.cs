@@ -11,5 +11,7 @@ namespace MarblesECS
         public Vector3 LinearVelocity;
         public bool HasRestitution;
         public float Restitution;
+        public bool HasSettings;
+        public MarblePhysicalSettings Settings;
     }
 }

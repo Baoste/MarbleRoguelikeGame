@@ -105,7 +105,8 @@ public class ScoreListener : MonoBehaviour
                 RushSlider.gameObject.SetActive(rushActive);
             if (Controller != null && Controller.IsReady)
             {
-                RushSlider.maxValue = Controller.Tuning.MaxRushSeconds;
+                RushSlider.minValue = 0f;
+                RushSlider.maxValue = (float)Controller.Balance.Content.Definition(GameAttribute.RUSH_DURATION).MaxValue;
                 RushSlider.value = (float)Controller.Snapshot.RushSecondsRemaining;
             }
             else

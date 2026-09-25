@@ -6,14 +6,14 @@ namespace MarblesECS
     public sealed class CampaignTuning
     {
         public long StartingCoins = 30;
-        public double CashoutCoinsPerBlood = 0.5;
+        [NonSerialized] public double CashoutCoinsPerBlood = 0.5;
         public long ShopRefreshCost = 5;
         public int ShopOfferCount = 4;
         public double SellRatio = 0.5;
         public int MaxOwnedDevices = 20;
         public int MaxDrugInventory = 30;
-        public double GamblingWinChance = 0.5;
-        public double GamblingWinMultiplier = 3;
+        [NonSerialized] public double GamblingWinChance = 0.5;
+        [NonSerialized] public double GamblingWinMultiplier = 3;
         public long MaxTotalScore = 9000000000000000L;
 
         public CampaignTuning Copy() { return (CampaignTuning)MemberwiseClone(); }

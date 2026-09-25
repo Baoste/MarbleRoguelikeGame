@@ -12,6 +12,7 @@ namespace MarblesECS
         internal EntityManager Manager => World.EntityManager;
         internal readonly MarbleTuning Tuning;
         internal readonly GameBalance Balance;
+        internal readonly GameContent Content;
         internal readonly Entity RoundEntity, PlayerEntity, LauncherEntity, BoardEntity;
         internal readonly EntityQuery MarbleQuery;
         internal readonly EntityQuery DeviceQuery;
@@ -22,11 +23,14 @@ namespace MarblesECS
         internal ulong NextSpawnSequence;
         internal ulong NextStableId;
         internal float StepSeconds;
+        internal readonly HashSet<ulong> CloverFamilies = new HashSet<ulong>();
+        internal readonly HashSet<ulong> RefundedFamilies = new HashSet<ulong>();
 
-        internal SimulationContext(MarbleTuning tuning, GameBalance balance = null)
+        internal SimulationContext(MarbleTuning tuning, GameBalance balance = null, GameContent content = null)
         {
             Tuning = tuning;
             Balance = balance;
+            Content = balance?.Content ?? content;
             World = new World("MarblesECS.OwnedGameplayWorld");
             RoundEntity = Manager.CreateEntity(typeof(RoundData));
             PlayerEntity = Manager.CreateEntity(typeof(PlayerData));
@@ -39,6 +43,7 @@ namespace MarblesECS
             Manager.SetComponentData(BoardEntity, new StableIdentity { StableId = ++NextStableId });
             Manager.AddBuffer<ActiveScoreEffectData>(PlayerEntity);
             Manager.AddBuffer<ActiveBounceDrugData>(PlayerEntity);
+            Manager.AddBuffer<ActiveDrugData>(PlayerEntity);
             Manager.AddComponentData(RoundEntity, new CampaignData());
             Manager.AddBuffer<DrugInventoryData>(PlayerEntity);
             Manager.AddBuffer<ShopOfferData>(RoundEntity);
@@ -46,6 +51,7 @@ namespace MarblesECS
             DeviceQuery = Manager.CreateEntityQuery(typeof(OwnedDeviceData));
             Round = new RoundData { Phase = (byte)RoundPhase.Lost, TargetScore = tuning.TargetScore };
             Player = new PlayerData { DrugScoreMultiplier = 1 };
+            if (Content != null) AttributeRuntime.Initialize(this, PlayerEntity);
         }
 
         internal RoundData Round { get => Manager.GetComponentData<RoundData>(RoundEntity); set => Manager.SetComponentData(RoundEntity, value); }

@@ -11,8 +11,19 @@ namespace MarblesECS
         public float RestitutionMultiplier = 1;
         public float DurationSeconds = 12;
         public int StartingCount;
+        [OptionalBalanceField] public DrugKind Kind;
+        [OptionalBalanceField] public string SourceId;
+        [OptionalBalanceField] public string Description;
+        [OptionalBalanceField] public bool Stackable;
+        [OptionalBalanceField] public float VolumeMultiplier = 1;
+        [OptionalBalanceField] public AttributeEffect[] Effects = Array.Empty<AttributeEffect>();
 
-        public DrugDefinition Copy() { return (DrugDefinition)MemberwiseClone(); }
+        public DrugDefinition Copy()
+        {
+            var copy = (DrugDefinition)MemberwiseClone();
+            copy.Effects = Effects == null ? Array.Empty<AttributeEffect>() : (AttributeEffect[])Effects.Clone();
+            return copy;
+        }
 
         public void Validate()
         {
@@ -22,6 +33,7 @@ namespace MarblesECS
             BalanceGuard.Range(RestitutionMultiplier, 0.1, 4, nameof(RestitutionMultiplier));
             BalanceGuard.Range(DurationSeconds, 0.1, 300, nameof(DurationSeconds));
             BalanceGuard.Range(StartingCount, 0, 1000, nameof(StartingCount));
+            BalanceGuard.Range(VolumeMultiplier, 0.01, 100, nameof(VolumeMultiplier));
         }
     }
 }

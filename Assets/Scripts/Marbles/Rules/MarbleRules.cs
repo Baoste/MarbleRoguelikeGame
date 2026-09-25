@@ -19,6 +19,13 @@ namespace MarblesECS
                 tuning.LauncherScoreMultiplier);
         }
 
+        public static float Investment(MarbleTuning tuning, float flow)
+        {
+            if (!IsFinite(flow)) throw new ArgumentOutOfRangeException(nameof(flow));
+            float t = Math.Max(0f, Math.Min(1f, flow));
+            return tuning.MinInvestment + (tuning.MaxInvestment - tuning.MinInvestment) * t;
+        }
+
         public static long Score(double baseValue, double drug, double device, double zone, double launcher, double rush, long cap)
         {
             if (baseValue < 0) throw new ArgumentOutOfRangeException(nameof(baseValue));
@@ -76,9 +83,14 @@ namespace MarblesECS
         public static bool Roll(ref uint state, double probability)
         {
             if (!IsFinite(probability) || probability < 0 || probability > 1) throw new ArgumentOutOfRangeException(nameof(probability));
+            return NextRandom(ref state) < probability;
+        }
+
+        public static double NextRandom(ref uint state)
+        {
             if (state == 0) state = 0x6D2B79F5u;
             state ^= state << 13; state ^= state >> 17; state ^= state << 5;
-            return state / 4294967296d < probability;
+            return state / 4294967296d;
         }
     }
 }

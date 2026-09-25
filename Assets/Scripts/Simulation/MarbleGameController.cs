@@ -12,7 +12,6 @@ namespace MarblesECS.PhysX
         [Header("Gameplay")]
         [Min(0f)] public float StartingBlood = 100f;
         [Min(0.01f)] public float BallsPerSecond = 6.666667f;
-        [Min(0.01f)] public float BallLaunchSpeed = 12f;
         public Transform LaunchPoint;
         [Tooltip("独立根对象；所有参与弹珠模拟的台面/区域/装置放在它下面。")]
         public Transform PhysicsRoot;
@@ -26,6 +25,12 @@ namespace MarblesECS.PhysX
         [Min(0f)] public float LauncherMoveHalfWidth = 5.2f;
         [Min(0f)] public float LauncherMoveSpeed = 2.5f;
         [Min(0.1f)] public float RandomScoreRevealDelay = 3f;
+
+        [Header("Device Placement")]
+        [Min(0f)] public float GridSize = 0.5f;
+        [Min(0f)] public float PlacementClearance = 0.15f;
+        [Tooltip("固定钉等障碍物的根对象，检测其子对象的实际非 Trigger Collider。不要包含底板或运行时装置的父对象。")]
+        public Transform[] PlacementObstacleRoots = Array.Empty<Transform>();
 
         public bool Paused { get; private set; }
         public bool RequiresRestart { get; private set; }
@@ -50,6 +55,7 @@ namespace MarblesECS.PhysX
         private float publishedBlood = float.NaN;
         private int publishedGamblingRoundId = int.MinValue;
         private float gamblingRevealDeadline = -1f;
+        private readonly DevicePlacementObstacles placementObstacles = new DevicePlacementObstacles();
 
 
         public void SetFireHeld(bool held)
@@ -80,6 +86,7 @@ namespace MarblesECS.PhysX
         public void RestartRound()
         {
             if (simulation == null || bridge == null) return;
+            bridge.RestorePins();
             if (EnableCampaign) simulation.StartSession(bridge);
             else simulation.StartRound(bridge);
             BeginRoundWhenInventoryIsEmpty();
@@ -142,7 +149,7 @@ namespace MarblesECS.PhysX
 
             publishedGamblingRoundId = marble.RoundId;
             var result = new RandomScoreResult(session.GamblingStake, session.GamblingWon,
-                session.GamblingPayout);
+                session.GamblingPayout, session.GamblingMultiplier);
             gamblingRevealDeadline = Time.unscaledTime + RandomScoreRevealDelay;
             try { RandomScoreSettled?.Invoke(result); }
             catch (Exception error) { Debug.LogException(error, this); }

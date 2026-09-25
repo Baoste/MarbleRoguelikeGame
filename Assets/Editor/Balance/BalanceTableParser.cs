@@ -61,12 +61,14 @@ namespace MarblesECS.Editor
 
         private static Dictionary<string, FieldInfo> Fields<T>()
         {
-            return typeof(T).GetFields(BindingFlags.Public | BindingFlags.Instance).ToDictionary(x => x.Name);
+            return typeof(T).GetFields(BindingFlags.Public | BindingFlags.Instance)
+                .Where(x => !Attribute.IsDefined(x, typeof(NonSerializedAttribute))).ToDictionary(x => x.Name);
         }
 
         private static void RequireAll(Dictionary<string, FieldInfo> fields, HashSet<string> seen, string sheet)
         {
-            var missing = fields.Keys.Where(x => !seen.Contains(x)).ToArray();
+            var missing = fields.Keys.Where(x => !seen.Contains(x) &&
+                !Attribute.IsDefined(fields[x], typeof(OptionalBalanceFieldAttribute))).ToArray();
             if (missing.Length > 0) throw new InvalidDataException(sheet + ": missing fields " + string.Join(", ", missing));
         }
     }

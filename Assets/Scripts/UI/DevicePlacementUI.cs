@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using MarblesECS;
 using MarblesECS.PhysX;
+using MarblesECS.Presentation;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Serialization;
@@ -12,13 +13,13 @@ public sealed class DevicePlacementUI : MonoBehaviour
     [Serializable]
     public sealed class DevicePrefabBinding
     {
-        [Min(1)] public int DefinitionId = 1;
+        [Min(1)] public int DefinitionId = 100;
         public GameObject Prefab;
     }
 
     public MarbleGameController Controller;
     public Camera ViewCamera;
-    [Tooltip("盘面局部 X/Z 必须与 GameBalance Board 的放置坐标一致。")]
+    [Tooltip("装置位置以此对象的局部 X/Z 坐标保存。")]
     public Transform BoardRoot;
     [Tooltip("用于控制放置平面位置和旋转的 Transform。未绑定时使用 BoardRoot。")]
     public Transform PlacementPlane;
@@ -47,7 +48,7 @@ public sealed class DevicePlacementUI : MonoBehaviour
             return;
         }
         GameObject prefab = FindPrefab(device.DefinitionId);
-        if (prefab == null)
+        if (prefab == null && device.Kind == DeviceKind.LegacyPin)
         {
             Debug.LogError("No device prefab is bound for DefinitionId " + device.DefinitionId, this);
             LastFeedback = "Missing prefab for DefinitionId " + device.DefinitionId + ".";
@@ -56,8 +57,9 @@ public sealed class DevicePlacementUI : MonoBehaviour
 
         CancelPlacement();
         SelectedInstanceId = instanceId;
-        previewObject = Instantiate(prefab, BoardRoot);
-        previewObject.name = prefab.name + " Preview";
+        previewObject = prefab != null ? Instantiate(prefab, BoardRoot) : ContentDeviceView.Create(device, BoardRoot);
+        previewObject.name = device.Name + " Preview";
+        ConfigurePin(previewObject, device);
         SetPreviewPhysics(false);
         LastFeedback = "Move the pointer over the placement plane and left-click to place.";
     }
@@ -94,15 +96,17 @@ public sealed class DevicePlacementUI : MonoBehaviour
 
         previewObject.SetActive(true);
 
-        if (SnapToGrid && Controller.Balance.Board.GridSize > 0f)
+        if (SnapToGrid && Controller.GridSize > 0f)
         {
-            float grid = Controller.Balance.Board.GridSize;
+            float grid = Controller.GridSize;
             localPoint.x = Mathf.Round(localPoint.x / grid) * grid;
             localPoint.z = Mathf.Round(localPoint.z / grid) * grid;
         }
         SetDeviceTransform(previewObject.transform, localPoint.x, localPoint.z);
+        if (TryGetDevice(SelectedInstanceId, out var selected)) previewObject.transform.rotation *= Quaternion.Euler(0, selected.Angle, 0);
 
 #if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(KeyCode.R)) Controller.RotateDevice(SelectedInstanceId, 45);
         if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
         {
             CancelPlacement();
@@ -112,14 +116,17 @@ public sealed class DevicePlacementUI : MonoBehaviour
             EventSystem.current.IsPointerOverGameObject();
         if (Input.GetMouseButtonDown(0) && !pointerBlocked)
         {
-            if (Controller.PlaceDevice(SelectedInstanceId, localPoint.x, localPoint.z))
+            Vector3 scale = previewObject.transform.lossyScale;
+            if (IsInsidePlacementPlane(previewObject.transform.position) &&
+                Controller.PlaceDevice(SelectedInstanceId, localPoint.x, localPoint.z,
+                    previewObject.transform.position, Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z))))
             {
                 LastFeedback = "Device placed.";
                 CancelPlacement();
             }
             else
             {
-                LastFeedback = "Placement rejected: overlaps a fixed pin or another device.";
+                LastFeedback = "Placement rejected: outside the placement area or overlaps an obstacle/device.";
                 Debug.LogWarning(LastFeedback, this);
             }
         }
@@ -149,6 +156,14 @@ public sealed class DevicePlacementUI : MonoBehaviour
         return false;
     }
 
+    private bool IsInsidePlacementPlane(Vector3 worldPoint)
+    {
+        GetPlacementPlanePose(out Vector3 position, out Quaternion rotation);
+        Vector3 point = Quaternion.Inverse(rotation) * (worldPoint - position);
+        return Mathf.Abs(point.x) <= PlacementPlaneSize.x * 0.5f &&
+            Mathf.Abs(point.z) <= PlacementPlaneSize.y * 0.5f;
+    }
+
     private void SyncPlacedObjects()
     {
         int revision = Controller.Session.LayoutRevision;
@@ -159,17 +174,18 @@ public sealed class DevicePlacementUI : MonoBehaviour
         displayedRoundId = roundId;
 
         foreach (GameObject item in placedObjects.Values)
-            if (item != null) Destroy(item);
+            if (item != null) { item.SetActive(false); Destroy(item); }
         placedObjects.Clear();
 
         foreach (OwnedDeviceSnapshot device in Controller.GetOwnedDevices())
         {
             if (!device.Placed) continue;
             GameObject prefab = FindPrefab(device.DefinitionId);
-            if (prefab == null) continue;
-            GameObject item = Instantiate(prefab, BoardRoot);
+            if (prefab == null && device.Kind == DeviceKind.LegacyPin) continue;
+            GameObject item = prefab != null ? Instantiate(prefab, BoardRoot) : ContentDeviceView.Create(device, BoardRoot);
             item.name = device.Name + " #" + device.InstanceId;
             SetDeviceTransform(item.transform, device.X, device.Z);
+            item.transform.rotation *= Quaternion.Euler(0, device.Angle, 0);
             ConfigurePin(item, device);
             placedObjects.Add(device.InstanceId, item);
         }
@@ -178,6 +194,7 @@ public sealed class DevicePlacementUI : MonoBehaviour
 
     private void ConfigurePin(GameObject item, OwnedDeviceSnapshot device)
     {
+        if (device.Kind != DeviceKind.LegacyPin) { ContentDeviceView.Configure(item, device); return; }
         MarblePin pin = item.GetComponentInChildren<MarblePin>(true);
         if (pin == null)
             pin = item.AddComponent<MarblePin>();
@@ -224,6 +241,7 @@ public sealed class DevicePlacementUI : MonoBehaviour
             collider.enabled = enabled;
         foreach (MarblePin pin in previewObject.GetComponentsInChildren<MarblePin>(true))
             pin.enabled = enabled;
+        foreach (MarbleDevice device in previewObject.GetComponentsInChildren<MarbleDevice>(true)) device.enabled = enabled;
     }
 
     private GameObject FindPrefab(uint definitionId)

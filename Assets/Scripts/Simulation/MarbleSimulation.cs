@@ -10,6 +10,7 @@ namespace MarblesECS
     public sealed partial class MarbleSimulation : IDisposable
     {
         private readonly SimulationContext context;
+        internal SimulationContext Context => context;
         private bool disposed;
         private bool insidePhysicsStep;
         private bool started;
@@ -21,6 +22,17 @@ namespace MarblesECS
             var ownedTuning = tuning.Copy();
             ownedTuning.Validate();
             context = new SimulationContext(ownedTuning);
+        }
+
+        /// <summary>Standalone rounds use the same content attributes without starting a campaign.</summary>
+        public MarbleSimulation(MarbleTuning tuning, GameContent content)
+        {
+            if (tuning == null) throw new ArgumentNullException(nameof(tuning));
+            if (content == null) throw new ArgumentNullException(nameof(content));
+            var ownedTuning = tuning.Copy();
+            var ownedContent = content.Copy();
+            ownedTuning.Validate(); ownedContent.Validate();
+            context = new SimulationContext(ownedTuning, content: ownedContent);
         }
 
         public MarbleSimulation(GameBalance balance)
@@ -49,6 +61,20 @@ namespace MarblesECS
             context.ScoreEvents.Clear();
             context.Manager.GetBuffer<ActiveScoreEffectData>(context.PlayerEntity).Clear();
             BounceDrugSystem.Clear(context);
+            context.Manager.GetBuffer<ActiveDrugData>(context.PlayerEntity).Clear();
+            context.CloverFamilies.Clear();
+            context.RefundedFamilies.Clear();
+            if (AttributeRuntime.Enabled(context))
+            {
+                var globalEffects = context.Manager.GetBuffer<AttributeModifierData>(context.PlayerEntity);
+                for (int i = globalEffects.Length - 1; i >= 0; i--) if (globalEffects[i].ExpireTick != 0) globalEffects.RemoveAt(i);
+                using (var devices = context.DeviceQuery.ToEntityArray(Unity.Collections.Allocator.Temp))
+                    foreach (var entity in devices)
+                    {
+                        var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+                        device.NextTriggerAt = 0; device.StoredValue = 0; context.Manager.SetComponentData(entity, device);
+                    }
+            }
             context.Round = new RoundData
             {
                 RoundId = newRoundId, Phase = (byte)RoundPhase.Playing,
@@ -81,6 +107,7 @@ namespace MarblesECS
                 round.Time += dt;
                 round.Tick = checked(round.Tick + 1);
                 context.Round = round;
+                AttributeRuntime.Tick(context);
                 BounceDrugSystem.Expire(context);
                 EffectLifecycleSystem.Execute(context);
                 LaunchSystem.Execute(context, physics, launchPosition, launchRotation);

@@ -69,10 +69,13 @@ namespace MarblesECS.PhysX
                 view.Body = body;
                 view.Bridge = this;
                 view.Radius = data.Quote.Radius;
+                view.HasSettings = data.HasSettings;
+                view.Settings = data.Settings;
                 view.PreviousPosition = data.Position;
                 view.PrepareForSpawn();
                 ConfigureMaterial(view, collider, data);
                 bodies.Add(data.Key, view);
+                if (data.HasSettings) SetProperties(data.Key, data.Settings);
                 instance.SetActive(true);
                 body.position = data.Position;
                 body.rotation = data.Rotation;

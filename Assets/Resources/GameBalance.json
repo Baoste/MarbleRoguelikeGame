@@ -1,29 +1,15 @@
 {
     "Marble": {
-        "InitialBlood": 10.0,
-        "BloodCapacity": 10.0,
+        "InitialBlood": 100.0,
+        "BloodCapacity": 100.0,
         "MinInvestment": 1.0,
         "MaxInvestment": 5.0,
-        "MinRadius": 0.08,
-        "MaxRadius": 0.08,
-        "MassPerBlood": 0.1,
         "MarbleDefinitionId": 1,
-        "BaseScore": 1.0,
-        "BaseRushChance": 0.06,
-        "BloodCostMultiplier": 1.0,
-        "FireIntervalSeconds": 0.3,
-        "LaunchSpeed": 1.0,
-        "LauncherScoreMultiplier": 1.0,
+        "FireIntervalSeconds": 0.30000001192092898,
         "MaxActiveMarbles": 256,
-        "MaxLifeSeconds": 45.0,
         "DrainTimeoutSeconds": 15.0,
         "DespawnBelowY": -10.0,
         "WorldBoundsExtent": 200.0,
-        "RushDurationSeconds": 2.0,
-        "MaxRushSeconds": 2.0,
-        "RushTimeScale": 1.0,
-        "RushExtendsDuration": false,
-        "BaseRestitution": 0.0,
         "MaxActiveBounceDrugs": 16,
         "MaxPerMarbleScore": 1000000000,
         "MaxRoundScore": 9000000000000,
@@ -32,27 +18,24 @@
     },
     "Campaign": {
         "StartingCoins": 30,
-        "CashoutCoinsPerBlood": 0.5,
         "ShopRefreshCost": 5,
         "ShopOfferCount": 4,
         "SellRatio": 0.5,
         "MaxOwnedDevices": 20,
         "MaxDrugInventory": 30,
-        "GamblingWinChance": 0.5,
-        "GamblingWinMultiplier": 3.0,
         "MaxTotalScore": 9000000000000000
     },
     "Stages": [
         {
             "Id": 1,
-            "TargetScore": 15,
+            "TargetScore": 150,
             "RewardCoins": 30,
             "SkipRewardCoins": 15,
             "CashoutRate": 1.0
         },
         {
             "Id": 2,
-            "TargetScore": 100,
+            "TargetScore": 1000,
             "RewardCoins": 40,
             "SkipRewardCoins": 20,
             "CashoutRate": 1.1
@@ -84,135 +67,6 @@
             "RewardCoins": 100,
             "SkipRewardCoins": 50,
             "CashoutRate": 1.5
-        }
-    ],
-    "Devices": [
-        {
-            "Id": 1,
-            "Name": "Multi Ding",
-            "Price": 25,
-            "ScoreMultiplier": 2.0,
-            "RushChanceAdd": 0.0,
-            "Radius": 0.18000000715255738,
-            "StartingCount": 1
-        },
-        {
-            "Id": 2,
-            "Name": "Rush Ding",
-            "Price": 20,
-            "ScoreMultiplier": 1.0,
-            "RushChanceAdd": 0.08,
-            "Radius": 0.18000000715255738,
-            "StartingCount": 1
-        }
-    ],
-    "Drugs": [
-        {
-            "Id": 1,
-            "Name": "Up Restitution",
-            "Price": 10,
-            "RestitutionMultiplier": 1.5,
-            "DurationSeconds": 12.0,
-            "StartingCount": 1
-        },
-        {
-            "Id": 2,
-            "Name": "Down Restitution",
-            "Price": 8,
-            "RestitutionMultiplier": 0.6499999761581421,
-            "DurationSeconds": 12.0,
-            "StartingCount": 1
-        }
-    ],
-    "Board": {
-        "Width": 10.0,
-        "Length": 16.0,
-        "Thickness": 0.3499999940395355,
-        "TiltDegrees": 22.0,
-        "WallHeight": 0.8500000238418579,
-        "WallThickness": 0.30000001192092898,
-        "PlacementMinX": -4.0,
-        "PlacementMaxX": 4.0,
-        "PlacementMinZ": -4.5,
-        "PlacementMaxZ": 5.0,
-        "PlacementClearance": 0.15000000596046449,
-        "PinHeight": 0.699999988079071,
-        "GridSize": 0.5,
-        "LauncherX": 0.0,
-        "LauncherZ": 6.5,
-        "LauncherHeight": 0.3499999940395355,
-        "LaunchAngleDegrees": 10.0,
-        "LauncherMoveHalfWidth": 2.0,
-        "LauncherMoveSpeed": 4.0,
-        "FixedStepSeconds": 0.01666666753590107,
-        "MaxStepsPerFrame": 4,
-        "FixedPinRows": 5,
-        "FixedPinColumns": 7,
-        "FixedPinRadius": 0.12999999523162843,
-        "FixedPinSpacingX": 1.149999976158142,
-        "FixedPinSpacingZ": 1.649999976158142,
-        "FixedPinStartZ": 3.700000047683716
-    },
-    "Zones": [
-        {
-            "Id": 1,
-            "Name": "落空",
-            "Kind": 2,
-            "ScoreMultiplier": 0.0,
-            "RushEnabled": false,
-            "Priority": 0,
-            "CenterX": -4.0,
-            "CenterZ": -6.800000190734863,
-            "Width": 1.7999999523162842,
-            "Depth": 1.600000023841858
-        },
-        {
-            "Id": 2,
-            "Name": "得分 x1",
-            "Kind": 0,
-            "ScoreMultiplier": 1.0,
-            "RushEnabled": true,
-            "Priority": 100,
-            "CenterX": -2.0,
-            "CenterZ": -6.800000190734863,
-            "Width": 1.7999999523162842,
-            "Depth": 1.600000023841858
-        },
-        {
-            "Id": 3,
-            "Name": "赌分 x3",
-            "Kind": 1,
-            "ScoreMultiplier": 1.0,
-            "RushEnabled": true,
-            "Priority": 100,
-            "CenterX": 0.0,
-            "CenterZ": -6.800000190734863,
-            "Width": 1.7999999523162842,
-            "Depth": 1.600000023841858
-        },
-        {
-            "Id": 4,
-            "Name": "得分 x1.5",
-            "Kind": 0,
-            "ScoreMultiplier": 1.5,
-            "RushEnabled": true,
-            "Priority": 100,
-            "CenterX": 2.0,
-            "CenterZ": -6.800000190734863,
-            "Width": 1.7999999523162842,
-            "Depth": 1.600000023841858
-        },
-        {
-            "Id": 5,
-            "Name": "落空",
-            "Kind": 2,
-            "ScoreMultiplier": 0.0,
-            "RushEnabled": false,
-            "Priority": 0,
-            "CenterX": 4.0,
-            "CenterZ": -6.800000190734863,
-            "Width": 1.7999999523162842,
-            "Depth": 1.600000023841858
         }
     ]
 }

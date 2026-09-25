@@ -14,5 +14,7 @@ namespace MarblesECS
         public bool RushDisabled;
         public long FlatScore;
         public Vector3 Position;
+        public long LinkKey;
+        public float Speed;
     }
 }

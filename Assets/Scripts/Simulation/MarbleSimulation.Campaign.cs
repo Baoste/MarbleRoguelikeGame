@@ -11,6 +11,11 @@ namespace MarblesECS
             ThrowIfDisposed();
             if (context.Balance == null) throw new InvalidOperationException("Construct with GameBalance to start a campaign.");
             ResetRound(physics);
+            if (AttributeRuntime.Enabled(context))
+            {
+                context.Manager.GetBuffer<AttributeModifierData>(context.PlayerEntity).Clear();
+                AttributeRuntime.Initialize(context, context.PlayerEntity);
+            }
             using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
                 context.Manager.DestroyEntity(entities);
             context.Campaign = new CampaignData
@@ -63,15 +68,19 @@ namespace MarblesECS
             if (!CanCampaignAct(RoundPhase.Playing) || !CampaignStateUtility.CanCashOut(context)) return false;
             var campaign = context.Campaign;
             var stage = context.Balance.Stages[campaign.StageIndex];
-            campaign.LastCashoutCoins = MarbleRules.RoundScore(context.Player.Blood *
-                context.Balance.Campaign.CashoutCoinsPerBlood * stage.CashoutRate, CampaignStateUtility.MaxCoins);
+            double dividend = AttributeRuntime.Enabled(context)
+                ? AttributeRuntime.Global(context, GameAttribute.BLOOD_DIVIDEND_RATE) * AttributeRuntime.Global(context, GameAttribute.COIN_GAIN_RATE)
+                : context.Balance.Campaign.CashoutCoinsPerBlood;
+            campaign.LastCashoutCoins = MarbleRules.RoundScore(context.Player.Blood * stage.CashoutRate * dividend,
+                CampaignStateUtility.MaxCoins);
             campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastCashoutCoins, CampaignStateUtility.MaxCoins);
             context.Campaign = campaign;
             var player = context.Player;
             player.Blood = 0;
             context.Player = player;
             context.BeginDraining();
-            context.RemoveAllMarbles();
+            var cashoutRound = context.Round; cashoutRound.CashoutRequested = true; context.Round = cashoutRound;
+            if (!AttributeRuntime.Enabled(context)) context.RemoveAllMarbles();
             RoundFlowSystem.Execute(context);
             return true;
         }

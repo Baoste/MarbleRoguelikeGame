@@ -22,5 +22,8 @@ namespace MarblesECS
         public byte Phase;
         public uint RandomState;
         public long RushEndTick;
+        public double RushRemaining, RushMeter, FractionalScore, FractionalPendingScore;
+        public int GamblingMultiplier;
+        public bool CashoutRequested;
     }
 }

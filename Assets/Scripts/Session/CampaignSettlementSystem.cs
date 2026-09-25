@@ -15,12 +15,23 @@ namespace MarblesECS
             {
                 // Every RandomScoreZone contributes to this one pool and this one draw.
                 round.GamblingStake = round.PendingScore;
-                round.GamblingWon = round.PendingScore > 0 &&
-                    MarbleRules.Roll(ref round.RandomState, rules.GamblingWinChance);
-                round.GamblingPayout = round.GamblingWon
-                    ? MarbleRules.RoundScore(round.PendingScore * rules.GamblingWinMultiplier,
-                        context.Tuning.MaxRoundScore)
-                    : 0;
+                if (AttributeRuntime.Enabled(context))
+                {
+                    double draw = round.GamblingStake > 0 ? MarbleRules.NextRandom(ref round.RandomState) : 0;
+                    round.GamblingMultiplier = AttributeMath.GamblingOutcome(draw,
+                        AttributeRuntime.Global(context, GameAttribute.GAMBLE_LOSS_CHANCE),
+                        AttributeRuntime.Global(context, GameAttribute.GAMBLE_RETURN_CHANCE),
+                        AttributeRuntime.Global(context, GameAttribute.GAMBLE_WIN_CHANCE),
+                        AttributeRuntime.Global(context, GameAttribute.GAMBLE_QUADRUPLE_CHANCE));
+                    round.GamblingWon = round.GamblingMultiplier >= 2;
+                    round.GamblingPayout = MarbleRules.RoundScore(round.GamblingStake * (double)round.GamblingMultiplier, context.Tuning.MaxRoundScore);
+                }
+                else
+                {
+                    round.GamblingWon = round.GamblingStake > 0 && MarbleRules.Roll(ref round.RandomState, rules.GamblingWinChance);
+                    round.GamblingPayout = round.GamblingWon
+                        ? MarbleRules.RoundScore(round.GamblingStake * rules.GamblingWinMultiplier, context.Tuning.MaxRoundScore) : 0;
+                }
                 round.PendingScore = 0;
                 round.GamblingResolved = true;
                 round.GamblingRevealComplete = round.GamblingStake == 0;
@@ -72,6 +83,15 @@ namespace MarblesECS
             }
             campaign.LastSkippedStages = Math.Max(0, next - first - 1);
             campaign.StagesCleared = next;
+            if (AttributeRuntime.Enabled(context))
+            {
+                long oldTotal = campaign.TotalScore - round.Score;
+                long excess = Math.Max(0, campaign.TotalScore - Math.Max(oldTotal, round.TargetScore));
+                long overkill = MarbleRules.RoundScore(excess * context.Content.OverkillCoinsPerScore *
+                    AttributeRuntime.Global(context, GameAttribute.SCORE_OVERKILL_RATE), CampaignStateUtility.MaxCoins);
+                campaign.LastRewardCoins = MarbleRules.AddScore(campaign.LastRewardCoins, overkill, CampaignStateUtility.MaxCoins);
+                campaign.LastRewardCoins = MarbleRules.RoundScore(campaign.LastRewardCoins * AttributeRuntime.Global(context, GameAttribute.COIN_GAIN_RATE), CampaignStateUtility.MaxCoins);
+            }
             campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastRewardCoins, CampaignStateUtility.MaxCoins);
             campaign.StageIndex = Math.Min(next, stages.Length - 1);
             round.Phase = (byte)(next == stages.Length ? RoundPhase.Won : RoundPhase.Shop);

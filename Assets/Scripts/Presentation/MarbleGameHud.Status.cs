@@ -34,7 +34,7 @@ namespace MarblesECS.Presentation
             var session = Controller.Session;
             GUILayout.Label("本轮结算 " + session.RoundScore + "　累计 " + session.TotalScore);
             if (session.GamblingResolved)
-                GUILayout.Label(session.GamblingWon ? "待定分开奖：赢！ +" + session.GamblingPayout : "待定分开奖：未中奖，待定分清零。");
+                GUILayout.Label("待定分开奖 ×" + session.GamblingMultiplier + "：+" + session.GamblingPayout);
             GUILayout.Label("通关奖励 +" + session.LastRewardCoins + " 金币　提现 +" + session.LastCashoutCoins);
             if (session.LastSkippedStages > 0) GUILayout.Label("越级跳过 " + session.LastSkippedStages + " 个阶段，已计入奖励。");
         }

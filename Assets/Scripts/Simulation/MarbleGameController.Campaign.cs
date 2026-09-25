@@ -64,8 +64,34 @@ namespace MarblesECS.PhysX
         public bool BuyOffer(int index) => simulation != null && simulation.BuyOffer(index);
         public bool RefreshShop() => simulation != null && simulation.RefreshShop();
         public bool SellDevice(int id) => simulation != null && simulation.SellDevice(id);
-        public bool PlaceDevice(int id, float x, float z) => simulation != null && simulation.PlaceDevice(id, x, z);
+        /// <summary>For placements expressed directly in PhysicsRoot's local XZ plane.</summary>
+        public bool PlaceDevice(int id, float x, float z)
+        {
+            return PhysicsRoot != null && PlaceDevice(id, x, z,
+                PhysicsRoot.TransformPoint(new Vector3(x, 0, z)),
+                Mathf.Max(Mathf.Abs(PhysicsRoot.lossyScale.x), Mathf.Abs(PhysicsRoot.lossyScale.z)));
+        }
+
+        /// <summary>Presentation supplies the actual world pose when its placement plane is offset or tilted.</summary>
+        public bool PlaceDevice(int id, float x, float z, Vector3 worldPosition, float radiusScale = 1f)
+        {
+            if (!IsReady || Session.Phase != RoundPhase.Build || !SimulationContext.IsFinite(worldPosition) ||
+                !MarbleRules.IsFinite(radiusScale) || radiusScale <= 0 ||
+                !MarbleRules.IsFinite(PlacementClearance) || PlacementClearance < 0) return false;
+            foreach (var device in simulation.GetOwnedDevices())
+            {
+                if (device.InstanceId != id) continue;
+                float radius = (device.Radius + PlacementClearance) * radiusScale;
+                if (!MarbleRules.IsFinite(radius) ||
+                    !placementObstacles.IsClear(localPhysics, PlacementObstacleRoots, worldPosition, radius)) return false;
+                return simulation.PlaceDevice(id, x, z, PlacementClearance);
+            }
+            return false;
+        }
         public bool RemoveDevicePlacement(int id) => simulation != null && simulation.RemoveDevicePlacement(id);
+        public bool RotateDevice(int id, float degrees) => simulation != null && simulation.RotateDevice(id, degrees);
+        public ShotQuote QuoteShot(float flow) => simulation != null ? simulation.QuoteShot(flow) : default;
+        public long ShopRefreshPrice => IsReady ? CampaignShopSystem.Price(simulation.Context, Balance.Campaign.ShopRefreshCost) : 0;
         public bool UseDrug(uint id) => simulation != null && !Paused && simulation.UseDrug(id);
         public OwnedDeviceSnapshot[] GetOwnedDevices() => simulation?.GetOwnedDevices() ?? Array.Empty<OwnedDeviceSnapshot>();
         public ShopOfferSnapshot[] GetShopOffers() => simulation?.GetShopOffers() ?? Array.Empty<ShopOfferSnapshot>();

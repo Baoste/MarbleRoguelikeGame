@@ -10,5 +10,8 @@ namespace MarblesECS
         public bool Placed;
         public float X;
         public float Z;
+        public float Angle;
+        public int PairId;
+        public double NextTriggerAt, StoredValue;
     }
 }

@@ -25,6 +25,13 @@ namespace MarblesECS.PhysX
                     throw new InvalidOperationException("FixedStep应在0.002到0.03秒之间。");
                 if (MaxStepsPerFrame < 1 || MaxStepsPerFrame > 16)
                     throw new InvalidOperationException("MaxStepsPerFrame应在1到16之间。");
+                if (!MarbleRules.IsFinite(GridSize) || GridSize < 0 ||
+                    !MarbleRules.IsFinite(PlacementClearance) || PlacementClearance < 0)
+                    throw new InvalidOperationException("GridSize and PlacementClearance must be finite and non-negative.");
+                if (PlacementObstacleRoots != null)
+                    foreach (Transform obstacleRoot in PlacementObstacleRoots)
+                        if (obstacleRoot != null && !obstacleRoot.IsChildOf(PhysicsRoot))
+                            throw new InvalidOperationException("Placement obstacles must be under PhysicsRoot: " + obstacleRoot.name);
                 TargetIdAllocator.EnsureUniqueUnder(PhysicsRoot);
                 ValidateZones();
                 step = FixedStep;
@@ -46,12 +53,14 @@ namespace MarblesECS.PhysX
                     };
                     material = ownedMaterial;
                 }
-                simulation = EnableCampaign ? new MarbleSimulation(Balance) : new MarbleSimulation(runtimeTuning);
+                simulation = EnableCampaign ? new MarbleSimulation(Balance) : new MarbleSimulation(runtimeTuning, Balance.Content);
                 simulation.ConfigureLauncherMovement(LaunchPoint.localPosition, LauncherMoveHalfWidth, LauncherMoveSpeed);
                 bridge = new MarblePhysicsBridge(localScene, MarblePrefab, material, simulation.EnqueueContact);
                 if (EnableCampaign) simulation.StartSession(bridge);
                 else simulation.StartRound(bridge);
                 BeginRoundWhenInventoryIsEmpty();
+                if (Balance.Content != null && FindObjectOfType<MarblesECS.Presentation.MarbleGameHud>() == null && GetComponent<ContentDrugPanel>() == null)
+                    gameObject.AddComponent<ContentDrugPanel>().Controller = this;
                 publishedGamblingRoundId = int.MinValue;
                 gamblingRevealDeadline = -1f;
                 PublishBloodIfChanged();
@@ -73,14 +82,11 @@ namespace MarblesECS.PhysX
                 throw new InvalidOperationException("StartingBlood must be finite and non-negative.");
             if (!MarbleRules.IsFinite(BallsPerSecond) || BallsPerSecond <= 0f)
                 throw new InvalidOperationException("BallsPerSecond must be finite and positive.");
-            if (!MarbleRules.IsFinite(BallLaunchSpeed) || BallLaunchSpeed <= 0f)
-                throw new InvalidOperationException("BallLaunchSpeed must be finite and positive.");
 
             MarbleTuning runtimeTuning = Tuning.Copy();
             runtimeTuning.InitialBlood = StartingBlood;
             runtimeTuning.BloodCapacity = Math.Max(runtimeTuning.BloodCapacity, StartingBlood);
             runtimeTuning.FireIntervalSeconds = 1f / BallsPerSecond;
-            runtimeTuning.LaunchSpeed = BallLaunchSpeed;
             runtimeTuning.Validate();
             return runtimeTuning;
         }

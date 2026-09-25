@@ -8,7 +8,7 @@ namespace MarblesECS.Editor
 {
     internal static class XlsxWorkbookReader
     {
-        internal static Dictionary<string, List<string[]>> Read(string path)
+        internal static Dictionary<string, List<string[]>> Read(string path, bool skipFormulas = false)
         {
             using (var archive = new XlsxArchive(path))
             {
@@ -27,7 +27,7 @@ namespace MarblesECS.Editor
                     if (id == null || !relationships.TryGetValue(id, out var link) || (string)link.Attribute("TargetMode") == "External")
                         throw new InvalidDataException("Invalid worksheet relationship: " + name);
                     string part = Resolve((string)link.Attribute("Target"));
-                    sheets.Add(name, XlsxCells.Rows(archive.Read(part), shared, name));
+                    sheets.Add(name, XlsxCells.Rows(archive.Read(part), shared, name, skipFormulas));
                 }
                 return sheets;
             }

@@ -25,5 +25,6 @@ namespace MarblesECS
         public bool GamblingResolved;
         public bool GamblingWon;
         public bool CanCashOut;
+        public int GamblingMultiplier;
     }
 }

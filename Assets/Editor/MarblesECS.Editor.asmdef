@@ -3,7 +3,9 @@
   "rootNamespace": "MarblesECS.Editor",
   "references": [
     "MarblesECS.Runtime",
-    "MarblesECS.Rules"
+    "MarblesECS.Rules",
+    "Unity.Entities",
+    "Unity.Collections"
   ],
   "includePlatforms": [
     "Editor"

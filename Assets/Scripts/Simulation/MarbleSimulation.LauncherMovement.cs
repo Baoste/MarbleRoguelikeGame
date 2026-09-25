@@ -5,6 +5,11 @@ namespace MarblesECS
 {
     public sealed partial class MarbleSimulation
     {
+        public float LauncherCenterZ
+        {
+            get { ThrowIfDisposed(); return context.Manager.GetComponentData<LauncherMovementConfig>(context.LauncherEntity).InitialLocalPosition.z; }
+        }
+
         public Vector3 LauncherLocalPosition
         {
             get { ThrowIfDisposed(); return context.Manager.GetComponentData<LauncherMovementState>(context.LauncherEntity).LocalPosition; }

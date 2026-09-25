@@ -13,6 +13,8 @@ namespace MarblesECS
             for (int i = 0; i < offers.Length; i++)
             {
                 var offer = offers[i];
+                if (!offer.Sold) offer.Price = CampaignShopSystem.Price(context, offer.Kind == ShopItemKind.Device
+                    ? CampaignStateUtility.Device(context, offer.DefinitionId).Price : CampaignStateUtility.Drug(context, offer.DefinitionId).Price);
                 string name = offer.Kind == ShopItemKind.Device ? CampaignStateUtility.Device(context, offer.DefinitionId).Name :
                     CampaignStateUtility.Drug(context, offer.DefinitionId).Name;
                 result[i] = new ShopOfferSnapshot
@@ -36,9 +38,13 @@ namespace MarblesECS
                 var definition = CampaignStateUtility.Drug(context, item.DefinitionId);
                 result[i] = new DrugInventorySnapshot
                 {
-                    DefinitionId = item.DefinitionId, Name = definition.Name, Count = item.Count,
+                    DefinitionId = item.DefinitionId, Name = definition.Name, Count = item.Count, Description = definition.Description,
                     RestitutionMultiplier = definition.RestitutionMultiplier, DurationSeconds = definition.DurationSeconds
                 };
+                var doses = context.Manager.GetBuffer<ActiveDrugData>(context.PlayerEntity);
+                for (int d = 0; d < doses.Length; d++)
+                    if (doses[d].DefinitionId == item.DefinitionId && doses[d].EndsAt > context.Round.Time)
+                    { result[i].ActiveDoses++; result[i].SecondsRemaining = Math.Max(result[i].SecondsRemaining, doses[d].EndsAt - context.Round.Time); }
             }
             return result;
         }

@@ -17,7 +17,7 @@ namespace MarblesECS.Editor
             return document.Descendants(Main + "si").Select(Text).ToArray();
         }
 
-        internal static List<string[]> Rows(XDocument document, string[] strings, string sheet)
+        internal static List<string[]> Rows(XDocument document, string[] strings, string sheet, bool skipFormulas = false)
         {
             var result = new List<string[]>();
             foreach (var row in document.Descendants(Main + "sheetData").Elements(Main + "row"))
@@ -28,7 +28,7 @@ namespace MarblesECS.Editor
                 {
                     int column = Column((string)cell.Attribute("r"));
                     if (cells.ContainsKey(column)) throw new InvalidDataException(sheet + ": duplicate cell.");
-                    cells.Add(column, Value(cell, strings, sheet));
+                    cells.Add(column, skipFormulas && cell.Element(Main + "f") != null ? "" : Value(cell, strings, sheet));
                 }
                 if (cells.Count == 0 || cells.Values.All(string.IsNullOrWhiteSpace)) continue;
                 var values = new string[cells.Keys.Last() + 1];

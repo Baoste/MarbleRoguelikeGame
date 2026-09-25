@@ -33,16 +33,35 @@ namespace MarblesECS
 
         internal static void CreateDevice(SimulationContext context, DeviceDefinition definition, long price)
         {
+            if (definition.Kind == DeviceKind.Portal)
+            {
+                int pair = context.Campaign.NextDeviceId + 1;
+                CreateSingleDevice(context, definition, price / 2, pair);
+                CreateSingleDevice(context, definition, price - price / 2, pair);
+                return;
+            }
+            CreateSingleDevice(context, definition, price, 0);
+        }
+
+        private static void CreateSingleDevice(SimulationContext context, DeviceDefinition definition, long price, int pair)
+        {
             var campaign = context.Campaign;
             int instanceId = checked(campaign.NextDeviceId + 1);
             var entity = context.Manager.CreateEntity(typeof(OwnedDeviceData), typeof(StableIdentity),
                 typeof(Owner), typeof(OnBoard), typeof(DefinitionRef));
             context.Manager.SetComponentData(entity, new OwnedDeviceData
-                { InstanceId = instanceId, DefinitionId = definition.Id, PurchasePrice = price });
+                { InstanceId = instanceId, DefinitionId = definition.Id, PurchasePrice = price, PairId = pair });
             context.Manager.SetComponentData(entity, new StableIdentity { StableId = ++context.NextStableId });
             context.Manager.SetComponentData(entity, new Owner { Player = context.PlayerEntity });
             context.Manager.SetComponentData(entity, new OnBoard { Board = context.BoardEntity });
             context.Manager.SetComponentData(entity, new DefinitionRef { DefinitionId = definition.Id });
+            if (AttributeRuntime.Enabled(context))
+            {
+                AttributeRuntime.Initialize(context, entity);
+                AttributeRuntime.SetBase(context, entity, GameAttribute.DEVICE_COOLDOWN, definition.Cooldown);
+                AttributeRuntime.SetBase(context, entity, GameAttribute.DEVICE_TRIGGER_RATE, 1);
+                AttributeRuntime.SetBase(context, entity, GameAttribute.MACHINE_MULT, 1);
+            }
             campaign.NextDeviceId = instanceId;
             campaign.LayoutRevision++;
             context.Campaign = campaign;

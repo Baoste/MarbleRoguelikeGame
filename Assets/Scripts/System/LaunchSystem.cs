@@ -8,6 +8,7 @@ namespace MarblesECS
     {
         internal static void Execute(SimulationContext context, IMarblePhysics physics, Vector3 position, Quaternion rotation)
         {
+            if (AttributeRuntime.Enabled(context)) { ContentSpawnSystem.Launch(context, position, rotation); return; }
             var round = context.Round;
             if (round.Phase != (byte)RoundPhase.Playing) return;
             var launcher = context.Launcher;

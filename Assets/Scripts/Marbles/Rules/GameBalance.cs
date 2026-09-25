@@ -8,10 +8,20 @@ namespace MarblesECS
         public MarbleTuning Marble;
         public CampaignTuning Campaign;
         public StageDefinition[] Stages;
-        public DeviceDefinition[] Devices;
-        public DrugDefinition[] Drugs;
-        public BoardTuning Board;
-        public ZoneDefinition[] Zones;
+        public GameContent Content;
+        // Catalogs are views of GameContent, never a second serialized copy.
+        public DeviceDefinition[] Devices
+        {
+            get => Content != null ? Content.Devices : legacyDevices;
+            set { if (Content != null) Content.Devices = value; else legacyDevices = value; }
+        }
+        public DrugDefinition[] Drugs
+        {
+            get => Content != null ? Content.Drugs : legacyDrugs;
+            set { if (Content != null) Content.Drugs = value; else legacyDrugs = value; }
+        }
+        private DeviceDefinition[] legacyDevices = Array.Empty<DeviceDefinition>();
+        private DrugDefinition[] legacyDrugs = Array.Empty<DrugDefinition>();
 
         public static GameBalance Default() { return GameBalanceDefaults.Create(); }
         public void Validate() { GameBalanceValidation.Validate(this); }
@@ -19,14 +29,18 @@ namespace MarblesECS
         public GameBalance Copy()
         {
             Validate();
-            return new GameBalance
+            var copy = new GameBalance
             {
-                Marble = Marble.Copy(), Campaign = Campaign.Copy(), Board = Board.Copy(),
+                Marble = Marble.Copy(), Campaign = Campaign.Copy(),
                 Stages = Array.ConvertAll(Stages, value => value.Copy()),
-                Devices = Array.ConvertAll(Devices, value => value.Copy()),
-                Drugs = Array.ConvertAll(Drugs, value => value.Copy()),
-                Zones = Array.ConvertAll(Zones, value => value.Copy())
+                Content = Content?.Copy()
             };
+            if (Content == null)
+            {
+                copy.Devices = Array.ConvertAll(Devices, value => value.Copy());
+                copy.Drugs = Array.ConvertAll(Drugs, value => value.Copy());
+            }
+            return copy;
         }
     }
 }

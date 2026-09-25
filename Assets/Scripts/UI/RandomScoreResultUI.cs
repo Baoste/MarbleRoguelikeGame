@@ -64,7 +64,7 @@ public sealed class RandomScoreResultUI : MonoBehaviour
         }
 
         ResultText.enabled = true;
-        ResultText.text = result.Won
+        ResultText.text = result.Multiplier > 0 ? (result.Multiplier == 1 ? "返还 ×1" : "中奖 ×" + result.Multiplier) + " +" + result.Payout : result.Won
             ? string.Format(WinText, result.Payout)
             : LoseText;
         animationRoutine = null;

@@ -13,5 +13,9 @@ namespace MarblesECS
         public long SellPrice;
         public double ScoreMultiplier;
         public double RushChanceAdd;
+        public DeviceKind Kind;
+        public string Description;
+        public float Angle, Range, Strength;
+        public int PairId;
     }
 }

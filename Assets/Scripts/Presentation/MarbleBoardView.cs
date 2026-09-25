@@ -8,6 +8,7 @@ namespace MarblesECS.Presentation
     public sealed class MarbleBoardView : MonoBehaviour
     {
         public Camera ViewCamera;
+        [Min(0.01f)] public float PinHeight = 0.7f;
         public int SelectedDeviceId { get; private set; }
         public string Feedback { get; private set; } = "选择库存中的钉子，再点击盘面放置。";
         private MarbleGameController controller;
@@ -40,11 +41,20 @@ namespace MarblesECS.Presentation
             {
                 if (owned.InstanceId == SelectedDeviceId) selectedExists = true;
                 if (!owned.Placed) continue;
-                float height = controller.Balance.Board.PinHeight;
-                GameObject obj = MarbleBoardGeometry.Primitive(owned.Name + " #" + owned.InstanceId,
-                    PrimitiveType.Cylinder, board, new Vector3(owned.X, height / 2, owned.Z),
-                    new Vector3(owned.Radius * 2, height / 2, owned.Radius * 2),
-                    owned.RushChanceAdd > 0 ? palette.Rush : palette.Multiplier);
+                if (owned.Kind != DeviceKind.LegacyPin)
+                {
+                    var content = ContentDeviceView.Create(owned, board);
+                    content.transform.localPosition = new Vector3(owned.X, 0, owned.Z);
+                    content.transform.localRotation = Quaternion.Euler(0, owned.Angle, 0);
+                    devices.Add(owned.InstanceId, content); continue;
+                }
+                float height = PinHeight;
+                GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                obj.name = owned.Name + " #" + owned.InstanceId;
+                obj.transform.SetParent(board, false);
+                obj.transform.localPosition = new Vector3(owned.X, height / 2, owned.Z);
+                obj.transform.localScale = new Vector3(owned.Radius * 2, height / 2, owned.Radius * 2);
+                obj.GetComponent<Renderer>().sharedMaterial = owned.RushChanceAdd > 0 ? palette.Rush : palette.Multiplier;
                 var pin = obj.AddComponent<MarblePin>();
                 pin.TargetId = checked(100000 + owned.InstanceId);
                 pin.ScoreMultiplier = (float)owned.ScoreMultiplier;
@@ -61,6 +71,8 @@ namespace MarblesECS.Presentation
             if (ViewCamera == null) ViewCamera = Camera.main;
             if (ViewCamera == null) return;
             Event input = Event.current;
+            if (input.type == EventType.KeyDown && input.keyCode == KeyCode.R && SelectedDeviceId != 0)
+            { controller.RotateDevice(SelectedDeviceId, 45); input.Use(); }
             if (input.type == EventType.MouseDown && input.button == 1)
             { SelectedDeviceId = 0; Feedback = "已取消选择。"; }
             if (input.type == EventType.MouseDown && input.button == 0 &&
@@ -94,13 +106,15 @@ namespace MarblesECS.Presentation
                 if (item.Placed && Vector2.Distance(new Vector2(point.x, point.z), new Vector2(item.X, item.Z)) < item.Radius + .25f)
                 { Select(item.InstanceId); return; }
             if (SelectedDeviceId == 0) { Feedback = "先在左侧库存选择一枚钉子。"; return; }
-            float grid = controller.Balance.Board.GridSize;
+            float grid = controller.GridSize;
             if (Event.current.shift && grid > 0)
             {
                 point.x = Mathf.Round(point.x / grid) * grid;
                 point.z = Mathf.Round(point.z / grid) * grid;
             }
-            Feedback = controller.PlaceDevice(SelectedDeviceId, point.x, point.z)
+            Vector3 scale = board.lossyScale;
+            Feedback = controller.PlaceDevice(SelectedDeviceId, point.x, point.z,
+                board.TransformPoint(point), Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z)))
                 ? "布置成功。继续点击可移动；下一回合保留布局。"
                 : "此处不能放置：请避开普通钉、其他装置、发射口和终点区域。";
         }

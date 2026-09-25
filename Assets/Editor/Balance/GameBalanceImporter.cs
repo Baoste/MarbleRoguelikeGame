@@ -10,6 +10,16 @@ namespace MarblesECS.Editor
         public const string WorkbookPath = "Assets/Config/GameBalance.xlsx";
         public const string JsonPath = "Assets/Resources/GameBalance.json";
 
+        // Attributes and catalogs are authored in GameContent.json.
+        // Board geometry, placement settings and zones are authored in the scene.
+        [Serializable]
+        private sealed class BaseBalanceJson
+        {
+            public MarbleTuning Marble;
+            public CampaignTuning Campaign;
+            public StageDefinition[] Stages;
+        }
+
         [MenuItem("Marbles ECS/Import Game Balance Excel")]
         public static void ImportDefault()
         {
@@ -28,7 +38,11 @@ namespace MarblesECS.Editor
         {
             // Parsing, field completeness and cross-table validation all finish before any write.
             var balance = GameBalanceExcel.Read(workbookPath);
-            string json = JsonUtility.ToJson(balance, true) + "\n";
+            var exported = new BaseBalanceJson
+            {
+                Marble = balance.Marble, Campaign = balance.Campaign, Stages = balance.Stages
+            };
+            string json = JsonUtility.ToJson(exported, true) + "\n";
             if (File.Exists(jsonPath) && File.ReadAllText(jsonPath) == json) return;
             BalanceAssetWriter.Write(jsonPath, json);
             if (jsonPath.StartsWith("Assets/", StringComparison.Ordinal))

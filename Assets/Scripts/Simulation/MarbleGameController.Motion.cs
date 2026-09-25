@@ -5,6 +5,7 @@ namespace MarblesECS.PhysX
     public sealed partial class MarbleGameController
     {
         public Vector3 LauncherLocalPosition => IsReady ? simulation.LauncherLocalPosition : Vector3.zero;
+        public float LauncherCenterZ => IsReady ? simulation.LauncherCenterZ : (LaunchPoint != null ? LaunchPoint.localPosition.z : 0f);
 
         private void StepLauncher(float deltaTime)
         {

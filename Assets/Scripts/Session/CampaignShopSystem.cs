@@ -1,3 +1,4 @@
+using System;
 namespace MarblesECS
 {
     internal static class CampaignShopSystem
@@ -16,12 +17,12 @@ namespace MarblesECS
                 if (selection < balance.Devices.Length)
                 {
                     var definition = balance.Devices[selection];
-                    offers.Add(new ShopOfferData { Kind = ShopItemKind.Device, DefinitionId = definition.Id, Price = definition.Price });
+                    offers.Add(new ShopOfferData { Kind = ShopItemKind.Device, DefinitionId = definition.Id, Price = Price(context, definition.Price) });
                 }
                 else
                 {
                     var definition = balance.Drugs[selection - balance.Devices.Length];
-                    offers.Add(new ShopOfferData { Kind = ShopItemKind.Drug, DefinitionId = definition.Id, Price = definition.Price });
+                    offers.Add(new ShopOfferData { Kind = ShopItemKind.Drug, DefinitionId = definition.Id, Price = Price(context, definition.Price) });
                 }
             }
             context.Campaign = campaign;
@@ -32,10 +33,14 @@ namespace MarblesECS
             var offers = context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);
             if (index < 0 || index >= offers.Length) return false;
             var offer = offers[index];
+            if (!offer.Sold) offer.Price = Price(context, offer.Kind == ShopItemKind.Device
+                ? CampaignStateUtility.Device(context, offer.DefinitionId).Price : CampaignStateUtility.Drug(context, offer.DefinitionId).Price);
             if (offer.Sold || context.Campaign.Coins < offer.Price) return false;
             if (offer.Kind == ShopItemKind.Device)
             {
-                if (context.DeviceQuery.CalculateEntityCount() >= context.Balance.Campaign.MaxOwnedDevices ||
+                var definition = CampaignStateUtility.Device(context, offer.DefinitionId);
+                int quantity = definition.Kind == DeviceKind.Portal ? 2 : 1;
+                if (context.DeviceQuery.CalculateEntityCount() + quantity > context.Balance.Campaign.MaxOwnedDevices ||
                     context.Campaign.NextDeviceId >= int.MaxValue - 100000) return false;
                 CampaignStateUtility.CreateDevice(context, CampaignStateUtility.Device(context, offer.DefinitionId), offer.Price);
             }
@@ -63,5 +68,7 @@ namespace MarblesECS
             context.Campaign = campaign;
             return true;
         }
+        internal static long Price(SimulationContext context, long basis) => Math.Max(1, MarbleRules.RoundScore(basis *
+            (AttributeRuntime.Enabled(context) ? AttributeRuntime.Global(context, GameAttribute.SHOP_PRICE_MOD) : 1), CampaignStateUtility.MaxCoins));
     }
 }
