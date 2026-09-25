@@ -1,7 +1,7 @@
 {
     "Marble": {
-        "InitialBlood": 100.0,
-        "BloodCapacity": 100.0,
+        "InitialBlood": 50.0,
+        "BloodCapacity": 50.0,
         "MinInvestment": 1.0,
         "MaxInvestment": 5.0,
         "MarbleDefinitionId": 1,
@@ -28,42 +28,42 @@
     "Stages": [
         {
             "Id": 1,
-            "TargetScore": 150,
+            "TargetScore": 50,
             "RewardCoins": 30,
             "SkipRewardCoins": 15,
             "CashoutRate": 1.0
         },
         {
             "Id": 2,
-            "TargetScore": 1000,
+            "TargetScore": 150,
             "RewardCoins": 40,
             "SkipRewardCoins": 20,
             "CashoutRate": 1.1
         },
         {
             "Id": 3,
-            "TargetScore": 2200,
+            "TargetScore": 350,
             "RewardCoins": 50,
             "SkipRewardCoins": 25,
             "CashoutRate": 1.2
         },
         {
             "Id": 4,
-            "TargetScore": 4200,
+            "TargetScore": 750,
             "RewardCoins": 60,
             "SkipRewardCoins": 30,
             "CashoutRate": 1.3
         },
         {
             "Id": 5,
-            "TargetScore": 7500,
+            "TargetScore": 1500,
             "RewardCoins": 75,
             "SkipRewardCoins": 40,
             "CashoutRate": 1.4
         },
         {
             "Id": 6,
-            "TargetScore": 12000,
+            "TargetScore": 3500,
             "RewardCoins": 100,
             "SkipRewardCoins": 50,
             "CashoutRate": 1.5

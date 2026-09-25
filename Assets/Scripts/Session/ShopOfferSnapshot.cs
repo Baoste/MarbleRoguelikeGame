@@ -6,6 +6,7 @@ namespace MarblesECS
         public ShopItemKind Kind;
         public uint DefinitionId;
         public string Name;
+        public string Description;
         public long Price;
         public bool Sold;
     }

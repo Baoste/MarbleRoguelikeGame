@@ -13,6 +13,10 @@ namespace MarblesECS.PhysX
         [Min(0f)] public float StartingBlood = 100f;
         [Min(0.01f)] public float BallsPerSecond = 6.666667f;
         public Transform LaunchPoint;
+        [Tooltip("发射位置相对于 LaunchPoint 的局部 XYZ 偏移，跟随发射点的移动、旋转和缩放。")]
+        public Vector3 LaunchOffset = Vector3.zero;
+        [Tooltip("显示原始发射点到实际发射位置的连线、位置标记和发射方向。")]
+        public bool ShowLaunchGizmos = true;
         [Tooltip("独立根对象；所有参与弹珠模拟的台面/区域/装置放在它下面。")]
         public Transform PhysicsRoot;
         [Tooltip("可留空，自动生成球。自定义时为直径1的球，根上唯一SphereCollider。")]

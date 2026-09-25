@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public sealed class OwnedDeviceButtonUI : MonoBehaviour
 {
     public TMP_Text NameText;
+    public TMP_Text DescriptionText;
     public Button SelectButton;
 
     private int instanceId;
@@ -39,6 +40,8 @@ public sealed class OwnedDeviceButtonUI : MonoBehaviour
         selected = onSelected;
         if (NameText != null)
             NameText.text = device.Name;
+        if (DescriptionText != null)
+            DescriptionText.text = device.Description ?? string.Empty;
         if (SelectButton != null)
             SelectButton.interactable = canSelect && !device.Placed;
     }

@@ -22,7 +22,7 @@ namespace MarblesECS.PhysX
                 {
                     if (LaunchPoint == null) throw new InvalidOperationException("LaunchPoint在运行中被销毁。");
                     StepLauncher(step);
-                    simulation.BeforePhysics(step, bridge, LaunchPoint.position, LaunchPoint.rotation);
+                    simulation.BeforePhysics(step, bridge, LaunchWorldPosition, LaunchPoint.rotation);
                     PublishBloodIfChanged();
                     Physics.SyncTransforms();
                     bridge.Simulate(step);

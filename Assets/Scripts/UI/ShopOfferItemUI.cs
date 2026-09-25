@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public sealed class ShopOfferItemUI : MonoBehaviour
 {
     public TMP_Text NameText;
+    public TMP_Text DescriptionText;
     public TMP_Text KindText;
     public TMP_Text PriceText;
     public TMP_Text SoldText;
@@ -35,6 +36,8 @@ public sealed class ShopOfferItemUI : MonoBehaviour
 
         if (NameText != null)
             NameText.text = offer.Name;
+        if (DescriptionText != null)
+            DescriptionText.text = offer.Description ?? string.Empty;
         if (KindText != null)
             KindText.text = offer.Kind == ShopItemKind.Device ? "DEVICE" : "DRUG";
         if (PriceText != null)

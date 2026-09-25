@@ -13,14 +13,23 @@ namespace MarblesECS
             for (int i = 0; i < offers.Length; i++)
             {
                 var offer = offers[i];
-                if (!offer.Sold) offer.Price = CampaignShopSystem.Price(context, offer.Kind == ShopItemKind.Device
-                    ? CampaignStateUtility.Device(context, offer.DefinitionId).Price : CampaignStateUtility.Drug(context, offer.DefinitionId).Price);
-                string name = offer.Kind == ShopItemKind.Device ? CampaignStateUtility.Device(context, offer.DefinitionId).Name :
-                    CampaignStateUtility.Drug(context, offer.DefinitionId).Name;
+                string name, description;
+                long basePrice;
+                if (offer.Kind == ShopItemKind.Device)
+                {
+                    var definition = CampaignStateUtility.Device(context, offer.DefinitionId);
+                    name = definition.Name; description = definition.Description; basePrice = definition.Price;
+                }
+                else
+                {
+                    var definition = CampaignStateUtility.Drug(context, offer.DefinitionId);
+                    name = definition.Name; description = definition.Description; basePrice = definition.Price;
+                }
+                if (!offer.Sold) offer.Price = CampaignShopSystem.Price(context, basePrice);
                 result[i] = new ShopOfferSnapshot
                 {
                     Index = i, Kind = offer.Kind, DefinitionId = offer.DefinitionId,
-                    Name = name, Price = offer.Price, Sold = offer.Sold
+                    Name = name, Description = description, Price = offer.Price, Sold = offer.Sold
                 };
             }
             return result;

@@ -17,6 +17,8 @@ namespace MarblesECS.PhysX
                 if (PhysicsRoot == null || PhysicsRoot.parent != null || transform.IsChildOf(PhysicsRoot))
                     throw new InvalidOperationException("PhysicsRoot必须是独立根对象，且不能包含controller。");
                 if (LaunchPoint == null) throw new InvalidOperationException("请设置 LaunchPoint。");
+                if (!SimulationContext.IsFinite(LaunchOffset))
+                    throw new InvalidOperationException("LaunchOffset 的 XYZ 必须是有限数值。");
                 if (!MarbleRules.IsFinite(LauncherMoveHalfWidth) || LauncherMoveHalfWidth < 0f)
                     throw new InvalidOperationException("LauncherMoveHalfWidth must be finite and non-negative.");
                 if (!MarbleRules.IsFinite(LauncherMoveSpeed) || LauncherMoveSpeed < 0f)
