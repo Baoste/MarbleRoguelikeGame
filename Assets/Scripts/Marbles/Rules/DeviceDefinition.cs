@@ -35,8 +35,9 @@ namespace MarblesECS
             BalanceGuard.Range(Range, 0.01, 100, nameof(Range));
             BalanceGuard.Range(Strength, 0, 1000, nameof(Strength));
             BalanceGuard.Range(MaxTriggersPerBall, 0, 10000, nameof(MaxTriggersPerBall));
-            if (Kind == DeviceKind.LegacyPin && !((ScoreMultiplier == 2 && RushChanceAdd == 0) || (ScoreMultiplier == 1 && RushChanceAdd > 0)))
-                throw new ArgumentException("Devices must be either score x2 or Rush chance pins.");
+            if (Kind == DeviceKind.LegacyPin && !((ScoreMultiplier > 1 && ScoreMultiplier <= 100 && RushChanceAdd == 0) ||
+                (ScoreMultiplier == 1 && RushChanceAdd > 0)))
+                throw new ArgumentException("Legacy pins must be either a bounded score multiplier or a Rush chance pin.");
         }
     }
 }

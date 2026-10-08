@@ -22,11 +22,11 @@
 | 赌博概率及倍率 | `GAMBLE_LOSS_CHANCE / RETURN_CHANCE / WIN_CHANCE / QUADRUPLE_CHANCE` | `Campaign.GamblingWinChance / GamblingWinMultiplier` |
 | 剩余血量兑换率 | `BLOOD_DIVIDEND_RATE` | `Campaign.CashoutCoinsPerBlood` |
 
-半径按现有单位转换：**实际世界半径 = 最终 BALL_RADIUS × 0.16**。默认属性值 `0.5` 对应半径 `0.08`、直径 `0.16`；质量直接采用属性的 kg 数值。抽血档位不再隐式改变半径、质量或基础分。凝血剂等药物仍可通过体积倍率影响半径，按体积倍率的立方根换算。
+半径按现有单位转换：**实际世界半径 = 最终 BALL_RADIUS × 0.16**。最低档默认属性值 `0.5` 对应半径 `0.08`、直径 `0.16`。高档位以 `Investment / MinInvestment` 为投入倍率：半径按立方根增长，质量线性增长，基础价值按 `FlowValueExponent` 次方增长；当前指数为 `1.15`。凝血剂等药物仍可通过体积倍率影响半径，按体积倍率的立方根换算。
 
 发射速度直接采用 `BALL_LAUNCH_SPEED`，单位为 m/s，不再乘旧发射速度；最终仍受 `BALL_MAX_SPEED` 限制。弹性在属性范围内结算；与静态或运动学障碍物碰撞时，按该球属性校正反弹，障碍物的高弹性材质不会把 `BALL_BOUNCE = 0` 抬高。超过 `1` 的属性值提供额外反弹增益。
 
-抽血档位仍在 `MinInvestment/MaxInvestment` 间选择投入量。基础耗血为「投入量 × BLOOD_COST」，随后应用属性 ADD/MUL/SET 和上下限；批量发射按球数收费。提现为「剩余血量 × BLOOD_DIVIDEND_RATE × 当前阶段 CashoutRate × COIN_GAIN_RATE」，金币向下取整。
+抽血档位仍在 `MinInvestment/MaxInvestment` 间选择投入量。基础耗血为「投入量 × BLOOD_COST」，随后应用属性 ADD/MUL/SET 和上下限；批量发射按球数收费。低档位用于增加 Rush 检定次数，高档位用于 Rush 窗口内快速兑现价值。提现为「剩余血量 × BLOOD_DIVIDEND_RATE × 当前阶段 CashoutRate × COIN_GAIN_RATE」，金币向下取整。
 
 场景 `MarbleZone` 的倍率、Rush 概率和触发开关，以及具体装置效果，属于不同区域或装置的规则；它们不是另一份弹珠基础属性。旧的 `Marble.BaseRushChance` 已从配置移除，区域概率在 `MarbleZone.BaseRushChance` 设置。
 
@@ -35,6 +35,10 @@
 ## 装置和药物
 
 在 `GameContent.json` 的 `Devices`、`Drugs` 列表中修改名称、价格、参数、`StartingCount` 和药物效果。`StartingCount = 0` 不赠送，正整数表示开局数量；传送门每份生成一对，容量按两个实体计算。
+
+给程序/策划交接的工作簿是 `Assets/Docs/血色柏青哥_道具药物装置_规范修订版.xlsx`。优先查看其中的“运行时平衡表”：它汇总全部 27 个装置/药物的价格、当前效果、时长、叠加规则、证据等级、旧值/新值和调整原因。该页用于审阅与配置交接，运行时 Source of Truth 仍是 `Resources/GameContent.json`。
+
+Rush 药物的专用数值也已数据化：`RushChanceAdd` 控制肾上腺素的概率加成，`RushScoreMultiplier` 控制烧烧果实在 Rush 结算时的额外倍率。商店每轮保底一个 Rush 装置和一个 Rush 药物，其余槽位从全目录无重复抽取。
 
 `GameBalance` 的装置和药物列表直接引用同一份内容目录；会话复制时深拷贝整个目录。基础 JSON 和基础 Excel 不再保存旧装置、药物列表。
 
@@ -46,6 +50,7 @@
 
 - `Config/GameBalance.xlsx` 只保留 `Marble`、`Campaign`、`Stages` 和说明页；保存会自动导入基础 JSON，也可使用 `Marbles ECS/Import Game Balance Excel`。
 - 规范工作簿不再自动覆盖 `GameContent.json`。只有显式执行 `Marbles ECS/Import Attribute and Content Excel`，才会采用表中的属性和药物窗口等数值；需要使用该菜单时，先把希望保留的 JSON 修改同步到表格。
+- “运行时平衡表”是汇总审阅页，不被 Importer 自动读取；显式导入读取的是属性字典与“设计总表”，装置/药物配方仍由 JSON 注册内容保留。
 - 旧属性表将发射速度标为倍率 `x`；导入器统一标记为 `m/s`，数值本身不做额外缩放。
 - `Editor/Balance/build_content.py` 只补充缺失的已注册条目，保留已有属性、价格、初始数量、配方及内容规则。目录完整时不会重写文件。
 

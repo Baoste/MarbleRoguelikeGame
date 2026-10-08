@@ -1,32 +1,62 @@
 using System;
+using System.Collections.Generic;
 namespace MarblesECS
 {
     internal static class CampaignShopSystem
     {
+        private struct Candidate
+        {
+            internal ShopItemKind Kind;
+            internal uint Id;
+            internal long Price;
+        }
+
         internal static void Generate(SimulationContext context)
         {
             var balance = context.Balance;
             var offers = context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);
             offers.Clear();
             var campaign = context.Campaign;
-            int count = balance.Devices.Length + balance.Drugs.Length;
-            for (int i = 0; i < balance.Campaign.ShopOfferCount; i++)
+            var all = new List<Candidate>(balance.Devices.Length + balance.Drugs.Length);
+            var rushDevices = new List<Candidate>();
+            var rushDrugs = new List<Candidate>();
+            foreach (var definition in balance.Devices)
             {
-                MarbleRules.Roll(ref campaign.RandomState, 0);
-                int selection = (int)((ulong)campaign.RandomState * (uint)count >> 32);
-                if (selection < balance.Devices.Length)
-                {
-                    var definition = balance.Devices[selection];
-                    offers.Add(new ShopOfferData { Kind = ShopItemKind.Device, DefinitionId = definition.Id, Price = Price(context, definition.Price) });
-                }
-                else
-                {
-                    var definition = balance.Drugs[selection - balance.Devices.Length];
-                    offers.Add(new ShopOfferData { Kind = ShopItemKind.Drug, DefinitionId = definition.Id, Price = Price(context, definition.Price) });
-                }
+                var candidate = new Candidate { Kind = ShopItemKind.Device, Id = definition.Id, Price = definition.Price };
+                all.Add(candidate);
+                if (definition.Kind == DeviceKind.Clover || definition.RushChanceAdd > 0) rushDevices.Add(candidate);
             }
+            foreach (var definition in balance.Drugs)
+            {
+                var candidate = new Candidate { Kind = ShopItemKind.Drug, Id = definition.Id, Price = definition.Price };
+                all.Add(candidate);
+                if (definition.Kind == DrugKind.Adrenaline || definition.Kind == DrugKind.RushFruit ||
+                    definition.Kind == DrugKind.RushDuration) rushDrugs.Add(candidate);
+            }
+            var used = new HashSet<ulong>();
+            if (offers.Length < balance.Campaign.ShopOfferCount) AddRandom(context, offers, rushDevices, used, ref campaign.RandomState);
+            if (offers.Length < balance.Campaign.ShopOfferCount) AddRandom(context, offers, rushDrugs, used, ref campaign.RandomState);
+            while (offers.Length < balance.Campaign.ShopOfferCount && AddRandom(context, offers, all, used, ref campaign.RandomState)) { }
             context.Campaign = campaign;
         }
+
+        private static bool AddRandom(SimulationContext context, Unity.Entities.DynamicBuffer<ShopOfferData> offers,
+            List<Candidate> source, HashSet<ulong> used, ref uint randomState)
+        {
+            var available = new List<Candidate>(source.Count);
+            foreach (var candidate in source)
+                if (!used.Contains(Key(candidate))) available.Add(candidate);
+            if (available.Count == 0) return false;
+            MarbleRules.Roll(ref randomState, 0);
+            int selection = (int)((ulong)randomState * (uint)available.Count >> 32);
+            var chosen = available[selection];
+            used.Add(Key(chosen));
+            offers.Add(new ShopOfferData { Kind = chosen.Kind, DefinitionId = chosen.Id,
+                Price = Price(context, chosen.Price) });
+            return true;
+        }
+
+        private static ulong Key(Candidate candidate) => ((ulong)candidate.Kind << 32) | candidate.Id;
 
         internal static bool Buy(SimulationContext context, int index)
         {

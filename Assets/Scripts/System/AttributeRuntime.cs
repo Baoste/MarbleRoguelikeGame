@@ -83,8 +83,13 @@ namespace MarblesECS
             var values = new double[(int)GameAttribute.Count];
             var bases = c.Manager.GetBuffer<AttributeValue>(c.PlayerEntity);
             for (int i = 0; i < values.Length; i++) values[i] = bases[i].Base;
-            // Flow chooses the invested amount; all attribute bases come exclusively from GameContent.
+            // Flow is a burst lever: larger shots are physically larger/heavier and gain a
+            // small efficiency premium, while low flow still creates more Rush attempts.
+            double investmentScale = investment / c.Tuning.MinInvestment;
             values[(int)GameAttribute.BLOOD_COST] *= investment;
+            values[(int)GameAttribute.BALL_BASE_VALUE] *= Math.Pow(investmentScale, c.Content.FlowValueExponent);
+            values[(int)GameAttribute.BALL_RADIUS] *= Math.Pow(investmentScale, 1d / 3d);
+            values[(int)GameAttribute.BALL_MASS] *= investmentScale;
             var features = new BallFeatures { RushScoreMultiplier = 1 };
             double volume = 1;
             var effects = new List<AttributeEffect>();
@@ -104,8 +109,8 @@ namespace MarblesECS
                         effects.Add(new AttributeEffect { Attribute = GameAttribute.BALL_BOUNCE,
                             Operation = AttributeOperation.Multiply, Value = drug.RestitutionMultiplier });
                         break;
-                    case DrugKind.Adrenaline: features.RushChanceAdd += .2; break;
-                    case DrugKind.RushFruit: features.RushScoreMultiplier *= 1.15; break;
+                    case DrugKind.Adrenaline: features.RushChanceAdd += drug.RushChanceAdd; break;
+                    case DrugKind.RushFruit: features.RushScoreMultiplier *= drug.RushScoreMultiplier; break;
                     case DrugKind.ThinBlood: features.PierceChance = 1 - (1 - features.PierceChance) * .7f; break;
                     case DrugKind.Replicator: features.Replicates = true; break;
                     case DrugKind.Magnetic: features.Magnetic = true; features.MagneticRadius = 10 * c.Content.CentimetersToUnits; break;

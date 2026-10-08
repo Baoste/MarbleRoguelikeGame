@@ -48,6 +48,7 @@ namespace MarblesECS.Editor
                 LegacyContent();
                 Devices();
                 EconomyAndGambling();
+                ShopGuarantees();
                 Boundaries();
                 PhysicalBridge();
                 Debug.Log("CONTENT_VALIDATION_PASSED: " + assertions + " assertions.");
@@ -126,10 +127,11 @@ namespace MarblesECS.Editor
             {
                 simulation.StartSession(physics); simulation.BeginRound();
                 var low = simulation.QuoteShot(0); var high = simulation.QuoteShot(1);
-                Near(.12, low.Radius, "radius comes only from content and unit conversion");
-                Near(low.Radius, high.Radius, "flow no longer scales radius");
-                Near(2, high.Mass, "flow and old MassPerBlood cannot multiply content mass");
-                Near(23, high.BaseValue, "old BaseScore cannot multiply content base value");
+                Near(.12, low.Radius, "minimum flow uses content radius and unit conversion");
+                Near(.12 * Math.Pow(5, 1d / 3d), high.Radius, "flow scales radius by invested volume");
+                Near(10, high.Mass, "flow scales content mass with investment");
+                Near(23 * Math.Pow(5, balance.Content.FlowValueExponent), high.BaseValue,
+                    "flow grants the authored burst-value curve");
                 Near(1, high.LauncherMultiplier, "old launcher multiplier is neutral in content mode");
                 Near(1.5, low.Cost, "content blood cost per investment unit");
                 Near(7.5, high.Cost, "investment remains the explicit player input");
@@ -146,7 +148,7 @@ namespace MarblesECS.Editor
             using (var standalone = new MarbleSimulation(balance.Marble, balance.Content))
             {
                 var standalonePhysics = new FakePhysics(); standalone.StartRound(standalonePhysics);
-                Near(.12, standalone.QuoteShot(1).Radius, "standalone scenes use content radius too");
+                Near(.12, standalone.QuoteShot(0).Radius, "standalone scenes use content radius too");
                 standalone.FireOnce(); standalone.BeforePhysics(.1f, standalonePhysics, Vector3.up * 2, Quaternion.identity); standalone.AfterPhysics(standalonePhysics);
                 Near(3, standalonePhysics.Spawns.Single().Value.LinearVelocity.magnitude, "standalone launch reads content");
             }
@@ -228,7 +230,10 @@ namespace MarblesECS.Editor
 
         private static void Placement()
         {
-            using (var simulation = new MarbleSimulation(GameBalance.Default()))
+            var balance = GameBalance.Default();
+            foreach (var device in balance.Devices) device.StartingCount = 0;
+            balance.Devices[0].StartingCount = 2;
+            using (var simulation = new MarbleSimulation(balance))
             {
                 simulation.StartSession(new FakePhysics());
                 var devices = simulation.GetOwnedDevices();
@@ -313,9 +318,11 @@ namespace MarblesECS.Editor
                 var after=f.Launch();
                 Near(10,f.Simulation.GetMarbleAttribute(before,GameAttribute.BALL_BASE_VALUE),"old ball snapshot "+kind);
                 var features=f.C.Manager.GetComponentData<BallFeatures>(f.Ball(after));
-                if(kind==DrugKind.Adrenaline) Near(.2,features.RushChanceAdd,"adrenaline");
-                if(kind==DrugKind.RushFruit) Near(1.15,features.RushScoreMultiplier,"rush fruit");
-                if(kind==DrugKind.RushDuration) Near(12,f.Simulation.GetMarbleAttribute(after,GameAttribute.RUSH_DURATION),"duration");
+                if(kind==DrugKind.Adrenaline) Near(definition.RushChanceAdd,features.RushChanceAdd,"adrenaline");
+                if(kind==DrugKind.RushFruit) Near(definition.RushScoreMultiplier,features.RushScoreMultiplier,"rush fruit");
+                if(kind==DrugKind.RushDuration) Near(f.C.Content.Definition(GameAttribute.RUSH_DURATION).DefaultValue *
+                    definition.Effects.Single(x=>x.Attribute==GameAttribute.RUSH_DURATION && x.Operation==AttributeOperation.Multiply).Value,
+                    f.Simulation.GetMarbleAttribute(after,GameAttribute.RUSH_DURATION),"duration");
                 if(kind==DrugKind.Lubricant) Near(.15,f.Simulation.GetMarbleAttribute(after,GameAttribute.BALL_FRICTION),"lubricant");
                 if(kind==DrugKind.Coagulant) Check(f.Physics.Spawns[after].Quote.Radius>f.Physics.Spawns[before].Quote.Radius,"volume radius conversion");
                 if(kind==DrugKind.Ecstasy) Near(2,f.Simulation.GetMarbleAttribute(after,GameAttribute.BALL_BOUNCE),"ecstasy clamp");
@@ -325,6 +332,40 @@ namespace MarblesECS.Editor
                 if(kind==DrugKind.Direction) Check(features.ExitDown,"direction tag");
                 Check(f.Simulation.UseDrug(definition.Id),"reuse drug");
                 Check(f.Simulation.GetDrugInventory().Single(x=>x.DefinitionId==definition.Id).ActiveDoses==(definition.Stackable?2:1),"stack policy "+kind);
+            }
+        }
+
+        private static void ShopGuarantees()
+        {
+            using (var f = new Fixture())
+            {
+                for (uint seed = 1; seed <= 64; seed++)
+                {
+                    var campaign = f.C.Campaign; campaign.RandomState = seed; f.C.Campaign = campaign;
+                    CampaignShopSystem.Generate(f.C);
+                    var offers = f.C.Manager.GetBuffer<ShopOfferData>(f.C.RoundEntity);
+                    Check(offers.Length == f.C.Balance.Campaign.ShopOfferCount, "shop offer count");
+                    bool rushDevice = false, rushDrug = false;
+                    var unique = new HashSet<ulong>();
+                    for (int i = 0; i < offers.Length; i++)
+                    {
+                        var offer = offers[i];
+                        Check(unique.Add(((ulong)offer.Kind << 32) | offer.DefinitionId), "shop offers are unique");
+                        if (offer.Kind == ShopItemKind.Device)
+                        {
+                            var definition = CampaignStateUtility.Device(f.C, offer.DefinitionId);
+                            rushDevice |= definition.Kind == DeviceKind.Clover || definition.RushChanceAdd > 0;
+                        }
+                        else
+                        {
+                            var definition = CampaignStateUtility.Drug(f.C, offer.DefinitionId);
+                            rushDrug |= definition.Kind == DrugKind.Adrenaline || definition.Kind == DrugKind.RushFruit ||
+                                definition.Kind == DrugKind.RushDuration;
+                        }
+                    }
+                    Check(rushDevice, "shop guarantees a Rush device");
+                    Check(rushDrug, "shop guarantees a Rush drug");
+                }
             }
         }
         private static void LegacyContent()
@@ -364,11 +405,15 @@ namespace MarblesECS.Editor
                         Multiplier = definition.ScoreMultiplier, RushChanceAdd = definition.RushChanceAdd };
                     f.Step(contact); f.Step(contact);
                 }
-                Near(2, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "legacy multiplier pin applies once");
-                Near(.08, f.C.Manager.GetComponentData<MarbleRush>(f.Ball(key)).RushChanceBonus, "legacy rush pin applies once");
+                var multiplierPin=f.C.Balance.Devices.Single(x=>x.Kind==DeviceKind.LegacyPin && x.ScoreMultiplier>1);
+                Near(multiplierPin.ScoreMultiplier, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "legacy multiplier pin applies once");
+                Near(f.C.Balance.Devices.Single(x => x.RushChanceAdd > 0).RushChanceAdd,
+                    f.C.Manager.GetComponentData<MarbleRush>(f.Ball(key)).RushChanceBonus, "legacy rush pin applies once");
+                double baseBeforeLens=f.Simulation.GetMarbleAttribute(key,GameAttribute.BALL_BASE_VALUE);
+                var lensDefinition=f.C.Balance.Devices.Single(x=>x.Kind==DeviceKind.Lens);
                 f.Step(f.Hit(key, f.Add(DeviceKind.Lens)));
                 f.Step(new MarbleContact { Key = key, TargetId = 10, Kind = MarbleContactKind.Score, Multiplier = 1, RushDisabled = true });
-                Near(40, f.C.Round.Score, "legacy multiplier combines with new lens");
+                Near(Math.Floor(baseBeforeLens*lensDefinition.Value*multiplierPin.ScoreMultiplier), f.C.Round.Score, "legacy multiplier combines with new lens");
             }
         }
         private static void Devices()
@@ -380,18 +425,24 @@ namespace MarblesECS.Editor
                 var contact=f.Hit(key,device);
                 if(kind==DeviceKind.Amplifier) contact.LinkKey=((long)device.InstanceId<<32)|99;
                 double coins=f.C.Campaign.Coins;
+                double valueBeforeContact=f.Simulation.GetMarbleAttribute(key,GameAttribute.BALL_BASE_VALUE);
+                var definition=f.C.Balance.Devices.Single(x=>x.Kind==kind);
                 f.Step(contact);
                 switch(kind)
                 {
                     case DeviceKind.Bank:
                         Check(!f.C.Marbles.ContainsKey(key),"bank consumes");
-                        Near(coins+1,f.C.Campaign.Coins,"bank 10*.12 floors once"); break;
+                        var bank=f.C.Balance.Devices.Single(x=>x.Kind==DeviceKind.Bank);
+                        double gain=f.C.Content.Definition(GameAttribute.COIN_GAIN_RATE).DefaultValue;
+                        Near(coins+Math.Floor(valueBeforeContact*bank.Value*gain),f.C.Campaign.Coins,
+                            "bank value, rate and coin gain floor once"); break;
                     case DeviceKind.Amplifier: Near(12,f.Simulation.GetMarbleAttribute(key,GameAttribute.BALL_BASE_VALUE),"tower value"); break;
                     case DeviceKind.Lens:
-                        Near(20,f.Simulation.GetMarbleAttribute(key,GameAttribute.BALL_BASE_VALUE),"lens");
-                        f.Step();f.Step(contact);Near(40,f.Simulation.GetMarbleAttribute(key,GameAttribute.BALL_BASE_VALUE),"repeat lens");break;
-                    case DeviceKind.Capital: Near(30,f.Simulation.GetMarbleAttribute(key,GameAttribute.BALL_BASE_VALUE),"capital");break;
-                    case DeviceKind.Clover: Check(f.C.Manager.GetComponentData<BallFeatures>(ball).Clover,"clover marker");break;
+                        Near(10*definition.Value,f.Simulation.GetMarbleAttribute(key,GameAttribute.BALL_BASE_VALUE),"lens");
+                        f.Step();f.Step(contact);Near(10*definition.Value*definition.Value,f.Simulation.GetMarbleAttribute(key,GameAttribute.BALL_BASE_VALUE),"repeat lens");break;
+                    case DeviceKind.Capital: Near(10*definition.Value,f.Simulation.GetMarbleAttribute(key,GameAttribute.BALL_BASE_VALUE),"capital");break;
+                    case DeviceKind.Clover:
+                        Near(definition.Value,f.C.Manager.GetComponentData<BallFeatures>(ball).CloverChance,"clover value from data");break;
                     case DeviceKind.Revive: Check(f.C.Manager.GetComponentData<BallFeatures>(ball).Revive,"revive marker");break;
                     case DeviceKind.BloodCannon: Check(f.Physics.CannonShots==1 && !CampaignStateUtility.FindDevice(f.C,device.InstanceId,out _),"cannon consumed");break;
                     case DeviceKind.Splitter:
@@ -419,6 +470,14 @@ namespace MarblesECS.Editor
                 f.Step(new MarbleContact{Key=key,TargetId=42,Kind=MarbleContactKind.Pin,Multiplier=1});
                 Check(f.C.Marbles.Count==2,"pin replication");
                 Check(f.C.Marbles.Values.All(e=>f.C.Manager.GetComponentData<BallFeatures>(e).Replicates),"recursive clone inheritance");
+                Check(f.C.Marbles.Values.All(e=>f.C.Manager.GetComponentData<BallFeatures>(e).ReplicationGeneration==1),"replication generation one");
+                var generationOne=f.C.Marbles.Keys.ToArray();
+                f.Step(generationOne.Select(k=>new MarbleContact{Key=k,TargetId=43,Kind=MarbleContactKind.Pin,Multiplier=1}).ToArray());
+                Check(f.C.Marbles.Count==4,"replication reaches configured generation cap");
+                Check(f.C.Marbles.Values.All(e=>f.C.Manager.GetComponentData<BallFeatures>(e).ReplicationGeneration==2),"replication generation two");
+                var capped=f.C.Marbles.Keys.ToArray();
+                f.Step(capped.Select(k=>new MarbleContact{Key=k,TargetId=44,Kind=MarbleContactKind.Pin,Multiplier=1}).ToArray());
+                Check(f.C.Marbles.Count==4,"replication stops at configured generation cap");
             }
         }
         private static void EconomyAndGambling()
@@ -496,7 +555,9 @@ namespace MarblesECS.Editor
                 Check(JsonUtility.ToJson(legacy) == JsonUtility.ToJson(imported.Devices.Single(x => x.Id == legacy.Id)), "import preserves legacy device values " + legacy.Id);
             foreach (var legacy in recipes.Drugs.Where(x => x.Kind == DrugKind.LegacyBounce))
                 Check(JsonUtility.ToJson(legacy) == JsonUtility.ToJson(imported.Drugs.Single(x => x.Id == legacy.Id)), "import preserves legacy drug values " + legacy.Id);
-            Near(.25, imported.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue, "import confirmed fourth outcome");
+            Near(recipes.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue,
+                imported.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue,
+                "import preserves authored fourth outcome");
             Check(imported.Devices.Count(x => x.SourceId == "D009") == 2, "duplicate authoring IDs do not merge devices");
             using (var f = new Fixture())
             {
@@ -510,7 +571,8 @@ namespace MarblesECS.Editor
                 f.Simulation.ApplyDeviceAttribute(device.InstanceId, 1, GameAttribute.DEVICE_COOLDOWN, AttributeOperation.Set, 2);
                 f.Simulation.ApplyDeviceAttribute(device.InstanceId, 2, GameAttribute.MACHINE_MULT, AttributeOperation.Set, 2);
                 f.Step(f.Hit(key, device)); f.Step(f.Hit(key, device));
-                Near(20, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "device cooldown seconds");
+                Near(10 * f.C.Balance.Devices.Single(x=>x.Kind==DeviceKind.Lens).Value,
+                    f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "device cooldown seconds");
                 Near(2, f.Simulation.GetMarbleAttribute(key, GameAttribute.MACHINE_MULT), "device machine multiplier");
                 f.Simulation.ApplyAttribute(key, 2, GameAttribute.BALL_LIFETIME, AttributeOperation.Set, 1);
                 for (int i = 0; i < 12; i++) f.Step();
