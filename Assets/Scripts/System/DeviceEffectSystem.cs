@@ -66,7 +66,8 @@ namespace MarblesECS
                     else AttributeRuntime.SetBase(c, ball, GameAttribute.BALL_BASE_VALUE, value * definition.Value);
                     break;
                 case DeviceKind.Clover:
-                    features.Clover = true; c.Manager.SetComponentData(ball, features); break;
+                    features.CloverChance = Math.Max(features.CloverChance, (float)definition.Value);
+                    c.Manager.SetComponentData(ball, features); break;
                 case DeviceKind.Revive:
                     features.Revive = true; c.Manager.SetComponentData(ball, features); break;
                 case DeviceKind.Slow:
@@ -150,6 +151,10 @@ namespace MarblesECS
         }
         private static void Replicate(SimulationContext c, Entity ball, MarbleContact contact)
         {
+            var features = c.Manager.GetComponentData<BallFeatures>(ball);
+            if (features.ReplicationGeneration >= c.Content.MaxSplitGeneration) return;
+            features.ReplicationGeneration++;
+            c.Manager.SetComponentData(ball, features);
             Vector3 normal = Vector3.up;
             if (c.Physics is IMarblePhysicsCommands commands && commands.TryGetDevicePose(contact.TargetId - 100000, out var pose)) normal = pose.Up;
             ContentSpawnSystem.Children(c, ball, 1, false, Direction(c, ball), normal);

@@ -18,14 +18,36 @@ public sealed class RandomScoreResultUI : MonoBehaviour
 
     private void Awake()
     {
-        if (ResultText != null)
-            ResultText.enabled = false;
+        ConfigureDisplay();
+        ClearResult();
     }
 
     private void OnEnable()
     {
+        ConfigureDisplay();
         if (Controller != null)
             Controller.RandomScoreSettled += Play;
+    }
+
+    private void OnValidate()
+    {
+        ConfigureDisplay();
+    }
+
+    private void ConfigureDisplay()
+    {
+        // The result is a read-only overlay. Its RectTransform may cover the
+        // playfield and physical controls, but must never consume pointer hits.
+        if (ResultText != null)
+            ResultText.raycastTarget = false;
+    }
+
+    private void Update()
+    {
+        if (Controller == null || !Controller.IsReady) return;
+        RoundPhase phase = Controller.Session.Phase;
+        if (phase == RoundPhase.Build || phase == RoundPhase.Playing)
+            ClearResult();
     }
 
     private void OnDisable()
@@ -33,16 +55,24 @@ public sealed class RandomScoreResultUI : MonoBehaviour
         if (Controller != null)
             Controller.RandomScoreSettled -= Play;
 
+        ClearResult();
+    }
+
+    private void ClearResult()
+    {
         if (animationRoutine != null)
         {
             StopCoroutine(animationRoutine);
             animationRoutine = null;
         }
+        if (ResultText != null)
+            ResultText.enabled = false;
     }
 
     private void Play(RandomScoreResult result)
     {
         if (ResultText == null) return;
+        ConfigureDisplay();
         if (animationRoutine != null)
             StopCoroutine(animationRoutine);
         animationRoutine = StartCoroutine(PlayRoutine(result));

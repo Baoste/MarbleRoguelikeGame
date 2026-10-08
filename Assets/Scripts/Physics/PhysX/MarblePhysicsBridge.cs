@@ -84,7 +84,10 @@ namespace MarblesECS.PhysX
             while (pool.Count > 0)
             {
                 var view = pool.Pop();
-                if (view != null) UnityEngine.Object.Destroy(view.gameObject);
+                if (view == null) continue;
+                // Balance sampling also owns a temporary pool outside Play Mode.
+                if (Application.isPlaying) UnityEngine.Object.Destroy(view.gameObject);
+                else UnityEngine.Object.DestroyImmediate(view.gameObject);
             }
         }
 

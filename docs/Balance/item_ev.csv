@@ -1,0 +1,109 @@
+﻿config,category,id,name,price,ev_ratio,variance_class,trigger_frequency,modeled,pick_rate
+Baseline,Device,113,Multi Ding,27,0.02392593,Medium,Empirical hotspot,1,0.24746667
+Baseline,Drug,100,肾上腺素,21,0.02378571,Medium,Use-window,1,0.52476667
+Baseline,Drug,102,延长药剂,12,0.02275000,Medium,Use-window,1,0.80283333
+Baseline,Drug,101,烧烧果实,22,0.02263636,Medium,Use-window,1,0.53660000
+Baseline,Device,114,Rush Ding,20,0.01406075,Medium,Empirical hotspot,1,0.27363333
+Baseline,Device,107,增值透镜,46,0.01333515,High,Empirical hotspot,1,0.03866667
+Baseline,Device,104,黑色四叶草,36,0.01303009,Medium,Empirical hotspot,1,0.25086667
+Baseline,Drug,105,摇头丸,15,0.00733333,Medium,Use-window,0,0.00000000
+Baseline,Device,108,资本主义,49,0.00668146,High,Empirical hotspot,1,0.01770000
+Baseline,Device,102,离心机,9,0.00568889,Medium,Empirical hotspot,0,0.00000000
+Baseline,Device,106,弹板,9,0.00568889,Medium,Empirical hotspot,0,0.00000000
+Baseline,Device,110,减速带,9,0.00568889,Medium,Empirical hotspot,0,0.00000000
+Baseline,Device,111,复活吧我的爱人,56,0.00514286,High,Empirical hotspot,1,0.00000000
+Baseline,Device,105,分流器,15,0.00512000,Medium,Empirical hotspot,0,0.00000000
+Baseline,Drug,106,稀血剂,24,0.00458333,Medium,Use-window,0,0.00000000
+Baseline,Device,100,银行,24,0.00430139,Medium,Empirical hotspot,1,0.00000000
+Baseline,Drug,107,无限增值,61,0.00387978,High,Use-window,0,0.00000000
+Baseline,Drug,104,凝血剂,24,0.00345833,Medium,Use-window,0,0.00000000
+Baseline,Device,103,传送门,15,0.00341333,Medium,Empirical hotspot,0,0.00000000
+Baseline,Drug,2,Down Restitution,7,0.00285714,Medium,Use-window,0,0.00000000
+Baseline,Device,101,增幅塔,15,0.00269111,Medium,Empirical hotspot,1,0.00000000
+Baseline,Drug,103,润流剂,9,0.00222222,Medium,Use-window,0,0.00000000
+Baseline,Drug,109,定向试剂（补全名）,9,0.00222222,Medium,Use-window,0,0.00000000
+Baseline,Drug,1,Up Restitution,9,0.00222222,Medium,Use-window,0,0.00000000
+Baseline,Device,112,磁磁磁,24,0.00213333,Medium,Empirical hotspot,0,0.00000000
+Baseline,Device,109,血穿炮,24,0.00133333,Medium,Empirical hotspot,0,0.00000000
+Baseline,Drug,108,磁堕,24,0.00083333,High,Use-window,0,0.00000000
+Conservative,Drug,101,烧烧果实,20,0.02490000,Medium,Use-window,1,0.84643333
+Conservative,Device,113,Multi Ding,28,0.02307143,Medium,Empirical hotspot,1,0.27550000
+Conservative,Drug,102,延长药剂,12,0.02275000,Medium,Use-window,1,0.82466667
+Conservative,Drug,100,肾上腺素,24,0.02081250,Medium,Use-window,1,0.53443333
+Conservative,Device,104,黑色四叶草,28,0.01675298,Medium,Empirical hotspot,1,0.28703333
+Conservative,Device,107,增值透镜,42,0.01460516,High,Empirical hotspot,1,0.06356667
+Conservative,Device,114,Rush Ding,20,0.01406075,Medium,Empirical hotspot,1,0.28363333
+Conservative,Drug,105,摇头丸,15,0.00733333,Medium,Use-window,0,0.00000000
+Conservative,Device,108,资本主义,46,0.00711721,High,Empirical hotspot,1,0.05906667
+Conservative,Device,102,离心机,9,0.00568889,Medium,Empirical hotspot,0,0.00000000
+Conservative,Device,106,弹板,9,0.00568889,Medium,Empirical hotspot,0,0.00000000
+Conservative,Device,110,减速带,9,0.00568889,Medium,Empirical hotspot,0,0.00000000
+Conservative,Device,111,复活吧我的爱人,56,0.00514286,High,Empirical hotspot,1,0.00000000
+Conservative,Device,105,分流器,15,0.00512000,Medium,Empirical hotspot,0,0.00000000
+Conservative,Drug,106,稀血剂,24,0.00458333,Medium,Use-window,0,0.00000000
+Conservative,Device,100,银行,24,0.00430139,Medium,Empirical hotspot,1,0.00000000
+Conservative,Drug,107,无限增值,61,0.00387978,High,Use-window,0,0.00000000
+Conservative,Drug,104,凝血剂,24,0.00345833,Medium,Use-window,0,0.00000000
+Conservative,Device,103,传送门,15,0.00341333,Medium,Empirical hotspot,0,0.00000000
+Conservative,Drug,2,Down Restitution,7,0.00285714,Medium,Use-window,0,0.00000000
+Conservative,Device,101,增幅塔,15,0.00269111,Medium,Empirical hotspot,1,0.00000000
+Conservative,Drug,103,润流剂,9,0.00222222,Medium,Use-window,0,0.00000000
+Conservative,Drug,109,定向试剂（补全名）,9,0.00222222,Medium,Use-window,0,0.00000000
+Conservative,Drug,1,Up Restitution,9,0.00222222,Medium,Use-window,0,0.00000000
+Conservative,Device,112,磁磁磁,24,0.00213333,Medium,Empirical hotspot,0,0.00000000
+Conservative,Device,109,血穿炮,24,0.00133333,Medium,Empirical hotspot,0,0.00000000
+Conservative,Drug,108,磁堕,24,0.00083333,High,Use-window,0,0.00000000
+Recommended,Device,113,Multi Ding,27,0.02392593,Medium,Empirical hotspot,1,0.24746667
+Recommended,Drug,100,肾上腺素,21,0.02378571,Medium,Use-window,1,0.52476667
+Recommended,Drug,102,延长药剂,12,0.02275000,Medium,Use-window,1,0.80283333
+Recommended,Drug,101,烧烧果实,22,0.02263636,Medium,Use-window,1,0.53660000
+Recommended,Device,114,Rush Ding,20,0.01406075,Medium,Empirical hotspot,1,0.27363333
+Recommended,Device,107,增值透镜,46,0.01333515,High,Empirical hotspot,1,0.03866667
+Recommended,Device,104,黑色四叶草,36,0.01303009,Medium,Empirical hotspot,1,0.25086667
+Recommended,Drug,105,摇头丸,15,0.00733333,Medium,Use-window,0,0.00000000
+Recommended,Device,108,资本主义,49,0.00668146,High,Empirical hotspot,1,0.01770000
+Recommended,Device,102,离心机,9,0.00568889,Medium,Empirical hotspot,0,0.00000000
+Recommended,Device,106,弹板,9,0.00568889,Medium,Empirical hotspot,0,0.00000000
+Recommended,Device,110,减速带,9,0.00568889,Medium,Empirical hotspot,0,0.00000000
+Recommended,Device,111,复活吧我的爱人,56,0.00514286,High,Empirical hotspot,1,0.00000000
+Recommended,Device,105,分流器,15,0.00512000,Medium,Empirical hotspot,0,0.00000000
+Recommended,Drug,106,稀血剂,24,0.00458333,Medium,Use-window,0,0.00000000
+Recommended,Device,100,银行,24,0.00430139,Medium,Empirical hotspot,1,0.00000000
+Recommended,Drug,107,无限增值,61,0.00387978,High,Use-window,0,0.00000000
+Recommended,Drug,104,凝血剂,24,0.00345833,Medium,Use-window,0,0.00000000
+Recommended,Device,103,传送门,15,0.00341333,Medium,Empirical hotspot,0,0.00000000
+Recommended,Drug,2,Down Restitution,7,0.00285714,Medium,Use-window,0,0.00000000
+Recommended,Device,101,增幅塔,15,0.00269111,Medium,Empirical hotspot,1,0.00000000
+Recommended,Drug,103,润流剂,9,0.00222222,Medium,Use-window,0,0.00000000
+Recommended,Drug,109,定向试剂（补全名）,9,0.00222222,Medium,Use-window,0,0.00000000
+Recommended,Drug,1,Up Restitution,9,0.00222222,Medium,Use-window,0,0.00000000
+Recommended,Device,112,磁磁磁,24,0.00213333,Medium,Empirical hotspot,0,0.00000000
+Recommended,Device,109,血穿炮,24,0.00133333,Medium,Empirical hotspot,0,0.00000000
+Recommended,Drug,108,磁堕,24,0.00083333,High,Use-window,0,0.00000000
+Experimental,Drug,102,延长药剂,12,0.02275000,Medium,Use-window,1,0.87773333
+Experimental,Device,113,Multi Ding,36,0.01794444,Medium,Empirical hotspot,1,0.04866667
+Experimental,Drug,101,烧烧果实,28,0.01778571,Medium,Use-window,1,0.23853333
+Experimental,Drug,100,肾上腺素,32,0.01560938,Medium,Use-window,1,0.37490000
+Experimental,Device,107,增值透镜,60,0.01022361,High,Empirical hotspot,1,0.00050000
+Experimental,Device,114,Rush Ding,28,0.01004339,Medium,Empirical hotspot,1,0.15393333
+Experimental,Device,104,黑色四叶草,48,0.00977257,Medium,Empirical hotspot,1,0.01430000
+Experimental,Drug,105,摇头丸,15,0.00733333,Medium,Use-window,0,0.00000000
+Experimental,Device,102,离心机,9,0.00568889,Medium,Empirical hotspot,0,0.00000000
+Experimental,Device,106,弹板,9,0.00568889,Medium,Empirical hotspot,0,0.00000000
+Experimental,Device,110,减速带,9,0.00568889,Medium,Empirical hotspot,0,0.00000000
+Experimental,Device,105,分流器,15,0.00512000,Medium,Empirical hotspot,0,0.00000000
+Experimental,Device,108,资本主义,64,0.00511549,High,Empirical hotspot,1,0.00000000
+Experimental,Drug,106,稀血剂,24,0.00458333,Medium,Use-window,0,0.00000000
+Experimental,Device,100,银行,24,0.00430139,Medium,Empirical hotspot,1,0.00000000
+Experimental,Device,111,复活吧我的爱人,72,0.00400000,High,Empirical hotspot,1,0.00000000
+Experimental,Drug,104,凝血剂,24,0.00345833,Medium,Use-window,0,0.00000000
+Experimental,Device,103,传送门,15,0.00341333,Medium,Empirical hotspot,0,0.00000000
+Experimental,Drug,107,无限增值,80,0.00295833,High,Use-window,0,0.00000000
+Experimental,Drug,2,Down Restitution,7,0.00285714,Medium,Use-window,0,0.00000000
+Experimental,Device,101,增幅塔,15,0.00269111,Medium,Empirical hotspot,1,0.00000000
+Experimental,Drug,103,润流剂,9,0.00222222,Medium,Use-window,0,0.00000000
+Experimental,Drug,109,定向试剂（补全名）,9,0.00222222,Medium,Use-window,0,0.00000000
+Experimental,Drug,1,Up Restitution,9,0.00222222,Medium,Use-window,0,0.00000000
+Experimental,Device,112,磁磁磁,24,0.00213333,Medium,Empirical hotspot,0,0.00000000
+Experimental,Device,109,血穿炮,24,0.00133333,Medium,Empirical hotspot,0,0.00000000
+Experimental,Drug,108,磁堕,24,0.00083333,High,Use-window,0,0.00000000

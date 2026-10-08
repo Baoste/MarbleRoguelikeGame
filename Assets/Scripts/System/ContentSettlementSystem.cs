@@ -36,9 +36,9 @@ namespace MarblesECS
             { round.FractionalScore = total - Math.Floor(total); round.Score = MarbleRules.AddScore(round.Score, score, c.Tuning.MaxRoundScore); }
             if (!contact.RushDisabled)
             {
-                bool canRoll = !features.Clover || c.CloverFamilies.Add(features.Family);
+                bool canRoll = features.CloverChance <= 0 || c.CloverFamilies.Add(features.Family);
                 var chance = c.Manager.GetComponentData<MarbleRush>(ball);
-                double probability = Math.Min(1, Math.Max(0, (features.Clover ? .75 : contact.BaseRushChance) + features.RushChanceAdd + chance.RushChanceBonus + modifiers.RushChanceAdd));
+                double probability = Math.Min(1, Math.Max(0, (features.CloverChance > 0 ? features.CloverChance : contact.BaseRushChance) + features.RushChanceAdd + chance.RushChanceBonus + modifiers.RushChanceAdd));
                 bool triggered = canRoll && MarbleRules.Roll(ref round.RandomState, probability);
                 round.RushMeter += AttributeRuntime.Get(c, ball, GameAttribute.BALL_RUSH_GAIN);
                 if (round.RushMeter >= c.Content.RushThreshold)

@@ -16,6 +16,8 @@ namespace MarblesECS
         [OptionalBalanceField] public string Description;
         [OptionalBalanceField] public bool Stackable;
         [OptionalBalanceField] public float VolumeMultiplier = 1;
+        [OptionalBalanceField] public double RushChanceAdd;
+        [OptionalBalanceField] public double RushScoreMultiplier = 1;
         [OptionalBalanceField] public AttributeEffect[] Effects = Array.Empty<AttributeEffect>();
 
         public DrugDefinition Copy()
@@ -27,6 +29,7 @@ namespace MarblesECS
 
         public void Validate()
         {
+            if (RushScoreMultiplier == 0) RushScoreMultiplier = 1;
             BalanceGuard.Range(Id, 1, uint.MaxValue, nameof(Id));
             BalanceGuard.Text(Name, nameof(Name));
             BalanceGuard.Range(Price, 1, BalanceGuard.MaxInteger, nameof(Price));
@@ -34,6 +37,8 @@ namespace MarblesECS
             BalanceGuard.Range(DurationSeconds, 0.1, 300, nameof(DurationSeconds));
             BalanceGuard.Range(StartingCount, 0, 1000, nameof(StartingCount));
             BalanceGuard.Range(VolumeMultiplier, 0.01, 100, nameof(VolumeMultiplier));
+            BalanceGuard.Range(RushChanceAdd, 0, 1, nameof(RushChanceAdd));
+            BalanceGuard.Range(RushScoreMultiplier, 0.01, 100, nameof(RushScoreMultiplier));
         }
     }
 }

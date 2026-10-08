@@ -1,0 +1,535 @@
+{
+    "SchemaVersion": 1,
+    "Scene": "Assets/Scenes/TestScene.unity",
+    "UnityVersion": "2022.3.62f3c1",
+    "GeneratedUtc": "2026-10-02T07:37:43.2705320Z",
+    "Seed": 20260930,
+    "SampleCount": 1800,
+    "FixedStep": 0.01666666753590107,
+    "PhysicsFingerprint": "e0836128665a29db70ba78b9dbfa4232",
+    "Profiles": [
+        {
+            "Lane": "Left",
+            "Flow": 0.0,
+            "Samples": 200,
+            "Outcomes": [
+                {
+                    "Kind": "RandomScore",
+                    "TargetId": 1,
+                    "Multiplier": 1.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": false,
+                    "Count": 52,
+                    "Probability": 0.25999999046325686,
+                    "MeanFlightSeconds": 1.4673069715499879
+                },
+                {
+                    "Kind": "Score",
+                    "TargetId": 2,
+                    "Multiplier": 6.0,
+                    "BaseRushChance": 0.11999999731779099,
+                    "RushEnabled": true,
+                    "Count": 95,
+                    "Probability": 0.4749999940395355,
+                    "MeanFlightSeconds": 1.8278937339782715
+                },
+                {
+                    "Kind": "Score",
+                    "TargetId": 5,
+                    "Multiplier": 1.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": false,
+                    "Count": 53,
+                    "Probability": 0.26499998569488528,
+                    "MeanFlightSeconds": 2.2264137268066408
+                }
+            ],
+            "MeanFlightSeconds": 1.8397489786148072,
+            "MeanPinContacts": 0.0,
+            "MeanDeviceContacts": 0.0,
+            "Hotspots": [
+                {
+                    "DeviceRadius": 0.03999999910593033,
+                    "HitProbability": 0.5849999785423279,
+                    "BoardX": 1.8000000715255738,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.11999999731779099,
+                    "HitProbability": 0.6100000143051148,
+                    "BoardX": 1.899999976158142,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.18000000715255738,
+                    "HitProbability": 0.7450000047683716,
+                    "BoardX": 2.1000001430511476,
+                    "BoardZ": -1.0,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                }
+            ]
+        },
+        {
+            "Lane": "Left",
+            "Flow": 0.5,
+            "Samples": 200,
+            "Outcomes": [
+                {
+                    "Kind": "RandomScore",
+                    "TargetId": 1,
+                    "Multiplier": 1.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": false,
+                    "Count": 66,
+                    "Probability": 0.33000001311302187,
+                    "MeanFlightSeconds": 1.4452013969421387
+                },
+                {
+                    "Kind": "Score",
+                    "TargetId": 2,
+                    "Multiplier": 6.0,
+                    "BaseRushChance": 0.11999999731779099,
+                    "RushEnabled": true,
+                    "Count": 78,
+                    "Probability": 0.38999998569488528,
+                    "MeanFlightSeconds": 1.6794862747192383
+                },
+                {
+                    "Kind": "Score",
+                    "TargetId": 5,
+                    "Multiplier": 1.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": false,
+                    "Count": 56,
+                    "Probability": 0.2800000011920929,
+                    "MeanFlightSeconds": 2.0458321571350099
+                }
+            ],
+            "MeanFlightSeconds": 1.7047491073608399,
+            "MeanPinContacts": 0.0,
+            "MeanDeviceContacts": 0.0,
+            "Hotspots": [
+                {
+                    "DeviceRadius": 0.03999999910593033,
+                    "HitProbability": 0.5600000023841858,
+                    "BoardX": 1.899999976158142,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.11999999731779099,
+                    "HitProbability": 0.699999988079071,
+                    "BoardX": 2.0,
+                    "BoardZ": -0.9000000357627869,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.18000000715255738,
+                    "HitProbability": 0.7900000214576721,
+                    "BoardX": 2.1000001430511476,
+                    "BoardZ": -0.9000000357627869,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                }
+            ]
+        },
+        {
+            "Lane": "Left",
+            "Flow": 1.0,
+            "Samples": 200,
+            "Outcomes": [
+                {
+                    "Kind": "RandomScore",
+                    "TargetId": 1,
+                    "Multiplier": 1.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": false,
+                    "Count": 51,
+                    "Probability": 0.2549999952316284,
+                    "MeanFlightSeconds": 1.3594765663146973
+                },
+                {
+                    "Kind": "Score",
+                    "TargetId": 2,
+                    "Multiplier": 6.0,
+                    "BaseRushChance": 0.11999999731779099,
+                    "RushEnabled": true,
+                    "Count": 88,
+                    "Probability": 0.4399999976158142,
+                    "MeanFlightSeconds": 1.5272719860076905
+                },
+                {
+                    "Kind": "Score",
+                    "TargetId": 5,
+                    "Multiplier": 1.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": false,
+                    "Count": 61,
+                    "Probability": 0.3050000071525574,
+                    "MeanFlightSeconds": 2.05792236328125
+                }
+            ],
+            "MeanFlightSeconds": 1.6463325023651124,
+            "MeanPinContacts": 0.0,
+            "MeanDeviceContacts": 0.0,
+            "Hotspots": [
+                {
+                    "DeviceRadius": 0.03999999910593033,
+                    "HitProbability": 0.5799999833106995,
+                    "BoardX": 1.899999976158142,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.11999999731779099,
+                    "HitProbability": 0.6800000071525574,
+                    "BoardX": 2.1000001430511476,
+                    "BoardZ": -1.0,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.18000000715255738,
+                    "HitProbability": 0.7649999856948853,
+                    "BoardX": 2.1000001430511476,
+                    "BoardZ": -0.9000000357627869,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                }
+            ]
+        },
+        {
+            "Lane": "Center",
+            "Flow": 0.0,
+            "Samples": 200,
+            "Outcomes": [
+                {
+                    "Kind": "RandomScore",
+                    "TargetId": 1,
+                    "Multiplier": 1.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": false,
+                    "Count": 176,
+                    "Probability": 0.8799999952316284,
+                    "MeanFlightSeconds": 1.8686542510986329
+                },
+                {
+                    "Kind": "Score",
+                    "TargetId": 2,
+                    "Multiplier": 6.0,
+                    "BaseRushChance": 0.11999999731779099,
+                    "RushEnabled": true,
+                    "Count": 9,
+                    "Probability": 0.04500000178813934,
+                    "MeanFlightSeconds": 2.827775716781616
+                },
+                {
+                    "Kind": "Score",
+                    "TargetId": 5,
+                    "Multiplier": 1.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": false,
+                    "Count": 6,
+                    "Probability": 0.029999999329447748,
+                    "MeanFlightSeconds": 3.124997615814209
+                },
+                {
+                    "Kind": "Void",
+                    "TargetId": 0,
+                    "Multiplier": 0.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": true,
+                    "Count": 9,
+                    "Probability": 0.04500000178813934,
+                    "MeanFlightSeconds": 2.570368528366089
+                }
+            ],
+            "MeanFlightSeconds": 1.9810822010040284,
+            "MeanPinContacts": 0.0,
+            "MeanDeviceContacts": 0.0,
+            "Hotspots": [
+                {
+                    "DeviceRadius": 0.03999999910593033,
+                    "HitProbability": 0.9549999833106995,
+                    "BoardX": 3.299999952316284,
+                    "BoardZ": -1.100000023841858,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.11999999731779099,
+                    "HitProbability": 0.9549999833106995,
+                    "BoardX": 3.299999952316284,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.18000000715255738,
+                    "HitProbability": 0.9549999833106995,
+                    "BoardX": 3.200000047683716,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                }
+            ]
+        },
+        {
+            "Lane": "Center",
+            "Flow": 0.5,
+            "Samples": 200,
+            "Outcomes": [
+                {
+                    "Kind": "RandomScore",
+                    "TargetId": 1,
+                    "Multiplier": 1.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": false,
+                    "Count": 38,
+                    "Probability": 0.1899999976158142,
+                    "MeanFlightSeconds": 2.12894606590271
+                },
+                {
+                    "Kind": "Score",
+                    "TargetId": 5,
+                    "Multiplier": 1.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": false,
+                    "Count": 152,
+                    "Probability": 0.7599999904632568,
+                    "MeanFlightSeconds": 2.727191209793091
+                },
+                {
+                    "Kind": "Void",
+                    "TargetId": 0,
+                    "Multiplier": 0.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": true,
+                    "Count": 10,
+                    "Probability": 0.05000000074505806,
+                    "MeanFlightSeconds": 2.6049981117248537
+                }
+            ],
+            "MeanFlightSeconds": 2.607414960861206,
+            "MeanPinContacts": 0.0,
+            "MeanDeviceContacts": 0.0,
+            "Hotspots": [
+                {
+                    "DeviceRadius": 0.03999999910593033,
+                    "HitProbability": 0.949999988079071,
+                    "BoardX": 3.299999952316284,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.11999999731779099,
+                    "HitProbability": 0.949999988079071,
+                    "BoardX": 3.4000000953674318,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.18000000715255738,
+                    "HitProbability": 0.949999988079071,
+                    "BoardX": 3.4000000953674318,
+                    "BoardZ": -1.3000000715255738,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                }
+            ]
+        },
+        {
+            "Lane": "Center",
+            "Flow": 1.0,
+            "Samples": 200,
+            "Outcomes": [
+                {
+                    "Kind": "Score",
+                    "TargetId": 2,
+                    "Multiplier": 6.0,
+                    "BaseRushChance": 0.11999999731779099,
+                    "RushEnabled": true,
+                    "Count": 5,
+                    "Probability": 0.02500000037252903,
+                    "MeanFlightSeconds": 3.546663999557495
+                },
+                {
+                    "Kind": "Score",
+                    "TargetId": 5,
+                    "Multiplier": 1.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": false,
+                    "Count": 186,
+                    "Probability": 0.9300000071525574,
+                    "MeanFlightSeconds": 2.3163068294525148
+                },
+                {
+                    "Kind": "Void",
+                    "TargetId": 0,
+                    "Multiplier": 0.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": true,
+                    "Count": 9,
+                    "Probability": 0.04500000178813934,
+                    "MeanFlightSeconds": 2.688887119293213
+                }
+            ],
+            "MeanFlightSeconds": 2.3638317584991457,
+            "MeanPinContacts": 0.0,
+            "MeanDeviceContacts": 0.0,
+            "Hotspots": [
+                {
+                    "DeviceRadius": 0.03999999910593033,
+                    "HitProbability": 0.9549999833106995,
+                    "BoardX": 3.299999952316284,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.11999999731779099,
+                    "HitProbability": 0.9549999833106995,
+                    "BoardX": 3.4000000953674318,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.18000000715255738,
+                    "HitProbability": 0.9549999833106995,
+                    "BoardX": 3.5,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                }
+            ]
+        },
+        {
+            "Lane": "Right",
+            "Flow": 0.0,
+            "Samples": 200,
+            "Outcomes": [
+                {
+                    "Kind": "Void",
+                    "TargetId": 0,
+                    "Multiplier": 0.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": true,
+                    "Count": 200,
+                    "Probability": 1.0,
+                    "MeanFlightSeconds": 2.252748489379883
+                }
+            ],
+            "MeanFlightSeconds": 2.252748489379883,
+            "MeanPinContacts": 0.0,
+            "MeanDeviceContacts": 0.0,
+            "Hotspots": [
+                {
+                    "DeviceRadius": 0.03999999910593033,
+                    "HitProbability": 0.45500001311302187,
+                    "BoardX": 5.599999904632568,
+                    "BoardZ": -1.100000023841858,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.11999999731779099,
+                    "HitProbability": 0.45500001311302187,
+                    "BoardX": 5.599999904632568,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.18000000715255738,
+                    "HitProbability": 0.6000000238418579,
+                    "BoardX": 5.400000095367432,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                }
+            ]
+        },
+        {
+            "Lane": "Right",
+            "Flow": 0.5,
+            "Samples": 200,
+            "Outcomes": [
+                {
+                    "Kind": "Void",
+                    "TargetId": 0,
+                    "Multiplier": 0.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": true,
+                    "Count": 200,
+                    "Probability": 1.0,
+                    "MeanFlightSeconds": 2.2604153156280519
+                }
+            ],
+            "MeanFlightSeconds": 2.2604153156280519,
+            "MeanPinContacts": 0.0,
+            "MeanDeviceContacts": 0.0,
+            "Hotspots": [
+                {
+                    "DeviceRadius": 0.03999999910593033,
+                    "HitProbability": 0.48500001430511477,
+                    "BoardX": 5.0,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.11999999731779099,
+                    "HitProbability": 0.6349999904632568,
+                    "BoardX": 5.099999904632568,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.18000000715255738,
+                    "HitProbability": 0.6349999904632568,
+                    "BoardX": 5.099999904632568,
+                    "BoardZ": -1.3000000715255738,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                }
+            ]
+        },
+        {
+            "Lane": "Right",
+            "Flow": 1.0,
+            "Samples": 200,
+            "Outcomes": [
+                {
+                    "Kind": "Void",
+                    "TargetId": 0,
+                    "Multiplier": 0.0,
+                    "BaseRushChance": 0.0,
+                    "RushEnabled": true,
+                    "Count": 200,
+                    "Probability": 1.0,
+                    "MeanFlightSeconds": 2.2509984970092775
+                }
+            ],
+            "MeanFlightSeconds": 2.2509984970092775,
+            "MeanPinContacts": 0.0,
+            "MeanDeviceContacts": 0.0,
+            "Hotspots": [
+                {
+                    "DeviceRadius": 0.03999999910593033,
+                    "HitProbability": 0.5,
+                    "BoardX": 5.0,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.11999999731779099,
+                    "HitProbability": 0.6499999761581421,
+                    "BoardX": 5.200000286102295,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                },
+                {
+                    "DeviceRadius": 0.18000000715255738,
+                    "HitProbability": 0.800000011920929,
+                    "BoardX": 5.200000286102295,
+                    "BoardZ": -1.2000000476837159,
+                    "Provenance": "EMPIRICAL_BEST_OBSERVED_CELL"
+                }
+            ]
+        }
+    ],
+    "Limitations": [
+        "PhysX is not cross-platform deterministic; Seed reproduces launch choices, not solver bit patterns.",
+        "Hotspot exposure is the best observed legal-path cell, not a promise that a player will place a device there.",
+        "Purchased device effects are excluded from the board sample and are applied by the economy layer.",
+        "No SpecialBall catalog exists in the current runtime; related KPIs are reported as N/A."
+    ]
+}

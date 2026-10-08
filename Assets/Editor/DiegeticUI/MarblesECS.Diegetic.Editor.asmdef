@@ -1,0 +1,6 @@
+{
+  "name": "MarblesECS.Diegetic.Editor",
+  "references": ["MarblesECS.Runtime", "MarblesECS.Rules", "MarblesECS.Editor", "Unity.TextMeshPro", "Unity.Entities", "Unity.Collections"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

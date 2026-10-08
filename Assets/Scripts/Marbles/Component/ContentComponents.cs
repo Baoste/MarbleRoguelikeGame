@@ -18,11 +18,12 @@ namespace MarblesECS
     {
         public ulong Family;
         public int Generation;
+        public int ReplicationGeneration;
         public int PiercesUsed;
         public long BirthTick;
-        public bool Replicates, Magnetic, ExitDown, Revive, Clover, SplitConsumed;
+        public bool Replicates, Magnetic, ExitDown, Revive, SplitConsumed;
         public double RushChanceAdd, RushScoreMultiplier, PortalLockedUntil;
-        public float PierceChance, MagneticRadius;
+        public float PierceChance, MagneticRadius, CloverChance;
         public float RefundBlood;
         public long MovedTick;
     }

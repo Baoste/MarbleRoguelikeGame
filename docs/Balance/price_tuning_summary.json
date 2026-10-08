@@ -1,0 +1,2523 @@
+{
+  "Current": {
+    "Conservative": {
+      "runs": 10000,
+      "win_rate": 0.8729,
+      "round_clear_rate": 0.978176136266076,
+      "round_failure_rate": 0.021823863733924004,
+      "cashout_rate": 0.933772901320421,
+      "average_run_duration": 57.054729619281204,
+      "average_balls_launched": 158.7935,
+      "average_blood_remaining": 42.99344750000002,
+      "average_score": 4189.8354,
+      "average_gold_income": 229.8234,
+      "average_cashout_income": 77.2859,
+      "average_bank_income": 0.0,
+      "average_stage_reward_income": 149.5708,
+      "average_overkill_income": 2.9667,
+      "average_gold_spend": 51.878,
+      "average_purchase_spend": 51.878,
+      "average_refresh_spend": 0.0,
+      "average_gold_stock": 207.9454,
+      "average_purchases": 1.818,
+      "average_refreshes": 0.0,
+      "average_devices": 1.2435,
+      "average_medicines": 0.0,
+      "average_special_balls": null,
+      "score_variance": 205402.95350684,
+      "gold_variance": 1244.81201884,
+      "run_variance": 42.52953236532639,
+      "dead_run_rate": 0.1239,
+      "failure_stage_counts": {
+        "3": 14,
+        "4": 83,
+        "5": 375,
+        "6": 799
+      },
+      "stage_clear_rates": [
+        {
+          "stage": 1,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 2,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 3,
+          "clear_rate": 0.9986
+        },
+        {
+          "stage": 4,
+          "clear_rate": 0.9903
+        },
+        {
+          "stage": 5,
+          "clear_rate": 0.9528
+        },
+        {
+          "stage": 6,
+          "clear_rate": 0.8729
+        }
+      ],
+      "build_strength_curve": [
+        {
+          "stage": 1,
+          "runs_reaching": 10000,
+          "average_strength_index": 2.4350000047683715,
+          "average_devices": 1.0,
+          "average_medicines": 1.0
+        },
+        {
+          "stage": 2,
+          "runs_reaching": 8834,
+          "average_strength_index": 1.7894430656694358,
+          "average_devices": 1.0,
+          "average_medicines": 0.06441023318994793
+        },
+        {
+          "stage": 3,
+          "runs_reaching": 9996,
+          "average_strength_index": 2.044926475584149,
+          "average_devices": 1.047719087635054,
+          "average_medicines": 0.3831532613045218
+        },
+        {
+          "stage": 4,
+          "runs_reaching": 9981,
+          "average_strength_index": 2.085119732735499,
+          "average_devices": 1.1016932171125138,
+          "average_medicines": 0.38312794309187453
+        },
+        {
+          "stage": 5,
+          "runs_reaching": 9903,
+          "average_strength_index": 2.139473397482601,
+          "average_devices": 1.170453397960214,
+          "average_medicines": 0.3876603049580935
+        },
+        {
+          "stage": 6,
+          "runs_reaching": 9525,
+          "average_strength_index": 2.2008462002040834,
+          "average_devices": 1.253753280839895,
+          "average_medicines": 0.38666666666666666
+        }
+      ],
+      "shop_affordability_curve": [
+        {
+          "stage": 1,
+          "observations": 8834,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.6385555807108897,
+          "coins_p25": 59.0,
+          "coins_p50": 61.0,
+          "bundle_cost_p50": 61.0,
+          "bundle_cost_p75": 61.0
+        },
+        {
+          "stage": 2,
+          "observations": 9996,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9998999599839936,
+          "coins_p25": 91.0,
+          "coins_p50": 96.0,
+          "bundle_cost_p50": 61.0,
+          "bundle_cost_p75": 61.0
+        },
+        {
+          "stage": 3,
+          "observations": 9981,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 105.0,
+          "coins_p50": 117.0,
+          "bundle_cost_p50": 61.0,
+          "bundle_cost_p75": 61.0
+        },
+        {
+          "stage": 4,
+          "observations": 9903,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 129.0,
+          "coins_p50": 146.0,
+          "bundle_cost_p50": 61.0,
+          "bundle_cost_p75": 61.0
+        },
+        {
+          "stage": 5,
+          "observations": 9525,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.9990551181102362,
+          "coins_p25": 159.0,
+          "coins_p50": 177.0,
+          "bundle_cost_p50": 99.0,
+          "bundle_cost_p75": 99.0
+        },
+        {
+          "stage": 6,
+          "observations": 8729,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 1.0,
+          "coins_p25": 195.0,
+          "coins_p50": 216.0,
+          "bundle_cost_p50": 99.0,
+          "bundle_cost_p75": 99.0
+        }
+      ],
+      "item_pick_rates": [
+        {
+          "category": "Medicine",
+          "id": 100,
+          "name": "肾上腺素",
+          "pick_rate": 0.8558,
+          "average_copies": 1.5745
+        },
+        {
+          "category": "Device",
+          "id": 113,
+          "name": "Multi Ding",
+          "pick_rate": 0.2209,
+          "average_copies": 0.2435
+        }
+      ]
+    },
+    "Balanced": {
+      "runs": 10000,
+      "win_rate": 0.9806,
+      "round_clear_rate": 0.9955866963920106,
+      "round_failure_rate": 0.004413303607989445,
+      "cashout_rate": 0.9785932026024842,
+      "average_run_duration": 43.53822950220153,
+      "average_balls_launched": 123.9788,
+      "average_blood_remaining": 40.95954866666666,
+      "average_score": 4756.7957,
+      "average_gold_income": 243.2114,
+      "average_cashout_income": 58.1379,
+      "average_bank_income": 0.0,
+      "average_stage_reward_income": 177.2221,
+      "average_overkill_income": 7.8514,
+      "average_gold_spend": 89.6771,
+      "average_purchase_spend": 85.2906,
+      "average_refresh_spend": 4.3865,
+      "average_gold_stock": 183.5343,
+      "average_purchases": 3.572,
+      "average_refreshes": 0.8773,
+      "average_devices": 1.3384,
+      "average_medicines": 1.4617,
+      "average_special_balls": null,
+      "score_variance": 290655.65236151,
+      "gold_variance": 578.21962351,
+      "run_variance": 107.17781876723427,
+      "dead_run_rate": 0.0185,
+      "failure_stage_counts": {
+        "3": 1,
+        "4": 3,
+        "5": 63,
+        "6": 127
+      },
+      "stage_clear_rates": [
+        {
+          "stage": 1,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 2,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 3,
+          "clear_rate": 0.9999
+        },
+        {
+          "stage": 4,
+          "clear_rate": 0.9996
+        },
+        {
+          "stage": 5,
+          "clear_rate": 0.9933
+        },
+        {
+          "stage": 6,
+          "clear_rate": 0.9806
+        }
+      ],
+      "build_strength_curve": [
+        {
+          "stage": 1,
+          "runs_reaching": 10000,
+          "average_strength_index": 2.2550000047683714,
+          "average_devices": 1.0,
+          "average_medicines": 1.0
+        },
+        {
+          "stage": 2,
+          "runs_reaching": 2617,
+          "average_strength_index": 2.473034013657794,
+          "average_devices": 1.1012609858616738,
+          "average_medicines": 1.3148643484906382
+        },
+        {
+          "stage": 3,
+          "runs_reaching": 8183,
+          "average_strength_index": 2.7310485205171915,
+          "average_devices": 1.1120615911035072,
+          "average_medicines": 1.838689967004766
+        },
+        {
+          "stage": 4,
+          "runs_reaching": 6349,
+          "average_strength_index": 2.813526545233343,
+          "average_devices": 1.178768309970074,
+          "average_medicines": 2.0108678532052293
+        },
+        {
+          "stage": 5,
+          "runs_reaching": 8258,
+          "average_strength_index": 2.8795931276578712,
+          "average_devices": 1.224025187696779,
+          "average_medicines": 2.119157180915476
+        },
+        {
+          "stage": 6,
+          "runs_reaching": 8551,
+          "average_strength_index": 2.971707993554673,
+          "average_devices": 1.297041281721436,
+          "average_medicines": 2.2834756168869137
+        }
+      ],
+      "shop_affordability_curve": [
+        {
+          "stage": 1,
+          "observations": 2617,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.5510126098586168,
+          "coins_p25": 57.0,
+          "coins_p50": 58.0,
+          "bundle_cost_p50": 55.0,
+          "bundle_cost_p75": 61.0
+        },
+        {
+          "stage": 2,
+          "observations": 8183,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9882683612367102,
+          "coins_p25": 81.0,
+          "coins_p50": 84.0,
+          "bundle_cost_p50": 55.0,
+          "bundle_cost_p75": 61.0
+        },
+        {
+          "stage": 3,
+          "observations": 6349,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9963773822649236,
+          "coins_p25": 90.0,
+          "coins_p50": 97.0,
+          "bundle_cost_p50": 55.0,
+          "bundle_cost_p75": 61.0
+        },
+        {
+          "stage": 4,
+          "observations": 8258,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 112.0,
+          "coins_p50": 123.0,
+          "bundle_cost_p50": 55.0,
+          "bundle_cost_p75": 61.0
+        },
+        {
+          "stage": 5,
+          "observations": 8551,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.9948544029938019,
+          "coins_p25": 137.0,
+          "coins_p50": 150.0,
+          "bundle_cost_p50": 89.0,
+          "bundle_cost_p75": 99.0
+        },
+        {
+          "stage": 6,
+          "observations": 9806,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.9995920864776667,
+          "coins_p25": 170.0,
+          "coins_p50": 186.0,
+          "bundle_cost_p50": 89.0,
+          "bundle_cost_p75": 99.0
+        }
+      ],
+      "item_pick_rates": [
+        {
+          "category": "Medicine",
+          "id": 101,
+          "name": "烧烧果实",
+          "pick_rate": 0.9012,
+          "average_copies": 1.6257
+        },
+        {
+          "category": "Medicine",
+          "id": 102,
+          "name": "延长药剂",
+          "pick_rate": 0.8569,
+          "average_copies": 1.6079
+        },
+        {
+          "category": "Device",
+          "id": 113,
+          "name": "Multi Ding",
+          "pick_rate": 0.3035,
+          "average_copies": 0.3384
+        }
+      ]
+    },
+    "Aggressive": {
+      "runs": 10000,
+      "win_rate": 0.9574,
+      "round_clear_rate": 0.9887729285262492,
+      "round_failure_rate": 0.01122707147375079,
+      "cashout_rate": 0.9708254269449715,
+      "average_run_duration": 27.343278577324764,
+      "average_balls_launched": 72.8992,
+      "average_blood_remaining": 19.910933929166642,
+      "average_score": 4946.6612,
+      "average_gold_income": 215.9316,
+      "average_cashout_income": 21.2006,
+      "average_bank_income": 0.0,
+      "average_stage_reward_income": 185.5077,
+      "average_overkill_income": 9.2233,
+      "average_gold_spend": 148.0895,
+      "average_purchase_spend": 148.063,
+      "average_refresh_spend": 0.0265,
+      "average_gold_stock": 97.8421,
+      "average_purchases": 5.2914,
+      "average_refreshes": 0.0053,
+      "average_devices": 3.1718,
+      "average_medicines": 0.0359,
+      "average_special_balls": null,
+      "score_variance": 822706.11281456,
+      "gold_variance": 1231.42896759,
+      "run_variance": 36.97052357531497,
+      "dead_run_rate": 0.0214,
+      "failure_stage_counts": {
+        "3": 35,
+        "4": 62,
+        "5": 144,
+        "6": 185
+      },
+      "stage_clear_rates": [
+        {
+          "stage": 1,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 2,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 3,
+          "clear_rate": 0.9965
+        },
+        {
+          "stage": 4,
+          "clear_rate": 0.9903
+        },
+        {
+          "stage": 5,
+          "clear_rate": 0.9759
+        },
+        {
+          "stage": 6,
+          "clear_rate": 0.9574
+        }
+      ],
+      "build_strength_curve": [
+        {
+          "stage": 1,
+          "runs_reaching": 10000,
+          "average_strength_index": 2.390000021457672,
+          "average_devices": 1.0,
+          "average_medicines": 1.0
+        },
+        {
+          "stage": 2,
+          "runs_reaching": 1632,
+          "average_strength_index": 2.5480858710013767,
+          "average_devices": 1.3229166666666667,
+          "average_medicines": 1.048406862745098
+        },
+        {
+          "stage": 3,
+          "runs_reaching": 8212,
+          "average_strength_index": 2.9724982813410046,
+          "average_devices": 1.877496346809547,
+          "average_medicines": 1.1636629322942036
+        },
+        {
+          "stage": 4,
+          "runs_reaching": 4160,
+          "average_strength_index": 3.101272028448841,
+          "average_devices": 2.1552884615384613,
+          "average_medicines": 1.1665865384615384
+        },
+        {
+          "stage": 5,
+          "runs_reaching": 7255,
+          "average_strength_index": 3.50361780454088,
+          "average_devices": 2.8037215713301173,
+          "average_medicines": 1.168435561681599
+        },
+        {
+          "stage": 6,
+          "runs_reaching": 6685,
+          "average_strength_index": 3.7878384953383777,
+          "average_devices": 3.362752430815258,
+          "average_medicines": 1.1640987284966342
+        }
+      ],
+      "shop_affordability_curve": [
+        {
+          "stage": 1,
+          "observations": 1632,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.4099264705882353,
+          "coins_p25": 50.0,
+          "coins_p50": 53.0,
+          "bundle_cost_p50": 51.0,
+          "bundle_cost_p75": 61.0
+        },
+        {
+          "stage": 2,
+          "observations": 8212,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9473940574768631,
+          "coins_p25": 77.0,
+          "coins_p50": 80.0,
+          "bundle_cost_p50": 51.0,
+          "bundle_cost_p75": 61.0
+        },
+        {
+          "stage": 3,
+          "observations": 4160,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.6129807692307693,
+          "coins_p25": 47.0,
+          "coins_p50": 61.0,
+          "bundle_cost_p50": 55.0,
+          "bundle_cost_p75": 61.0
+        },
+        {
+          "stage": 4,
+          "observations": 7255,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.8733287388008271,
+          "coins_p25": 76.0,
+          "coins_p50": 88.0,
+          "bundle_cost_p50": 55.0,
+          "bundle_cost_p75": 61.0
+        },
+        {
+          "stage": 5,
+          "observations": 6685,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.41540762902019446,
+          "coins_p25": 62.0,
+          "coins_p50": 81.0,
+          "bundle_cost_p50": 89.0,
+          "bundle_cost_p75": 99.0
+        },
+        {
+          "stage": 6,
+          "observations": 9574,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.5311259661583455,
+          "coins_p25": 72.0,
+          "coins_p50": 92.0,
+          "bundle_cost_p50": 89.0,
+          "bundle_cost_p75": 99.0
+        }
+      ],
+      "item_pick_rates": [
+        {
+          "category": "Medicine",
+          "id": 101,
+          "name": "烧烧果实",
+          "pick_rate": 0.7619,
+          "average_copies": 1.0727
+        },
+        {
+          "category": "Device",
+          "id": 114,
+          "name": "Rush Ding",
+          "pick_rate": 0.7194,
+          "average_copies": 1.0522
+        },
+        {
+          "category": "Medicine",
+          "id": 102,
+          "name": "延长药剂",
+          "pick_rate": 0.7067,
+          "average_copies": 1.0576
+        },
+        {
+          "category": "Medicine",
+          "id": 100,
+          "name": "肾上腺素",
+          "pick_rate": 0.6919,
+          "average_copies": 0.9893
+        },
+        {
+          "category": "Device",
+          "id": 104,
+          "name": "黑色四叶草",
+          "pick_rate": 0.6438,
+          "average_copies": 0.8205
+        },
+        {
+          "category": "Device",
+          "id": 113,
+          "name": "Multi Ding",
+          "pick_rate": 0.1974,
+          "average_copies": 0.2093
+        },
+        {
+          "category": "Device",
+          "id": 107,
+          "name": "增值透镜",
+          "pick_rate": 0.081,
+          "average_copies": 0.0824
+        },
+        {
+          "category": "Device",
+          "id": 108,
+          "name": "资本主义",
+          "pick_rate": 0.0074,
+          "average_copies": 0.0074
+        }
+      ]
+    }
+  },
+  "PriceConservative": {
+    "Conservative": {
+      "runs": 10000,
+      "win_rate": 0.9063,
+      "round_clear_rate": 0.9839373264305551,
+      "round_failure_rate": 0.01606267356944492,
+      "cashout_rate": 0.9515034113895842,
+      "average_run_duration": 54.63767338038827,
+      "average_balls_launched": 150.6849,
+      "average_blood_remaining": 45.705047666666694,
+      "average_score": 4267.9319,
+      "average_gold_income": 238.7111,
+      "average_cashout_income": 83.5133,
+      "average_bank_income": 0.0,
+      "average_stage_reward_income": 151.7119,
+      "average_overkill_income": 3.4859,
+      "average_gold_spend": 95.5122,
+      "average_purchase_spend": 95.5122,
+      "average_refresh_spend": 0.0,
+      "average_gold_stock": 173.1989,
+      "average_purchases": 3.6459,
+      "average_refreshes": 0.0,
+      "average_devices": 1.2396,
+      "average_medicines": 0.053,
+      "average_special_balls": null,
+      "score_variance": 176869.74826239,
+      "gold_variance": 1011.09033879,
+      "run_variance": 39.49273519376779,
+      "dead_run_rate": 0.0915,
+      "failure_stage_counts": {
+        "3": 10,
+        "4": 58,
+        "5": 274,
+        "6": 595
+      },
+      "stage_clear_rates": [
+        {
+          "stage": 1,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 2,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 3,
+          "clear_rate": 0.999
+        },
+        {
+          "stage": 4,
+          "clear_rate": 0.9932
+        },
+        {
+          "stage": 5,
+          "clear_rate": 0.9658
+        },
+        {
+          "stage": 6,
+          "clear_rate": 0.9063
+        }
+      ],
+      "build_strength_curve": [
+        {
+          "stage": 1,
+          "runs_reaching": 10000,
+          "average_strength_index": 2.4350000047683715,
+          "average_devices": 1.0,
+          "average_medicines": 1.0
+        },
+        {
+          "stage": 2,
+          "runs_reaching": 8834,
+          "average_strength_index": 2.095397050274371,
+          "average_devices": 1.0,
+          "average_medicines": 0.6230473171836088
+        },
+        {
+          "stage": 3,
+          "runs_reaching": 9974,
+          "average_strength_index": 2.245998852001012,
+          "average_devices": 1.0483256466813715,
+          "average_medicines": 0.8676559053539202
+        },
+        {
+          "stage": 4,
+          "runs_reaching": 9952,
+          "average_strength_index": 2.2657913034804573,
+          "average_devices": 1.1007837620578778,
+          "average_medicines": 0.8221463022508039
+        },
+        {
+          "stage": 5,
+          "runs_reaching": 9924,
+          "average_strength_index": 2.3127627524153356,
+          "average_devices": 1.161628375654978,
+          "average_medicines": 0.826279725916969
+        },
+        {
+          "stage": 6,
+          "runs_reaching": 9650,
+          "average_strength_index": 2.372152078482277,
+          "average_devices": 1.2464248704663212,
+          "average_medicines": 0.813678756476684
+        }
+      ],
+      "shop_affordability_curve": [
+        {
+          "stage": 1,
+          "observations": 8834,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9568711795336201,
+          "coins_p25": 59.0,
+          "coins_p50": 61.0,
+          "bundle_cost_p50": 56.0,
+          "bundle_cost_p75": 56.0
+        },
+        {
+          "stage": 2,
+          "observations": 9974,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9998997393222379,
+          "coins_p25": 71.0,
+          "coins_p50": 76.0,
+          "bundle_cost_p50": 56.0,
+          "bundle_cost_p75": 56.0
+        },
+        {
+          "stage": 3,
+          "observations": 9952,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 84.0,
+          "coins_p50": 97.0,
+          "bundle_cost_p50": 56.0,
+          "bundle_cost_p75": 56.0
+        },
+        {
+          "stage": 4,
+          "observations": 9924,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 104.0,
+          "coins_p50": 119.0,
+          "bundle_cost_p50": 56.0,
+          "bundle_cost_p75": 56.0
+        },
+        {
+          "stage": 5,
+          "observations": 9650,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.9990673575129534,
+          "coins_p25": 128.0,
+          "coins_p50": 144.0,
+          "bundle_cost_p50": 90.0,
+          "bundle_cost_p75": 90.0
+        },
+        {
+          "stage": 6,
+          "observations": 9063,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 1.0,
+          "coins_p25": 158.0,
+          "coins_p50": 177.0,
+          "bundle_cost_p50": 90.0,
+          "bundle_cost_p75": 90.0
+        }
+      ],
+      "item_pick_rates": [
+        {
+          "category": "Medicine",
+          "id": 100,
+          "name": "肾上腺素",
+          "pick_rate": 0.8888,
+          "average_copies": 1.8206
+        },
+        {
+          "category": "Medicine",
+          "id": 101,
+          "name": "烧烧果实",
+          "pick_rate": 0.8559,
+          "average_copies": 1.5857
+        },
+        {
+          "category": "Device",
+          "id": 113,
+          "name": "Multi Ding",
+          "pick_rate": 0.2201,
+          "average_copies": 0.2396
+        }
+      ]
+    },
+    "Balanced": {
+      "runs": 10000,
+      "win_rate": 0.9806,
+      "round_clear_rate": 0.9955824756353038,
+      "round_failure_rate": 0.004417524364696238,
+      "cashout_rate": 0.9785044175243647,
+      "average_run_duration": 43.497074556343684,
+      "average_balls_launched": 123.8651,
+      "average_blood_remaining": 40.96641889583333,
+      "average_score": 4754.7665,
+      "average_gold_income": 243.2232,
+      "average_cashout_income": 58.0764,
+      "average_bank_income": 0.0,
+      "average_stage_reward_income": 177.2933,
+      "average_overkill_income": 7.8535,
+      "average_gold_spend": 83.295,
+      "average_purchase_spend": 79.791,
+      "average_refresh_spend": 3.504,
+      "average_gold_stock": 189.9282,
+      "average_purchases": 3.5886,
+      "average_refreshes": 0.876,
+      "average_devices": 1.3372,
+      "average_medicines": 1.4659,
+      "average_special_balls": null,
+      "score_variance": 288088.58897775,
+      "gold_variance": 528.88524476,
+      "run_variance": 107.69548239702233,
+      "dead_run_rate": 0.0185,
+      "failure_stage_counts": {
+        "3": 1,
+        "4": 3,
+        "5": 63,
+        "6": 127
+      },
+      "stage_clear_rates": [
+        {
+          "stage": 1,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 2,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 3,
+          "clear_rate": 0.9999
+        },
+        {
+          "stage": 4,
+          "clear_rate": 0.9996
+        },
+        {
+          "stage": 5,
+          "clear_rate": 0.9933
+        },
+        {
+          "stage": 6,
+          "clear_rate": 0.9806
+        }
+      ],
+      "build_strength_curve": [
+        {
+          "stage": 1,
+          "runs_reaching": 10000,
+          "average_strength_index": 2.2550000047683714,
+          "average_devices": 1.0,
+          "average_medicines": 1.0
+        },
+        {
+          "stage": 2,
+          "runs_reaching": 2617,
+          "average_strength_index": 2.475235007161806,
+          "average_devices": 1.1012609858616738,
+          "average_medicines": 1.3209782193351165
+        },
+        {
+          "stage": 3,
+          "runs_reaching": 8183,
+          "average_strength_index": 2.741519008113428,
+          "average_devices": 1.1120615911035072,
+          "average_medicines": 1.8577538799951119
+        },
+        {
+          "stage": 4,
+          "runs_reaching": 6315,
+          "average_strength_index": 2.814403014305368,
+          "average_devices": 1.1735550277117972,
+          "average_medicines": 2.0212193190815517
+        },
+        {
+          "stage": 5,
+          "runs_reaching": 8252,
+          "average_strength_index": 2.880994310243235,
+          "average_devices": 1.2230974309258362,
+          "average_medicines": 2.124697043141057
+        },
+        {
+          "stage": 6,
+          "runs_reaching": 8549,
+          "average_strength_index": 2.9716136451994055,
+          "average_devices": 1.295473154754942,
+          "average_medicines": 2.286700198853667
+        }
+      ],
+      "shop_affordability_curve": [
+        {
+          "stage": 1,
+          "observations": 2617,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.8876576232327092,
+          "coins_p25": 57.0,
+          "coins_p50": 58.0,
+          "bundle_cost_p50": 50.0,
+          "bundle_cost_p75": 56.0
+        },
+        {
+          "stage": 2,
+          "observations": 8183,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9991445680068435,
+          "coins_p25": 81.0,
+          "coins_p50": 84.0,
+          "bundle_cost_p50": 50.0,
+          "bundle_cost_p75": 56.0
+        },
+        {
+          "stage": 3,
+          "observations": 6315,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9992082343626286,
+          "coins_p25": 92.0,
+          "coins_p50": 99.0,
+          "bundle_cost_p50": 50.0,
+          "bundle_cost_p75": 56.0
+        },
+        {
+          "stage": 4,
+          "observations": 8252,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9998788172564227,
+          "coins_p25": 115.0,
+          "coins_p50": 126.0,
+          "bundle_cost_p50": 50.0,
+          "bundle_cost_p75": 56.0
+        },
+        {
+          "stage": 5,
+          "observations": 8549,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.9994151362732483,
+          "coins_p25": 142.0,
+          "coins_p50": 154.0,
+          "bundle_cost_p50": 81.0,
+          "bundle_cost_p75": 90.0
+        },
+        {
+          "stage": 6,
+          "observations": 9806,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 1.0,
+          "coins_p25": 177.0,
+          "coins_p50": 192.0,
+          "bundle_cost_p50": 81.0,
+          "bundle_cost_p75": 90.0
+        }
+      ],
+      "item_pick_rates": [
+        {
+          "category": "Medicine",
+          "id": 101,
+          "name": "烧烧果实",
+          "pick_rate": 0.9048,
+          "average_copies": 1.6376
+        },
+        {
+          "category": "Medicine",
+          "id": 102,
+          "name": "延长药剂",
+          "pick_rate": 0.8585,
+          "average_copies": 1.6138
+        },
+        {
+          "category": "Device",
+          "id": 113,
+          "name": "Multi Ding",
+          "pick_rate": 0.3036,
+          "average_copies": 0.3372
+        }
+      ]
+    },
+    "Aggressive": {
+      "runs": 10000,
+      "win_rate": 0.9591,
+      "round_clear_rate": 0.9891373632210773,
+      "round_failure_rate": 0.010862636778922767,
+      "cashout_rate": 0.9731488367151812,
+      "average_run_duration": 26.96392976779626,
+      "average_balls_launched": 71.8112,
+      "average_blood_remaining": 20.136652466666643,
+      "average_score": 4985.9745,
+      "average_gold_income": 216.9308,
+      "average_cashout_income": 21.2933,
+      "average_bank_income": 0.0,
+      "average_stage_reward_income": 186.2498,
+      "average_overkill_income": 9.3877,
+      "average_gold_spend": 144.9886,
+      "average_purchase_spend": 144.9842,
+      "average_refresh_spend": 0.0044,
+      "average_gold_stock": 101.9422,
+      "average_purchases": 5.5174,
+      "average_refreshes": 0.0011,
+      "average_devices": 3.3922,
+      "average_medicines": 0.0316,
+      "average_special_balls": null,
+      "score_variance": 892875.88304975,
+      "gold_variance": 1304.70245916,
+      "run_variance": 34.523855219874356,
+      "dead_run_rate": 0.0216,
+      "failure_stage_counts": {
+        "3": 33,
+        "4": 63,
+        "5": 133,
+        "6": 180
+      },
+      "stage_clear_rates": [
+        {
+          "stage": 1,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 2,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 3,
+          "clear_rate": 0.9967
+        },
+        {
+          "stage": 4,
+          "clear_rate": 0.9904
+        },
+        {
+          "stage": 5,
+          "clear_rate": 0.9771
+        },
+        {
+          "stage": 6,
+          "clear_rate": 0.9591
+        }
+      ],
+      "build_strength_curve": [
+        {
+          "stage": 1,
+          "runs_reaching": 10000,
+          "average_strength_index": 2.390000021457672,
+          "average_devices": 1.0,
+          "average_medicines": 1.0
+        },
+        {
+          "stage": 2,
+          "runs_reaching": 1632,
+          "average_strength_index": 2.6198517235847114,
+          "average_devices": 1.431985294117647,
+          "average_medicines": 1.0906862745098038
+        },
+        {
+          "stage": 3,
+          "runs_reaching": 8161,
+          "average_strength_index": 3.0129824033873023,
+          "average_devices": 1.9389780664134297,
+          "average_medicines": 1.1666462443328023
+        },
+        {
+          "stage": 4,
+          "runs_reaching": 4152,
+          "average_strength_index": 3.2002467264337664,
+          "average_devices": 2.3034682080924855,
+          "average_medicines": 1.189306358381503
+        },
+        {
+          "stage": 5,
+          "runs_reaching": 7119,
+          "average_strength_index": 3.606530317017479,
+          "average_devices": 2.96811349908695,
+          "average_medicines": 1.17685068127546
+        },
+        {
+          "stage": 6,
+          "runs_reaching": 6588,
+          "average_strength_index": 3.9458157034697243,
+          "average_devices": 3.6132361870066787,
+          "average_medicines": 1.1734972677595628
+        }
+      ],
+      "shop_affordability_curve": [
+        {
+          "stage": 1,
+          "observations": 1632,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.6274509803921569,
+          "coins_p25": 50.0,
+          "coins_p50": 53.0,
+          "bundle_cost_p50": 47.0,
+          "bundle_cost_p75": 56.0
+        },
+        {
+          "stage": 2,
+          "observations": 8161,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.95980884695503,
+          "coins_p25": 77.0,
+          "coins_p50": 80.0,
+          "bundle_cost_p50": 50.0,
+          "bundle_cost_p75": 56.0
+        },
+        {
+          "stage": 3,
+          "observations": 4152,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.7377167630057804,
+          "coins_p25": 49.0,
+          "coins_p50": 64.0,
+          "bundle_cost_p50": 50.0,
+          "bundle_cost_p75": 56.0
+        },
+        {
+          "stage": 4,
+          "observations": 7119,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9085545722713865,
+          "coins_p25": 78.0,
+          "coins_p50": 90.0,
+          "bundle_cost_p50": 47.0,
+          "bundle_cost_p75": 56.0
+        },
+        {
+          "stage": 5,
+          "observations": 6588,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.5707346690953249,
+          "coins_p25": 66.0,
+          "coins_p50": 88.0,
+          "bundle_cost_p50": 81.0,
+          "bundle_cost_p75": 90.0
+        },
+        {
+          "stage": 6,
+          "observations": 9591,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.6655197581065583,
+          "coins_p25": 75.0,
+          "coins_p50": 97.0,
+          "bundle_cost_p50": 81.0,
+          "bundle_cost_p75": 90.0
+        }
+      ],
+      "item_pick_rates": [
+        {
+          "category": "Device",
+          "id": 114,
+          "name": "Rush Ding",
+          "pick_rate": 0.7626,
+          "average_copies": 1.1496
+        },
+        {
+          "category": "Medicine",
+          "id": 101,
+          "name": "烧烧果实",
+          "pick_rate": 0.761,
+          "average_copies": 1.0674
+        },
+        {
+          "category": "Medicine",
+          "id": 100,
+          "name": "肾上腺素",
+          "pick_rate": 0.7012,
+          "average_copies": 1.0085
+        },
+        {
+          "category": "Medicine",
+          "id": 102,
+          "name": "延长药剂",
+          "pick_rate": 0.7008,
+          "average_copies": 1.0493
+        },
+        {
+          "category": "Device",
+          "id": 104,
+          "name": "黑色四叶草",
+          "pick_rate": 0.678,
+          "average_copies": 0.8943
+        },
+        {
+          "category": "Device",
+          "id": 113,
+          "name": "Multi Ding",
+          "pick_rate": 0.2004,
+          "average_copies": 0.2126
+        },
+        {
+          "category": "Device",
+          "id": 107,
+          "name": "增值透镜",
+          "pick_rate": 0.1149,
+          "average_copies": 0.1179
+        },
+        {
+          "category": "Device",
+          "id": 108,
+          "name": "资本主义",
+          "pick_rate": 0.0178,
+          "average_copies": 0.0178
+        }
+      ]
+    }
+  },
+  "PriceRecommended": {
+    "Conservative": {
+      "runs": 10000,
+      "win_rate": 0.9031,
+      "round_clear_rate": 0.9833785035507222,
+      "round_failure_rate": 0.016621496449277847,
+      "cashout_rate": 0.9575114069093279,
+      "average_run_duration": 54.21212825047661,
+      "average_balls_launched": 149.307,
+      "average_blood_remaining": 45.99649433333336,
+      "average_score": 4265.9772,
+      "average_gold_income": 239.1397,
+      "average_cashout_income": 84.0642,
+      "average_bank_income": 0.0,
+      "average_stage_reward_income": 151.5403,
+      "average_overkill_income": 3.5352,
+      "average_gold_spend": 114.018,
+      "average_purchase_spend": 114.018,
+      "average_refresh_spend": 0.0,
+      "average_gold_stock": 155.1217,
+      "average_purchases": 5.3088,
+      "average_refreshes": 0.0,
+      "average_devices": 1.2693,
+      "average_medicines": 1.3814,
+      "average_special_balls": null,
+      "score_variance": 184285.92368016,
+      "gold_variance": 652.26008911,
+      "run_variance": 41.219322311224225,
+      "dead_run_rate": 0.0943,
+      "failure_stage_counts": {
+        "3": 9,
+        "4": 61,
+        "5": 288,
+        "6": 611
+      },
+      "stage_clear_rates": [
+        {
+          "stage": 1,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 2,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 3,
+          "clear_rate": 0.9991
+        },
+        {
+          "stage": 4,
+          "clear_rate": 0.993
+        },
+        {
+          "stage": 5,
+          "clear_rate": 0.9642
+        },
+        {
+          "stage": 6,
+          "clear_rate": 0.9031
+        }
+      ],
+      "build_strength_curve": [
+        {
+          "stage": 1,
+          "runs_reaching": 10000,
+          "average_strength_index": 2.4350000047683715,
+          "average_devices": 1.0,
+          "average_medicines": 1.0
+        },
+        {
+          "stage": 2,
+          "runs_reaching": 8834,
+          "average_strength_index": 2.2282479673606495,
+          "average_devices": 1.0365632782431515,
+          "average_medicines": 0.9573239755490152
+        },
+        {
+          "stage": 3,
+          "runs_reaching": 9965,
+          "average_strength_index": 2.39995685412928,
+          "average_devices": 1.081685900652283,
+          "average_medicines": 1.380431510286001
+        },
+        {
+          "stage": 4,
+          "runs_reaching": 9948,
+          "average_strength_index": 2.4897770962640373,
+          "average_devices": 1.1306795335745878,
+          "average_medicines": 1.6350020104543628
+        },
+        {
+          "stage": 5,
+          "runs_reaching": 9918,
+          "average_strength_index": 2.621730445286612,
+          "average_devices": 1.1915708812260537,
+          "average_medicines": 1.9780197620488003
+        },
+        {
+          "stage": 6,
+          "runs_reaching": 9633,
+          "average_strength_index": 2.7549304535128325,
+          "average_devices": 1.2776912695941036,
+          "average_medicines": 2.2612893179694797
+        }
+      ],
+      "shop_affordability_curve": [
+        {
+          "stage": 1,
+          "observations": 8834,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9993208059769074,
+          "coins_p25": 59.0,
+          "coins_p50": 61.0,
+          "bundle_cost_p50": 50.0,
+          "bundle_cost_p75": 50.0
+        },
+        {
+          "stage": 2,
+          "observations": 9965,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 72.0,
+          "coins_p50": 75.0,
+          "bundle_cost_p50": 50.0,
+          "bundle_cost_p75": 50.0
+        },
+        {
+          "stage": 3,
+          "observations": 9948,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 85.0,
+          "coins_p50": 91.0,
+          "bundle_cost_p50": 50.0,
+          "bundle_cost_p75": 50.0
+        },
+        {
+          "stage": 4,
+          "observations": 9918,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 102.0,
+          "coins_p50": 110.0,
+          "bundle_cost_p50": 50.0,
+          "bundle_cost_p75": 50.0
+        },
+        {
+          "stage": 5,
+          "observations": 9633,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 1.0,
+          "coins_p25": 122.0,
+          "coins_p50": 132.0,
+          "bundle_cost_p50": 78.0,
+          "bundle_cost_p75": 78.0
+        },
+        {
+          "stage": 6,
+          "observations": 9031,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 1.0,
+          "coins_p25": 148.0,
+          "coins_p50": 161.0,
+          "bundle_cost_p50": 78.0,
+          "bundle_cost_p75": 78.0
+        }
+      ],
+      "item_pick_rates": [
+        {
+          "category": "Medicine",
+          "id": 100,
+          "name": "肾上腺素",
+          "pick_rate": 0.8963,
+          "average_copies": 1.8622
+        },
+        {
+          "category": "Medicine",
+          "id": 101,
+          "name": "烧烧果实",
+          "pick_rate": 0.8561,
+          "average_copies": 1.5994
+        },
+        {
+          "category": "Medicine",
+          "id": 102,
+          "name": "延长药剂",
+          "pick_rate": 0.8459,
+          "average_copies": 1.5779
+        },
+        {
+          "category": "Device",
+          "id": 113,
+          "name": "Multi Ding",
+          "pick_rate": 0.2438,
+          "average_copies": 0.2693
+        }
+      ]
+    },
+    "Balanced": {
+      "runs": 10000,
+      "win_rate": 0.9781,
+      "round_clear_rate": 0.9951304115802815,
+      "round_failure_rate": 0.004869588419718498,
+      "cashout_rate": 0.9770751339692705,
+      "average_run_duration": 44.70398602925586,
+      "average_balls_launched": 127.3957,
+      "average_blood_remaining": 40.103442208333334,
+      "average_score": 4704.3848,
+      "average_gold_income": 240.8564,
+      "average_cashout_income": 58.1061,
+      "average_bank_income": 0.0,
+      "average_stage_reward_income": 175.2014,
+      "average_overkill_income": 7.5489,
+      "average_gold_spend": 91.29,
+      "average_purchase_spend": 91.29,
+      "average_refresh_spend": 0.0,
+      "average_gold_stock": 179.5664,
+      "average_purchases": 4.2736,
+      "average_refreshes": 0.0,
+      "average_devices": 1.2747,
+      "average_medicines": 2.3237,
+      "average_special_balls": null,
+      "score_variance": 257680.94572896,
+      "gold_variance": 629.46079104,
+      "run_variance": 105.46068107804801,
+      "dead_run_rate": 0.0206,
+      "failure_stage_counts": {
+        "3": 1,
+        "4": 4,
+        "5": 65,
+        "6": 149
+      },
+      "stage_clear_rates": [
+        {
+          "stage": 1,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 2,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 3,
+          "clear_rate": 0.9999
+        },
+        {
+          "stage": 4,
+          "clear_rate": 0.9995
+        },
+        {
+          "stage": 5,
+          "clear_rate": 0.993
+        },
+        {
+          "stage": 6,
+          "clear_rate": 0.9781
+        }
+      ],
+      "build_strength_curve": [
+        {
+          "stage": 1,
+          "runs_reaching": 10000,
+          "average_strength_index": 2.2550000047683714,
+          "average_devices": 1.0,
+          "average_medicines": 1.0
+        },
+        {
+          "stage": 2,
+          "runs_reaching": 2617,
+          "average_strength_index": 2.5546255305909362,
+          "average_devices": 1.0863584256782575,
+          "average_medicines": 1.5070691631639281
+        },
+        {
+          "stage": 3,
+          "runs_reaching": 8272,
+          "average_strength_index": 2.8379569684513766,
+          "average_devices": 1.0909090909090908,
+          "average_medicines": 2.0655222437137333
+        },
+        {
+          "stage": 4,
+          "runs_reaching": 6783,
+          "average_strength_index": 3.053014158426476,
+          "average_devices": 1.1318000884564352,
+          "average_medicines": 2.513047324192835
+        },
+        {
+          "stage": 5,
+          "runs_reaching": 8520,
+          "average_strength_index": 3.2042605690015873,
+          "average_devices": 1.1788732394366197,
+          "average_medicines": 2.783333333333333
+        },
+        {
+          "stage": 6,
+          "runs_reaching": 8781,
+          "average_strength_index": 3.4026113258077704,
+          "average_devices": 1.2399498918118665,
+          "average_medicines": 3.1547659719849674
+        }
+      ],
+      "shop_affordability_curve": [
+        {
+          "stage": 1,
+          "observations": 2617,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9969430645777608,
+          "coins_p25": 57.0,
+          "coins_p50": 58.0,
+          "bundle_cost_p50": 44.0,
+          "bundle_cost_p75": 50.0
+        },
+        {
+          "stage": 2,
+          "observations": 8272,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.996615087040619,
+          "coins_p25": 81.0,
+          "coins_p50": 83.0,
+          "bundle_cost_p50": 44.0,
+          "bundle_cost_p75": 50.0
+        },
+        {
+          "stage": 3,
+          "observations": 6783,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9998525726079905,
+          "coins_p25": 89.0,
+          "coins_p50": 97.0,
+          "bundle_cost_p50": 41.0,
+          "bundle_cost_p75": 50.0
+        },
+        {
+          "stage": 4,
+          "observations": 8520,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 109.0,
+          "coins_p50": 121.0,
+          "bundle_cost_p50": 44.0,
+          "bundle_cost_p75": 50.0
+        },
+        {
+          "stage": 5,
+          "observations": 8781,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.9996583532627263,
+          "coins_p25": 133.0,
+          "coins_p50": 147.0,
+          "bundle_cost_p50": 69.0,
+          "bundle_cost_p75": 78.0
+        },
+        {
+          "stage": 6,
+          "observations": 9781,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 1.0,
+          "coins_p25": 165.0,
+          "coins_p50": 182.0,
+          "bundle_cost_p50": 69.0,
+          "bundle_cost_p75": 78.0
+        }
+      ],
+      "item_pick_rates": [
+        {
+          "category": "Medicine",
+          "id": 101,
+          "name": "烧烧果实",
+          "pick_rate": 0.8341,
+          "average_copies": 1.3402
+        },
+        {
+          "category": "Medicine",
+          "id": 102,
+          "name": "延长药剂",
+          "pick_rate": 0.7951,
+          "average_copies": 1.3445
+        },
+        {
+          "category": "Medicine",
+          "id": 100,
+          "name": "肾上腺素",
+          "pick_rate": 0.7872,
+          "average_copies": 1.3142
+        },
+        {
+          "category": "Device",
+          "id": 113,
+          "name": "Multi Ding",
+          "pick_rate": 0.2515,
+          "average_copies": 0.2747
+        }
+      ]
+    },
+    "Aggressive": {
+      "runs": 10000,
+      "win_rate": 0.9576,
+      "round_clear_rate": 0.9886384951365257,
+      "round_failure_rate": 0.01136150486347437,
+      "cashout_rate": 0.9747313700795841,
+      "average_run_duration": 26.527232839715335,
+      "average_balls_launched": 70.5006,
+      "average_blood_remaining": 20.403805862499976,
+      "average_score": 5013.8577,
+      "average_gold_income": 217.8995,
+      "average_cashout_income": 21.4121,
+      "average_bank_income": 0.0,
+      "average_stage_reward_income": 186.9578,
+      "average_overkill_income": 9.5296,
+      "average_gold_spend": 140.8126,
+      "average_purchase_spend": 140.8126,
+      "average_refresh_spend": 0.0,
+      "average_gold_stock": 107.0869,
+      "average_purchases": 5.759,
+      "average_refreshes": 0.0,
+      "average_devices": 3.6453,
+      "average_medicines": 0.0243,
+      "average_special_balls": null,
+      "score_variance": 929764.32105071,
+      "gold_variance": 1388.50234839,
+      "run_variance": 31.67319698301193,
+      "dead_run_rate": 0.0228,
+      "failure_stage_counts": {
+        "3": 23,
+        "4": 58,
+        "5": 144,
+        "6": 199
+      },
+      "stage_clear_rates": [
+        {
+          "stage": 1,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 2,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 3,
+          "clear_rate": 0.9977
+        },
+        {
+          "stage": 4,
+          "clear_rate": 0.9919
+        },
+        {
+          "stage": 5,
+          "clear_rate": 0.9775
+        },
+        {
+          "stage": 6,
+          "clear_rate": 0.9576
+        }
+      ],
+      "build_strength_curve": [
+        {
+          "stage": 1,
+          "runs_reaching": 10000,
+          "average_strength_index": 2.390000021457672,
+          "average_devices": 1.0,
+          "average_medicines": 1.0
+        },
+        {
+          "stage": 2,
+          "runs_reaching": 1632,
+          "average_strength_index": 2.691826754185645,
+          "average_devices": 1.5159313725490196,
+          "average_medicines": 1.1299019607843137
+        },
+        {
+          "stage": 3,
+          "runs_reaching": 8133,
+          "average_strength_index": 3.0636347412763345,
+          "average_devices": 2.017090864379688,
+          "average_medicines": 1.1677117914668633
+        },
+        {
+          "stage": 4,
+          "runs_reaching": 4035,
+          "average_strength_index": 3.3193426250459166,
+          "average_devices": 2.4954151177199506,
+          "average_medicines": 1.1990086741016108
+        },
+        {
+          "stage": 5,
+          "runs_reaching": 7044,
+          "average_strength_index": 3.7298418596772347,
+          "average_devices": 3.1656729131175467,
+          "average_medicines": 1.1760363429869392
+        },
+        {
+          "stage": 6,
+          "runs_reaching": 6475,
+          "average_strength_index": 4.118744378624598,
+          "average_devices": 3.8923552123552123,
+          "average_medicines": 1.1742084942084943
+        }
+      ],
+      "shop_affordability_curve": [
+        {
+          "stage": 1,
+          "observations": 1632,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.8829656862745098,
+          "coins_p25": 50.0,
+          "coins_p50": 53.0,
+          "bundle_cost_p50": 41.0,
+          "bundle_cost_p75": 50.0
+        },
+        {
+          "stage": 2,
+          "observations": 8133,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9681544325587115,
+          "coins_p25": 77.0,
+          "coins_p50": 80.0,
+          "bundle_cost_p50": 44.0,
+          "bundle_cost_p75": 50.0
+        },
+        {
+          "stage": 3,
+          "observations": 4035,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.8560099132589839,
+          "coins_p25": 52.0,
+          "coins_p50": 67.0,
+          "bundle_cost_p50": 41.0,
+          "bundle_cost_p75": 50.0
+        },
+        {
+          "stage": 4,
+          "observations": 7044,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9537194775695628,
+          "coins_p25": 81.0,
+          "coins_p50": 93.0,
+          "bundle_cost_p50": 44.0,
+          "bundle_cost_p75": 50.0
+        },
+        {
+          "stage": 5,
+          "observations": 6475,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.7763706563706564,
+          "coins_p25": 72.0,
+          "coins_p50": 95.0,
+          "bundle_cost_p50": 69.0,
+          "bundle_cost_p75": 78.0
+        },
+        {
+          "stage": 6,
+          "observations": 9576,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.8532790309106099,
+          "coins_p25": 79.0,
+          "coins_p50": 107.0,
+          "bundle_cost_p50": 69.0,
+          "bundle_cost_p75": 78.0
+        }
+      ],
+      "item_pick_rates": [
+        {
+          "category": "Device",
+          "id": 114,
+          "name": "Rush Ding",
+          "pick_rate": 0.795,
+          "average_copies": 1.2343
+        },
+        {
+          "category": "Medicine",
+          "id": 101,
+          "name": "烧烧果实",
+          "pick_rate": 0.7515,
+          "average_copies": 1.0485
+        },
+        {
+          "category": "Device",
+          "id": 104,
+          "name": "黑色四叶草",
+          "pick_rate": 0.7299,
+          "average_copies": 1.0166
+        },
+        {
+          "category": "Medicine",
+          "id": 100,
+          "name": "肾上腺素",
+          "pick_rate": 0.7051,
+          "average_copies": 1.0215
+        },
+        {
+          "category": "Medicine",
+          "id": 102,
+          "name": "延长药剂",
+          "pick_rate": 0.6968,
+          "average_copies": 1.0437
+        },
+        {
+          "category": "Device",
+          "id": 113,
+          "name": "Multi Ding",
+          "pick_rate": 0.2021,
+          "average_copies": 0.213
+        },
+        {
+          "category": "Device",
+          "id": 107,
+          "name": "增值透镜",
+          "pick_rate": 0.144,
+          "average_copies": 0.1487
+        },
+        {
+          "category": "Device",
+          "id": 108,
+          "name": "资本主义",
+          "pick_rate": 0.0327,
+          "average_copies": 0.0327
+        }
+      ]
+    }
+  },
+  "PriceExperimental": {
+    "Conservative": {
+      "runs": 10000,
+      "win_rate": 0.9076,
+      "round_clear_rate": 0.9841493121075926,
+      "round_failure_rate": 0.015850687892407452,
+      "cashout_rate": 0.9591553161560367,
+      "average_run_duration": 53.833933801221534,
+      "average_balls_launched": 148.0563,
+      "average_blood_remaining": 46.416571500000025,
+      "average_score": 4274.8535,
+      "average_gold_income": 240.4165,
+      "average_cashout_income": 85.0123,
+      "average_bank_income": 0.0,
+      "average_stage_reward_income": 151.8106,
+      "average_overkill_income": 3.5936,
+      "average_gold_spend": 104.9508,
+      "average_purchase_spend": 104.9508,
+      "average_refresh_spend": 0.0,
+      "average_gold_stock": 165.4657,
+      "average_purchases": 5.5093,
+      "average_refreshes": 0.0,
+      "average_devices": 1.3084,
+      "average_medicines": 1.4728,
+      "average_special_balls": null,
+      "score_variance": 182123.91083775,
+      "gold_variance": 654.80602351,
+      "run_variance": 42.334160562410524,
+      "dead_run_rate": 0.0899,
+      "failure_stage_counts": {
+        "3": 9,
+        "4": 61,
+        "5": 276,
+        "6": 578
+      },
+      "stage_clear_rates": [
+        {
+          "stage": 1,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 2,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 3,
+          "clear_rate": 0.9991
+        },
+        {
+          "stage": 4,
+          "clear_rate": 0.993
+        },
+        {
+          "stage": 5,
+          "clear_rate": 0.9654
+        },
+        {
+          "stage": 6,
+          "clear_rate": 0.9076
+        }
+      ],
+      "build_strength_curve": [
+        {
+          "stage": 1,
+          "runs_reaching": 10000,
+          "average_strength_index": 2.4350000047683715,
+          "average_devices": 1.0,
+          "average_medicines": 1.0
+        },
+        {
+          "stage": 2,
+          "runs_reaching": 8834,
+          "average_strength_index": 2.2383509785302604,
+          "average_devices": 1.0525243377858275,
+          "average_medicines": 0.9474756622141726
+        },
+        {
+          "stage": 3,
+          "runs_reaching": 9959,
+          "average_strength_index": 2.419468325337608,
+          "average_devices": 1.0957927502761322,
+          "average_medicines": 1.4184155035646149
+        },
+        {
+          "stage": 4,
+          "runs_reaching": 9945,
+          "average_strength_index": 2.540944701314152,
+          "average_devices": 1.1507290095525389,
+          "average_medicines": 1.7559577677224736
+        },
+        {
+          "stage": 5,
+          "runs_reaching": 9912,
+          "average_strength_index": 2.680511507058548,
+          "average_devices": 1.2263922518159807,
+          "average_medicines": 2.0902945924132363
+        },
+        {
+          "stage": 6,
+          "runs_reaching": 9644,
+          "average_strength_index": 2.8142479843007533,
+          "average_devices": 1.3177104935711323,
+          "average_medicines": 2.364682704272086
+        }
+      ],
+      "shop_affordability_curve": [
+        {
+          "stage": 1,
+          "observations": 8834,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 59.0,
+          "coins_p50": 61.0,
+          "bundle_cost_p50": 45.0,
+          "bundle_cost_p75": 45.0
+        },
+        {
+          "stage": 2,
+          "observations": 9959,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 75.0,
+          "coins_p50": 78.0,
+          "bundle_cost_p50": 45.0,
+          "bundle_cost_p75": 45.0
+        },
+        {
+          "stage": 3,
+          "observations": 9945,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 90.0,
+          "coins_p50": 95.0,
+          "bundle_cost_p50": 45.0,
+          "bundle_cost_p75": 45.0
+        },
+        {
+          "stage": 4,
+          "observations": 9912,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 107.0,
+          "coins_p50": 115.0,
+          "bundle_cost_p50": 45.0,
+          "bundle_cost_p75": 45.0
+        },
+        {
+          "stage": 5,
+          "observations": 9644,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 1.0,
+          "coins_p25": 129.0,
+          "coins_p50": 139.0,
+          "bundle_cost_p50": 72.0,
+          "bundle_cost_p75": 72.0
+        },
+        {
+          "stage": 6,
+          "observations": 9076,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 1.0,
+          "coins_p25": 159.0,
+          "coins_p50": 171.0,
+          "bundle_cost_p50": 72.0,
+          "bundle_cost_p75": 72.0
+        }
+      ],
+      "item_pick_rates": [
+        {
+          "category": "Medicine",
+          "id": 100,
+          "name": "肾上腺素",
+          "pick_rate": 0.8985,
+          "average_copies": 1.8685
+        },
+        {
+          "category": "Medicine",
+          "id": 101,
+          "name": "烧烧果实",
+          "pick_rate": 0.8703,
+          "average_copies": 1.6653
+        },
+        {
+          "category": "Medicine",
+          "id": 102,
+          "name": "延长药剂",
+          "pick_rate": 0.8679,
+          "average_copies": 1.6671
+        },
+        {
+          "category": "Device",
+          "id": 113,
+          "name": "Multi Ding",
+          "pick_rate": 0.2738,
+          "average_copies": 0.3084
+        }
+      ]
+    },
+    "Balanced": {
+      "runs": 10000,
+      "win_rate": 0.9781,
+      "round_clear_rate": 0.9951298701298701,
+      "round_failure_rate": 0.00487012987012987,
+      "cashout_rate": 0.9770725849492973,
+      "average_run_duration": 44.69957485318495,
+      "average_balls_launched": 127.3838,
+      "average_blood_remaining": 40.09940335416666,
+      "average_score": 4704.3306,
+      "average_gold_income": 240.8499,
+      "average_cashout_income": 58.0908,
+      "average_bank_income": 0.0,
+      "average_stage_reward_income": 175.2095,
+      "average_overkill_income": 7.5496,
+      "average_gold_spend": 81.6437,
+      "average_purchase_spend": 81.6437,
+      "average_refresh_spend": 0.0,
+      "average_gold_stock": 189.2062,
+      "average_purchases": 4.2997,
+      "average_refreshes": 0.0,
+      "average_devices": 1.2746,
+      "average_medicines": 2.3428,
+      "average_special_balls": null,
+      "score_variance": 257722.59610364,
+      "gold_variance": 549.85448156,
+      "run_variance": 105.36698333740125,
+      "dead_run_rate": 0.0206,
+      "failure_stage_counts": {
+        "3": 1,
+        "4": 4,
+        "5": 65,
+        "6": 149
+      },
+      "stage_clear_rates": [
+        {
+          "stage": 1,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 2,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 3,
+          "clear_rate": 0.9999
+        },
+        {
+          "stage": 4,
+          "clear_rate": 0.9995
+        },
+        {
+          "stage": 5,
+          "clear_rate": 0.993
+        },
+        {
+          "stage": 6,
+          "clear_rate": 0.9781
+        }
+      ],
+      "build_strength_curve": [
+        {
+          "stage": 1,
+          "runs_reaching": 10000,
+          "average_strength_index": 2.2550000047683714,
+          "average_devices": 1.0,
+          "average_medicines": 1.0
+        },
+        {
+          "stage": 2,
+          "runs_reaching": 2617,
+          "average_strength_index": 2.5721188435447,
+          "average_devices": 1.0863584256782575,
+          "average_medicines": 1.5483377913641574
+        },
+        {
+          "stage": 3,
+          "runs_reaching": 8271,
+          "average_strength_index": 2.8467942259732824,
+          "average_devices": 1.090920082214968,
+          "average_medicines": 2.083907629065409
+        },
+        {
+          "stage": 4,
+          "runs_reaching": 6780,
+          "average_strength_index": 3.0628303888751343,
+          "average_devices": 1.131268436578171,
+          "average_medicines": 2.535103244837758
+        },
+        {
+          "stage": 5,
+          "runs_reaching": 8519,
+          "average_strength_index": 3.2137709881310896,
+          "average_devices": 1.1788942364127244,
+          "average_medicines": 2.803498063152952
+        },
+        {
+          "stage": 6,
+          "runs_reaching": 8781,
+          "average_strength_index": 3.4107670028371784,
+          "average_devices": 1.2398360095661087,
+          "average_medicines": 3.172645484568956
+        }
+      ],
+      "shop_affordability_curve": [
+        {
+          "stage": 1,
+          "observations": 2617,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 57.0,
+          "coins_p50": 58.0,
+          "bundle_cost_p50": 41.0,
+          "bundle_cost_p75": 45.0
+        },
+        {
+          "stage": 2,
+          "observations": 8271,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9996372869060574,
+          "coins_p25": 81.0,
+          "coins_p50": 83.0,
+          "bundle_cost_p50": 41.0,
+          "bundle_cost_p75": 45.0
+        },
+        {
+          "stage": 3,
+          "observations": 6780,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 92.0,
+          "coins_p50": 100.0,
+          "bundle_cost_p50": 38.0,
+          "bundle_cost_p75": 45.0
+        },
+        {
+          "stage": 4,
+          "observations": 8519,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 1.0,
+          "coins_p25": 114.0,
+          "coins_p50": 125.0,
+          "bundle_cost_p50": 41.0,
+          "bundle_cost_p75": 45.0
+        },
+        {
+          "stage": 5,
+          "observations": 8781,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 1.0,
+          "coins_p25": 141.0,
+          "coins_p50": 154.0,
+          "bundle_cost_p50": 65.0,
+          "bundle_cost_p75": 72.0
+        },
+        {
+          "stage": 6,
+          "observations": 9781,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 1.0,
+          "coins_p25": 176.0,
+          "coins_p50": 192.0,
+          "bundle_cost_p50": 65.0,
+          "bundle_cost_p75": 72.0
+        }
+      ],
+      "item_pick_rates": [
+        {
+          "category": "Medicine",
+          "id": 101,
+          "name": "烧烧果实",
+          "pick_rate": 0.8348,
+          "average_copies": 1.3424
+        },
+        {
+          "category": "Medicine",
+          "id": 102,
+          "name": "延长药剂",
+          "pick_rate": 0.7979,
+          "average_copies": 1.3534
+        },
+        {
+          "category": "Medicine",
+          "id": 100,
+          "name": "肾上腺素",
+          "pick_rate": 0.7907,
+          "average_copies": 1.3293
+        },
+        {
+          "category": "Device",
+          "id": 113,
+          "name": "Multi Ding",
+          "pick_rate": 0.2514,
+          "average_copies": 0.2746
+        }
+      ]
+    },
+    "Aggressive": {
+      "runs": 10000,
+      "win_rate": 0.9482,
+      "round_clear_rate": 0.9859837107990367,
+      "round_failure_rate": 0.014016289200963282,
+      "cashout_rate": 0.9727250588521795,
+      "average_run_duration": 26.07237067993737,
+      "average_balls_launched": 69.1514,
+      "average_blood_remaining": 20.698299883333313,
+      "average_score": 5016.9298,
+      "average_gold_income": 217.8629,
+      "average_cashout_income": 21.5272,
+      "average_bank_income": 0.0,
+      "average_stage_reward_income": 186.7257,
+      "average_overkill_income": 9.61,
+      "average_gold_spend": 133.9296,
+      "average_purchase_spend": 133.9296,
+      "average_refresh_spend": 0.0,
+      "average_gold_stock": 113.9333,
+      "average_purchases": 6.0337,
+      "average_refreshes": 0.0,
+      "average_devices": 3.9417,
+      "average_medicines": 0.0204,
+      "average_special_balls": null,
+      "score_variance": 1058816.29707196,
+      "gold_variance": 1517.36585111,
+      "run_variance": 29.210548354337778,
+      "dead_run_rate": 0.0296,
+      "failure_stage_counts": {
+        "3": 41,
+        "4": 59,
+        "5": 182,
+        "6": 236
+      },
+      "stage_clear_rates": [
+        {
+          "stage": 1,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 2,
+          "clear_rate": 1.0
+        },
+        {
+          "stage": 3,
+          "clear_rate": 0.9959
+        },
+        {
+          "stage": 4,
+          "clear_rate": 0.99
+        },
+        {
+          "stage": 5,
+          "clear_rate": 0.9718
+        },
+        {
+          "stage": 6,
+          "clear_rate": 0.9482
+        }
+      ],
+      "build_strength_curve": [
+        {
+          "stage": 1,
+          "runs_reaching": 10000,
+          "average_strength_index": 2.390000021457672,
+          "average_devices": 1.0,
+          "average_medicines": 1.0
+        },
+        {
+          "stage": 2,
+          "runs_reaching": 1632,
+          "average_strength_index": 2.824072561520864,
+          "average_devices": 1.6899509803921569,
+          "average_medicines": 1.1464460784313726
+        },
+        {
+          "stage": 3,
+          "runs_reaching": 8051,
+          "average_strength_index": 3.1317805958085145,
+          "average_devices": 2.1376226555707367,
+          "average_medicines": 1.165693702645634
+        },
+        {
+          "stage": 4,
+          "runs_reaching": 3950,
+          "average_strength_index": 3.4723431501998556,
+          "average_devices": 2.7356962025316456,
+          "average_medicines": 1.201772151898734
+        },
+        {
+          "stage": 5,
+          "runs_reaching": 6961,
+          "average_strength_index": 3.875426837974561,
+          "average_devices": 3.4035339750035916,
+          "average_medicines": 1.1728199971268496
+        },
+        {
+          "stage": 6,
+          "runs_reaching": 6363,
+          "average_strength_index": 4.322238159184564,
+          "average_devices": 4.2129498664152125,
+          "average_medicines": 1.1727172717271728
+        }
+      ],
+      "shop_affordability_curve": [
+        {
+          "stage": 1,
+          "observations": 1632,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9852941176470589,
+          "coins_p25": 50.0,
+          "coins_p50": 53.0,
+          "bundle_cost_p50": 38.0,
+          "bundle_cost_p75": 45.0
+        },
+        {
+          "stage": 2,
+          "observations": 8051,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.9790088187802758,
+          "coins_p25": 77.0,
+          "coins_p50": 80.0,
+          "bundle_cost_p50": 41.0,
+          "bundle_cost_p75": 45.0
+        },
+        {
+          "stage": 3,
+          "observations": 3950,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.94,
+          "coins_p25": 57.0,
+          "coins_p50": 70.0,
+          "bundle_cost_p50": 38.0,
+          "bundle_cost_p75": 45.0
+        },
+        {
+          "stage": 4,
+          "observations": 6961,
+          "required_purchases": 2,
+          "required_refreshes": 1,
+          "affordability_rate": 0.981755494900158,
+          "coins_p25": 83.0,
+          "coins_p50": 97.0,
+          "bundle_cost_p50": 41.0,
+          "bundle_cost_p75": 45.0
+        },
+        {
+          "stage": 5,
+          "observations": 6363,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.8725443972968725,
+          "coins_p25": 82.0,
+          "coins_p50": 101.0,
+          "bundle_cost_p50": 65.0,
+          "bundle_cost_p75": 72.0
+        },
+        {
+          "stage": 6,
+          "observations": 9482,
+          "required_purchases": 3,
+          "required_refreshes": 3,
+          "affordability_rate": 0.9311326724319764,
+          "coins_p25": 88.0,
+          "coins_p50": 117.0,
+          "bundle_cost_p50": 65.0,
+          "bundle_cost_p75": 72.0
+        }
+      ],
+      "item_pick_rates": [
+        {
+          "category": "Device",
+          "id": 114,
+          "name": "Rush Ding",
+          "pick_rate": 0.821,
+          "average_copies": 1.3149
+        },
+        {
+          "category": "Device",
+          "id": 104,
+          "name": "黑色四叶草",
+          "pick_rate": 0.7892,
+          "average_copies": 1.1795
+        },
+        {
+          "category": "Medicine",
+          "id": 101,
+          "name": "烧烧果实",
+          "pick_rate": 0.7431,
+          "average_copies": 1.0275
+        },
+        {
+          "category": "Medicine",
+          "id": 100,
+          "name": "肾上腺素",
+          "pick_rate": 0.7048,
+          "average_copies": 1.029
+        },
+        {
+          "category": "Medicine",
+          "id": 102,
+          "name": "延长药剂",
+          "pick_rate": 0.6988,
+          "average_copies": 1.0355
+        },
+        {
+          "category": "Device",
+          "id": 113,
+          "name": "Multi Ding",
+          "pick_rate": 0.2063,
+          "average_copies": 0.2173
+        },
+        {
+          "category": "Device",
+          "id": 107,
+          "name": "增值透镜",
+          "pick_rate": 0.1609,
+          "average_copies": 0.1671
+        },
+        {
+          "category": "Device",
+          "id": 108,
+          "name": "资本主义",
+          "pick_rate": 0.0628,
+          "average_copies": 0.0629
+        }
+      ]
+    }
+  }
+}

@@ -14,14 +14,14 @@ namespace MarblesECS
                 Campaign = new CampaignTuning(),
                 Stages = new[]
                 {
-                    Stage(1, 350, 30, 15, 1), Stage(2, 1000, 40, 20, 1.1),
-                    Stage(3, 2200, 50, 25, 1.2), Stage(4, 4200, 60, 30, 1.3),
-                    Stage(5, 7500, 75, 40, 1.4), Stage(6, 12000, 100, 50, 1.5)
+                    Stage(1, 150, 35, 18, 1), Stage(2, 450, 45, 22, 1.05),
+                    Stage(3, 960, 60, 30, 1.1), Stage(4, 1650, 80, 40, 1.2),
+                    Stage(5, 2520, 105, 52, 1.3), Stage(6, 3750, 135, 68, 1.4)
                 },
                 Devices = new[]
                 {
-                    new DeviceDefinition { Id = 113, Name = "倍分钉", Price = 25, ScoreMultiplier = 2, StartingCount = 2 },
-                    new DeviceDefinition { Id = 114, Name = "Rush 钉", Price = 20, RushChanceAdd = 0.08, StartingCount = 1 }
+                    new DeviceDefinition { Id = 113, Name = "倍分钉", Price = 24, ScoreMultiplier = 2, StartingCount = 1 },
+                    new DeviceDefinition { Id = 114, Name = "Rush 钉", Price = 18, RushChanceAdd = 0.12, StartingCount = 0 }
                 },
                 Drugs = new[]
                 {

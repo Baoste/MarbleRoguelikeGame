@@ -1,0 +1,381 @@
+﻿category_a,id_a,name_a,category_b,id_b,name_b,status,reason
+Device,100,银行,Device,100,银行,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,101,增幅塔,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,102,离心机,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,103,传送门,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,104,黑色四叶草,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,105,分流器,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,106,弹板,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,107,增值透镜,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,108,资本主义,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,109,血穿炮,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,110,减速带,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,111,复活吧我的爱人,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,113,Multi Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,100,银行,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,101,增幅塔,Device,101,增幅塔,Watch,同类乘法可重复，虽有属性上限，仍会在少量触发后接近上限。
+Device,101,增幅塔,Device,102,离心机,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,101,增幅塔,Device,103,传送门,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,101,增幅塔,Device,104,黑色四叶草,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,101,增幅塔,Device,105,分流器,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,101,增幅塔,Device,106,弹板,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,101,增幅塔,Device,107,增值透镜,Watch,至少两个倍率环节相乘；有硬上限，但需要在回流盘面压测触顶速度。
+Device,101,增幅塔,Device,108,资本主义,Watch,至少两个倍率环节相乘；有硬上限，但需要在回流盘面压测触顶速度。
+Device,101,增幅塔,Device,109,血穿炮,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,101,增幅塔,Device,110,减速带,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,101,增幅塔,Device,111,复活吧我的爱人,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,101,增幅塔,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,101,增幅塔,Device,113,Multi Ding,Watch,至少两个倍率环节相乘；有硬上限，但需要在回流盘面压测触顶速度。
+Device,101,增幅塔,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,102,离心机,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,103,传送门,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,104,黑色四叶草,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,105,分流器,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,106,弹板,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,107,增值透镜,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,108,资本主义,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,109,血穿炮,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,110,减速带,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,111,复活吧我的爱人,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,113,Multi Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,102,离心机,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,103,传送门,Device,103,传送门,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,103,传送门,Device,104,黑色四叶草,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,103,传送门,Device,105,分流器,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,103,传送门,Device,106,弹板,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,103,传送门,Device,107,增值透镜,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,103,传送门,Device,108,资本主义,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,103,传送门,Device,109,血穿炮,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,103,传送门,Device,110,减速带,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,103,传送门,Device,111,复活吧我的爱人,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,103,传送门,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,103,传送门,Device,113,Multi Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,103,传送门,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,104,黑色四叶草,Device,104,黑色四叶草,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,104,黑色四叶草,Device,105,分流器,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,104,黑色四叶草,Device,106,弹板,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,104,黑色四叶草,Device,107,增值透镜,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,104,黑色四叶草,Device,108,资本主义,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,104,黑色四叶草,Device,109,血穿炮,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,104,黑色四叶草,Device,110,减速带,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,104,黑色四叶草,Device,111,复活吧我的爱人,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,104,黑色四叶草,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,104,黑色四叶草,Device,113,Multi Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,104,黑色四叶草,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,105,分流器,Device,105,分流器,Safe,分裂代数上限为2且每代总价值守恒。
+Device,105,分流器,Device,106,弹板,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,105,分流器,Device,107,增值透镜,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,105,分流器,Device,108,资本主义,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,105,分流器,Device,109,血穿炮,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,105,分流器,Device,110,减速带,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,105,分流器,Device,111,复活吧我的爱人,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,105,分流器,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,105,分流器,Device,113,Multi Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,105,分流器,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,106,弹板,Device,106,弹板,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,106,弹板,Device,107,增值透镜,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,106,弹板,Device,108,资本主义,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,106,弹板,Device,109,血穿炮,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,106,弹板,Device,110,减速带,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,106,弹板,Device,111,复活吧我的爱人,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,106,弹板,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,106,弹板,Device,113,Multi Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,106,弹板,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,107,增值透镜,Device,107,增值透镜,Watch,至少两个倍率环节相乘；有硬上限，但需要在回流盘面压测触顶速度。
+Device,107,增值透镜,Device,108,资本主义,Watch,基础价值串联为 ×4.995；重复路线仍会复利，但较原 ×6 收敛。
+Device,107,增值透镜,Device,109,血穿炮,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,107,增值透镜,Device,110,减速带,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,107,增值透镜,Device,111,复活吧我的爱人,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,107,增值透镜,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,107,增值透镜,Device,113,Multi Ding,Watch,至少两个倍率环节相乘；有硬上限，但需要在回流盘面压测触顶速度。
+Device,107,增值透镜,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,108,资本主义,Device,108,资本主义,Watch,至少两个倍率环节相乘；有硬上限，但需要在回流盘面压测触顶速度。
+Device,108,资本主义,Device,109,血穿炮,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,108,资本主义,Device,110,减速带,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,108,资本主义,Device,111,复活吧我的爱人,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,108,资本主义,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,108,资本主义,Device,113,Multi Ding,Watch,至少两个倍率环节相乘；有硬上限，但需要在回流盘面压测触顶速度。
+Device,108,资本主义,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,109,血穿炮,Device,109,血穿炮,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,109,血穿炮,Device,110,减速带,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,109,血穿炮,Device,111,复活吧我的爱人,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,109,血穿炮,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,109,血穿炮,Device,113,Multi Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,109,血穿炮,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,110,减速带,Device,110,减速带,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,110,减速带,Device,111,复活吧我的爱人,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,110,减速带,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,110,减速带,Device,113,Multi Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,110,减速带,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,111,复活吧我的爱人,Device,111,复活吧我的爱人,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,111,复活吧我的爱人,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,111,复活吧我的爱人,Device,113,Multi Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,111,复活吧我的爱人,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,112,磁磁磁,Device,112,磁磁磁,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,112,磁磁磁,Device,113,Multi Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,112,磁磁磁,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,113,Multi Ding,Device,113,Multi Ding,Watch,同类乘法可重复，虽有属性上限，仍会在少量触发后接近上限。
+Device,113,Multi Ding,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Device,114,Rush Ding,Device,114,Rush Ding,UNKNOWN,未发现已编码的递归/乘法规则；仍需实际布局或物理变体证据。
+Medicine,1,Up Restitution,Device,100,银行,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,101,增幅塔,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,102,离心机,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,103,传送门,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,104,黑色四叶草,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,105,分流器,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,106,弹板,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,107,增值透镜,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,108,资本主义,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,109,血穿炮,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,110,减速带,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,111,复活吧我的爱人,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,112,磁磁磁,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,113,Multi Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Device,114,Rush Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,100,银行,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,101,增幅塔,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,102,离心机,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,103,传送门,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,104,黑色四叶草,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,105,分流器,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,106,弹板,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,107,增值透镜,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,108,资本主义,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,109,血穿炮,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,110,减速带,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,111,复活吧我的爱人,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,112,磁磁磁,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,113,Multi Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,2,Down Restitution,Device,114,Rush Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,100,银行,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,101,增幅塔,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,102,离心机,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,103,传送门,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,104,黑色四叶草,Watch,SET 与 ADD 合计 88.0%，不再是确定触发。
+Medicine,100,肾上腺素,Device,105,分流器,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,106,弹板,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,107,增值透镜,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,108,资本主义,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,109,血穿炮,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,110,减速带,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,111,复活吧我的爱人,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,112,磁磁磁,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,113,Multi Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,100,肾上腺素,Device,114,Rush Ding,Watch,Rush 点火、倍率或窗口叠加，提高爆发覆盖率；受时长/倍率上限约束。
+Medicine,101,烧烧果实,Device,100,银行,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,101,增幅塔,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,102,离心机,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,103,传送门,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,104,黑色四叶草,Watch,Rush 点火、倍率或窗口叠加，提高爆发覆盖率；受时长/倍率上限约束。
+Medicine,101,烧烧果实,Device,105,分流器,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,106,弹板,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,107,增值透镜,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,108,资本主义,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,109,血穿炮,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,110,减速带,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,111,复活吧我的爱人,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,112,磁磁磁,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,113,Multi Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,101,烧烧果实,Device,114,Rush Ding,Watch,Rush 点火、倍率或窗口叠加，提高爆发覆盖率；受时长/倍率上限约束。
+Medicine,102,延长药剂,Device,100,银行,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,101,增幅塔,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,102,离心机,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,103,传送门,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,104,黑色四叶草,Watch,Rush 点火、倍率或窗口叠加，提高爆发覆盖率；受时长/倍率上限约束。
+Medicine,102,延长药剂,Device,105,分流器,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,106,弹板,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,107,增值透镜,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,108,资本主义,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,109,血穿炮,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,110,减速带,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,111,复活吧我的爱人,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,112,磁磁磁,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,113,Multi Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,102,延长药剂,Device,114,Rush Ding,Watch,Rush 点火、倍率或窗口叠加，提高爆发覆盖率；受时长/倍率上限约束。
+Medicine,103,润流剂,Device,100,银行,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,101,增幅塔,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,102,离心机,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,103,传送门,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,104,黑色四叶草,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,105,分流器,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,106,弹板,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,107,增值透镜,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,108,资本主义,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,109,血穿炮,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,110,减速带,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,111,复活吧我的爱人,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,112,磁磁磁,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,113,Multi Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,103,润流剂,Device,114,Rush Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,100,银行,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,101,增幅塔,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,102,离心机,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,103,传送门,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,104,黑色四叶草,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,105,分流器,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,106,弹板,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,107,增值透镜,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,108,资本主义,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,109,血穿炮,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,110,减速带,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,111,复活吧我的爱人,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,112,磁磁磁,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,113,Multi Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,104,凝血剂,Device,114,Rush Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,100,银行,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,101,增幅塔,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,102,离心机,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,103,传送门,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,104,黑色四叶草,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,105,分流器,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,106,弹板,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,107,增值透镜,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,108,资本主义,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,109,血穿炮,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,110,减速带,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,111,复活吧我的爱人,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,112,磁磁磁,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,113,Multi Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,105,摇头丸,Device,114,Rush Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,100,银行,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,101,增幅塔,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,102,离心机,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,103,传送门,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,104,黑色四叶草,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,105,分流器,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,106,弹板,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,107,增值透镜,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,108,资本主义,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,109,血穿炮,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,110,减速带,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,111,复活吧我的爱人,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,112,磁磁磁,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,113,Multi Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,106,稀血剂,Device,114,Rush Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,107,无限增值,Device,100,银行,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,101,增幅塔,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,102,离心机,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,103,传送门,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,104,黑色四叶草,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,105,分流器,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,106,弹板,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,107,增值透镜,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,108,资本主义,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,109,血穿炮,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,110,减速带,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,111,复活吧我的爱人,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,112,磁磁磁,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,113,Multi Ding,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,107,无限增值,Device,114,Rush Ding,Watch,复制体继承能力，但独立复制代数封顶 2；单颗原球最多 4 球。
+Medicine,108,磁堕,Device,100,银行,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,101,增幅塔,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,102,离心机,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,103,传送门,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,104,黑色四叶草,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,105,分流器,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,106,弹板,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,107,增值透镜,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,108,资本主义,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,109,血穿炮,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,110,减速带,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,111,复活吧我的爱人,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,112,磁磁磁,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,113,Multi Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,108,磁堕,Device,114,Rush Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,100,银行,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,101,增幅塔,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,102,离心机,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,103,传送门,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,104,黑色四叶草,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,105,分流器,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,106,弹板,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,107,增值透镜,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,108,资本主义,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,109,血穿炮,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,110,减速带,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,111,复活吧我的爱人,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,112,磁磁磁,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,113,Multi Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,109,定向试剂（补全名）,Device,114,Rush Ding,UNKNOWN,路线或临时窗口效果未建立配对物理样本，不能宣称安全。
+Medicine,1,Up Restitution,Medicine,1,Up Restitution,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,1,Up Restitution,Medicine,2,Down Restitution,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,1,Up Restitution,Medicine,100,肾上腺素,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,1,Up Restitution,Medicine,101,烧烧果实,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,1,Up Restitution,Medicine,102,延长药剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,1,Up Restitution,Medicine,103,润流剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,1,Up Restitution,Medicine,104,凝血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,1,Up Restitution,Medicine,105,摇头丸,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,1,Up Restitution,Medicine,106,稀血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,1,Up Restitution,Medicine,107,无限增值,Watch,包含复制药物，但独立复制代数封顶 2，不再只依赖全局球数上限。
+Medicine,1,Up Restitution,Medicine,108,磁堕,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,1,Up Restitution,Medicine,109,定向试剂（补全名）,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,2,Down Restitution,Medicine,2,Down Restitution,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,2,Down Restitution,Medicine,100,肾上腺素,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,2,Down Restitution,Medicine,101,烧烧果实,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,2,Down Restitution,Medicine,102,延长药剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,2,Down Restitution,Medicine,103,润流剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,2,Down Restitution,Medicine,104,凝血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,2,Down Restitution,Medicine,105,摇头丸,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,2,Down Restitution,Medicine,106,稀血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,2,Down Restitution,Medicine,107,无限增值,Watch,包含复制药物，但独立复制代数封顶 2，不再只依赖全局球数上限。
+Medicine,2,Down Restitution,Medicine,108,磁堕,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,2,Down Restitution,Medicine,109,定向试剂（补全名）,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,100,肾上腺素,Medicine,100,肾上腺素,Watch,Rush 概率、倍率与持续时间可在同一窗口协同。
+Medicine,100,肾上腺素,Medicine,101,烧烧果实,Watch,Rush 概率、倍率与持续时间可在同一窗口协同。
+Medicine,100,肾上腺素,Medicine,102,延长药剂,Watch,Rush 概率、倍率与持续时间可在同一窗口协同。
+Medicine,100,肾上腺素,Medicine,103,润流剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,100,肾上腺素,Medicine,104,凝血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,100,肾上腺素,Medicine,105,摇头丸,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,100,肾上腺素,Medicine,106,稀血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,100,肾上腺素,Medicine,107,无限增值,Watch,包含复制药物，但独立复制代数封顶 2，不再只依赖全局球数上限。
+Medicine,100,肾上腺素,Medicine,108,磁堕,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,100,肾上腺素,Medicine,109,定向试剂（补全名）,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,101,烧烧果实,Medicine,101,烧烧果实,Watch,Rush 概率、倍率与持续时间可在同一窗口协同。
+Medicine,101,烧烧果实,Medicine,102,延长药剂,Watch,Rush 概率、倍率与持续时间可在同一窗口协同。
+Medicine,101,烧烧果实,Medicine,103,润流剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,101,烧烧果实,Medicine,104,凝血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,101,烧烧果实,Medicine,105,摇头丸,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,101,烧烧果实,Medicine,106,稀血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,101,烧烧果实,Medicine,107,无限增值,Watch,包含复制药物，但独立复制代数封顶 2，不再只依赖全局球数上限。
+Medicine,101,烧烧果实,Medicine,108,磁堕,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,101,烧烧果实,Medicine,109,定向试剂（补全名）,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,102,延长药剂,Medicine,102,延长药剂,Watch,Rush 概率、倍率与持续时间可在同一窗口协同。
+Medicine,102,延长药剂,Medicine,103,润流剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,102,延长药剂,Medicine,104,凝血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,102,延长药剂,Medicine,105,摇头丸,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,102,延长药剂,Medicine,106,稀血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,102,延长药剂,Medicine,107,无限增值,Watch,包含复制药物，但独立复制代数封顶 2，不再只依赖全局球数上限。
+Medicine,102,延长药剂,Medicine,108,磁堕,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,102,延长药剂,Medicine,109,定向试剂（补全名）,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,103,润流剂,Medicine,103,润流剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,103,润流剂,Medicine,104,凝血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,103,润流剂,Medicine,105,摇头丸,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,103,润流剂,Medicine,106,稀血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,103,润流剂,Medicine,107,无限增值,Watch,包含复制药物，但独立复制代数封顶 2，不再只依赖全局球数上限。
+Medicine,103,润流剂,Medicine,108,磁堕,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,103,润流剂,Medicine,109,定向试剂（补全名）,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,104,凝血剂,Medicine,104,凝血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,104,凝血剂,Medicine,105,摇头丸,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,104,凝血剂,Medicine,106,稀血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,104,凝血剂,Medicine,107,无限增值,Watch,包含复制药物，但独立复制代数封顶 2，不再只依赖全局球数上限。
+Medicine,104,凝血剂,Medicine,108,磁堕,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,104,凝血剂,Medicine,109,定向试剂（补全名）,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,105,摇头丸,Medicine,105,摇头丸,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,105,摇头丸,Medicine,106,稀血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,105,摇头丸,Medicine,107,无限增值,Watch,包含复制药物，但独立复制代数封顶 2，不再只依赖全局球数上限。
+Medicine,105,摇头丸,Medicine,108,磁堕,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,105,摇头丸,Medicine,109,定向试剂（补全名）,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,106,稀血剂,Medicine,106,稀血剂,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,106,稀血剂,Medicine,107,无限增值,Watch,包含复制药物，但独立复制代数封顶 2，不再只依赖全局球数上限。
+Medicine,106,稀血剂,Medicine,108,磁堕,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,106,稀血剂,Medicine,109,定向试剂（补全名）,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,107,无限增值,Medicine,107,无限增值,Watch,包含复制药物，但独立复制代数封顶 2，不再只依赖全局球数上限。
+Medicine,107,无限增值,Medicine,108,磁堕,Watch,包含复制药物，但独立复制代数封顶 2，不再只依赖全局球数上限。
+Medicine,107,无限增值,Medicine,109,定向试剂（补全名）,Watch,包含复制药物，但独立复制代数封顶 2，不再只依赖全局球数上限。
+Medicine,108,磁堕,Medicine,108,磁堕,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,108,磁堕,Medicine,109,定向试剂（补全名）,UNKNOWN,缺少该双药窗口的物理变体采样。
+Medicine,109,定向试剂（补全名）,Medicine,109,定向试剂（补全名）,UNKNOWN,缺少该双药窗口的物理变体采样。
+Device,*,全部装置,SpecialBall,N/A,运行时无目录,N/A,当前项目没有 SpecialBall 数据或库存系统。
+SpecialBall,N/A,运行时无目录,SpecialBall,N/A,运行时无目录,N/A,当前项目没有 SpecialBall 数据或库存系统。

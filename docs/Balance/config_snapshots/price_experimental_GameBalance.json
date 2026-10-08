@@ -1,0 +1,72 @@
+{
+  "Marble": {
+    "InitialBlood": 100.0,
+    "BloodCapacity": 100.0,
+    "MinInvestment": 1.0,
+    "MaxInvestment": 5.0,
+    "MarbleDefinitionId": 1,
+    "FireIntervalSeconds": 0.30000001192092896,
+    "MaxActiveMarbles": 256,
+    "DrainTimeoutSeconds": 15.0,
+    "DespawnBelowY": -10.0,
+    "WorldBoundsExtent": 200.0,
+    "MaxActiveBounceDrugs": 16,
+    "MaxPerMarbleScore": 1000000000,
+    "MaxRoundScore": 9000000000000,
+    "TargetScore": 350,
+    "RandomSeed": 12345
+  },
+  "Campaign": {
+    "StartingCoins": 30,
+    "ShopRefreshCost": 3,
+    "ShopOfferCount": 4,
+    "SellRatio": 0.5,
+    "MaxOwnedDevices": 20,
+    "MaxDrugInventory": 30,
+    "MaxTotalScore": 9000000000000000
+  },
+  "Stages": [
+    {
+      "Id": 1,
+      "TargetScore": 160,
+      "RewardCoins": 22,
+      "SkipRewardCoins": 12,
+      "CashoutRate": 0.7
+    },
+    {
+      "Id": 2,
+      "TargetScore": 490,
+      "RewardCoins": 28,
+      "SkipRewardCoins": 15,
+      "CashoutRate": 0.75
+    },
+    {
+      "Id": 3,
+      "TargetScore": 1040,
+      "RewardCoins": 36,
+      "SkipRewardCoins": 20,
+      "CashoutRate": 0.8
+    },
+    {
+      "Id": 4,
+      "TargetScore": 1800,
+      "RewardCoins": 46,
+      "SkipRewardCoins": 25,
+      "CashoutRate": 0.9
+    },
+    {
+      "Id": 5,
+      "TargetScore": 2800,
+      "RewardCoins": 58,
+      "SkipRewardCoins": 32,
+      "CashoutRate": 1.0
+    },
+    {
+      "Id": 6,
+      "TargetScore": 4000,
+      "RewardCoins": 75,
+      "SkipRewardCoins": 40,
+      "CashoutRate": 1.1
+    }
+  ]
+}
