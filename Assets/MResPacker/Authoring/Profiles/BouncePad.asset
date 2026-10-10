@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edcc8d922cbaa444bbd823733e49714d, type: 3}
+  m_Name: BouncePad
+  m_EditorClassIdentifier: 
+  SourcePrefab: {fileID: 6192186376052046272, guid: 31abbabb81416dd459b1ff657b09434f, type: 3}
+  LuaScript: {fileID: 102900000, guid: 747fbf39c58dc284ca02cb1074a60717, type: 3}
+  Metadata:
+    name: "\u793A\u4F8B\u5F39\u5C04\u53F0"
+    description: "\u4FDD\u6301\u6216\u63D0\u9AD8\u901F\u5EA6\uFF0C\u5E76\u6CBF\u88C5\u7F6E\u51FA\u53E3\u671D\u5411\u5F39\u51FA\u3002"
+    value: 120
+    type: device
+  ShaderRegistry: {fileID: 11400000, guid: 6a02c0d8ec667c24db7ad0a9bed082f4, type: 2}
+  OutputPath: Assets/MResPacker/Output/BouncePad.mres
+  ExtraFiles:
+  - VirtualPath: game/device.json
+    Source: {fileID: 4900000, guid: 016d2409cbceb0a489887fcf901c335e, type: 3}

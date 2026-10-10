@@ -11,6 +11,7 @@ namespace MarblesECS
             ThrowIfDisposed();
             if (context.Balance == null) throw new InvalidOperationException("Construct with GameBalance to start a campaign.");
             ResetRound(physics);
+            context.DeviceScripts.Clear();
             if (AttributeRuntime.Enabled(context))
             {
                 context.Manager.GetBuffer<AttributeModifierData>(context.PlayerEntity).Clear();

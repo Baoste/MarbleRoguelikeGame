@@ -1,0 +1,6 @@
+{
+  "name": "MRes.Runtime",
+  "rootNamespace": "MRes",
+  "references": ["XLua.Runtime"],
+  "autoReferenced": true
+}

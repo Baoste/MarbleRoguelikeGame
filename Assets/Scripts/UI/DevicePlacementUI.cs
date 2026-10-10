@@ -10,13 +10,6 @@ using UnityEngine.Serialization;
 [DisallowMultipleComponent]
 public sealed class DevicePlacementUI : MonoBehaviour
 {
-    [Serializable]
-    public sealed class DevicePrefabBinding
-    {
-        [Min(1)] public int DefinitionId = 100;
-        public GameObject Prefab;
-    }
-
     public MarbleGameController Controller;
     public Camera ViewCamera;
     [Tooltip("装置位置以此对象的局部 X/Z 坐标保存。")]
@@ -24,7 +17,6 @@ public sealed class DevicePlacementUI : MonoBehaviour
     [Tooltip("用于控制放置平面位置和旋转的 Transform。未绑定时使用 BoardRoot。")]
     public Transform PlacementPlane;
     public Vector2 PlacementPlaneSize = new Vector2(8f, 9.5f);
-    public DevicePrefabBinding[] DevicePrefabs = Array.Empty<DevicePrefabBinding>();
     [FormerlySerializedAs("DeviceLocalY")]
     [Tooltip("装置沿 PlacementPlane 法线方向与平面的距离。")]
     public float DevicePlaneDistance;
@@ -35,8 +27,9 @@ public sealed class DevicePlacementUI : MonoBehaviour
     public int SelectedInstanceId { get; private set; }
     public string LastFeedback { get; private set; }
 
-    private readonly Dictionary<int, GameObject> placedObjects = new Dictionary<int, GameObject>();
-    private GameObject previewObject;
+    private readonly Dictionary<int, MRes.MResLoadHandle> placedObjects = new Dictionary<int, MRes.MResLoadHandle>();
+    private MRes.MResLoadHandle preview;
+    private GameObject previewObject => preview?.Root;
     private int displayedRevision = -1;
     private int displayedRoundId = -1;
 
@@ -47,29 +40,17 @@ public sealed class DevicePlacementUI : MonoBehaviour
             LastFeedback = "Device can only be selected during Build.";
             return;
         }
-        GameObject prefab = FindPrefab(device.DefinitionId);
-        if (prefab == null && device.Kind == DeviceKind.LegacyPin)
-        {
-            Debug.LogError("No device prefab is bound for DefinitionId " + device.DefinitionId, this);
-            LastFeedback = "Missing prefab for DefinitionId " + device.DefinitionId + ".";
-            return;
-        }
-
         CancelPlacement();
+        preview = MResDeviceView.Create(device, BoardRoot, null, true);
         SelectedInstanceId = instanceId;
-        previewObject = prefab != null ? Instantiate(prefab, BoardRoot) : ContentDeviceView.Create(device, BoardRoot);
-        previewObject.name = device.Name + " Preview";
-        ConfigurePin(previewObject, device);
-        SetPreviewPhysics(false);
         LastFeedback = "Move the pointer over the placement plane and left-click to place.";
     }
 
     public void CancelPlacement()
     {
         SelectedInstanceId = 0;
-        if (previewObject != null)
-            Destroy(previewObject);
-        previewObject = null;
+        preview?.Dispose();
+        preview = null;
     }
 
     private void Update()
@@ -173,34 +154,19 @@ public sealed class DevicePlacementUI : MonoBehaviour
         displayedRevision = revision;
         displayedRoundId = roundId;
 
-        foreach (GameObject item in placedObjects.Values)
-            if (item != null) { item.SetActive(false); Destroy(item); }
+        foreach (var item in placedObjects.Values) item.Dispose();
         placedObjects.Clear();
-
         foreach (OwnedDeviceSnapshot device in Controller.GetOwnedDevices())
         {
             if (!device.Placed) continue;
-            GameObject prefab = FindPrefab(device.DefinitionId);
-            if (prefab == null && device.Kind == DeviceKind.LegacyPin) continue;
-            GameObject item = prefab != null ? Instantiate(prefab, BoardRoot) : ContentDeviceView.Create(device, BoardRoot);
-            item.name = device.Name + " #" + device.InstanceId;
+            var handle = MResDeviceView.Create(device, BoardRoot, Controller.DeviceScript(device));
+            var item = handle.Root;
             SetDeviceTransform(item.transform, device.X, device.Z);
             item.transform.rotation *= Quaternion.Euler(0, device.Angle, 0);
-            ConfigurePin(item, device);
-            placedObjects.Add(device.InstanceId, item);
+            placedObjects.Add(device.InstanceId, handle);
+            item.SetActive(true);
         }
         Physics.SyncTransforms();
-    }
-
-    private void ConfigurePin(GameObject item, OwnedDeviceSnapshot device)
-    {
-        if (device.Kind != DeviceKind.LegacyPin) { ContentDeviceView.Configure(item, device); return; }
-        MarblePin pin = item.GetComponentInChildren<MarblePin>(true);
-        if (pin == null)
-            pin = item.AddComponent<MarblePin>();
-        pin.TargetId = checked(100000 + device.InstanceId);
-        pin.ScoreMultiplier = (float)device.ScoreMultiplier;
-        pin.RushChanceAdd = (float)device.RushChanceAdd;
     }
 
     private void SetDeviceTransform(Transform device, float boardX, float boardZ)
@@ -235,23 +201,6 @@ public sealed class DevicePlacementUI : MonoBehaviour
         rotation = planeTransform.rotation;
     }
 
-    private void SetPreviewPhysics(bool enabled)
-    {
-        foreach (Collider collider in previewObject.GetComponentsInChildren<Collider>(true))
-            collider.enabled = enabled;
-        foreach (MarblePin pin in previewObject.GetComponentsInChildren<MarblePin>(true))
-            pin.enabled = enabled;
-        foreach (MarbleDevice device in previewObject.GetComponentsInChildren<MarbleDevice>(true)) device.enabled = enabled;
-    }
-
-    private GameObject FindPrefab(uint definitionId)
-    {
-        foreach (DevicePrefabBinding binding in DevicePrefabs)
-            if (binding != null && binding.DefinitionId > 0 && (uint)binding.DefinitionId == definitionId)
-                return binding.Prefab;
-        return null;
-    }
-
     private bool TryGetDevice(int instanceId, out OwnedDeviceSnapshot result)
     {
         if (Controller != null && Controller.IsReady && Controller.Session.Phase == RoundPhase.Build)
@@ -268,6 +217,13 @@ public sealed class DevicePlacementUI : MonoBehaviour
     private void OnDisable()
     {
         CancelPlacement();
+    }
+
+    private void OnDestroy()
+    {
+        CancelPlacement();
+        foreach (var item in placedObjects.Values) item.Dispose();
+        placedObjects.Clear();
     }
 
     private void OnDrawGizmos()

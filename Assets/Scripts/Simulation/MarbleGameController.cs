@@ -45,6 +45,7 @@ namespace MarblesECS.PhysX
         public event Action<RandomScoreResult> RandomScoreSettled;
 
         private MarbleSimulation simulation;
+        internal MRes.MResLuaScript DeviceScript(OwnedDeviceSnapshot device) => simulation.Context.DeviceScripts.Get(device.InstanceId, device.DefinitionId);
         private MarblePhysicsBridge bridge;
         private PhysicsScene localPhysics;
         private Scene localScene;

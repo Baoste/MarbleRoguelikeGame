@@ -1,0 +1,7 @@
+{
+  "name": "MResPacker.Editor",
+  "rootNamespace": "MResPacker",
+  "references": [],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false
+}

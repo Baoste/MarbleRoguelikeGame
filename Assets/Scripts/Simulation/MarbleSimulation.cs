@@ -158,6 +158,7 @@ namespace MarblesECS
         {
             if (disposed) return;
             disposed = true;
+            context.DeviceScripts.Clear();
             // Entities' global shutdown also disposes manually owned worlds before some MB callbacks.
             if (!context.World.IsCreated)
             {

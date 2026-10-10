@@ -75,7 +75,7 @@ namespace MarblesECS.PhysX
         private void ReportSensor(MarbleBody view, Collider collider)
         {
             if (collider == null || !collider.isTrigger) return;
-            var device = collider.GetComponentInParent<MarbleDevice>();
+            var device = collider.GetComponentInParent<MResDeviceBody>();
             if (device != null) { ReportDevice(view, device); return; }
             var zone = collider.GetComponentInParent<MarbleZone>();
             if (zone != null && zone.isActiveAndEnabled && zone.IsValid)

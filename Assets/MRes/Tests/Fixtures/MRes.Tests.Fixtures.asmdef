@@ -1,0 +1,6 @@
+{
+  "name": "MRes.Tests.Fixtures",
+  "references": ["MRes.Runtime"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}

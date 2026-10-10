@@ -24,7 +24,7 @@ namespace MarblesECS
             {
                 var candidate = new Candidate { Kind = ShopItemKind.Device, Id = definition.Id, Price = definition.Price };
                 all.Add(candidate);
-                if (definition.Kind == DeviceKind.Clover || definition.RushChanceAdd > 0) rushDevices.Add(candidate);
+                if (definition.RushCategory || definition.RushChanceAdd > 0) rushDevices.Add(candidate);
             }
             foreach (var definition in balance.Drugs)
             {
@@ -69,7 +69,7 @@ namespace MarblesECS
             if (offer.Kind == ShopItemKind.Device)
             {
                 var definition = CampaignStateUtility.Device(context, offer.DefinitionId);
-                int quantity = definition.Kind == DeviceKind.Portal ? 2 : 1;
+                int quantity = definition.PurchaseQuantity;
                 if (context.DeviceQuery.CalculateEntityCount() + quantity > context.Balance.Campaign.MaxOwnedDevices ||
                     context.Campaign.NextDeviceId >= int.MaxValue - 100000) return false;
                 CampaignStateUtility.CreateDevice(context, CampaignStateUtility.Device(context, offer.DefinitionId), offer.Price);

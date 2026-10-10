@@ -6,22 +6,22 @@
 
 ## 配置与使用
 
-- `Resources/GameContent.json` 是属性、装置和药物的唯一运行时配置来源。半径、质量、基础分、弹性、发射速度、寿命、Rush 和赌博等属性不再叠乘旧数值；完整对应关系见 `Balance.md`。
+- `Resources/GameContent.json` 配置属性和药物；装置以 `Resources/Devices/*.mres` 为唯一运行时来源。半径、质量、基础分、弹性、发射速度、寿命、Rush 和赌博等属性不再叠乘旧数值；完整对应关系见 `Balance.md`。
 - `Resources/GameBalance.json` 只保留血量、抽血档位、发射间隔、容量、阶段及战役参数，不再保存重复属性、`Devices`、`Drugs`、`Board`、`Zones`。
 - 盘面由场景手工搭建，区域在 `MarbleZone` 和 Trigger Collider 中配置；网格和间距在 `MarbleGameController.GridSize/PlacementClearance` 配置，固定钉避让检测 `PlacementObstacleRoots` 下实际启用的非 Trigger Collider。`TestScene` 已绑定 `PhysicsRoot/MarblePins`，完整迁移说明见 `Balance.md`。
-- `Resources/GameContent.json` 保存 34 个属性定义、15 种装置、12 种药物和内容规则（含迁入的 2 种旧装置和 2 种旧药物）。
-- `GameBalanceLoader` 加载两份配置，装置／药物列表直接引用内容目录；运行会话深拷贝后仍共享该会话的一份目录，避免两份数据不同步。
+- `Resources/GameContent.json` 保存 34 个属性定义、12 种药物和内容规则；其中 `Devices` 是从 `.mres` 生成的离线平衡工具兼容快照。
+- `GameBalanceLoader` 加载基础配置、属性药物配置和 MRes 装置目录，装置／药物列表直接引用会话内容目录；运行会话深拷贝后仍共享该会话的一份目录，避免两份数据不同步。
 - 直接修改内容 JSON，重新进入 Play 后生效。保存规范工作簿不再自动覆盖内容 JSON；显式执行 `Marbles ECS/Import Attribute and Content Excel` 才会把表中数值导入。
-- 数值属性列可直接导入。总表中自然语言效果不是脚本：改变效果文字后导入器会拒绝发布，要求同步审阅行为代码和配方，避免说明改变但实际行为不变。
-- `Editor/Balance/build_content.py` 只补充缺少的已注册条目，保留已有属性、价格、初始数量和配方；完整目录不会被重写。日常直接修改内容 JSON；需要以表格替换数值时再显式使用导入菜单。
+- 数值属性列可直接导入。药物总表中的自然语言效果不是脚本，需同步审阅配方；装置由 `.mres` 中的 Lua 和参数定义，Excel 导入不会覆盖它们。
+- `Editor/Balance/build_content.py` 只补充缺少的属性和药物，保留已有数值及 MRes 生成的装置快照；完整目录不会被重写。日常直接修改内容 JSON；需要以表格替换数值时再显式使用导入菜单。
 - 重复原 ID（如 D009、M006）保留在 `SourceId`，运行 ID 按已注册内容名称分配：装置 100～114、表内药物 100～109，旧药物 1、2。
-- 全部 15 种装置 prefab 位于 `Prefabs/Devices/`，`TestScene` 的 `DevicePlacementUI.DevicePrefabs` 已逐项绑定，详见该目录 README。未绑定的其他场景仍可使用程序生成的新装置外观。放置时按 R 旋转 45°；程序 HUD 也有旋转按钮。
+- 全部 15 种装置位于 `Resources/Devices/*.mres`，外观、碰撞体和 Lua 行为随包加载，不再绑定装置 prefab。详见 [MRes 装置目录](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
 - 传送门按一对购买，两门分别放置并共享配对 ID；两门都放置后才可传送。
 - 已有场景没有程序 HUD 时，控制器会提供可展开的药物库存面板。
 
-原型价格按 Common / Uncommon / Rare / Epic / Legendary 分别为 10 / 18 / 28 / 40 / 60 金币，可在内容 JSON 中改。初始赠送增值透镜和四叶草各一件、肾上腺素和润流剂各一瓶。
+原型价格按 Common / Uncommon / Rare / Epic / Legendary 分别为 10 / 18 / 28 / 40 / 60 金币，装置在包的 metadata 中改，药物在内容 JSON 中改。初始赠送增值透镜和四叶草各一件、肾上腺素和润流剂各一瓶。
 
-旧内容也已追加到 `GameContent.json`，保留价格、初始数量和原有数值。`Multi Ding` 和 `Rush Ding` 的定义 ID 统一为 113、114，prefab 文件名及场景绑定同步更新，初始各一件；旧药物保留 ID 1、2，初始各一瓶。`SourceId` 继续记录原始来源编号。这 4 条内容只在 `GameContent.json` 配置；基础 JSON 和基础 Excel 的旧条目已移除。内容 Excel 导入和配方生成工具会保留这些记录。
+`Multi Ding` 和 `Rush Ding` 的定义 ID 为 113、114，初始各一件，均已迁入 `.mres`，行为通过 Lua 实现。旧药物保留 ID 1、2，初始各一瓶，在 `GameContent.json` 中配置。`SourceId` 继续记录原始来源编号。
 
 旧装置 `Multi Ding` 每球每装置得分倍率 ×1.85 一次，`Rush Ding` 每球每装置 RUSH 概率 +0.11 一次。旧药物 `Up Restitution` / `Down Restitution` 在 12 秒窗口内给新球的 `BALL_BOUNCE` 分别乘 1.5 / 0.65，独立计时叠加；与新药物共用属性运算顺序及字典上限 2。两种旧药物合计同时生效剂量仍受 `MaxActiveBounceDrugs` 限制，面板显示库存和剩余药效时间。
 

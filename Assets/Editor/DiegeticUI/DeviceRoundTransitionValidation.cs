@@ -18,7 +18,7 @@ namespace MarblesECS.Editor.Diegetic
     public static class DeviceRoundTransitionValidation
     {
         const string Key="DeviceRoundTransitionValidation.Pending";
-        const string Work="E:/毕设/MarbleRoguelikeGame/.utmp/device_round2_20261008";
+        static string Work => Path.Combine(Path.GetTempPath(), "device_round_mres");
         static IEnumerator sequence;
         static DiegeticMachineUI rig;
         static SimulationContext context;
@@ -155,7 +155,7 @@ namespace MarblesECS.Editor.Diegetic
             rig.Placement.CancelPlacement();rig.RefreshInventory();
             Check(rig.Controller.GetOwnedDevices().Single(d=>d.InstanceId==id).Placed,"Placement is stored on the purchased instance");
             wait=Wait(.2f);while(wait.MoveNext())yield return null;
-            Check(UnityEngine.Object.FindObjectsOfType<MarbleDevice>().Any(d=>d.InstanceId==id&&d.enabled),"Purchased magnetic device has its active gameplay component");
+            Check(UnityEngine.Object.FindObjectsOfType<MResDeviceBody>().Any(d=>d.InstanceId==id&&d.enabled),"Purchased magnetic device has its active gameplay component");
             ClickVisible(rig.Continue.gameObject);
             Check(rig.Controller.Session.Phase==RoundPhase.Playing && !rig.Controller.Paused,"Physical Continue starts the next playable round");
             wait=Wait(.8f);while(wait.MoveNext())yield return null;

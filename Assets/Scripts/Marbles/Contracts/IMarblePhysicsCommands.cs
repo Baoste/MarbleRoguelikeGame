@@ -16,8 +16,9 @@ namespace MarblesECS
     public interface IMarblePhysicsCommands
     {
         bool TryMove(MarbleKey key, Vector3 position, Vector3 velocity);
+        bool TrySetVelocity(MarbleKey key, Vector3 velocity);
         void SetProperties(MarbleKey key, MarblePhysicalSettings settings);
         bool TryGetDevicePose(int instanceId, out DevicePose pose);
-        void FireBloodCannon(int instanceId);
+        void BreakPinsOnCross(int instanceId);
     }
 }

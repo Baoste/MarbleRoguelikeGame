@@ -19891,38 +19891,6 @@ MonoBehaviour:
   BoardRoot: {fileID: 1474251171}
   PlacementPlane: {fileID: 639334097}
   PlacementPlaneSize: {x: 3.49, y: 4.82}
-  DevicePrefabs:
-  - DefinitionId: 100
-    Prefab: {fileID: 1000, guid: 3c0d21cf6e284965a02370c31cfa1b3b, type: 3}
-  - DefinitionId: 101
-    Prefab: {fileID: 1000, guid: f798577b7621475aa3a471355d24bf1d, type: 3}
-  - DefinitionId: 102
-    Prefab: {fileID: 1000, guid: db3b32a5300e4fa4bdcee3bb9464dff5, type: 3}
-  - DefinitionId: 103
-    Prefab: {fileID: 1000, guid: 999af80f42d444159ed8fa7373be3d4b, type: 3}
-  - DefinitionId: 104
-    Prefab: {fileID: 1000, guid: 58c4f86475a94cbc80fdfecec378d482, type: 3}
-  - DefinitionId: 105
-    Prefab: {fileID: 1000, guid: d6e8710ae7b64134bad23964b32009b4, type: 3}
-  - DefinitionId: 106
-    Prefab: {fileID: 1000, guid: 8da44c2aeb834206a99b2ca9e9e15afb, type: 3}
-  - DefinitionId: 107
-    Prefab: {fileID: 1000, guid: 0b288e72d627449783033fd60dbb1fd3, type: 3}
-  - DefinitionId: 108
-    Prefab: {fileID: 1000, guid: 5e339c6186794d48a00761aa69bb61a6, type: 3}
-  - DefinitionId: 109
-    Prefab: {fileID: 1000, guid: bdc0b6a202cd466797c0ad54076eb963, type: 3}
-  - DefinitionId: 110
-    Prefab: {fileID: 1000, guid: 36b0ba6de26247e591390b07aabcff1e, type: 3}
-  - DefinitionId: 111
-    Prefab: {fileID: 1000, guid: 74d11c29097a40e0b4c647de238fabe6, type: 3}
-  - DefinitionId: 112
-    Prefab: {fileID: 1000, guid: 3b44de413767451f926746983ef3d2f3, type: 3}
-  - DefinitionId: 113
-    Prefab: {fileID: 7697712399794280852, guid: c360c956c753ed84998777d9f9b0fcbf,
-      type: 3}
-  - DefinitionId: 114
-    Prefab: {fileID: 1000, guid: af782d9fbea04c858f3aa99a151badc0, type: 3}
   DevicePlaneDistance: 0.1
   SnapToGrid: 0
   BlockClicksOverUI: 1

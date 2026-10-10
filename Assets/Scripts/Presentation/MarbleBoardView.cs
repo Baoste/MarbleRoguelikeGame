@@ -8,18 +8,16 @@ namespace MarblesECS.Presentation
     public sealed class MarbleBoardView : MonoBehaviour
     {
         public Camera ViewCamera;
-        [Min(0.01f)] public float PinHeight = 0.7f;
         public int SelectedDeviceId { get; private set; }
         public string Feedback { get; private set; } = "选择库存中的钉子，再点击盘面放置。";
         private MarbleGameController controller;
         private Transform board;
-        private MarbleVisualPalette palette;
         private int revision = -1;
         private int roundId = -1;
-        private readonly Dictionary<int, GameObject> devices = new Dictionary<int, GameObject>();
+        private readonly Dictionary<int, MRes.MResLoadHandle> devices = new Dictionary<int, MRes.MResLoadHandle>();
 
         internal void Initialize(MarbleGameController game, Transform boardRoot, MarbleVisualPalette looks)
-        { controller = game; board = boardRoot; palette = looks; }
+        { controller = game; board = boardRoot;  }
 
         public void Select(int id)
         {
@@ -33,36 +31,27 @@ namespace MarblesECS.Presentation
             if (revision == controller.Session.LayoutRevision && roundId == controller.Snapshot.RoundId) return;
             revision = controller.Session.LayoutRevision;
             roundId = controller.Snapshot.RoundId;
-            foreach (GameObject item in devices.Values)
-            { item.SetActive(false); Destroy(item); }
+            foreach (var item in devices.Values) item.Dispose();
             devices.Clear();
             bool selectedExists = false;
             foreach (var owned in controller.GetOwnedDevices())
             {
                 if (owned.InstanceId == SelectedDeviceId) selectedExists = true;
                 if (!owned.Placed) continue;
-                if (owned.Kind != DeviceKind.LegacyPin)
-                {
-                    var content = ContentDeviceView.Create(owned, board);
-                    content.transform.localPosition = new Vector3(owned.X, 0, owned.Z);
-                    content.transform.localRotation = Quaternion.Euler(0, owned.Angle, 0);
-                    devices.Add(owned.InstanceId, content); continue;
-                }
-                float height = PinHeight;
-                GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                obj.name = owned.Name + " #" + owned.InstanceId;
-                obj.transform.SetParent(board, false);
-                obj.transform.localPosition = new Vector3(owned.X, height / 2, owned.Z);
-                obj.transform.localScale = new Vector3(owned.Radius * 2, height / 2, owned.Radius * 2);
-                obj.GetComponent<Renderer>().sharedMaterial = owned.RushChanceAdd > 0 ? palette.Rush : palette.Multiplier;
-                var pin = obj.AddComponent<MarblePin>();
-                pin.TargetId = checked(100000 + owned.InstanceId);
-                pin.ScoreMultiplier = (float)owned.ScoreMultiplier;
-                pin.RushChanceAdd = (float)owned.RushChanceAdd;
-                devices.Add(owned.InstanceId, obj);
+                var handle = MResDeviceView.Create(owned, board, controller.DeviceScript(owned));
+                handle.Root.transform.localPosition = new Vector3(owned.X, 0, owned.Z);
+                handle.Root.transform.localRotation = Quaternion.Euler(0, owned.Angle, 0);
+                devices.Add(owned.InstanceId, handle);
+                handle.Root.SetActive(true);
             }
             if (!selectedExists) SelectedDeviceId = 0;
             Physics.SyncTransforms();
+        }
+
+        private void OnDestroy()
+        {
+            foreach (var item in devices.Values) item.Dispose();
+            devices.Clear();
         }
 
         private void OnGUI()
@@ -81,9 +70,9 @@ namespace MarblesECS.Presentation
                 HandleClick(point);
                 input.Use();
             }
-            if (devices.TryGetValue(SelectedDeviceId, out GameObject selected))
+            if (devices.TryGetValue(SelectedDeviceId, out var selected))
             {
-                Vector3 screen = ViewCamera.WorldToScreenPoint(selected.transform.position);
+                Vector3 screen = ViewCamera.WorldToScreenPoint(selected.Root.transform.position);
                 Color previous = GUI.color;
                 GUI.color = Color.yellow;
                 GUI.Label(new Rect(screen.x - 12, Screen.height - screen.y - 38, 100, 25), "▼ 已选中");

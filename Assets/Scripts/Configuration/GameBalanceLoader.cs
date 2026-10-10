@@ -14,6 +14,7 @@ namespace MarblesECS
             if (contentAsset == null) throw new ArgumentException("Resources/GameContent.json is required for gameplay attributes and catalogs.");
             balance.Content = JsonUtility.FromJson<GameContent>(contentAsset.text);
             if (balance.Content == null) throw new ArgumentException("GameContent.json is empty.");
+            balance.Content.Devices = DeviceResourceCatalog.Current.Definitions();
             balance.Validate();
             return balance.Copy();
         }

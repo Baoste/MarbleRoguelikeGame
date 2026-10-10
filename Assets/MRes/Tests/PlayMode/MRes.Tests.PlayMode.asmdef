@@ -1,0 +1,6 @@
+{
+  "name": "MRes.Tests.PlayMode",
+  "references": ["MRes.Runtime", "MRes.Tests.Fixtures", "XLua.Runtime"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}

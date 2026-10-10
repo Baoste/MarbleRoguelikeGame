@@ -12,6 +12,11 @@ namespace MarblesECS
         public double RushChanceAdd;
         public float Radius = 0.18f;
         public int StartingCount;
+        [OptionalBalanceField] public int PurchaseQuantity = 1;
+        [OptionalBalanceField] public bool RushCategory;
+        [OptionalBalanceField] public string LinkGroup;
+        [OptionalBalanceField] public float GroupClearance = .01f;
+        // Historical category retained for offline balance reports; never dispatches device behaviour.
         [OptionalBalanceField] public DeviceKind Kind;
         [OptionalBalanceField] public string SourceId;
         [OptionalBalanceField] public string Description;
@@ -30,14 +35,15 @@ namespace MarblesECS
             BalanceGuard.Range(Price, 1, BalanceGuard.MaxInteger, nameof(Price));
             BalanceGuard.Range(Radius, 0.01, 0.5, nameof(Radius));
             BalanceGuard.Range(StartingCount, 0, 200, nameof(StartingCount));
+            BalanceGuard.Range(PurchaseQuantity, 1, 20, nameof(PurchaseQuantity));
+            BalanceGuard.Range(GroupClearance, 0, 1, nameof(GroupClearance));
             BalanceGuard.Range(RushChanceAdd, 0, 1, nameof(RushChanceAdd));
             BalanceGuard.Range(Cooldown, 0, 60, nameof(Cooldown));
             BalanceGuard.Range(Range, 0.01, 100, nameof(Range));
             BalanceGuard.Range(Strength, 0, 1000, nameof(Strength));
             BalanceGuard.Range(MaxTriggersPerBall, 0, 10000, nameof(MaxTriggersPerBall));
-            if (Kind == DeviceKind.LegacyPin && !((ScoreMultiplier > 1 && ScoreMultiplier <= 100 && RushChanceAdd == 0) ||
-                (ScoreMultiplier == 1 && RushChanceAdd > 0)))
-                throw new ArgumentException("Legacy pins must be either a bounded score multiplier or a Rush chance pin.");
+            BalanceGuard.Range(ScoreMultiplier, 1, 100, nameof(ScoreMultiplier));
+            if (double.IsNaN(Value) || double.IsInfinity(Value)) throw new ArgumentException("Device Value must be finite.");
         }
     }
 }

@@ -5,7 +5,7 @@
         "MinInvestment": 1.0,
         "MaxInvestment": 5.0,
         "MarbleDefinitionId": 1,
-        "FireIntervalSeconds": 0.30000001192092898,
+        "FireIntervalSeconds": 0.1,
         "MaxActiveMarbles": 256,
         "DrainTimeoutSeconds": 15.0,
         "DespawnBelowY": -10.0,
@@ -28,14 +28,14 @@
     "Stages": [
         {
             "Id": 1,
-            "TargetScore": 120,
+            "TargetScore": 12,
             "RewardCoins": 22,
             "SkipRewardCoins": 12,
             "CashoutRate": 0.7
         },
         {
             "Id": 2,
-            "TargetScore": 380,
+            "TargetScore": 38,
             "RewardCoins": 28,
             "SkipRewardCoins": 15,
             "CashoutRate": 0.75

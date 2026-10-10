@@ -19,8 +19,8 @@ namespace MarblesECS
                     if (!other.Placed || other.InstanceId == instanceId) continue;
                     float distance = radius + CampaignStateUtility.Device(context, other.DefinitionId).Radius +
                         clearance;
-                    if (definition.Kind == DeviceKind.Amplifier && CampaignStateUtility.Device(context, other.DefinitionId).Kind == DeviceKind.Amplifier)
-                        distance = radius + CampaignStateUtility.Device(context, other.DefinitionId).Radius + .01f;
+                    if (!string.IsNullOrEmpty(definition.LinkGroup) && CampaignStateUtility.Device(context, other.DefinitionId).LinkGroup == definition.LinkGroup)
+                        distance = radius + CampaignStateUtility.Device(context, other.DefinitionId).Radius + definition.GroupClearance;
                     if (Overlaps(x, z, other.X, other.Z, distance)) return false;
                 }
             device.X = x;

@@ -16,7 +16,7 @@ namespace MarblesECS
                     if (!context.Manager.GetComponentData<DespawnState>(entity).PendingDespawn) continue;
                     var id = context.Manager.GetComponentData<ShotOrigin>(entity);
                     var key = new MarbleKey(id.RoundId, id.SpawnSequence);
-                    DeviceEffectSystem.Refund(context, entity);
+                    BallInteractionSystem.Refund(context, entity);
                     physics.Remove(key);
                     context.Marbles.Remove(key);
                     context.Manager.DestroyEntity(entity); // Also destroys the per-device visit buffer.

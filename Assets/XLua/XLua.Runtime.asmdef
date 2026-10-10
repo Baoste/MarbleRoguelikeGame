@@ -1,0 +1,6 @@
+{
+  "name": "XLua.Runtime",
+  "rootNamespace": "XLua",
+  "allowUnsafeCode": true,
+  "autoReferenced": true
+}

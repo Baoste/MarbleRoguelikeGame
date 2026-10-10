@@ -1,0 +1,7 @@
+{
+  "name": "MResPacker.Tests.Editor",
+  "references": ["MResPacker.Editor"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}

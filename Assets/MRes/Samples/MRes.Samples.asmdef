@@ -1,0 +1,1 @@
+{ "name": "MRes.Samples", "references": ["MRes.Runtime"], "autoReferenced": true }

@@ -30,6 +30,7 @@ namespace MarblesECS
             campaign.Coins = MarbleRules.AddScore(campaign.Coins, price, CampaignStateUtility.MaxCoins);
             campaign.LayoutRevision++;
             context.Manager.DestroyEntity(entity);
+            context.DeviceScripts.Remove(instanceId);
             context.Campaign = campaign;
             return true;
         }

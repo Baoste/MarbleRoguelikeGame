@@ -33,7 +33,7 @@ namespace MarblesECS
             int deviceCount = 0, drugCount = 0;
             foreach (var device in b.Devices)
             {
-                deviceCount += device.StartingCount * (device.Kind == DeviceKind.Portal ? 2 : 1);
+                deviceCount += device.StartingCount * device.PurchaseQuantity;
             }
             foreach (var drug in b.Drugs) drugCount += drug.StartingCount;
             if (deviceCount > b.Campaign.MaxOwnedDevices || drugCount > b.Campaign.MaxDrugInventory)

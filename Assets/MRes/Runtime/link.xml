@@ -1,0 +1,10 @@
+<linker>
+  <assembly fullname="MRes.Runtime">
+    <type fullname="MRes.MResLuaObject" preserve="all" />
+    <type fullname="MRes.MResMetadata" preserve="all" />
+    <type fullname="MRes.MResItemType" preserve="all" />
+  </assembly>
+  <assembly fullname="UnityEngine.CoreModule">
+    <type fullname="UnityEngine.Vector3" preserve="all" />
+  </assembly>
+</linker>

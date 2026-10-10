@@ -16,7 +16,7 @@ namespace MarblesECS
                 if (!IsDevice(contact.Kind) || !context.TryGetFlying(contact.Key, out var entity)) continue;
                 if (AttributeRuntime.Enabled(context) && (contact.Kind == MarbleContactKind.Device ||
                     contact.Kind == MarbleContactKind.Pin || contact.Kind == MarbleContactKind.Pierced))
-                { DeviceEffectSystem.Execute(context, entity, contact); continue; }
+                { BallInteractionSystem.Execute(context, entity, contact); continue; }
                 if (contact.Kind == MarbleContactKind.Device || contact.Kind == MarbleContactKind.Pin || contact.Kind == MarbleContactKind.Pierced) continue;
                 var visits = context.Manager.GetBuffer<VisitedDeviceData>(entity);
                 bool visited = false;

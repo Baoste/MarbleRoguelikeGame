@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 namespace MarblesECS.Editor
 {
     [InitializeOnLoad]
-    public static class GameContentValidation
+    public static partial class GameContentValidation
     {
         private static int assertions;
         static GameContentValidation()
@@ -38,6 +38,7 @@ namespace MarblesECS.Editor
             try
             {
                 assertions = 0;
+                DeviceResourceValidation.Run();
                 Rules();
                 ContentAuthority();
                 ContentLimitAuthority();
@@ -47,6 +48,7 @@ namespace MarblesECS.Editor
                 SpawnAndDrugs();
                 LegacyContent();
                 Devices();
+                DeviceLuaApi();
                 EconomyAndGambling();
                 ShopGuarantees();
                 Boundaries();
@@ -231,6 +233,7 @@ namespace MarblesECS.Editor
         private static void Placement()
         {
             var balance = GameBalance.Default();
+            balance.Devices = DeviceResourceCatalog.Current.Definitions();
             foreach (var device in balance.Devices) device.StartingCount = 0;
             balance.Devices[0].StartingCount = 2;
             using (var simulation = new MarbleSimulation(balance))
@@ -277,7 +280,10 @@ namespace MarblesECS.Editor
             }
             internal OwnedDeviceData Add(DeviceKind kind)
             {
-                var definition = C.Balance.Devices.Single(x => x.Kind == kind);
+                return Add(C.Balance.Devices.Single(x => x.Kind == kind));
+            }
+            internal OwnedDeviceData Add(DeviceDefinition definition)
+            {
                 CampaignStateUtility.CreateDevice(C, definition, definition.Price);
                 var snapshots = Simulation.GetOwnedDevices().Where(x => x.DefinitionId == definition.Id).ToArray();
                 foreach (var snapshot in snapshots)
@@ -400,9 +406,7 @@ namespace MarblesECS.Editor
                 var key = f.Launch();
                 foreach (var definition in f.C.Balance.Devices.Where(x => x.Kind == DeviceKind.LegacyPin))
                 {
-                    var contact = new MarbleContact { Key = key, TargetId = 100000 + (int)definition.Id,
-                        Kind = definition.ScoreMultiplier == 1 ? MarbleContactKind.RushPin : MarbleContactKind.Multiplier,
-                        Multiplier = definition.ScoreMultiplier, RushChanceAdd = definition.RushChanceAdd };
+                    var contact = f.Hit(key, f.Add(definition));
                     f.Step(contact); f.Step(contact);
                 }
                 var multiplierPin=f.C.Balance.Devices.Single(x=>x.Kind==DeviceKind.LegacyPin && x.ScoreMultiplier>1);
@@ -418,6 +422,20 @@ namespace MarblesECS.Editor
         }
         private static void Devices()
         {
+            foreach (uint definitionId in new uint[] { 113, 114 })
+                using (var f = new Fixture())
+                {
+                    var definition = f.C.Balance.Devices.Single(d => d.Id == definitionId);
+                    var device = f.Add(definition);
+                    var first = f.Launch(); var second = f.Launch();
+                    f.Step(f.Hit(first, device), f.Hit(second, device));
+                    f.Step(f.Hit(first, device), f.Hit(second, device));
+                    foreach (var key in new[] { first, second })
+                    {
+                        Near(definition.ScoreMultiplier, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "MRes pin per-ball score exactly once");
+                        Near(definition.RushChanceAdd, f.C.Manager.GetComponentData<MarbleRush>(f.Ball(key)).RushChanceBonus, "MRes pin per-ball Rush exactly once");
+                    }
+                }
             foreach(var kind in Enum.GetValues(typeof(DeviceKind)).Cast<DeviceKind>().Where(x=>x!=DeviceKind.LegacyPin && x!=DeviceKind.Magnet))
             using(var f=new Fixture())
             {
@@ -532,7 +550,10 @@ namespace MarblesECS.Editor
                 bridge.Remove(new MarbleKey(1,2));UnityEngine.Object.DestroyImmediate(pinObject);
                 var magnetObject=new GameObject("MagnetValidation");SceneManager.MoveGameObjectToScene(magnetObject,scene);
                 magnetObject.transform.position=new Vector3(0,2,.15f);
-                var magnet=magnetObject.AddComponent<MarbleDevice>();magnet.InstanceId=1;magnet.Kind=DeviceKind.Magnet;magnet.Range=1;magnet.Strength=1;
+                var magnet=magnetObject.AddComponent<MResDeviceBody>();
+                using var fieldScript = new MRes.MResLuaScript(DeviceResourceCatalog.Current.Get(112).Package);
+                var fieldDefinition = DeviceResourceCatalog.Current.Get(112).Definition.Copy(); fieldDefinition.Range=1; fieldDefinition.Strength=1;
+                magnet.Initialize(1, fieldDefinition, fieldScript);
                 settings.PierceCount=0;settings.Magnetic=true;
                 Check(bridge.TrySpawn(new MarbleSpawnData{Key=new MarbleKey(1,3),Position=new Vector3(0,2,0),Rotation=Quaternion.identity,
                     Quote=new ShotQuote(1,1,.08f,.1f,10,1),LinearVelocity=Vector3.right*.01f,HasRestitution=true,Restitution=.6f,HasSettings=true,Settings=settings}),"magnetic spawn");
@@ -551,8 +572,8 @@ namespace MarblesECS.Editor
             var recipes = Balance().Content;
             var imported = GameContentImporter.Read(GameContentImporter.Workbook, recipes);
             Check(imported.Attributes.Length == 34 && imported.Devices.Length == 15 && imported.Drugs.Length == 12, "real workbook import preserves migrated legacy definitions");
-            foreach (var legacy in recipes.Devices.Where(x => x.Kind == DeviceKind.LegacyPin))
-                Check(JsonUtility.ToJson(legacy) == JsonUtility.ToJson(imported.Devices.Single(x => x.Id == legacy.Id)), "import preserves legacy device values " + legacy.Id);
+            foreach (var definition in DeviceResourceCatalog.Current.Definitions())
+                Check(JsonUtility.ToJson(definition) == JsonUtility.ToJson(imported.Devices.Single(x => x.Id == definition.Id)), "Excel import preserves MRes device authority " + definition.Id);
             foreach (var legacy in recipes.Drugs.Where(x => x.Kind == DrugKind.LegacyBounce))
                 Check(JsonUtility.ToJson(legacy) == JsonUtility.ToJson(imported.Drugs.Single(x => x.Id == legacy.Id)), "import preserves legacy drug values " + legacy.Id);
             Near(recipes.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue,
@@ -606,6 +627,7 @@ namespace MarblesECS.Editor
             internal readonly Dictionary<MarbleKey,MarblePhysicsState> States=new Dictionary<MarbleKey,MarblePhysicsState>();
             internal readonly Dictionary<int,DevicePose> Poses=new Dictionary<int,DevicePose>();
             internal int FailSpawnAt,Attempts,Moves,CannonShots;
+            internal bool BlockMoves;
             public bool TrySpawn(MarbleSpawnData data)
             {
                 if(++Attempts==FailSpawnAt)return false;
@@ -614,10 +636,11 @@ namespace MarblesECS.Editor
             public bool TryGetPosition(MarbleKey key,out Vector3 p){bool ok=States.TryGetValue(key,out var s);p=s.Position;return ok;}
             public bool TryGetState(MarbleKey key,out MarblePhysicsState state)=>States.TryGetValue(key,out state);
             public void Remove(MarbleKey key){Spawns.Remove(key);States.Remove(key);}
-            public bool TryMove(MarbleKey key,Vector3 p,Vector3 v){var s=States[key];s.Position=p;s.LinearVelocity=v;States[key]=s;Moves++;return true;}
+            public bool TryMove(MarbleKey key,Vector3 p,Vector3 v){if(BlockMoves || !States.TryGetValue(key,out var s))return false;s.Position=p;s.LinearVelocity=v;States[key]=s;Moves++;return true;}
+            public bool TrySetVelocity(MarbleKey key,Vector3 v){if(!States.TryGetValue(key,out var s))return false;s.LinearVelocity=v;States[key]=s;return true;}
             public void SetProperties(MarbleKey key,MarblePhysicalSettings settings){}
             public bool TryGetDevicePose(int id,out DevicePose pose)=>Poses.TryGetValue(id,out pose);
-            public void FireBloodCannon(int id){CannonShots++;}
+            public void BreakPinsOnCross(int id){CannonShots++;}
         }
     }
 }

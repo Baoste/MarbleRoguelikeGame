@@ -34,15 +34,15 @@
 
 ## 装置和药物
 
-在 `GameContent.json` 的 `Devices`、`Drugs` 列表中修改名称、价格、参数、`StartingCount` 和药物效果。`StartingCount = 0` 不赠送，正整数表示开局数量；传送门每份生成一对，容量按两个实体计算。
+装置的名称、价格、参数和 `StartingCount` 在 `Resources/Devices/*.mres` 中配置；药物在 `GameContent.json` 的 `Drugs` 中修改。`Devices` 是 MRes 目录自动生成的离线分析快照。`StartingCount = 0` 不赠送，正整数表示开局数量；传送门每份生成一对，容量按两个实体计算。
 
-给程序/策划交接的工作簿是 `Assets/Docs/血色柏青哥_道具药物装置_规范修订版.xlsx`。优先查看其中的“运行时平衡表”：它汇总全部 27 个装置/药物的价格、当前效果、时长、叠加规则、证据等级、旧值/新值和调整原因。该页用于审阅与配置交接，运行时 Source of Truth 仍是 `Resources/GameContent.json`。
+给程序/策划交接的工作簿是 `Assets/Docs/血色柏青哥_道具药物装置_规范修订版.xlsx`。优先查看其中的“运行时平衡表”：它汇总全部 27 个装置/药物的价格、当前效果、时长、叠加规则、证据等级、旧值/新值和调整原因。该页用于审阅与配置交接，运行时装置来源是 `Resources/Devices/*.mres`，属性和药物来源是 `Resources/GameContent.json`。
 
 Rush 药物的专用数值也已数据化：`RushChanceAdd` 控制肾上腺素的概率加成，`RushScoreMultiplier` 控制烧烧果实在 Rush 结算时的额外倍率。商店每轮保底一个 Rush 装置和一个 Rush 药物，其余槽位从全目录无重复抽取。
 
 `GameBalance` 的装置和药物列表直接引用同一份内容目录；会话复制时深拷贝整个目录。基础 JSON 和基础 Excel 不再保存旧装置、药物列表。
 
-当前共 34 个属性、15 种装置、12 种药物。全部装置 Prefab 在 `Prefabs/Devices`，`TestScene` 已按定义 ID 绑定。
+当前共 34 个属性、15 种装置、12 种药物。全部装置由 `Resources/Devices/*.mres` 加载，详见 [MRes 装置目录](../Resources/Devices/README.md)。
 
 ## JSON 与 Excel
 

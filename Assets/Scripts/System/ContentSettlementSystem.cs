@@ -7,7 +7,7 @@ namespace MarblesECS
     {
         internal static void Settle(SimulationContext c, Entity ball, MarbleContact contact)
         {
-            DeviceEffectSystem.Consume(c, ball, true);
+            BallInteractionSystem.Consume(c, ball, true);
             if (contact.Kind == MarbleContactKind.Drain) return;
             var round = c.Round;
             var scoreData = c.Manager.GetComponentData<MarbleScore>(ball);

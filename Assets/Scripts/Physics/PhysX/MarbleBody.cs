@@ -54,6 +54,8 @@ namespace MarblesECS.PhysX
                     Body.velocity = Vector3.ClampMagnitude(Body.velocity + normal * (incoming * Settings.Bounce - outgoing), Settings.MaxSpeed);
                 }
             }
+            var device = collision.collider.GetComponentInParent<MResDeviceBody>();
+            if (device != null) { Bridge.ReportDevice(this, device); return; }
             var pin = collision.collider.GetComponentInParent<MarblePin>();
             if (pin != null && pin.isActiveAndEnabled && pin.IsValid)
             {
@@ -68,7 +70,7 @@ namespace MarblesECS.PhysX
         private void Report(Collider other)
         {
             if (Bridge == null || Body == null || !other.isTrigger) return;
-            var device = other.GetComponentInParent<MarbleDevice>();
+            var device = other.GetComponentInParent<MResDeviceBody>();
             if (device != null) { Bridge.ReportDevice(this, device); return; }
             var zone = other.GetComponentInParent<MarbleZone>();
             if (zone != null && zone.isActiveAndEnabled && zone.IsValid)

@@ -25,6 +25,7 @@ namespace MarblesECS
         internal float StepSeconds;
         internal readonly HashSet<ulong> CloverFamilies = new HashSet<ulong>();
         internal readonly HashSet<ulong> RefundedFamilies = new HashSet<ulong>();
+        internal readonly DeviceScriptSystem DeviceScripts = new DeviceScriptSystem();
 
         internal SimulationContext(MarbleTuning tuning, GameBalance balance = null, GameContent content = null)
         {

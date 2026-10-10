@@ -1,0 +1,7 @@
+{
+  "name": "MRes.Tests.EditMode",
+  "references": ["MRes.Runtime", "MRes.Samples", "MRes.Tests.Fixtures", "XLua.Runtime"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}

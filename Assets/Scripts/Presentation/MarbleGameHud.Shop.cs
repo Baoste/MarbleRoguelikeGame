@@ -52,8 +52,7 @@ namespace MarblesECS.Presentation
             {
                 GUILayout.BeginVertical(GUI.skin.box);
                 GUILayout.Label(device.Name + " #" + device.InstanceId + (device.Placed ? " · 已布置" : " · 库存中"));
-                GUILayout.Label(device.Kind != DeviceKind.LegacyPin ? device.Description : device.RushChanceAdd > 0 ? "入区 Rush 概率 +" + (device.RushChanceAdd * 100).ToString("0") + "%" :
-                    "碰撞后本珠得分倍率 ×" + device.ScoreMultiplier.ToString("0.##"));
+                GUILayout.Label(device.Description);
                 GUILayout.BeginHorizontal();
                 if (editable && GUILayout.Button("旋转 45°")) Controller.RotateDevice(device.InstanceId, 45);
                 if (editable && Board != null && GUILayout.Button(Board.SelectedDeviceId == device.InstanceId ? "已选中" : "选择 / 移动"))

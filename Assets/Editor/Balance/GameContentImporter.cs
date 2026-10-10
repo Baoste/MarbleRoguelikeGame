@@ -47,19 +47,11 @@ namespace MarblesECS.Editor
                 Debug.LogWarning("Workbook has the previous three-outcome schema. Applying the confirmed four outcomes at 25%; add GAMBLE_QUADRUPLE_CHANCE to the workbook to author probabilities directly.");
             }
             result.Attributes = attributes.ToArray();
-            var devices = new List<DeviceDefinition>();
             var drugs = new List<DrugDefinition>();
             foreach (var row in sheets["设计总表"])
             {
                 string kind = Cell(row, 2), name = Cell(row, 1);
-                if (kind == "装置")
-                {
-                    var recipe = recipes.Devices.SingleOrDefault(x => x.Name == name);
-                    if (recipe == null) throw new InvalidDataException("Device behavior is not registered: " + name);
-                    if (recipe.Description != Cell(row, 7)) throw new InvalidDataException(name + ": behavior prose changed. Review its numeric recipe and DeviceEffectSystem before importing.");
-                    var device = recipe.Copy(); device.SourceId = Cell(row, 0); devices.Add(device);
-                }
-                else if (kind == "药物")
+                if (kind == "药物")
                 {
                     var recipe = recipes.Drugs.SingleOrDefault(x => x.Name == name);
                     if (recipe == null) throw new InvalidDataException("Drug behavior is not registered: " + name);
@@ -73,9 +65,8 @@ namespace MarblesECS.Editor
                 }
             }
             // Legacy definitions were migrated from GameBalance and are not authored in this workbook.
-            devices.AddRange(recipes.Devices.Where(x => x.Kind == DeviceKind.LegacyPin).Select(x => x.Copy()));
             drugs.AddRange(recipes.Drugs.Where(x => x.Kind == DrugKind.LegacyBounce).Select(x => x.Copy()));
-            result.Devices = devices.ToArray(); result.Drugs = drugs.ToArray(); result.Validate();
+            result.Devices = DeviceResourceCatalog.Current.Definitions(); result.Drugs = drugs.ToArray(); result.Validate();
             double probabilities = result.Definition(GameAttribute.GAMBLE_LOSS_CHANCE).DefaultValue + result.Definition(GameAttribute.GAMBLE_RETURN_CHANCE).DefaultValue +
                 result.Definition(GameAttribute.GAMBLE_WIN_CHANCE).DefaultValue + result.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue;
             if (Math.Abs(probabilities - 1) > .000001) throw new InvalidDataException("Base gambling probabilities must sum to 1.");

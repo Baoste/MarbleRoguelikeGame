@@ -1,0 +1,6 @@
+{
+  "name": "XLua.Editor",
+  "references": ["XLua.Runtime"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

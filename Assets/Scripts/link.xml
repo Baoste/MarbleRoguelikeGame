@@ -1,0 +1,8 @@
+<linker>
+  <assembly fullname="MarblesECS.Runtime">
+    <type fullname="MarblesECS.DeviceContactContext" preserve="all" />
+    <type fullname="MarblesECS.DeviceMotionApi" preserve="all" />
+    <type fullname="MarblesECS.DeviceEndpoint" preserve="all" />
+    <type fullname="MarblesECS.PhysX.DeviceFieldContext" preserve="all" />
+  </assembly>
+</linker>

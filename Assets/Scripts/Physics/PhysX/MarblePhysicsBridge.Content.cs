@@ -6,19 +6,19 @@ namespace MarblesECS.PhysX
 {
     public sealed partial class MarblePhysicsBridge : IMarblePhysicsCommands
     {
-        private readonly List<MarbleDevice> contentDevices = new List<MarbleDevice>();
+        private readonly List<MResDeviceBody> contentDevices = new List<MResDeviceBody>();
         private RaycastHit[] pinHits = new RaycastHit[64];
         private readonly List<Collider> brokenPins = new List<Collider>();
         private void RefreshContentDevices()
         {
             contentDevices.Clear();
-            foreach (var device in MarbleDevice.Active)
+            foreach (var device in MResDeviceBody.Active)
                 if (device != null && device.InstanceId > 0 && device.gameObject.scene == scene) contentDevices.Add(device);
             contentDevices.Sort((a,b) => a.InstanceId.CompareTo(b.InstanceId));
         }
         public bool TryGetDevicePose(int instanceId, out DevicePose pose)
         {
-            foreach (var device in MarbleDevice.Active)
+            foreach (var device in MResDeviceBody.Active)
                 if (device != null && device.gameObject.scene == scene && device.InstanceId == instanceId)
                 { pose = new DevicePose { Position = device.transform.position, Forward = device.Forward, Up = device.Up, Radius = device.Radius }; return true; }
             pose = default; return false;
@@ -53,6 +53,12 @@ namespace MarblesECS.PhysX
                 view.RuntimeMaterial.staticFriction = settings.Friction;
             }
         }
+        public bool TrySetVelocity(MarbleKey key, Vector3 velocity)
+        {
+            if (!bodies.TryGetValue(key, out var view) || view == null || !Finite(velocity)) return false;
+            view.Body.velocity = Vector3.ClampMagnitude(velocity, view.Settings.MaxSpeed > 0 ? view.Settings.MaxSpeed : 100);
+            view.Body.WakeUp(); return true;
+        }
         private void BeforeContentSubstep(float dt)
         {
             foreach (var view in bodies.Values)
@@ -62,21 +68,16 @@ namespace MarblesECS.PhysX
                 view.BeforeVelocity = view.Body.velocity;
                 if (!view.HasSettings) continue;
                 Vector3 acceleration = Physics.gravity * view.Settings.Gravity;
-                Vector3 magneticForce = Vector3.zero;
-                if (view.Settings.Magnetic && view.Settings.MagnetResponse > 0)
-                    foreach (var device in contentDevices)
-                    {
-                        if (device.Kind != DeviceKind.Magnet) continue;
-                        Vector3 delta = Vector3.ProjectOnPlane(device.transform.position - view.Body.position, device.Up);
-                        float range = device.Range + view.Settings.MagneticRadius;
-                        float distance = delta.magnitude;
-                        if (distance < .001f || distance >= range) continue;
-                        float weight = 1 - distance / range;
-                        bool below = Vector3.Dot(view.Body.position - device.transform.position, device.Forward) >= 0;
-                        magneticForce += delta / distance * (below ? 1 : -1) * device.Strength * view.Settings.MagnetResponse * weight * weight;
-                    }
+                Vector3 fieldForce = Vector3.zero;
+                foreach (var device in contentDevices)
+                {
+                    if (device.Script == null || !device.Script.HasFunction("OnField")) continue;
+                    var api = new DeviceFieldContext(device, view);
+                    device.Script.Invoke("OnField", api);
+                    fieldForce += api.Force;
+                }
                 view.Body.AddForce(acceleration * dt, ForceMode.VelocityChange);
-                view.Body.AddForce(Vector3.ClampMagnitude(magneticForce, 100) * dt, ForceMode.Impulse);
+                view.Body.AddForce(Vector3.ClampMagnitude(fieldForce, 100) * dt, ForceMode.Impulse);
                 PreparePiercing(view, dt);
             }
         }
@@ -86,7 +87,7 @@ namespace MarblesECS.PhysX
             {
                 if (view == null) continue;
                 if (view.HasSettings) view.Body.velocity = Vector3.ClampMagnitude(view.Body.velocity, view.Settings.MaxSpeed);
-                ReportTowerCrossings(view);
+                ReportLinkCrossings(view);
                 view.InsideDevices.Clear();
                 view.InsideDevices.UnionWith(view.StepDevices);
             }
@@ -117,7 +118,7 @@ namespace MarblesECS.PhysX
             {
                 var collider = pinHits[i].collider;
                 var pin = collider.GetComponentInParent<MarblePin>();
-                if (pin == null || !pin.enabled || pin.ScoreMultiplier != 1 || pin.RushChanceAdd != 0 || collider.GetComponentInParent<MarbleDevice>() != null) continue;
+                if (pin == null || !pin.enabled || pin.ScoreMultiplier != 1 || pin.RushChanceAdd != 0 || collider.GetComponentInParent<MResDeviceBody>() != null) continue;
                 int id = collider.GetInstanceID(); nearby.Add(id);
                 if (!view.PierceAttempts.Add(id) || view.IgnoredPins.Contains(collider)) continue;
                 bool useCount = view.Settings.PierceCount > 0;
@@ -132,23 +133,23 @@ namespace MarblesECS.PhysX
             }
             view.PierceAttempts.IntersectWith(nearby);
         }
-        internal void ReportDevice(MarbleBody view, MarbleDevice device)
+        internal void ReportDevice(MarbleBody view, MResDeviceBody device)
         {
-            if (device == null || !device.isActiveAndEnabled || device.Kind == DeviceKind.Amplifier || device.Kind == DeviceKind.Magnet) return;
+            if (device == null || !device.isActiveAndEnabled || device.Script == null || !device.Script.HasFunction("OnContact")) return;
             view.StepDevices.Add(device.InstanceId);
             if (!view.InsideDevices.Add(device.InstanceId)) return;
             Report(device.Contact(view.Key, view.Body.position, view.Body.velocity.magnitude));
         }
-        private void ReportTowerCrossings(MarbleBody view)
+        private void ReportLinkCrossings(MarbleBody view)
         {
             for (int i = 0; i < contentDevices.Count; i++)
             {
                 var a = contentDevices[i];
-                if (a.Kind != DeviceKind.Amplifier) continue;
+                if (string.IsNullOrEmpty(a.LinkGroup)) continue;
                 for (int j = i + 1; j < contentDevices.Count; j++)
                 {
                     var b = contentDevices[j];
-                    if (b.Kind != DeviceKind.Amplifier) continue;
+                    if (b.LinkGroup != a.LinkGroup) continue;
                     Vector3 line = b.transform.position - a.transform.position;
                     float length = line.magnitude;
                     if (length > a.Range || length < .001f) continue;
@@ -165,13 +166,13 @@ namespace MarblesECS.PhysX
                 }
             }
         }
-        public void FireBloodCannon(int instanceId)
+        public void BreakPinsOnCross(int instanceId)
         {
             if (!TryGetDevicePose(instanceId, out var pose)) return;
             foreach (var root in scene.GetRootGameObjects())
                 foreach (var pin in root.GetComponentsInChildren<MarblePin>())
                 {
-                    if (pin.ScoreMultiplier != 1 || pin.RushChanceAdd != 0 || pin.GetComponentInParent<MarbleDevice>() != null) continue;
+                    if (pin.ScoreMultiplier != 1 || pin.RushChanceAdd != 0 || pin.GetComponentInParent<MResDeviceBody>() != null) continue;
                     Vector3 offset = Vector3.ProjectOnPlane(pin.transform.position - pose.Position, pose.Up);
                     float z = Vector3.Dot(offset, pose.Forward), x = Vector3.Dot(offset, Vector3.Cross(pose.Up, pose.Forward));
                     foreach (var collider in pin.GetComponentsInChildren<Collider>())

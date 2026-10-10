@@ -140,7 +140,7 @@ namespace MarblesECS
                     c.Manager.SetComponentData(child, new Lifetime { ExpireTick = expiry });
                 }
                 success = true;
-                if (replace) DeviceEffectSystem.Consume(c, parent, false);
+                if (replace) BallInteractionSystem.Consume(c, parent, false);
                 return true;
             }
             finally

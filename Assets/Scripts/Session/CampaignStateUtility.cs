@@ -33,14 +33,10 @@ namespace MarblesECS
 
         internal static void CreateDevice(SimulationContext context, DeviceDefinition definition, long price)
         {
-            if (definition.Kind == DeviceKind.Portal)
-            {
-                int pair = context.Campaign.NextDeviceId + 1;
-                CreateSingleDevice(context, definition, price / 2, pair);
-                CreateSingleDevice(context, definition, price - price / 2, pair);
-                return;
-            }
-            CreateSingleDevice(context, definition, price, 0);
+            int quantity = definition.PurchaseQuantity;
+            int pair = quantity > 1 ? context.Campaign.NextDeviceId + 1 : 0;
+            for (int i = 0; i < quantity; i++)
+                CreateSingleDevice(context, definition, price / quantity + (i < price % quantity ? 1 : 0), pair);
         }
 
         private static void CreateSingleDevice(SimulationContext context, DeviceDefinition definition, long price, int pair)
