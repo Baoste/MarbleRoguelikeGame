@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edcc8d922cbaa444bbd823733e49714d, type: 3}
+  m_Name: Portal
+  m_EditorClassIdentifier: 
+  SourcePrefab: {fileID: 7613155768261500519, guid: a8b34769e745d264b8854122b0b99edb,
+    type: 3}
+  LuaScript: {fileID: 102900000, guid: 1223dd781c5c3044f88e1dc593831227, type: 3}
+  Metadata:
+    name: "\u4F20\u9001\u95E8"
+    description: "\u8D2D\u4E70\u4E00\u5BF9\u95E8\uFF0C\u53CC\u5411\u4F20\u9001\uFF1B\u4FDD\u6301\u4E16\u754C\u8FD0\u52A8\u65B9\u5411\u3001\u901F\u5EA6\u548C\u81EA\u8EAB\u91CD\u529B\u7B49\u5C5E\u6027\uFF0C\u533A\u57DF\u529B\u6309\u51FA\u53E3\u73AF\u5883\u8BA1\u7B97\u3002"
+    value: 15
+    purchasePrice: 5
+    rarity: common
+    durability: 20
+    type: device
+  ShaderRegistry: {fileID: 11400000, guid: 891e6ba53d87e264bbf39a80c167dd56, type: 2}
+  OutputPath: Assets/MResPacker/Output/Portal.mres
+  ExtraFiles:
+  - VirtualPath: game/device.json
+    Source: {fileID: 4900000, guid: 88cee8572cd617a4e93a2aadc65b06f8, type: 3}

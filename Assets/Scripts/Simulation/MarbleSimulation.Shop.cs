@@ -26,7 +26,7 @@ namespace MarblesECS
             if (!CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
             var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
             var campaign = context.Campaign;
-            long price = MarbleRules.RoundScore(device.PurchasePrice * context.Balance.Campaign.SellRatio, CampaignStateUtility.MaxCoins);
+            long price = CampaignStateUtility.Device(context, device.DefinitionId).SellPrice;
             campaign.Coins = MarbleRules.AddScore(campaign.Coins, price, CampaignStateUtility.MaxCoins);
             campaign.LayoutRevision++;
             context.Manager.DestroyEntity(entity);

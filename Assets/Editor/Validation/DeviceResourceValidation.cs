@@ -21,6 +21,11 @@ namespace MarblesECS.Editor
             int count = 0;
             try
             {
+                var snapshot = JsonUtility.FromJson<GameContent>(File.ReadAllText(DeviceCatalogBuilder.ContentPath));
+                var definitions = catalog.Definitions();
+                Check(snapshot.Devices != null && snapshot.Devices.Length == definitions.Length &&
+                    snapshot.Devices.Zip(definitions, (a, b) => JsonUtility.ToJson(a) == JsonUtility.ToJson(b)).All(same => same),
+                    "GameContent device snapshot equals the current MRes catalog");
                 foreach (var entry in catalog.Entries)
                     Check(entry.Bytes.SequenceEqual(File.ReadAllBytes(entry.File)), "catalog equals raw package " + entry.File);
                 foreach (var definition in catalog.Definitions())
@@ -41,13 +46,13 @@ namespace MarblesECS.Editor
                             Check(view.Root.scene == scene && !view.Root.activeSelf, "device joins the correct physics scene before activation");
                             view.Root.SetActive(true);
                             Check(view.Root.GetComponent<MResDeviceBody>().Script == script, "view and gameplay share the same Lua instance");
-                            Check(script.HasFunction("OnContact") || script.HasFunction("OnField"), "packaged Lua handles gameplay");
+                            Check(script.HasFunction("OnContact") || script.HasFunction("OnField") || script.HasFunction("OnBallUpdate"), "packaged Lua handles gameplay");
                         }
                         Check(!script.IsDisposed, "visual disposal preserves the session script");
                     }
                     Check(MResLuaRuntime.ActiveBehaviourCount == scripts, "script released after device disposal");
                 }
-                Check(count == 15, "all original devices migrated");
+                Check(count == catalog.Entries.Length && definitions.Select(d => d.Id).Distinct().Count() == count, "current packages define the complete device list");
                 Check(!Directory.Exists("Assets/Prefabs/Devices"), "old device prefabs removed");
                 Debug.Log("DEVICE_RESOURCE_VALIDATION_PASSED: " + count + " raw packages, previews, scene placement and ownership.");
             }

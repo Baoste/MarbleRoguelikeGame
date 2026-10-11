@@ -37,7 +37,7 @@ public sealed class ShopOfferItemUI : MonoBehaviour
         if (NameText != null)
             NameText.text = offer.Name;
         if (DescriptionText != null)
-            DescriptionText.text = offer.Description ?? string.Empty;
+            DescriptionText.text = (offer.Kind == ShopItemKind.Device ? MarblesECS.Presentation.DeviceDisplayText.Details(offer) + "\n" : "") + (offer.Description ?? string.Empty);
         if (KindText != null)
             KindText.text = offer.Kind == ShopItemKind.Device ? "DEVICE" : "DRUG";
         if (PriceText != null)

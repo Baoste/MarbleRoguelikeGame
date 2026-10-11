@@ -1,0 +1,13 @@
+{
+  "Id": 9003,
+  "Radius": 0.2,
+  "ScoreMultiplier": 1,
+  "StartingCount": 0,
+  "PurchaseQuantity": 1,
+  "Cooldown": 0,
+  "MaxTriggersPerBall": 1,
+  "Range": 1.2,
+  "Strength": 3,
+  "Value": 2,
+  "SourceId": "Collector"
+}

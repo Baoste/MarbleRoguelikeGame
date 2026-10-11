@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edcc8d922cbaa444bbd823733e49714d, type: 3}
+  m_Name: Sticky
+  m_EditorClassIdentifier: 
+  SourcePrefab: {fileID: 8788188429258184182, guid: bb8f8e4116e09b648a0b6347ec69ccf8,
+    type: 3}
+  LuaScript: {fileID: 102900000, guid: 7309259411354b549bc4ca6677c6fabc, type: 3}
+  Metadata:
+    name: "\u9ECF\u9ECF"
+    description: "\u5F39\u73E0\u6EDE\u7559 1 \u79D2\uFF0C\u7136\u540E\u4FDD\u7559\u901F\u5EA6\u5927\u5C0F\u6CBF\u68CB\u76D8\u5411\u4E0B\u91CA\u653E\u3002"
+    value: 120
+    purchasePrice: 5
+    rarity: common
+    durability: 20
+    type: device
+  ShaderRegistry: {fileID: 11400000, guid: f5eb0674385714249ba1a307b0ecd40c, type: 2}
+  OutputPath: Assets/MResPacker/Output/Sticky.mres
+  ExtraFiles:
+  - VirtualPath: game/device.json
+    Source: {fileID: 4900000, guid: 665b556dfc2858346b9668d346348395, type: 3}

@@ -70,6 +70,10 @@ namespace MarblesECS.PhysX
         }
 
         public void FireOnce() { if (simulation != null && !Paused) simulation.FireOnce(); }
+        public bool TryActivateDevice(int instanceId) => IsReady && !Paused && simulation.TryActivateDevice(instanceId);
+        public bool TryActivateDevice(Ray ray) => IsReady && !Paused && bridge != null &&
+            bridge.TryPickDevice(ray, out int instanceId) && simulation.TryActivateDevice(instanceId);
+        public string GetDeviceStatus(int instanceId) => IsReady ? simulation.GetDeviceStatus(instanceId) : string.Empty;
         public void SetFlow(float normalized) { simulation?.SetFlow(normalized); }
         public void EndFiring() { if (simulation != null && !Paused) simulation.EndFiring(); }
 

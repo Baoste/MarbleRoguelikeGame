@@ -61,6 +61,8 @@ namespace MarblesECS.PhysX
                 if (EnableCampaign) simulation.StartSession(bridge);
                 else simulation.StartRound(bridge);
                 BeginRoundWhenInventoryIsEmpty();
+                if (GetComponent<MarblesECS.Presentation.DeviceActivationUI>() == null)
+                    gameObject.AddComponent<MarblesECS.Presentation.DeviceActivationUI>().Controller = this;
                 if (Balance.Content != null && FindObjectOfType<MarblesECS.Presentation.MarbleGameHud>() == null && GetComponent<ContentDrugPanel>() == null)
                     gameObject.AddComponent<ContentDrugPanel>().Controller = this;
                 publishedGamblingRoundId = int.MinValue;

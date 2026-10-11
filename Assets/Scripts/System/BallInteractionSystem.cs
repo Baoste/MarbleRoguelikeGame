@@ -9,7 +9,7 @@ namespace MarblesECS
         internal static void Execute(SimulationContext c, Entity ball, MarbleContact contact)
         {
             var features = c.Manager.GetComponentData<BallFeatures>(ball);
-            if (features.MovedTick == c.Round.Tick) return;
+            if (features.MovedTick == c.Round.Tick || c.Manager.HasComponent<HeldMotion>(ball)) return;
             if (contact.Kind == MarbleContactKind.Pierced)
             {
                 features.PiercesUsed++;
@@ -62,16 +62,18 @@ namespace MarblesECS
         }
         internal static bool Exit(SimulationContext c, Entity ball, DevicePose pose, Vector3 direction, float speed)
         {
-            if (!Finite(speed) || speed < 0 || !Finite(direction) || !Finite(direction.sqrMagnitude) || direction.sqrMagnitude < 1e-12f ||
-                !Finite(pose.Position) || !Finite(pose.Up) || pose.Up.sqrMagnitude < 1e-12f || !Finite(pose.Radius) || pose.Radius < 0) return false;
+            if (!ValidExit(pose, direction, speed)) return false;
             float radius = (float)AttributeRuntime.Get(c, ball, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
             return Move(c, ball, pose.Position + pose.Up.normalized * (radius + .005f) + direction.normalized * (pose.Radius + radius + .02f), direction.normalized * speed);
         }
+        internal static bool ValidExit(DevicePose pose, Vector3 direction, float speed) =>
+            Finite(speed) && speed >= 0 && Finite(direction) && Finite(direction.sqrMagnitude) && direction.sqrMagnitude >= 1e-12f &&
+            Finite(pose.Position) && Finite(pose.Up) && Finite(pose.Up.sqrMagnitude) && pose.Up.sqrMagnitude >= 1e-12f && Finite(pose.Radius) && pose.Radius >= 0;
         internal static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         private static bool Finite(Vector3 value) => Finite(value.x) && Finite(value.y) && Finite(value.z);
         internal static bool Move(SimulationContext c, Entity ball, Vector3 position, Vector3 velocity)
         {
-            if (!(c.Physics is IMarblePhysicsCommands commands) || !Finite(position) || !Finite(velocity) || !Finite(velocity.sqrMagnitude)) return false;
+            if (c.Manager.HasComponent<HeldMotion>(ball) || !(c.Physics is IMarblePhysicsCommands commands) || !Finite(position) || !Finite(velocity) || !Finite(velocity.sqrMagnitude)) return false;
             var shot = c.Manager.GetComponentData<ShotOrigin>(ball);
             velocity = Vector3.ClampMagnitude(velocity, (float)AttributeRuntime.Get(c, ball, GameAttribute.BALL_MAX_SPEED));
             if (!commands.TryMove(new MarbleKey(shot.RoundId, shot.SpawnSequence), position, velocity)) return false;
@@ -82,7 +84,7 @@ namespace MarblesECS
         }
         internal static bool SetVelocity(SimulationContext c, Entity ball, Vector3 velocity)
         {
-            if (!(c.Physics is IMarblePhysicsCommands commands) || !Finite(velocity) || !Finite(velocity.sqrMagnitude)) return false;
+            if (c.Manager.HasComponent<HeldMotion>(ball) || !(c.Physics is IMarblePhysicsCommands commands) || !Finite(velocity) || !Finite(velocity.sqrMagnitude)) return false;
             var shot = c.Manager.GetComponentData<ShotOrigin>(ball);
             velocity = Vector3.ClampMagnitude(velocity, (float)AttributeRuntime.Get(c, ball, GameAttribute.BALL_MAX_SPEED));
             if (!commands.TrySetVelocity(new MarbleKey(shot.RoundId, shot.SpawnSequence), velocity)) return false;

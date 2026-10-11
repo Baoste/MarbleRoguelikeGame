@@ -16,6 +16,7 @@ namespace MarblesECS.Presentation
                 if (GUILayout.Button((offer.Sold ? "已售出 " : "购买 " + kind + " ") + offer.Name + "　" + offer.Price + " 金"))
                     feedback = Controller.BuyOffer(offer.Index) ? "购买成功，已加入库存。" : "购买失败：金币不足、货位已售出或库存已满。";
                 GUI.enabled = true;
+                if (offer.Kind == ShopItemKind.Device) GUILayout.Label(DeviceDisplayText.Details(offer));
             }
             long cost = Controller.ShopRefreshPrice;
             GUI.enabled = Controller.Session.Coins >= cost;
@@ -53,6 +54,7 @@ namespace MarblesECS.Presentation
                 GUILayout.BeginVertical(GUI.skin.box);
                 GUILayout.Label(device.Name + " #" + device.InstanceId + (device.Placed ? " · 已布置" : " · 库存中"));
                 GUILayout.Label(device.Description);
+                GUILayout.Label(DeviceDisplayText.Details(device));
                 GUILayout.BeginHorizontal();
                 if (editable && GUILayout.Button("旋转 45°")) Controller.RotateDevice(device.InstanceId, 45);
                 if (editable && Board != null && GUILayout.Button(Board.SelectedDeviceId == device.InstanceId ? "已选中" : "选择 / 移动"))

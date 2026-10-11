@@ -2,12 +2,16 @@ using System;
 
 namespace MarblesECS
 {
+    public enum DeviceRarity { Common, Rare, Epic, Legendary }
     [Serializable]
     public sealed class DeviceDefinition
     {
         public uint Id;
         public string Name;
         public long Price;
+        [OptionalBalanceField] public long SellPrice;
+        [OptionalBalanceField] public DeviceRarity Rarity;
+        [OptionalBalanceField] public int Durability = 20;
         public double ScoreMultiplier = 1;
         public double RushChanceAdd;
         public float Radius = 0.18f;
@@ -33,7 +37,11 @@ namespace MarblesECS
             BalanceGuard.Range(Id, 1, uint.MaxValue, nameof(Id));
             BalanceGuard.Text(Name, nameof(Name));
             BalanceGuard.Range(Price, 1, BalanceGuard.MaxInteger, nameof(Price));
-            BalanceGuard.Range(Radius, 0.01, 0.5, nameof(Radius));
+            BalanceGuard.Range(SellPrice, 0, BalanceGuard.MaxInteger, nameof(SellPrice));
+            if (Durability != -1) BalanceGuard.Range(Durability, 1, 10000, nameof(Durability));
+            if (!Enum.IsDefined(typeof(DeviceRarity), Rarity)) throw new ArgumentException("Invalid device rarity.");
+            // Authoring can produce long fields as well as small pins; retain their full placement footprint.
+            BalanceGuard.Range(Radius, 0.01, 10, nameof(Radius));
             BalanceGuard.Range(StartingCount, 0, 200, nameof(StartingCount));
             BalanceGuard.Range(PurchaseQuantity, 1, 20, nameof(PurchaseQuantity));
             BalanceGuard.Range(GroupClearance, 0, 1, nameof(GroupClearance));

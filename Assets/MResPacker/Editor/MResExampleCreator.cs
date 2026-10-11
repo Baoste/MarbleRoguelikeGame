@@ -84,9 +84,9 @@ namespace MResPacker
             EnsureScene(prefab);
             AssetDatabase.SaveAssets(); return profile;
         }
-        private static void EnsureScene(GameObject prefab)
+        internal static void EnsureScene(GameObject prefab, string sceneName = "MResAuthoring")
         {
-            if (File.Exists(Root + "/Scenes/MResAuthoring.unity")) return;
+            if (File.Exists(Root + "/Scenes/" + sceneName + ".unity")) return;
             Directory.CreateDirectory(Root + "/Scenes");
             // Author two ordinary prefab instances without opening/replacing any user scene.
             // Unity refuses to add a regular scene beside an unsaved untitled scene.
@@ -106,7 +106,7 @@ namespace MResPacker
             var yaml = new System.Text.StringBuilder("%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n");
             SceneInstance(yaml, prefab, 1000); SceneInstance(yaml, cameraPrefab, 2000);
             yaml.Append("--- !u!1660057539 &9223372036854775807\nSceneRoots:\n  m_ObjectHideFlags: 0\n  m_Roots:\n  - {fileID: 1001}\n  - {fileID: 2001}\n");
-            string path = Root + "/Scenes/MResAuthoring.unity";
+            string path = Root + "/Scenes/" + sceneName + ".unity";
             File.WriteAllText(path, yaml.ToString(), MResJson.Utf8); AssetDatabase.ImportAsset(path);
         }
         private static void SceneInstance(System.Text.StringBuilder yaml, GameObject prefab, int id)

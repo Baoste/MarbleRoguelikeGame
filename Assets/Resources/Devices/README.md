@@ -1,14 +1,27 @@
 # MRes 装置目录
 
-本目录的原始 `.mres` 是装置外观、碰撞体、参数和行为的权威来源。现有 100～114 共 15 种装置均已迁入；`Prefabs/Devices`、手工 prefab 绑定和 C# 装置行为分支已删除。
+本目录的原始 `.mres` 是装置外观、碰撞体、参数和行为的权威来源。当前保留以下 8 种装置，商店与背包使用这个目录；`Prefabs/Devices`、手工 prefab 绑定和 C# 装置行为分支已删除。
+
+| ID | 装置 | 包文件 |
+| --- | --- | --- |
+| 103 | 传送门 | `103_Portal.mres` |
+| 113 | Multi Ding | `113_MultiDing.mres` |
+| 9000 | 示例弹射台 | `9000_BouncePad.mres` |
+| 9001 | 黏黏 | `9001_Sticky.mres` |
+| 9002 | 弹弹 | `9002_Reflector.mres` |
+| 9003 | 吸吸 | `9003_Collector.mres` |
+| 9004 | 加速力场 | `9004_AccelerationField.mres` |
+| 9005 | 黑洞 | `9005_BlackHole.mres` |
 
 ## 添加或更新装置
 
 1. 将符合 `MRes/README.md` 格式的 `.mres` 放在本目录或子目录中。文件名可自定，ID 必须唯一。
 2. 包内包含 `metadata.json`、节点/网格/材质/碰撞体数据、Lua 脚本，以及类型为 `Other (255)` 的 `game/device.json`。
-3. `game/device.json` 使用 `DeviceDefinition` 的字段名，至少提供唯一 `Id` 和所需玩法参数。名称、描述、售价以 metadata 的 `name`、`description`、`value` 为准；metadata 的 `type` 必须为 `device`，售价为正整数。
-4. 包引用的 shader ID 必须在 `ShaderRegistry.asset` 显式注册。已迁移资源使用 `device-lit`；连接线使用 `device-link`。
+3. `game/device.json` 使用 `DeviceDefinition` 的字段名，至少提供唯一 `Id` 和所需玩法参数。名称、描述、购买价、出售价格、稀有度和耐久以 Metadata 的 `name`、`description`、`purchasePrice`、`value`、`rarity`、`durability` 为准；`type` 必须为 `device`。购买价为正整数，出售价格可为 0，耐久 `-1` 表示无限。
+4. 包引用的 shader ID 必须在 `ShaderRegistry.asset` 显式注册。装置使用 `device-lit`；BouncePad 使用已注册的 `MRes/ExampleSurface`。
 5. 等待 Unity 导入，或执行 `Tools/MRes/Rebuild Device Catalog`。进入 Play 和构建 Player 前也会校验并刷新。
+
+`Resources/GameContent.json` 的 `Devices` 同步为本目录当前全部 MRes 的完整列表，包含子目录；包被删除后对应 JSON 条目也移除。打开项目、脚本重载和 JSON 导入同样会检查同步，不保留旧 JSON/Excel 的装置数据。其他属性、药物与内容规则继续使用原配置。离线可运行 `python Assets/Editor/Balance/sync_mres_devices.py`，`--check` 检查快照是否最新。
 
 Unity 不会将未知扩展名直接作为 `TextAsset` 收录，因此 `DeviceCatalog.asset` 保存原包的完整字节副本，供编辑器和 Player 统一读取。它由编辑器生成，不需要手工编辑，也不使用 ScriptedImporter，不会解包文件到磁盘。发布时需包含 Resources 中的目录资产和 shader 注册表。损坏包、重复 ID、缺失 shader 会阻止刷新、进入 Play 或构建，并报告源文件。
 
@@ -25,7 +38,7 @@ Unity 不会将未知扩展名直接作为 `TextAsset` 收录，因此 `DeviceCa
 
 ## Lua 事件与游戏接口
 
-完整接口、传送门及其他运动效果示例见 [装置 Lua API](../../Docs/Device_Lua_API.md)。新脚本通过 `a.Motion` 读取速度、获取出口并调用传送/出射/变速接口；传送门默认保持速度大小并沿出口朝向出射。
+完整接口、传送门及其他运动效果示例见 [装置 Lua API](../../Docs/Device_Lua_API.md)。新脚本通过 `a.Motion` 读取速度、获取出口并调用传送/出射/变速接口；当前传送门保留完整世界速度方向和大小，区域力在出口重新计算。
 
 每件库存装置拥有独立 Lua 环境，共享一个 xLua VM。`OnContact(a)` 在确定性接触处理阶段执行，`OnField(a)` 在手动物理子步前执行。脚本顶层只做声明和初始化；此时可能尚未生成视觉根节点。`self` 在实际视图绑定后可用，常规 Start/Update/物理事件仍由 MRes Loader 转发。
 
@@ -54,7 +67,7 @@ end
 
 ## 检查
 
-- `Marbles ECS/Validate Attribute and Content Runtime`：原包字节一致性、15 种资源加载、预览隔离、场景和生命周期，以及玩法/库存/商店回归。
+- `Marbles ECS/Validate Attribute and Content Runtime`：当前全部资源的原包字节一致性、加载、预览隔离、场景和生命周期，以及玩法/库存/商店回归。
 - Unity Test Runner 的 `MRes.Tests`：格式校验、资源释放、共享脚本、预览和 Lua/物理事件。
 - `Marbles ECS/实体UI/验证跨回合购买与鼠标点击`：真实 TestScene 的购买、预览、摆放和跨回合交互。
 

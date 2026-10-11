@@ -14,9 +14,14 @@ namespace MarblesECS.PhysX
         internal bool HasSettings;
         internal MarblePhysicalSettings Settings;
         internal Vector3 BeforeVelocity;
+        internal bool Suspended, SuspendedDetectCollisions;
+        internal Vector3 SuspendedSpin;
+        internal CollisionDetectionMode SuspendedCollisionMode;
         internal uint PhysicsRandom;
         internal readonly System.Collections.Generic.HashSet<int> InsideDevices = new System.Collections.Generic.HashSet<int>();
         internal readonly System.Collections.Generic.HashSet<int> StepDevices = new System.Collections.Generic.HashSet<int>();
+        internal readonly System.Collections.Generic.HashSet<int> ActiveFields = new System.Collections.Generic.HashSet<int>();
+        internal readonly System.Collections.Generic.HashSet<int> StepFields = new System.Collections.Generic.HashSet<int>();
         internal readonly System.Collections.Generic.HashSet<int> PierceAttempts = new System.Collections.Generic.HashSet<int>();
         internal readonly System.Collections.Generic.List<Collider> IgnoredPins = new System.Collections.Generic.List<Collider>();
         private MarblePinHitText pinHitText;
@@ -29,8 +34,10 @@ namespace MarblesECS.PhysX
 
         internal void PrepareForSpawn()
         {
+            Suspended = false;
             foreach (var pin in IgnoredPins) if (pin != null) Physics.IgnoreCollision(GetComponent<SphereCollider>(), pin, false);
             IgnoredPins.Clear(); PierceAttempts.Clear(); InsideDevices.Clear(); StepDevices.Clear();
+            ActiveFields.Clear(); StepFields.Clear();
             PhysicsRandom = unchecked((uint)Key.Sequence * 747796405u + (uint)Key.RoundId);
             if (pinHitText == null)
                 pinHitText = GetComponentInChildren<MarblePinHitText>(true);
@@ -39,7 +46,7 @@ namespace MarblesECS.PhysX
 
         private void ReportPin(Collision collision)
         {
-            if (Bridge == null || Body == null) return;
+            if (Bridge == null || Body == null || Suspended) return;
             if (HasSettings && collision.contactCount > 0 &&
                 (collision.rigidbody == null || collision.rigidbody.isKinematic))
             {
@@ -55,7 +62,11 @@ namespace MarblesECS.PhysX
                 }
             }
             var device = collision.collider.GetComponentInParent<MResDeviceBody>();
-            if (device != null) { Bridge.ReportDevice(this, device); return; }
+            if (device != null)
+            {
+                Bridge.ReportDevice(this, device, collision.contactCount > 0 ? (ContactPoint?)collision.GetContact(0) : null);
+                return;
+            }
             var pin = collision.collider.GetComponentInParent<MarblePin>();
             if (pin != null && pin.isActiveAndEnabled && pin.IsValid)
             {
@@ -69,7 +80,7 @@ namespace MarblesECS.PhysX
 
         private void Report(Collider other)
         {
-            if (Bridge == null || Body == null || !other.isTrigger) return;
+            if (Bridge == null || Body == null || Suspended || !other.isTrigger) return;
             var device = other.GetComponentInParent<MResDeviceBody>();
             if (device != null) { Bridge.ReportDevice(this, device); return; }
             var zone = other.GetComponentInParent<MarbleZone>();

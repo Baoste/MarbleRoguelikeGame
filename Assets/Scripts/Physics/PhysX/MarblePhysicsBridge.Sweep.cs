@@ -40,7 +40,7 @@ namespace MarblesECS.PhysX
         {
             foreach (var view in bodies.Values)
             {
-                if (view == null || view.Body == null || !view.gameObject.activeInHierarchy) continue;
+                if (view == null || view.Body == null || view.Suspended || !view.gameObject.activeInHierarchy) continue;
                 ReportOverlaps(view, view.PreviousPosition);
                 var displacement = view.Body.position - view.PreviousPosition;
                 float distance = displacement.magnitude;

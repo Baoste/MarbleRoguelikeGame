@@ -41,7 +41,7 @@ public sealed class OwnedDeviceButtonUI : MonoBehaviour
         if (NameText != null)
             NameText.text = device.Name;
         if (DescriptionText != null)
-            DescriptionText.text = device.Description ?? string.Empty;
+            DescriptionText.text = MarblesECS.Presentation.DeviceDisplayText.Details(device) + "\n" + (device.Description ?? string.Empty);
         if (SelectButton != null)
             SelectButton.interactable = canSelect && !device.Placed;
     }

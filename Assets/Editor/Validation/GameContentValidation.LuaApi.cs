@@ -32,11 +32,11 @@ namespace MarblesECS.Editor
                 f.Step(f.Hit(key, entry));
                 var after = f.Physics.States[key];
                 Near(speed, after.LinearVelocity.magnitude, "Lua portal preserves speed including zero and sub-0.1");
-                VectorNear(exit.Forward * speed, after.LinearVelocity, "Lua portal uses rotated exit facing");
+                VectorNear(before.LinearVelocity, after.LinearVelocity, "Lua portal preserves world direction despite rotated exit facing");
                 VectorNear(after.LinearVelocity, f.C.Manager.GetComponentData<Motion3D>(ball).LinearVelocity, "portal synchronizes ECS velocity");
                 VectorNear(before.AngularVelocity, f.C.Manager.GetComponentData<Motion3D>(ball).AngularVelocity, "portal preserves spin");
                 float radius = (float)f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
-                VectorNear(exit.Position + exit.Up * (radius + .005f) + exit.Forward * (exit.Radius + radius + .02f),
+                VectorNear(PortalExitPosition(exit, before.LinearVelocity, radius),
                     after.Position, "portal clears the exit and board surface");
                 f.Step(f.Hit(key, entry));
                 Check(f.Physics.Moves == 1, "Lua transport lock prevents immediate second teleport");
@@ -48,13 +48,12 @@ namespace MarblesECS.Editor
                 var exit = f.Physics.Poses[exitId];
                 exit.Up = Quaternion.Euler(65, 0, 0) * Vector3.up;
                 f.Physics.Poses[exitId] = exit;
-                float speed = f.Physics.States[key].LinearVelocity.magnitude;
+                var velocity = f.Physics.States[key].LinearVelocity;
                 var features = f.C.Manager.GetComponentData<BallFeatures>(ball); features.ExitDown = true;
                 f.C.Manager.SetComponentData(ball, features);
                 f.Step(f.Hit(key, entry));
-                VectorNear(Vector3.ProjectOnPlane(Vector3.down, exit.Up).normalized * speed,
-                    f.Physics.States[key].LinearVelocity, "Lua composes downhill medicine with motion API");
-                Check(!f.C.Manager.GetComponentData<BallFeatures>(ball).ExitDown, "successful teleport consumes downhill medicine once");
+                VectorNear(velocity, f.Physics.States[key].LinearVelocity, "position-only portal retains velocity even when a legacy directional flag is present");
+                Check(f.C.Manager.GetComponentData<BallFeatures>(ball).ExitDown, "position-only portal does not consume a directional override it never applies");
             }
             using (var f = new Fixture())
             {
@@ -94,7 +93,8 @@ namespace MarblesECS.Editor
                     Check(!motion.TryLaunch(exit, Vector3.zero, 2) && !motion.TryLaunch(exit, Vector3.up, -1) &&
                         !motion.TryLaunch(exit, Vector3.up, float.NaN) && !motion.TryTeleport(null), "invalid launch rejected");
                     Check(!motion.TrySetVelocity(new Vector3(float.PositiveInfinity, 0, 0)) &&
-                        !motion.TryScaleSpeed(-1) && !motion.TryMove(new Vector3(float.NaN, 0, 0), Vector3.zero), "invalid motion rejected");
+                        !motion.TryScaleSpeed(-1) && !motion.TryMove(new Vector3(float.NaN, 0, 0), Vector3.zero) &&
+                        !motion.TrySetPosition(new Vector3(float.NaN, 0, 0)), "invalid motion rejected");
                     VectorNear(before, motion.Position, "invalid API calls leave position unchanged");
                     f.Physics.BlockMoves = true;
                     Check(motion.TrySetVelocity(new Vector3(3, 0, 4)) && motion.TryScaleSpeed(.5f), "velocity changes need no teleport clearance");
@@ -105,6 +105,10 @@ namespace MarblesECS.Editor
                     Check(motion.TrySetVelocity(Vector3.right * (float)(cap * 2)), "engine accepts capped velocity");
                     Near(cap, motion.Speed, "motion API observes global speed limit");
                     f.Physics.BlockMoves = false;
+                    var unchangedVelocity = motion.Velocity;
+                    Check(motion.TrySetPosition(new Vector3(0, 4, 0)), "position-only command is independent of endpoint/launch logic");
+                    VectorNear(unchangedVelocity, motion.Velocity, "position-only command keeps velocity");
+                    VectorNear(new Vector3(0, 4, 0), f.Physics.States[key].Position, "position-only command synchronizes body");
                     Check(motion.TryMove(new Vector3(0, 3, 0), Vector3.left), "arbitrary motion command");
                     VectorNear(new Vector3(0, 3, 0), f.Physics.States[key].Position, "arbitrary move synchronizes body");
                     var another = new DeviceContactContext(f.C, ball, entity, f.Hit(key, entry), f.Physics.Poses[entry.InstanceId]);
@@ -158,14 +162,14 @@ namespace MarblesECS.Editor
                     float radius = (float)simulation.GetMarbleAttribute(key, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
                     obstacle = new GameObject("BlockedExit");
                     SceneManager.MoveGameObjectToScene(obstacle, scene);
-                    obstacle.transform.position = exit.Position + exit.Up * (radius + .005f) + exit.Forward * (exit.Radius + radius + .02f);
+                    obstacle.transform.position = PortalExitPosition(exit, before.LinearVelocity, radius);
                     obstacle.AddComponent<BoxCollider>().size = Vector3.one;
                     Physics.SyncTransforms();
                 }
                 simulation.EnqueueContact(objects[0].GetComponent<MResDeviceBody>().Contact(key, before.Position));
                 simulation.AfterPhysics(bridge);
                 bridge.TryGetState(key, out var after);
-                VectorNear(obstructed ? before.LinearVelocity : exit.Forward * 5, after.LinearVelocity, "Lua teleport reaches real PhysX velocity");
+                VectorNear(before.LinearVelocity, after.LinearVelocity, "Lua teleport retains real PhysX velocity whether successful or blocked");
                 VectorNear(after.Position, c.Manager.GetComponentData<Transform3D>(ball).Position, "real teleport position matches ECS");
                 if (obstructed) VectorNear(before.Position, after.Position, "solid obstacle rejects real teleport");
                 else Check(Vector3.Distance(before.Position, after.Position) > 1, "real portal relocates body");
@@ -178,6 +182,13 @@ namespace MarblesECS.Editor
                 foreach (var go in objects) UnityEngine.Object.DestroyImmediate(go);
                 simulation.Dispose(); bridge.Dispose(); SceneManager.UnloadSceneAsync(scene);
             }
+        }
+
+        private static Vector3 PortalExitPosition(DevicePose exit, Vector3 velocity, float radius)
+        {
+            var offset = Vector3.ProjectOnPlane(velocity, exit.Up);
+            offset = offset.sqrMagnitude < 1e-12f ? exit.Forward.normalized : offset / Mathf.Sqrt(offset.sqrMagnitude);
+            return exit.Position + exit.Up.normalized * (radius + .005f) + offset * (exit.Radius + radius + .02f);
         }
     }
 }

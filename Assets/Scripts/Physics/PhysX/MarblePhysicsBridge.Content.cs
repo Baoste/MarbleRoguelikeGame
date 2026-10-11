@@ -4,13 +4,24 @@ using UnityEngine;
 
 namespace MarblesECS.PhysX
 {
-    public sealed partial class MarblePhysicsBridge : IMarblePhysicsCommands
+    public sealed partial class MarblePhysicsBridge : IMarblePhysicsCommands, IMarbleDeviceUsageSink
     {
         private readonly List<MResDeviceBody> contentDevices = new List<MResDeviceBody>();
         private RaycastHit[] pinHits = new RaycastHit[64];
         private readonly List<Collider> brokenPins = new List<Collider>();
+        private readonly List<MarbleBody> orderedFieldBodies = new List<MarbleBody>();
+        private Func<int, bool> deviceAvailable, useDevice;
+        public void BindDeviceUsage(Func<int, bool> available, Func<int, bool> tryUse)
+        { deviceAvailable = available; useDevice = tryUse; RefreshDeviceAvailability(); }
+        public void RefreshDeviceAvailability()
+        {
+            foreach (var device in MResDeviceBody.Active)
+                if (device != null && device.gameObject.scene == scene)
+                    device.SetGameplayEnabled(deviceAvailable?.Invoke(device.InstanceId) ?? true);
+        }
         private void RefreshContentDevices()
         {
+            RefreshDeviceAvailability();
             contentDevices.Clear();
             foreach (var device in MResDeviceBody.Active)
                 if (device != null && device.InstanceId > 0 && device.gameObject.scene == scene) contentDevices.Add(device);
@@ -25,7 +36,7 @@ namespace MarblesECS.PhysX
         }
         public bool TryMove(MarbleKey key, Vector3 position, Vector3 velocity)
         {
-            if (!bodies.TryGetValue(key, out var view) || view == null || !Finite(position) || !Finite(velocity)) return false;
+            if (!bodies.TryGetValue(key, out var view) || view == null || view.Suspended || !Finite(position) || !Finite(velocity)) return false;
             // Reject an obstructed exit; never teleport inside solid geometry.
             var candidates = new Collider[32];
             int count = physicsScene.OverlapSphere(position, view.Radius, candidates, ~0, QueryTriggerInteraction.Ignore);
@@ -55,27 +66,40 @@ namespace MarblesECS.PhysX
         }
         public bool TrySetVelocity(MarbleKey key, Vector3 velocity)
         {
-            if (!bodies.TryGetValue(key, out var view) || view == null || !Finite(velocity)) return false;
+            if (!bodies.TryGetValue(key, out var view) || view == null || view.Suspended || !Finite(velocity)) return false;
             view.Body.velocity = Vector3.ClampMagnitude(velocity, view.Settings.MaxSpeed > 0 ? view.Settings.MaxSpeed : 100);
             view.Body.WakeUp(); return true;
         }
         private void BeforeContentSubstep(float dt)
         {
-            foreach (var view in bodies.Values)
+            orderedFieldBodies.Clear();
+            foreach (var body in bodies.Values) if (body != null) orderedFieldBodies.Add(body);
+            orderedFieldBodies.Sort((a, b) => a.Key.Sequence.CompareTo(b.Key.Sequence));
+            foreach (var view in orderedFieldBodies)
             {
                 if (view == null) continue;
+                if (view.Suspended) continue;
                 view.StepDevices.Clear();
+                view.StepFields.Clear();
                 view.BeforeVelocity = view.Body.velocity;
                 if (!view.HasSettings) continue;
                 Vector3 acceleration = Physics.gravity * view.Settings.Gravity;
                 Vector3 fieldForce = Vector3.zero;
                 foreach (var device in contentDevices)
                 {
-                    if (device.Script == null || !device.Script.HasFunction("OnField")) continue;
-                    var api = new DeviceFieldContext(device, view);
-                    device.Script.Invoke("OnField", api);
+                    if (device == null || !device.isActiveAndEnabled || !device.GameplayEnabled || device.Script == null || !device.Script.HasFunction("OnField")) continue;
+                    var api = new DeviceFieldContext(device, view, dt, () =>
+                    {
+                        bool accepted = view.ActiveFields.Contains(device.InstanceId) || (useDevice?.Invoke(device.InstanceId) ?? true);
+                        if (accepted) view.StepFields.Add(device.InstanceId);
+                        return accepted;
+                    });
+                    try { device.Script.Invoke("OnField", api); }
+                    catch (MRes.MResLuaException error) { Debug.LogException(error); }
+                    finally { api.Close(); }
                     fieldForce += api.Force;
                 }
+                view.ActiveFields.Clear(); view.ActiveFields.UnionWith(view.StepFields);
                 view.Body.AddForce(acceleration * dt, ForceMode.VelocityChange);
                 view.Body.AddForce(Vector3.ClampMagnitude(fieldForce, 100) * dt, ForceMode.Impulse);
                 PreparePiercing(view, dt);
@@ -85,7 +109,7 @@ namespace MarblesECS.PhysX
         {
             foreach (var view in bodies.Values)
             {
-                if (view == null) continue;
+                if (view == null || view.Suspended) continue;
                 if (view.HasSettings) view.Body.velocity = Vector3.ClampMagnitude(view.Body.velocity, view.Settings.MaxSpeed);
                 ReportLinkCrossings(view);
                 view.InsideDevices.Clear();
@@ -133,23 +157,31 @@ namespace MarblesECS.PhysX
             }
             view.PierceAttempts.IntersectWith(nearby);
         }
-        internal void ReportDevice(MarbleBody view, MResDeviceBody device)
+        internal void ReportDevice(MarbleBody view, MResDeviceBody device, ContactPoint? impact = null)
         {
-            if (device == null || !device.isActiveAndEnabled || device.Script == null || !device.Script.HasFunction("OnContact")) return;
+            if (view.Suspended || device == null || !device.isActiveAndEnabled || !device.GameplayEnabled || device.Script == null || !device.Script.HasFunction("OnContact")) return;
             view.StepDevices.Add(device.InstanceId);
             if (!view.InsideDevices.Add(device.InstanceId)) return;
-            Report(device.Contact(view.Key, view.Body.position, view.Body.velocity.magnitude));
+            var contact = device.Contact(view.Key, view.Body.position, view.Body.velocity.magnitude);
+            if (impact.HasValue)
+            {
+                contact.HasImpact = true;
+                contact.Position = impact.Value.point;
+                contact.Normal = impact.Value.normal;
+                contact.IncomingVelocity = view.BeforeVelocity;
+            }
+            Report(contact);
         }
         private void ReportLinkCrossings(MarbleBody view)
         {
             for (int i = 0; i < contentDevices.Count; i++)
             {
                 var a = contentDevices[i];
-                if (string.IsNullOrEmpty(a.LinkGroup)) continue;
+                if (!a.GameplayEnabled || string.IsNullOrEmpty(a.LinkGroup)) continue;
                 for (int j = i + 1; j < contentDevices.Count; j++)
                 {
                     var b = contentDevices[j];
-                    if (b.LinkGroup != a.LinkGroup) continue;
+                    if (!b.GameplayEnabled || b.LinkGroup != a.LinkGroup) continue;
                     Vector3 line = b.transform.position - a.transform.position;
                     float length = line.magnitude;
                     if (length > a.Range || length < .001f) continue;

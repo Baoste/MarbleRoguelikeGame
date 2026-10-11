@@ -1,0 +1,14 @@
+{
+  "Id": 103,
+  "Kind": 4,
+  "Radius": 0.12,
+  "ScoreMultiplier": 1,
+  "StartingCount": 0,
+  "PurchaseQuantity": 2,
+  "Cooldown": 0.5,
+  "MaxTriggersPerBall": 2,
+  "Range": 0.2,
+  "Strength": 2,
+  "Value": 1,
+  "SourceId": "D004"
+}

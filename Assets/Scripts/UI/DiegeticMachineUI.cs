@@ -175,7 +175,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
             {
                 DeviceButtons[i].gameObject.SetActive(occupied);
                 DeviceButtons[i].interactable=occupied && IsBoardOpen && Controller.Session.Phase==RoundPhase.Build && !Controller.Paused;
-                if(occupied){VisibleDeviceCount++;DeviceNames[i].text=unplacedDevices[n].Name;DeviceDescriptions[i].text=unplacedDevices[n].Description??"";}
+                if(occupied){VisibleDeviceCount++;DeviceNames[i].text=unplacedDevices[n].Name;DeviceDescriptions[i].text=MarblesECS.Presentation.DeviceDisplayText.Details(unplacedDevices[n])+"\n"+(unplacedDevices[n].Description??"");}
             }
         }
         int devicePages=Mathf.Max(1,(unplacedDevices.Count+5)/6);

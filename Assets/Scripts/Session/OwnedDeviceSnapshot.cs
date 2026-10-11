@@ -11,6 +11,9 @@ namespace MarblesECS
         public float Radius;
         public long PurchasePrice;
         public long SellPrice;
+        public DeviceRarity Rarity;
+        public int Durability, RemainingDurability;
+        public bool Exhausted => RemainingDurability == 0;
         public double ScoreMultiplier;
         public double RushChanceAdd;
         public DeviceKind Kind;

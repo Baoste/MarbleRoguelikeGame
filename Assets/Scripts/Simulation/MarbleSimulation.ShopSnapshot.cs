@@ -31,6 +31,12 @@ namespace MarblesECS
                     Index = i, Kind = offer.Kind, DefinitionId = offer.DefinitionId,
                     Name = name, Description = description, Price = offer.Price, Sold = offer.Sold
                 };
+                if (offer.Kind == ShopItemKind.Device)
+                {
+                    var definition = CampaignStateUtility.Device(context, offer.DefinitionId);
+                    result[i].Rarity = definition.Rarity; result[i].Durability = definition.Durability;
+                    result[i].SellPrice = definition.SellPrice;
+                }
             }
             return result;
         }

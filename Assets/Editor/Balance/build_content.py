@@ -7,6 +7,7 @@ from pathlib import Path
 import json
 import xml.etree.ElementTree as ET
 import zipfile
+from sync_mres_devices import read_devices
 
 ROOT = Path(__file__).resolve().parents[2]
 NS = {'m': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
@@ -79,6 +80,8 @@ def generate():
     output = ROOT/'Resources/GameContent.json'
     data = dict(Attributes=attrs, Drugs=drugs, RushThreshold=10,
                 OverkillCoinsPerScore=.01, CentimetersToUnits=.01, MaxSplitGeneration=2)
+    # Read first: invalid packages abort before publishing any content changes.
+    data['Devices'] = read_devices(ROOT/'Resources/Devices')
     if output.exists():
         previous = json.loads(output.read_text(encoding='utf-8-sig'))
         for key in ('Attributes', 'Drugs'):
@@ -86,10 +89,10 @@ def generate():
             ids = {row['Id'] for row in existing}
             data[key] = existing + [row for row in data[key] if row['Id'] not in ids]
         for key, value in previous.items():
-            if key not in ('Attributes', 'Drugs'):
+            if key not in ('Attributes', 'Drugs', 'Devices'):
                 data[key] = value
         if data == previous:
-            print('GameContent.json is already complete; existing values preserved.')
+            print('GameContent.json is complete; Devices match current MRes packages.')
             return
     output.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     print(f"Built {len(data['Attributes'])} attributes, {len(data['Drugs'])} drugs.")

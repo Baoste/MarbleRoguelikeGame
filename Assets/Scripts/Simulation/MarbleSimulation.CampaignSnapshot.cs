@@ -53,7 +53,8 @@ namespace MarblesECS
                         InstanceId = item.InstanceId, DefinitionId = item.DefinitionId, Name = definition.Name,
                         Placed = item.Placed, X = item.X, Z = item.Z, Radius = definition.Radius,
                         PurchasePrice = item.PurchasePrice,
-                        SellPrice = MarbleRules.RoundScore(item.PurchasePrice * context.Balance.Campaign.SellRatio, CampaignStateUtility.MaxCoins),
+                        SellPrice = definition.SellPrice, Rarity = definition.Rarity, Durability = definition.Durability,
+                        RemainingDurability = DeviceDurabilitySystem.Remaining(context, item),
                         ScoreMultiplier = definition.ScoreMultiplier, RushChanceAdd = definition.RushChanceAdd,
                         Kind = definition.Kind, Description = definition.Description, Angle = item.Angle,
                         PairId = item.PairId, Range = definition.Range * (context.Content?.CentimetersToUnits ?? .01f) / .01f, Strength = definition.Strength

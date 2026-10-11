@@ -5,6 +5,26 @@ namespace MarblesECS
 {
     internal static class ContentSettlementSystem
     {
+        // Lua chooses the score formula. The engine owns one-shot settlement and score event accounting.
+        internal static bool TrySettleAmount(SimulationContext c, Entity ball, MarbleContact contact, double amount)
+        {
+            if (!MarbleRules.IsFinite(amount) || amount < 0 || !c.Manager.Exists(ball) ||
+                c.Manager.GetComponentData<SettlementState>(ball).IsSettled ||
+                c.Manager.GetComponentData<DespawnState>(ball).PendingDespawn) return false;
+            BallInteractionSystem.Consume(c, ball, true);
+            c.Manager.SetComponentData(ball, new DespawnState { PendingDespawn = true, Reason = MarbleDespawnReason.Scored });
+            var round = c.Round;
+            double total = Math.Min(c.Tuning.MaxPerMarbleScore, amount) + round.FractionalScore;
+            long score = MarbleRules.RoundScore(total, c.Tuning.MaxPerMarbleScore);
+            round.FractionalScore = total - Math.Floor(total);
+            round.Score = MarbleRules.AddScore(round.Score, score, c.Tuning.MaxRoundScore);
+            c.Round = round;
+            c.ScoreEvents.Enqueue(new MarbleScoreEvent { Key = contact.Key, ZoneId = contact.TargetId, Position = contact.Position,
+                BaseValue = amount, DrugMultiplier = 1, DeviceMultiplier = 1, PermanentMultiplier = 1,
+                ModifierMultiplier = 1, ZoneMultiplier = 1, LauncherMultiplier = 1, RushMultiplier = 1,
+                Score = score, RoundScore = round.Score, PendingScore = round.PendingScore });
+            return true;
+        }
         internal static void Settle(SimulationContext c, Entity ball, MarbleContact contact)
         {
             BallInteractionSystem.Consume(c, ball, true);

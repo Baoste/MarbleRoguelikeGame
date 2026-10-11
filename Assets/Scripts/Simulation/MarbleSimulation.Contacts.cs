@@ -14,6 +14,9 @@ namespace MarblesECS
             if (!MarbleRules.IsFinite(contact.Multiplier) || contact.Multiplier < 0 || contact.Multiplier > 1000) return;
             if (!MarbleRules.IsFinite(contact.RushChanceAdd) || contact.RushChanceAdd < 0 || contact.RushChanceAdd > 1) return;
             if (contact.FlatScore < 0 || !SimulationContext.IsFinite(contact.Position)) return;
+            if (contact.HasImpact && (contact.Kind != MarbleContactKind.Device || !SimulationContext.IsFinite(contact.Normal) ||
+                !MarbleRules.IsFinite(contact.Normal.sqrMagnitude) || contact.Normal.sqrMagnitude < 1e-12f ||
+                !SimulationContext.IsFinite(contact.IncomingVelocity) || !MarbleRules.IsFinite(contact.IncomingVelocity.sqrMagnitude))) return;
             context.Contacts.Add(contact);
         }
 

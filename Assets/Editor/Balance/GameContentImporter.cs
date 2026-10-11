@@ -25,7 +25,8 @@ namespace MarblesECS.Editor
         public static GameContent Read(string path, GameContent recipes)
         {
             var sheets = XlsxWorkbookReader.Read(path, true);
-            var result = recipes.Copy();
+            var result = JsonUtility.FromJson<GameContent>(JsonUtility.ToJson(recipes));
+            result.Devices = DeviceCatalogBuilder.ReadDefinitions();
             var attributes = new List<AttributeDefinition>();
             foreach (var row in sheets["00_ATTRIBUTE_DICTIONARY (2)"])
             {
@@ -66,7 +67,7 @@ namespace MarblesECS.Editor
             }
             // Legacy definitions were migrated from GameBalance and are not authored in this workbook.
             drugs.AddRange(recipes.Drugs.Where(x => x.Kind == DrugKind.LegacyBounce).Select(x => x.Copy()));
-            result.Devices = DeviceResourceCatalog.Current.Definitions(); result.Drugs = drugs.ToArray(); result.Validate();
+            result.Drugs = drugs.ToArray(); result.Validate();
             double probabilities = result.Definition(GameAttribute.GAMBLE_LOSS_CHANCE).DefaultValue + result.Definition(GameAttribute.GAMBLE_RETURN_CHANCE).DefaultValue +
                 result.Definition(GameAttribute.GAMBLE_WIN_CHANCE).DefaultValue + result.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue;
             if (Math.Abs(probabilities - 1) > .000001) throw new InvalidDataException("Base gambling probabilities must sum to 1.");

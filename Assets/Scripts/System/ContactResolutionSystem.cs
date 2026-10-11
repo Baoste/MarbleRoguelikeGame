@@ -14,6 +14,7 @@ namespace MarblesECS
             foreach (var contact in context.Contacts)
             {
                 if (!IsDevice(contact.Kind) || !context.TryGetFlying(contact.Key, out var entity)) continue;
+                if (context.Manager.HasComponent<HeldMotion>(entity)) continue;
                 if (AttributeRuntime.Enabled(context) && (contact.Kind == MarbleContactKind.Device ||
                     contact.Kind == MarbleContactKind.Pin || contact.Kind == MarbleContactKind.Pierced))
                 { BallInteractionSystem.Execute(context, entity, contact); continue; }
@@ -34,6 +35,7 @@ namespace MarblesECS
             foreach (var contact in context.Contacts)
             {
                 if (IsDevice(contact.Kind) || !context.TryGetFlying(contact.Key, out var entity)) continue;
+                if (context.Manager.HasComponent<HeldMotion>(entity)) continue;
                 if (AttributeRuntime.Enabled(context) && context.Manager.GetComponentData<BallFeatures>(entity).MovedTick == context.Round.Tick) continue;
                 SettlementSystem.Settle(context, entity, contact);
             }

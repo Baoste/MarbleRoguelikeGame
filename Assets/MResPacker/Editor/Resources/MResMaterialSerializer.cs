@@ -30,6 +30,9 @@ namespace MResPacker
                         p.Add("type", "Vector"); p.Add("value", MResBuildContext.V4(material.GetVector(name))); break;
                     case ShaderPropertyType.Texture:
                         var texture = material.GetTexture(name);
+                        // URP declares unassigned global lightmap arrays on ordinary materials.
+                        // There is no material resource to serialize; assigned non-2D textures still fail.
+                        if (texture == null && shader.GetPropertyTextureDimension(i) != TextureDimension.Tex2D) continue;
                         if (shader.GetPropertyTextureDimension(i) != TextureDimension.Tex2D || (texture != null && !(texture is Texture2D)))
                             throw new ArgumentException("Only Texture2D properties are supported: " + material.name + "/" + name);
                         p.Add("type", "Texture"); p.Add("value", context.Texture(texture as Texture2D));

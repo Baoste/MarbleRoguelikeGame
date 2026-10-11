@@ -24,6 +24,16 @@ namespace MResPacker
     }
     public static class MResBuildPipeline
     {
+        public static void BuildAuthoringProfiles()
+        {
+            int count = 0;
+            foreach (string guid in AssetDatabase.FindAssets("t:MResBuildProfile", new[] { "Assets/MResPacker/Authoring" }))
+            {
+                var profile = AssetDatabase.LoadAssetAtPath<MResBuildProfile>(AssetDatabase.GUIDToAssetPath(guid));
+                Build(profile); EditorUtility.SetDirty(profile); count++;
+            }
+            AssetDatabase.SaveAssets(); Debug.Log("MRES_AUTHORING_BUILD_PASSED: " + count + " profiles.");
+        }
         public static MResAnalysisReport Analyze(MResBuildProfile profile)
         {
             var report = new MResAnalysisReport();
@@ -40,7 +50,8 @@ namespace MResPacker
                 var prefab = MResPrefabSerializer.Serialize(profile.SourcePrefab, context);
                 context.Add("prefab/root.json", MResEntryType.Prefab, MResJson.Bytes(prefab));
                 context.Add("metadata/metadata.json", MResEntryType.Metadata, MResJson.Bytes(MResJson.Object(
-                    "name", profile.Metadata.name, "description", profile.Metadata.description, "value", profile.Metadata.value, "type", profile.Metadata.type)));
+                    "name", profile.Metadata.name, "description", profile.Metadata.description, "value", profile.Metadata.value, "type", profile.Metadata.type,
+                    "purchasePrice", profile.Metadata.purchasePrice, "rarity", profile.Metadata.rarity, "durability", profile.Metadata.durability)));
                 string lua = null;
                 if (profile.LuaScript != null)
                 {

@@ -14,8 +14,35 @@ namespace MarblesECS.PhysX
         public float Strength { get; private set; }
         public string LinkGroup { get; private set; }
         public MResLuaScript Script { get; private set; }
+        public bool GameplayEnabled { get; private set; } = true;
+        private readonly List<Collider> disabledByUsage = new List<Collider>();
+        internal void SetGameplayEnabled(bool enabled)
+        {
+            if (GameplayEnabled == enabled) return;
+            GameplayEnabled = enabled;
+            if (!enabled)
+            {
+                foreach (var collider in GetComponentsInChildren<Collider>(true))
+                    if (collider.enabled) { disabledByUsage.Add(collider); collider.enabled = false; }
+            }
+            else
+            {
+                foreach (var collider in disabledByUsage) if (collider != null) collider.enabled = true;
+                disabledByUsage.Clear();
+            }
+        }
         public Vector3 Forward => transform.rotation * Vector3.back;
         public Vector3 Up => transform.up;
+        private readonly Dictionary<string, BoxCollider> fieldBoxes = new Dictionary<string, BoxCollider>();
+        internal BoxCollider FindFieldBox(string nodePath)
+        {
+            if (nodePath == null) return null;
+            if (fieldBoxes.TryGetValue(nodePath, out var box) && box != null) return box;
+            var node = nodePath.Length == 0 ? transform : transform.Find(nodePath);
+            box = node != null ? node.GetComponent<BoxCollider>() : null;
+            if (box != null) fieldBoxes[nodePath] = box;
+            return box;
+        }
         public void Initialize(int instanceId, DeviceDefinition definition, MResLuaScript script)
         {
             InstanceId = instanceId; Radius = definition.Radius; Range = definition.Range;

@@ -16,9 +16,12 @@ namespace MarblesECS.PhysX
 
         private void ReturnToPool(MarbleBody view)
         {
+            if (view.Suspended && view.Body != null) view.Body.isKinematic = false;
+            view.Suspended = false;
             foreach (var pin in view.IgnoredPins)
                 if (pin != null) Physics.IgnoreCollision(view.GetComponent<SphereCollider>(), pin, false);
             view.IgnoredPins.Clear(); view.PierceAttempts.Clear(); view.InsideDevices.Clear(); view.StepDevices.Clear();
+            view.ActiveFields.Clear(); view.StepFields.Clear();
             view.Bridge = null;
             view.Key = default;
 

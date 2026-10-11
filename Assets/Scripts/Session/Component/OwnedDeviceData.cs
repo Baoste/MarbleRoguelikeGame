@@ -12,6 +12,7 @@ namespace MarblesECS
         public float Z;
         public float Angle;
         public int PairId;
+        public int DurabilityRound, UsesThisRound;
         public double NextTriggerAt, StoredValue;
     }
 }

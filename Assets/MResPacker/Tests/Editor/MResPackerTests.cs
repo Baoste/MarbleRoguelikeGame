@@ -73,6 +73,28 @@ namespace MResPacker.Tests
             Assert.IsTrue(entries.ContainsKey("game/device.json"));
             Assert.AreEqual("TwoMaterialCube", ((Dictionary<string, object>)manifest["meshNames"])["meshes/0.meshbin"]);
         }
+        [Test] public void UnassignedTextureArraysAreSkippedButAssignedArraysAreRejected()
+        {
+            string shaderPath = scratch + "/Array.shader";
+            File.WriteAllText(shaderPath, "Shader \"MResPackerTests/Array\" { Properties { _Array(\"Array\", 2DArray) = \"\" {} } SubShader { Pass {} } }");
+            AssetDatabase.ImportAsset(shaderPath, ImportAssetOptions.ForceSynchronousImport);
+            var shader = AssetDatabase.LoadAssetAtPath<Shader>(shaderPath);
+            var registry = ScriptableObject.CreateInstance<MResPackerShaderRegistry>();
+            registry.Entries = new[] { new MResPackerShaderRegistry.Entry { Shader = shader, ShaderId = "test-array" } };
+            var material = new Material(shader); var texture = new Texture2DArray(2, 2, 1, TextureFormat.RGBA32, false);
+            AssetDatabase.CreateAsset(material, scratch + "/Array.mat");
+            AssetDatabase.CreateAsset(texture, scratch + "/Array.asset");
+            try
+            {
+                profile.ShaderRegistry = registry;
+                foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>()) renderer.sharedMaterials = new[] { material, material };
+                var entries = Build();
+                Assert.AreEqual(0, ((List<object>)Json(entries, "manifest.json")["textures"]).Count);
+                material.SetTexture("_Array", texture); Save();
+                Assert.IsTrue(MResBuildPipeline.Analyze(profile).Errors.Any(e => e.Contains("Only Texture2D")));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(registry); }
+        }
         [Test] public void B_HierarchyActiveTransformsAndMaterialSlots()
         {
             var visual = root.transform.Find("Visual"); visual.localPosition = new Vector3(.1f, .2f, .3f); visual.localRotation = Quaternion.Euler(10, 20, 30);
@@ -138,7 +160,8 @@ namespace MResPacker.Tests
             profile.Metadata.description = "中文描述\n\"quoted\""; var entries = Build();
             var script = File.ReadAllText(AssetDatabase.GetAssetPath(profile.LuaScript));
             Assert.AreEqual(script, MResJson.Utf8.GetString(entries["scripts/main.lua"]));
-            var metadata = Json(entries, "metadata/metadata.json"); Assert.AreEqual(4, metadata.Count);
+            var metadata = Json(entries, "metadata/metadata.json"); Assert.AreEqual(7, metadata.Count);
+            Assert.AreEqual("common", metadata["rarity"]); Assert.AreEqual(20d, metadata["durability"]); Assert.AreEqual(5d, metadata["purchasePrice"]);
             Assert.AreEqual(profile.Metadata.description, metadata["description"]); Assert.AreEqual("device", metadata["type"]); Assert.AreEqual(120d, metadata["value"]);
             foreach (var item in entries.Where(e => e.Key.EndsWith(".json")))
             {
@@ -240,6 +263,19 @@ namespace MResPacker.Tests
         {
             profile.Metadata.type = "medicine"; profile.LuaScript = null; var entries = Build();
             Assert.IsFalse(Json(entries, "manifest.json").ContainsKey("lua")); Assert.AreEqual("medicine", Json(entries, "metadata/metadata.json")["type"]);
+        }
+        [Test] public void RarityPricesAndUnlimitedDurabilityRoundTrip()
+        {
+            foreach (string rarity in new[] { "common", "rare", "epic", "legendary" })
+            {
+                profile.Metadata.rarity = rarity; profile.Metadata.durability = -1;
+                profile.Metadata.value = 24; profile.Metadata.purchasePrice = 5;
+                var data = Json(Build(), "metadata/metadata.json");
+                Assert.AreEqual(rarity, data["rarity"]); Assert.AreEqual(-1d, data["durability"]);
+                Assert.AreEqual(24d, data["value"]); Assert.AreEqual(5d, data["purchasePrice"]);
+            }
+            foreach (int invalid in new[] { -2, 0, 10001 })
+            { profile.Metadata.durability = invalid; Assert.IsFalse(MResBuildPipeline.Analyze(profile).CanBuild); }
         }
         [Test] public void InvalidUtf8LuaIsRejected()
         {

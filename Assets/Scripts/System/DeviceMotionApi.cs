@@ -5,7 +5,7 @@ using UnityEngine.Scripting;
 
 namespace MarblesECS
 {
-    /// <summary>Motion commands for the ball in OnContact. Coordinates are world space.</summary>
+    /// <summary>Composable motion commands for the current device callback. Coordinates are world space.</summary>
     [Preserve]
     public sealed class DeviceMotionApi
     {
@@ -28,7 +28,7 @@ namespace MarblesECS
         {
             var c = Context;
             if (!CampaignStateUtility.FindDevice(c, instanceId, out var entity) ||
-                !c.Manager.GetComponentData<OwnedDeviceData>(entity).Placed ||
+                !DeviceDurabilitySystem.Available(c, c.Manager.GetComponentData<OwnedDeviceData>(entity)) ||
                 !(c.Physics is IMarblePhysicsCommands commands) || !commands.TryGetDevicePose(instanceId, out var pose)) return null;
             return new DeviceEndpoint(this, instanceId, pose);
         }
@@ -62,16 +62,20 @@ namespace MarblesECS
             return Owns(destination) && BallInteractionSystem.Exit(c, ball, destination.Pose, direction, speed);
         }
         public bool TryMove(Vector3 position, Vector3 velocity) => BallInteractionSystem.Move(Context, ball, position, velocity);
+        /// <summary>Changes only world position, with clearance checks, retaining the current velocity and spin.</summary>
+        public bool TrySetPosition(Vector3 position) => TryMove(position, Velocity);
         public bool TrySetVelocity(Vector3 velocity) => BallInteractionSystem.SetVelocity(Context, ball, velocity);
         public bool TryScaleSpeed(float scale)
         {
             _ = Context;
             return BallInteractionSystem.Finite(scale) && scale >= 0 && TrySetVelocity(Velocity * scale);
         }
+        /// <summary>Suspends in place for (0, 60] simulation seconds, restores motion, then invokes OnHoldEnd.</summary>
+        public bool TryHold(float seconds) => HeldMotionSystem.Begin(Context, ball, source.InstanceId, owner.Contact, seconds);
         private bool Owns(DeviceEndpoint endpoint) => endpoint != null && ReferenceEquals(endpoint.Owner, this);
     }
 
-    /// <summary>Read-only device pose, valid only during the originating OnContact callback.</summary>
+    /// <summary>Read-only device pose, valid only during the originating device callback.</summary>
     [Preserve]
     public sealed class DeviceEndpoint
     {

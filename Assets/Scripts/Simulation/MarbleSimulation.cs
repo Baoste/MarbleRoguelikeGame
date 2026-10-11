@@ -88,6 +88,8 @@ namespace MarblesECS
             context.Launcher = new LauncherData();
             LauncherMovementSystem.Reset(context);
             context.StepSeconds = 0;
+            if (physics is IMarbleDeviceUsageSink usage)
+                usage.BindDeviceUsage(id => DeviceDurabilitySystem.Available(context, id), id => DeviceDurabilitySystem.TryUse(context, id));
             started = true;
         }
 
@@ -103,6 +105,7 @@ namespace MarblesECS
             if (context.IsRunning)
             {
                 context.StepSeconds = dt;
+                DeviceScriptSystem.Tick(context);
                 var round = context.Round;
                 round.Time += dt;
                 round.Tick = checked(round.Tick + 1);
@@ -124,7 +127,9 @@ namespace MarblesECS
             {
                 if (!context.IsRunning) return;
                 PhysicsReadbackSystem.Execute(context, physics);
+                HeldMotionSystem.Execute(context);
                 ContactResolutionSystem.Execute(context);
+                DeviceScriptSystem.BallUpdate(context);
                 LostMarbleSystem.Execute(context, physics);
                 DespawnSystem.Execute(context, physics);
                 RoundFlowSystem.Execute(context);

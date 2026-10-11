@@ -77,9 +77,14 @@ namespace MResPacker
             if ((string)m["format"] != "mres" || (double)m["version"] != 1) throw new FormatException("Invalid manifest format.");
             var prefab = Json(bytes, Ref(entries, m["prefab"], 2));
             var metadata = Json(bytes, Ref(entries, m["metadata"], 7));
-            if (metadata.Count != 4) throw new FormatException("Metadata must contain exactly four fields.");
+            if (metadata.Keys.Any(k => !new[] { "name", "description", "value", "type", "purchasePrice", "rarity", "durability" }.Contains(k)))
+                throw new FormatException("Unknown metadata field.");
+            double durability = metadata.TryGetValue("durability", out var d) ? (double)d : 20;
+            if (durability != Math.Truncate(durability) || (durability != -1 && (durability < 1 || durability > 10000))) throw new FormatException("Invalid durability.");
             new MResMetadataData { name = (string)metadata["name"], description = (string)metadata["description"],
-                value = (float)(double)metadata["value"], type = (string)metadata["type"] }.Validate();
+                value = (float)(double)metadata["value"], type = (string)metadata["type"],
+                purchasePrice = metadata.TryGetValue("purchasePrice", out var purchaseNumber) ? (float)(double)purchaseNumber : 5,
+                rarity = metadata.TryGetValue("rarity", out var rarityName) ? (string)rarityName : "common", durability = (int)durability }.Validate();
             if (m.TryGetValue("lua", out var lua) && lua != null)
             {
                 var e = Ref(entries, lua, 6); MResJson.Utf8.GetString(bytes, (int)e.Offset, (int)e.Size);

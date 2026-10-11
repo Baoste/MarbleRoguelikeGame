@@ -1,6 +1,6 @@
 # 配置来源与调参
 
-`Resources/GameContent.json` 是属性、装置和药物的唯一运行时配置来源。`Resources/GameBalance.json` 保留血量、抽血档位、发射间隔、库存容量、阶段目标和战役规则；盘面由场景组件配置。
+`Resources/GameContent.json` 配置属性、药物和内容规则；其中 `Devices` 始终由当前 `Resources/Devices/**/*.mres` 完整生成。运行时装置直接使用 MRes 目录。`Resources/GameBalance.json` 保留血量、抽血档位、发射间隔、库存容量、阶段目标和战役规则；盘面由场景组件配置。
 
 ## 属性的唯一入口
 
@@ -36,13 +36,17 @@
 
 装置的名称、价格、参数和 `StartingCount` 在 `Resources/Devices/*.mres` 中配置；药物在 `GameContent.json` 的 `Drugs` 中修改。`Devices` 是 MRes 目录自动生成的离线分析快照。`StartingCount = 0` 不赠送，正整数表示开局数量；传送门每份生成一对，容量按两个实体计算。
 
+打开项目/脚本重载、导入/删除/移动 MRes、导入 `GameContent.json`、进入 Play 或构建 Player 时都会同步。同步完整替换 `Devices`，移除当前包目录中已不存在的条目；名称、描述、买卖价格、稀有度和耐久取包内 Metadata，其余参数取包内 `game/device.json`。旧 JSON、Excel 不再补回装置或覆盖包内配置，属性、药物和内容规则保留。Play 中不修改当前会话，退出后同步，重新进入 Play 使用新配置。
+
+手动同步菜单为 `Tools/MRes/Rebuild Device Catalog`。Unity 未打开时可在项目根目录运行 `python Assets/Editor/Balance/sync_mres_devices.py`；加 `--check` 只检查是否与当前 MRes 一致。脚本仅解析快照所需的 Metadata/业务参数，完整资源、Shader、Lua 校验由 Unity 完成；包损坏或 ID 重复会报错，不使用旧列表兜底。离线数值工具继续读取这份最新快照，历史分析结果和显式选择的旧实验快照不会被重写。
+
 给程序/策划交接的工作簿是 `Assets/Docs/血色柏青哥_道具药物装置_规范修订版.xlsx`。优先查看其中的“运行时平衡表”：它汇总全部 27 个装置/药物的价格、当前效果、时长、叠加规则、证据等级、旧值/新值和调整原因。该页用于审阅与配置交接，运行时装置来源是 `Resources/Devices/*.mres`，属性和药物来源是 `Resources/GameContent.json`。
 
-Rush 药物的专用数值也已数据化：`RushChanceAdd` 控制肾上腺素的概率加成，`RushScoreMultiplier` 控制烧烧果实在 Rush 结算时的额外倍率。商店每轮保底一个 Rush 装置和一个 Rush 药物，其余槽位从全目录无重复抽取。
+Rush 药物的专用数值也已数据化：`RushChanceAdd` 控制肾上腺素的概率加成，`RushScoreMultiplier` 控制烧烧果实在 Rush 结算时的额外倍率。商店在当前目录有候选时保底 Rush 装置/Rush 药物，其余槽位从全目录无重复抽取；没有相应装置时不会恢复已删除的旧装置。
 
 `GameBalance` 的装置和药物列表直接引用同一份内容目录；会话复制时深拷贝整个目录。基础 JSON 和基础 Excel 不再保存旧装置、药物列表。
 
-当前共 34 个属性、15 种装置、12 种药物。全部装置由 `Resources/Devices/*.mres` 加载，详见 [MRes 装置目录](../Resources/Devices/README.md)。
+当前共 34 个属性、8 种装置、12 种药物；装置保留 BouncePad、黏黏、弹弹、吸吸、加速力场、传送门、黑洞和 Multi Ding。装置数量随实际 MRes 文件变化，全部由 `Resources/Devices/*.mres` 加载，详见 [MRes 装置目录](../Resources/Devices/README.md)。
 
 ## JSON 与 Excel
 
@@ -50,9 +54,9 @@ Rush 药物的专用数值也已数据化：`RushChanceAdd` 控制肾上腺素�
 
 - `Config/GameBalance.xlsx` 只保留 `Marble`、`Campaign`、`Stages` 和说明页；保存会自动导入基础 JSON，也可使用 `Marbles ECS/Import Game Balance Excel`。
 - 规范工作簿不再自动覆盖 `GameContent.json`。只有显式执行 `Marbles ECS/Import Attribute and Content Excel`，才会采用表中的属性和药物窗口等数值；需要使用该菜单时，先把希望保留的 JSON 修改同步到表格。
-- “运行时平衡表”是汇总审阅页，不被 Importer 自动读取；显式导入读取的是属性字典与“设计总表”，装置/药物配方仍由 JSON 注册内容保留。
+- “运行时平衡表”是汇总审阅页，不被 Importer 自动读取；显式导入读取的是属性字典与“设计总表”，药物配方保留已注册内容，装置每次直接解析当前 MRes 文件。
 - 旧属性表将发射速度标为倍率 `x`；导入器统一标记为 `m/s`，数值本身不做额外缩放。
-- `Editor/Balance/build_content.py` 只补充缺失的已注册条目，保留已有属性、价格、初始数量、配方及内容规则。目录完整时不会重写文件。
+- `Editor/Balance/build_content.py` 只补充缺失的属性和药物，保留其现有数值及内容规则；`Devices` 每次直接从当前 MRes 完整生成，不保留旧 JSON 中的装置行。数据完全一致时不重写文件。
 
 基础 Excel 不识别已删除的属性字段、`Devices/Drugs/Board/Zones` 工作表，导入失败时不会发布 JSON。JSON 中遗留的旧属性字段被忽略，不能重新控制内容属性。`GameContent.json` 是场景启动的必需资源，缺失时报错，不再静默切回旧数值。
 

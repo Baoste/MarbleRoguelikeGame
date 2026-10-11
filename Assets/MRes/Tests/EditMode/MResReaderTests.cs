@@ -84,6 +84,29 @@ namespace MRes.Tests
                 Assert.IsFalse(h.Root.GetComponents<MonoBehaviour>().Any(c => c.GetType().Name == "MResRuntimeBehaviour"));
             }
         }
+        [TestCase("common")]
+        [TestCase("rare")]
+        [TestCase("epic")]
+        [TestCase("legendary")]
+        public void ExtendedMetadataAndUnlimitedDurability(string rarity)
+        {
+            string json = "{\"name\":\"test\",\"description\":\"test\",\"type\":\"device\",\"value\":24,\"purchasePrice\":5,\"durability\":-1,\"rarity\":\"" + rarity + "\"}";
+            var metadata = MResLoader.Read(MResFixture.Create(metadata: json)).Metadata;
+            Assert.AreEqual(24, metadata.value); Assert.AreEqual(5, metadata.purchasePrice);
+            Assert.AreEqual(-1, metadata.durability); Assert.AreEqual(rarity, metadata.rarity);
+            var legacy = MResLoader.Read(MResFixture.Create()).Metadata;
+            Assert.AreEqual("common", legacy.rarity); Assert.AreEqual(20, legacy.durability); Assert.AreEqual(5, legacy.purchasePrice);
+        }
+        [TestCase("durability", "-2")]
+        [TestCase("durability", "0")]
+        [TestCase("durability", "1.5")]
+        [TestCase("purchasePrice", "-1")]
+        [TestCase("rarity", "\"mythic\"")]
+        public void InvalidExtendedMetadataIsRejected(string field, string value)
+        {
+            string json = "{\"name\":\"test\",\"description\":\"test\",\"type\":\"device\",\"value\":24,\"" + field + "\":" + value + "}";
+            Assert.Throws<MResFormatException>(() => MResLoader.Read(MResFixture.Create(metadata: json)));
+        }
         [Test] public void RestoresRigidbodyAndMedicineMetadata()
         {
             var node = MResFixture.Node(0, -1, "Body", "{\"type\":\"Rigidbody\",\"mass\":2.5,\"drag\":0.2,\"angularDrag\":0.3,\"useGravity\":false,\"isKinematic\":true,\"interpolation\":1,\"collisionDetectionMode\":3,\"constraints\":10}");

@@ -38,8 +38,12 @@ namespace MarblesECS
                     var definition = JsonUtility.FromJson<DeviceDefinition>(Encoding.UTF8.GetString(package.GetBytes("game/device.json")));
                     if (definition == null) throw new ArgumentException("Missing game/device.json.");
                     definition.Name = package.Metadata.name; definition.Description = package.Metadata.description;
-                    if (package.Metadata.value != Math.Truncate(package.Metadata.value)) throw new ArgumentException("Device metadata.value must be an integer price.");
-                    definition.Price = checked((long)package.Metadata.value);
+                    if (package.Metadata.value != Math.Truncate(package.Metadata.value) || package.Metadata.purchasePrice != Math.Truncate(package.Metadata.purchasePrice))
+                        throw new ArgumentException("Device purchase/sale prices must be whole coins.");
+                    definition.Price = checked((long)package.Metadata.purchasePrice);
+                    definition.SellPrice = checked((long)package.Metadata.value);
+                    definition.Durability = package.Metadata.durability;
+                    definition.Rarity = (DeviceRarity)Enum.Parse(typeof(DeviceRarity), package.Metadata.rarity, true);
                     definition.Validate();
                     if (result.ContainsKey(definition.Id)) throw new ArgumentException("Duplicate device ID " + definition.Id);
                     result.Add(definition.Id, new DeviceResource(package, definition));

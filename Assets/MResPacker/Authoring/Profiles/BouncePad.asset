@@ -18,6 +18,9 @@ MonoBehaviour:
     name: "\u793A\u4F8B\u5F39\u5C04\u53F0"
     description: "\u4FDD\u6301\u6216\u63D0\u9AD8\u901F\u5EA6\uFF0C\u5E76\u6CBF\u88C5\u7F6E\u51FA\u53E3\u671D\u5411\u5F39\u51FA\u3002"
     value: 120
+    purchasePrice: 5
+    rarity: common
+    durability: 20
     type: device
   ShaderRegistry: {fileID: 11400000, guid: 6a02c0d8ec667c24db7ad0a9bed082f4, type: 2}
   OutputPath: Assets/MResPacker/Output/BouncePad.mres

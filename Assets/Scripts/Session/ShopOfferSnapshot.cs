@@ -9,5 +9,8 @@ namespace MarblesECS
         public string Description;
         public long Price;
         public bool Sold;
+        public DeviceRarity Rarity;
+        public int Durability;
+        public long SellPrice;
     }
 }
