@@ -16,6 +16,7 @@ namespace MarblesECS.PhysX
 
         private void ReturnToPool(MarbleBody view)
         {
+            RestoreHeldVisibility(view);
             if (view.Suspended && view.Body != null) view.Body.isKinematic = false;
             view.Suspended = false;
             foreach (var pin in view.IgnoredPins)

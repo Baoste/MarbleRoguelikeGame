@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edcc8d922cbaa444bbd823733e49714d, type: 3}
+  m_Name: GoldRush
+  m_EditorClassIdentifier: 
+  SourcePrefab: {fileID: 2480268933280917447, guid: 0a3ef2982e4eeee4e91106e50d6f4d95,
+    type: 3}
+  LuaScript: {fileID: 102900000, guid: 1a50488b5fa902943bd71fdb38532b88, type: 3}
+  Metadata:
+    name: "\u6DD8\u91D1\u70ED"
+    description: "\u77FF\u8F66\u8FD0\u8D70\u4E00\u9897\u5F39\u73E0\uFF0C10\u79D2\u540E\u7B49\u6982\u7387\uFF1A\u8FD4\u8FD8\u5F39\u73E0\u5E76\u83B7\u5F972\u91D1\u5E01\u3001\u6D88\u8017\u5F39\u73E0\u83B7\u5F975\u91D1\u5E01\u3001\u6216\u4E00\u65E0\u6240\u83B7\u3002\u8FD0\u8F93\u671F\u95F4\u4E0D\u63A5\u6536\u65B0\u5F39\u73E0\uFF0C\u51FA\u7ED3\u679C\u62631\u8010\u4E45\u3002"
+    value: 120
+    purchasePrice: 5
+    rarity: common
+    durability: 20
+    type: device
+  ShaderRegistry: {fileID: 11400000, guid: 4653212b337e57840af32dc0e8f22684, type: 2}
+  OutputPath: Assets/MResPacker/Output/GoldRush.mres
+  ExtraFiles:
+  - VirtualPath: game/device.json
+    Source: {fileID: 4900000, guid: c9d5ab2fcf9004f409772298dff8740d, type: 3}

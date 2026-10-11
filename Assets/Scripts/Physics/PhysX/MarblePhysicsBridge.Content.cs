@@ -4,13 +4,23 @@ using UnityEngine;
 
 namespace MarblesECS.PhysX
 {
-    public sealed partial class MarblePhysicsBridge : IMarblePhysicsCommands, IMarbleDeviceUsageSink
+    public sealed partial class MarblePhysicsBridge : IMarblePhysicsCommands, IMarbleDeviceUsageSink, IMarbleDeviceInteractionSink, IMarbleDeviceRotation
     {
         private readonly List<MResDeviceBody> contentDevices = new List<MResDeviceBody>();
         private RaycastHit[] pinHits = new RaycastHit[64];
         private readonly List<Collider> brokenPins = new List<Collider>();
         private readonly List<MarbleBody> orderedFieldBodies = new List<MarbleBody>();
         private Func<int, bool> deviceAvailable, useDevice;
+        private Func<int, bool> canCompleteDevice;
+        public void BindDeviceInteraction(Func<int, bool> canComplete) { canCompleteDevice = canComplete; }
+        public bool TrySetDeviceYaw(int instanceId, float degrees)
+        {
+            if (!MarbleRules.IsFinite(degrees)) return false;
+            foreach (var device in MResDeviceBody.Active)
+                if (device != null && device.gameObject.scene == scene && device.InstanceId == instanceId)
+                { device.SetYaw(degrees); return true; }
+            return false;
+        }
         public void BindDeviceUsage(Func<int, bool> available, Func<int, bool> tryUse)
         { deviceAvailable = available; useDevice = tryUse; RefreshDeviceAvailability(); }
         public void RefreshDeviceAvailability()
@@ -159,7 +169,8 @@ namespace MarblesECS.PhysX
         }
         internal void ReportDevice(MarbleBody view, MResDeviceBody device, ContactPoint? impact = null)
         {
-            if (view.Suspended || device == null || !device.isActiveAndEnabled || !device.GameplayEnabled || device.Script == null || !device.Script.HasFunction("OnContact")) return;
+            // Contact-dependent status lifetimes also need devices without an OnContact Lua handler.
+            if (view.Suspended || device == null || !device.isActiveAndEnabled || !device.GameplayEnabled) return;
             view.StepDevices.Add(device.InstanceId);
             if (!view.InsideDevices.Add(device.InstanceId)) return;
             var contact = device.Contact(view.Key, view.Body.position, view.Body.velocity.magnitude);

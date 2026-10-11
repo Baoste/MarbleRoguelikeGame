@@ -11,6 +11,7 @@ namespace MarblesECS
         public string GetDeviceStatus(int instanceId)
         {
             ThrowIfDisposed();
+            if (!DeviceDurabilitySystem.Available(context, instanceId) && !DeviceScriptSystem.CanComplete(context, instanceId)) return string.Empty;
             return context.DeviceScripts.Status(instanceId, context.Round.RoundId);
         }
     }

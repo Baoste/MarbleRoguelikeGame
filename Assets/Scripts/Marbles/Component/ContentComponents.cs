@@ -17,6 +17,7 @@ namespace MarblesECS
     internal struct BallFeatures : IComponentData
     {
         public ulong Family;
+        public int SpawnSourceId;
         public int Generation;
         public int ReplicationGeneration;
         public int PiercesUsed;

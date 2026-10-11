@@ -1,0 +1,13 @@
+{
+  "Id": 9011,
+  "Radius": 0.6,
+  "ScoreMultiplier": 1,
+  "StartingCount": 0,
+  "PurchaseQuantity": 1,
+  "Cooldown": 0,
+  "MaxTriggersPerBall": 0,
+  "Range": 5,
+  "Strength": 2,
+  "Value": 10,
+  "SourceId": "GoldRush"
+}

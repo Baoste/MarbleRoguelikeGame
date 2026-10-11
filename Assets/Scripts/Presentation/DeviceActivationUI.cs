@@ -66,7 +66,7 @@ namespace MarblesECS.Presentation
                 string status = Controller.GetDeviceStatus(device.InstanceId);
                 if (!owned.TryGetValue(device.InstanceId, out var snapshot)) continue;
                 status = DeviceDisplayText.Durability(snapshot) +
-                    (snapshot.Exhausted || string.IsNullOrEmpty(status) ? "" : "\n" + status);
+                    (string.IsNullOrEmpty(status) ? "" : "\n" + status);
                 Vector3 point = camera.WorldToScreenPoint(device.transform.position);
                 if (point.z <= 0) continue;
                 var content = new GUIContent(status);

@@ -33,6 +33,16 @@ namespace MarblesECS.PhysX
         }
         public Vector3 Forward => transform.rotation * Vector3.back;
         public Vector3 Up => transform.up;
+        private bool hasYawBasis;
+        private Quaternion yawBasis;
+        internal void SetYaw(float degrees)
+        {
+            if (!hasYawBasis) { yawBasis = transform.rotation; hasYawBasis = true; }
+            var rotation = yawBasis * Quaternion.AngleAxis(degrees % 360, Vector3.up);
+            if (Quaternion.Angle(transform.rotation, rotation) < .001f) return;
+            transform.rotation = rotation;
+            Physics.SyncTransforms();
+        }
         private readonly Dictionary<string, BoxCollider> fieldBoxes = new Dictionary<string, BoxCollider>();
         internal BoxCollider FindFieldBox(string nodePath)
         {

@@ -16,6 +16,7 @@ namespace MarblesECS
         public float EntrySpeed => EntryVelocity.magnitude;
         public Vector3 EntryAngularVelocity { get { _ = owner.Context; return hold.OriginalSpin; } }
         public float Duration { get { _ = owner.Context; return hold.Duration; } }
+        public bool IsManual { get { _ = owner.Context; return hold.Manual; } }
         public double Elapsed { get { _ = owner.Context; return elapsed; } }
     }
 }

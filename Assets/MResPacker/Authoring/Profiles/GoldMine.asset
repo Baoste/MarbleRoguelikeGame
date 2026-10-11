@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edcc8d922cbaa444bbd823733e49714d, type: 3}
+  m_Name: GoldMine
+  m_EditorClassIdentifier: 
+  SourcePrefab: {fileID: 2895926625252987817, guid: 33f455e575b981e4cb0d30037b832fb4,
+    type: 3}
+  LuaScript: {fileID: 102900000, guid: 5054e53b15944ec4280886c6331808aa, type: 3}
+  Metadata:
+    name: "\u77FF\u8001\u677F"
+    description: "\u5F39\u73E0\u6BCF\u6B21\u649E\u51FB\u57FA\u7840\u4EF7\u503C-2\uFF08\u6700\u4F4E\u4E3A0\uFF09\uFF0C\u91D1\u5E01+4\uFF1B\u6BCF\u5EA7\u77FF\u6BCF\u56DE\u5408\u6700\u591A\u4EA7\u51FA20\u91D1\u5E01\uFF0C\u6BCF\u6B21\u4EA7\u51FA\u62631\u8010\u4E45\u3002"
+    value: 120
+    purchasePrice: 5
+    rarity: common
+    durability: 20
+    type: device
+  ShaderRegistry: {fileID: 11400000, guid: cf9a82dc1ff03d9428404ef15e57a762, type: 2}
+  OutputPath: Assets/MResPacker/Output/GoldMine.mres
+  ExtraFiles:
+  - VirtualPath: game/device.json
+    Source: {fileID: 4900000, guid: 7c8e8beb7a89ee146b1c23bce98c9a56, type: 3}

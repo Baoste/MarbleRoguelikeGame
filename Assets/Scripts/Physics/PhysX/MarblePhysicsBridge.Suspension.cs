@@ -2,8 +2,32 @@ using UnityEngine;
 
 namespace MarblesECS.PhysX
 {
-    public sealed partial class MarblePhysicsBridge : IMarblePhysicsSuspension
+    public sealed partial class MarblePhysicsBridge : IMarblePhysicsSuspension, IMarbleHeldVisibility
     {
+        public bool TrySetHeldVisible(MarbleKey key, bool visible)
+        {
+            if (!bodies.TryGetValue(key, out var view) || view == null || !view.Suspended) return false;
+            if (visible) RestoreHeldVisibility(view);
+            else
+            {
+                if (view.HeldRendererStates == null) view.HeldRendererStates = new System.Collections.Generic.Dictionary<Renderer, bool>();
+                foreach (var renderer in view.GetComponentsInChildren<Renderer>(true))
+                {
+                    if (!view.HeldRendererStates.ContainsKey(renderer)) view.HeldRendererStates.Add(renderer, renderer.forceRenderingOff);
+                    renderer.forceRenderingOff = true;
+                }
+            }
+            return true;
+        }
+
+        private static void RestoreHeldVisibility(MarbleBody view)
+        {
+            if (view.HeldRendererStates == null) return;
+            foreach (var state in view.HeldRendererStates)
+                if (state.Key != null) state.Key.forceRenderingOff = state.Value;
+            view.HeldRendererStates.Clear();
+        }
+
         public bool TrySetSuspended(MarbleKey key, bool suspended)
         {
             if (!bodies.TryGetValue(key, out var view) || view == null || view.Body == null) return false;
@@ -22,6 +46,7 @@ namespace MarblesECS.PhysX
             }
             else
             {
+                RestoreHeldVisibility(view);
                 body.isKinematic = false;
                 body.detectCollisions = view.SuspendedDetectCollisions;
                 body.collisionDetectionMode = view.SuspendedCollisionMode;

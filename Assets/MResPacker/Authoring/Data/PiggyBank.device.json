@@ -1,0 +1,13 @@
+{
+  "Id": 9012,
+  "Radius": 0.36,
+  "ScoreMultiplier": 1,
+  "StartingCount": 0,
+  "PurchaseQuantity": 1,
+  "Cooldown": 0,
+  "MaxTriggersPerBall": 0,
+  "Range": 0.2,
+  "Strength": 0.1,
+  "Value": 10,
+  "SourceId": "PiggyBank"
+}

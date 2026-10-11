@@ -7,6 +7,7 @@
     <type fullname="MarblesECS.DeviceHoldInfo" preserve="all" />
     <type fullname="MarblesECS.DeviceImpactInfo" preserve="all" />
     <type fullname="MarblesECS.DeviceVectorApi" preserve="all" />
+    <type fullname="MarblesECS.DeviceSpawnBatch" preserve="all" />
     <type fullname="MarblesECS.PhysX.DeviceFieldContext" preserve="all" />
   </assembly>
 </linker>

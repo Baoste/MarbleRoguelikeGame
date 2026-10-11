@@ -19,6 +19,7 @@ namespace MarblesECS.Editor
             GroupAndRelease();
             RangeAndLifecycle();
             ObstructedAndUnfinished();
+            Durability();
             Debug.Log("COLLECTOR_VALIDATION_PASSED: " + assertions + " assertions; packaged Lua, gradual attraction, shared deadline, separated slots and cleanup.");
         }
 
@@ -57,6 +58,7 @@ namespace MarblesECS.Editor
                 Check(r.Held(late), "later entrant joins the active group");
                 Near(deadline, r.C.Manager.GetComponentData<HeldMotion>(r.Ball(late)).ReleaseAt, "late entrant does not extend the group");
                 keys = keys.Concat(new[] { late }).ToArray(); speeds = speeds.Concat(new[] { 2f }).ToArray();
+                Check(r.C.Manager.GetComponentData<OwnedDeviceData>(r.Device).UsesThisRound == 0, "gathering a batch spends no durability");
                 var positions = keys.Select(k => r.Body(k).position).ToArray();
                 var spins = keys.Select(k => r.C.Manager.GetComponentData<HeldMotion>(r.Ball(k)).OriginalSpin).ToArray();
                 while (r.C.Round.Time + Rig.StepSeconds < deadline - .000001)
@@ -76,6 +78,7 @@ namespace MarblesECS.Editor
                     VectorNear(spins[i], body.angularVelocity, "release restores spin captured after attraction and ordinary collisions");
                 }
                 r.Step(false);
+                Check(r.C.Manager.GetComponentData<OwnedDeviceData>(r.Device).UsesThisRound == 1, "the entire released batch costs one use");
                 for (int i = 0; i < keys.Length; i++)
                 {
                     VectorNear(r.Down * speeds[i], r.Body(keys[i]).velocity, "released balls are not immediately caught again");
@@ -170,6 +173,25 @@ namespace MarblesECS.Editor
                     VectorNear(r.Down * 2, r.Body(key).velocity, "unfinished attraction releases downhill at the same deadline");
                 }
                 finally { UnityEngine.Object.DestroyImmediate(obstacle); }
+            }
+        }
+
+        private static void Durability()
+        {
+            using (var r = new Rig())
+            {
+                r.C.Balance.Devices.Single(d => d.Id == 9003).Durability = 1;
+                var held = r.Launch(); var unfinished = r.Launch();
+                r.Place(held, 0, 0, 3); r.Place(unfinished, .8f, 0, 5); r.Step(false);
+                Check(r.Held(held) && !r.Held(unfinished), "last-use batch includes a held ball and a distant straggler");
+                Near(1, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "gathering reserves no durability cost");
+                for (int i = 0; i < 40; i++) r.Step(false);
+                Check(!r.Held(held) && !r.Held(unfinished), "last batch completes held and unfinished members together");
+                VectorNear(r.Down * 3, r.Body(held).velocity, "held member releases at saved speed");
+                VectorNear(r.Down * 5, r.Body(unfinished).velocity, "unfinished member releases despite exhaustion from first member");
+                Near(0, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "last batch spends one use total");
+                var extra = r.Launch(); r.Place(extra, .6f, 180, 2); r.Step(false);
+                Check(!r.Held(extra) && r.VisitCount(extra) == 0, "completion window never admits a new batch at zero durability");
             }
         }
 

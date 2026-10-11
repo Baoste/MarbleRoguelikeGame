@@ -8,32 +8,39 @@ namespace MarblesECS
     [Preserve]
     public sealed class DeviceVectorApi
     {
-        private readonly DeviceContactContext owner;
-        internal DeviceVectorApi(DeviceContactContext owner) { this.owner = owner; }
+        private readonly Func<SimulationContext> context;
+        internal DeviceVectorApi(DeviceContactContext owner) : this(() => owner.Context) { }
+        internal DeviceVectorApi(Func<SimulationContext> context) { this.context = context; }
         public Vector3 Normalize(Vector3 vector)
         {
-            _ = owner.Context; Validate(vector);
+            _ = context(); Validate(vector);
             return vector.sqrMagnitude < 1e-12f ? Vector3.zero : Unit(vector);
         }
         public Vector3 ProjectOnPlane(Vector3 vector, Vector3 normal)
         {
-            _ = owner.Context; Validate(vector); Validate(normal, true);
+            _ = context(); Validate(vector); Validate(normal, true);
             return Vector3.ProjectOnPlane(vector, Unit(normal));
         }
         public Vector3 Reflect(Vector3 vector, Vector3 normal)
         {
-            _ = owner.Context; Validate(vector); Validate(normal, true);
+            _ = context(); Validate(vector); Validate(normal, true);
             return Vector3.Reflect(vector, Unit(normal));
         }
         public float Dot(Vector3 a, Vector3 b)
         {
-            _ = owner.Context; Validate(a); Validate(b);
+            _ = context(); Validate(a); Validate(b);
             return Vector3.Dot(a, b);
         }
         public float SignedAngle(Vector3 from, Vector3 to, Vector3 axis)
         {
-            _ = owner.Context; Validate(from, true); Validate(to, true); Validate(axis, true);
+            _ = context(); Validate(from, true); Validate(to, true); Validate(axis, true);
             return Vector3.SignedAngle(Unit(from), Unit(to), Unit(axis));
+        }
+        public Vector3 Rotate(Vector3 vector, Vector3 axis, float degrees)
+        {
+            _ = context(); Validate(vector); Validate(axis, true);
+            if (!BallInteractionSystem.Finite(degrees)) throw new ArgumentOutOfRangeException(nameof(degrees));
+            return Quaternion.AngleAxis(degrees % 360, Unit(axis)) * vector;
         }
         private static Vector3 Unit(Vector3 vector) => vector / Mathf.Sqrt(vector.sqrMagnitude);
         private static void Validate(Vector3 vector, bool nonzero = false)

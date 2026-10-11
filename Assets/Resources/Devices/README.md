@@ -1,6 +1,6 @@
 # MRes 装置目录
 
-本目录的原始 `.mres` 是装置外观、碰撞体、参数和行为的权威来源。当前保留以下 8 种装置，商店与背包使用这个目录；`Prefabs/Devices`、手工 prefab 绑定和 C# 装置行为分支已删除。
+本目录的原始 `.mres` 是装置外观、碰撞体、参数和行为的权威来源。当前包含以下 15 种装置，商店与背包使用这个目录；`Prefabs/Devices`、手工 prefab 绑定和 C# 装置行为分支已删除。
 
 | ID | 装置 | 包文件 |
 | --- | --- | --- |
@@ -12,6 +12,13 @@
 | 9003 | 吸吸 | `9003_Collector.mres` |
 | 9004 | 加速力场 | `9004_AccelerationField.mres` |
 | 9005 | 黑洞 | `9005_BlackHole.mres` |
+| 9006 | 反重力 | `9006_AntiGravity.mres` |
+| 9007 | 大炮 | `9007_Cannon.mres` |
+| 9008 | 沙包 | `9008_Sandbag.mres` |
+| 9009 | 大石碎胸口 | `9009_StoneBurst.mres` |
+| 9010 | 矿老板 | `9010_GoldMine.mres` |
+| 9011 | 淘金热 | `9011_GoldRush.mres` |
+| 9012 | 猪猪存钱罐 | `9012_PiggyBank.mres` |
 
 ## 添加或更新装置
 
@@ -40,6 +47,10 @@ Unity 不会将未知扩展名直接作为 `TextAsset` 收录，因此 `DeviceCa
 
 完整接口、传送门及其他运动效果示例见 [装置 Lua API](../../Docs/Device_Lua_API.md)。新脚本通过 `a.Motion` 读取速度、获取出口并调用传送/出射/变速接口；当前传送门保留完整世界速度方向和大小，区域力在出口重新计算。
 
+储存类耐久在释放效果时扣：黑洞启动一次引力、吸吸释放一批、大炮成功发射一批、黏黏释放一颗，分别扣 1；充能/储存/取消/空点击不扣。最后一次仍完成整批或完整持续时间，受阻重试不重复扣。其他即时装置仍按有效触发计数，持续力场每球每次进入扣 1；每回合恢复，`durability = -1` 无限。
+
+淘金热一次只运输一颗球，隐藏并等待 10 秒后，等概率返还原球并加 2 金币、消耗球加 5 金币、或消耗球无金币；三种结果均在完成时扣 1 耐久，运输及取消不扣。等待中拒绝其他球，结果后恢复接收；返还沿棋盘向下且保留进入速度大小。隐藏使用通用 `Motion.TrySetHeldVisible`，释放、取消与回收都会恢复显示。
+
 每件库存装置拥有独立 Lua 环境，共享一个 xLua VM。`OnContact(a)` 在确定性接触处理阶段执行，`OnField(a)` 在手动物理子步前执行。脚本顶层只做声明和初始化；此时可能尚未生成视觉根节点。`self` 在实际视图绑定后可用，常规 Start/Update/物理事件仍由 MRes Loader 转发。
 
 接触示例（增值透镜）：
@@ -47,19 +58,24 @@ Unity 不会将未知扩展名直接作为 `TextAsset` 收录，因此 `DeviceCa
 ```lua
 function OnContact(a)
     if not a:Trigger(0) then return end
-    a:Set('BALL_BASE_VALUE', a.Value * a.Parameter)
+    a:AddScoreMultiplier(a.Parameter)
 end
 ```
 
 `DeviceContactContext` 提供通用操作：
 
 - `Trigger(key)`：检查触发率、冷却和每球次数，应用通用机器倍率/复制修饰。`0` 使用当前装置 ID；连接线使用 `LinkKey`，配对装置可用 `-PairId`。
+- `TryPrepareTrigger(key)`：同样的触发检查与修正，不扣耐久；储存效果在释放时用 `CanUseOnce(key)` / `TryUseOnce(key)` 按实例、回合、批次去重。`TryKeepActive(seconds)` 让最后一点耐久对应的持续效果完成。
 - `Visit(key, maximum)`：只记录每球访问次数，不施加装置公共冷却；倍率钉和 Rush 钉用它保证同时接触的各颗球都能各触发一次。
 - `Get/Set/Global(attribute)`：读取、修改属性；`Value/Parameter/Strength/Speed` 等属性提供当前值和配置。
-- `Consume(refund)`、`AddCoins(amount)`、`Children(count, replace)`：消费弹珠、加金币、产生子球。
+- `AddBase(attribute, amount)`：增减弹珠未修正的基础属性，再计算现有修正，避免重复乘倍率。沙包用它叠加连击奖励；矿老板用它每次减 2（最低 0），再用 `AddCoins(4)` 产出金币。价值不足也触发，每座矿每回合最多 20 金币，每次实际产出扣 1 耐久；采完后不再扣值或耐久。
+- `CreateSpawnBatch()`：Lua 逐颗指定位置、速度和价值，整批提交生成；容量不足或物理受阻时整批撤销，不扣血。`SpawnSourceId` 提供来源信息。大石碎胸口在第 8 次撞击后均匀发射 16 颗，成功扣 1 耐久并冷却 5 秒。
+- `TryConsume(refund)`、`TrySettleAmount(score)`、`AddCoins(amount)`、`Children(count, replace)`：只负责吞噬、精确结算、加金币、产生子球；耐久由 Lua 组合登记。旧 `Consume` / `TrySettle` 保留隐式计数兼容。
 - `ScaleVelocity(scale)`、`Exit(direction, speed, angle)`、`ExitPartner(direction, speed)`：运动操作；方向为 `down` 或 `forward`，出口仍执行障碍检查。
 - `StoredValue`、`RushOnSettlement`、`RefundOnDespawn`、`ExitDown`、`TransportLockedUntil`：装置或弹珠状态。
-- `MultiplyScore`、`AddRushChance`、`Roll`、`BreakPinsOnCross`、`RemoveDevice`：计分、随机与通用场景操作。
+- `Coins`：只读当前钱包；猪猪存钱罐每满 10 金币提供 `1 + 0.1 × 档数` 的倍率，不花金币。
+- `AddScoreMultiplier(amount)`：传入完整倍率，累加 `amount - 1`，到得分区以 `1 + 累计增量` 统一计算。两次 1.5 得到 2，两次 1.2 得到 1.4；基础 1 只算一次。`MultiplyScore` 是相同语义的旧包兼容名。Multi Ding、猪猪存钱罐、装置通用倍率修正与旧倍率钉统一使用此规则。
+- `AddRushChance`、`Roll`、`BreakPinsOnCross`、`RemoveDevice`：概率、随机与通用场景操作。
 
 磁力脚本通过 `DeviceFieldContext` 的距离、方向、磁性参数计算作用力，再调用 `AddRadialForce`。C# 只负责通用物理执行及总力/速度上限，磁极方向与距离衰减公式在包内 Lua。
 

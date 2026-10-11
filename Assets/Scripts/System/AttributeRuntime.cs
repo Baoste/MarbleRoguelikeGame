@@ -160,7 +160,8 @@ namespace MarblesECS
             {
                 Radius = (float)Get(c, entity, GameAttribute.BALL_RADIUS) * RadiusToWorld,
                 Mass = (float)Get(c, entity, GameAttribute.BALL_MASS), Bounce = (float)Get(c, entity, GameAttribute.BALL_BOUNCE),
-                Friction = (float)Get(c, entity, GameAttribute.BALL_FRICTION), Gravity = (float)Get(c, entity, GameAttribute.BALL_GRAVITY_MOD),
+                Friction = (float)Get(c, entity, GameAttribute.BALL_FRICTION),
+                Gravity = (float)Get(c, entity, GameAttribute.BALL_GRAVITY_MOD) * TimedGravitySystem.Scale(c, entity),
                 MaxSpeed = (float)Get(c, entity, GameAttribute.BALL_MAX_SPEED), MagnetResponse = (float)Get(c, entity, GameAttribute.BALL_MAGNET_RESPONSE),
                 PierceCount = Math.Max(0, (int)Get(c, entity, GameAttribute.BALL_PIERCE_COUNT) - f.PiercesUsed), PierceChance = f.PierceChance,
                 Magnetic = f.Magnetic, MagneticRadius = f.MagneticRadius

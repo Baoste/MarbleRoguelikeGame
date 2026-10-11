@@ -17,6 +17,7 @@ namespace MarblesECS.PhysX
         internal bool Suspended, SuspendedDetectCollisions;
         internal Vector3 SuspendedSpin;
         internal CollisionDetectionMode SuspendedCollisionMode;
+        internal System.Collections.Generic.Dictionary<Renderer, bool> HeldRendererStates;
         internal uint PhysicsRandom;
         internal readonly System.Collections.Generic.HashSet<int> InsideDevices = new System.Collections.Generic.HashSet<int>();
         internal readonly System.Collections.Generic.HashSet<int> StepDevices = new System.Collections.Generic.HashSet<int>();

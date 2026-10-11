@@ -72,6 +72,22 @@ namespace MarblesECS
         }
         /// <summary>Suspends in place for (0, 60] simulation seconds, restores motion, then invokes OnHoldEnd.</summary>
         public bool TryHold(float seconds) => HeldMotionSystem.Begin(Context, ball, source.InstanceId, owner.Contact, seconds);
+        /// <summary>Changes only the display of this device's existing hold; restored before completion or cancellation.</summary>
+        public bool TrySetHeldVisible(bool visible)
+        {
+            var c = Context;
+            if (!c.Manager.HasComponent<HeldMotion>(ball) || c.Manager.GetComponentData<HeldMotion>(ball).SourceId != source.InstanceId ||
+                !(c.Physics is IMarbleHeldVisibility presentation)) return false;
+            var shot = c.Manager.GetComponentData<ShotOrigin>(ball);
+            return presentation.TrySetHeldVisible(new MarbleKey(shot.RoundId, shot.SpawnSequence), visible);
+        }
+        /// <summary>Suspends until the owning device requests ReleaseHeld, or lifecycle cleanup cancels it.</summary>
+        public bool TryHoldUntilReleased() => HeldMotionSystem.Begin(Context, ball, source.InstanceId, owner.Contact, 0, true);
+        /// <summary>Temporarily scales gravity only; a new call replaces the previous scale and deadline.</summary>
+        public bool TrySetGravityScale(float scale, float seconds, bool resetOnOtherDevice) =>
+            TimedGravitySystem.Set(Context, ball, source.InstanceId, scale, seconds, resetOnOtherDevice);
+        /// <summary>Removes the temporary scale, retaining current base gravity and unrelated modifiers.</summary>
+        public bool TryClearGravityScale() => TimedGravitySystem.Clear(Context, ball);
         private bool Owns(DeviceEndpoint endpoint) => endpoint != null && ReferenceEquals(endpoint.Owner, this);
     }
 

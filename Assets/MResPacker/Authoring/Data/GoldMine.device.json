@@ -1,0 +1,13 @@
+{
+  "Id": 9010,
+  "Radius": 0.25,
+  "ScoreMultiplier": 1,
+  "StartingCount": 0,
+  "PurchaseQuantity": 1,
+  "Cooldown": 0,
+  "MaxTriggersPerBall": 0,
+  "Range": 20,
+  "Strength": 4,
+  "Value": 2,
+  "SourceId": "GoldMine"
+}

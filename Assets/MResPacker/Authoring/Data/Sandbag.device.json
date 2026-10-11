@@ -1,0 +1,13 @@
+{
+  "Id": 9008,
+  "Radius": 0.2,
+  "ScoreMultiplier": 1,
+  "StartingCount": 0,
+  "PurchaseQuantity": 1,
+  "Cooldown": 0,
+  "MaxTriggersPerBall": 0,
+  "Range": 3,
+  "Strength": 0.3,
+  "Value": 1,
+  "SourceId": "Sandbag"
+}

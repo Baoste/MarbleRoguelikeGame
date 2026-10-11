@@ -47,12 +47,15 @@ namespace MarblesECS.Editor
             {
                 r.C.Balance.Devices.Single(d => d.Id == 9001).Durability = 1;
                 var key = r.Launch(); r.Contact(key, 5);
-                Check(r.Held(key) && r.Simulation.GetOwnedDevices().Single().Exhausted, "final durability use still starts a hold");
-                Check(r.View.Root.GetComponentsInChildren<Collider>().All(c => !c.enabled), "exhausted device loses its collision shape");
-                for (int i = 0; i < 10; i++) r.Step();
+                Check(r.Held(key) && r.Simulation.GetOwnedDevices().Single().RemainingDurability == 1, "holding does not spend durability");
+                Check(r.View.Root.GetComponentsInChildren<Collider>().All(c => c.enabled), "pending release keeps the sensor enabled");
+                var extra = r.Launch(); r.Contact(extra, 2);
+                Check(!r.Held(extra), "one remaining use reserves only one pending release");
+                for (int i = 0; i < 8; i++) r.Step();
                 Check(!r.Held(key) && !r.Body(key).isKinematic, "held completion restores a ball after source durability is depleted");
                 VectorNear(r.Down * 5, r.Body(key).velocity, "final held effect still completes its Lua launch");
-                Check(r.Simulation.GetOwnedDevices().Single().RemainingDurability == 0, "completion does not charge again");
+                Check(r.Simulation.GetOwnedDevices().Single().RemainingDurability == 0, "successful release spends the final use");
+                Check(r.View.Root.GetComponentsInChildren<Collider>().All(c => !c.enabled), "exhaustion disables the sensor after release");
             }
             foreach (float speed in new[] { 0f, .03f, 5f })
                 using (var r = new Rig())
@@ -129,6 +132,7 @@ namespace MarblesECS.Editor
                     Check(!r.Held(key), "removed or recalled device cancels pending hold");
                     VectorNear(new Vector3(3, 0, 4), r.Body(key).velocity, "cancel restores original entry direction and speed");
                     VectorNear(Rig.Spin, r.Body(key).angularVelocity, "cancel restores spin");
+                    if (!remove) Check(r.C.Manager.GetComponentData<OwnedDeviceData>(r.Device).UsesThisRound == 0, "cancelled storage has no durability cost");
                 }
             using (var r = new Rig())
             {

@@ -39,6 +39,8 @@ namespace MarblesECS
         private OwnedDeviceData Device => C.Manager.GetComponentData<OwnedDeviceData>(deviceEntity);
         private BallFeatures Features => C.Manager.GetComponentData<BallFeatures>(ball);
         public double Value => Get("BALL_BASE_VALUE");
+        /// <summary>Current wallet balance as a Lua number; read only and exact through the wallet cap.</summary>
+        public double Coins => C.Campaign.Coins;
         public double Parameter => definition.Value;
         public double Strength => definition.Strength;
         public double ScoreMultiplier => definition.ScoreMultiplier;
@@ -46,6 +48,9 @@ namespace MarblesECS
         public float Speed => Motion.Speed;
         public long LinkKey => contact.LinkKey;
         public int PairId => Device.PairId;
+        public int InstanceId => Device.InstanceId;
+        public int SpawnSourceId => Features.SpawnSourceId;
+        public DeviceSpawnBatch CreateSpawnBatch() => new DeviceSpawnBatch(() => C, InstanceId);
         public double Time => C.Round.Time;
         public int RoundId => C.Round.RoundId;
         public string BallId
@@ -60,6 +65,10 @@ namespace MarblesECS
         public float Radius => (float)Get("BALL_RADIUS") * AttributeRuntime.RadiusToWorld;
         public float Range { get { _ = C; return definition.Range; } }
         public int RemainingDurability => DeviceDurabilitySystem.Remaining(C, Device);
+        public int HeldCount => HeldMotionSystem.Count(C, Device.InstanceId);
+        public bool CanUseOnce(string key) => DeviceDurabilitySystem.CanUseOnce(C, deviceEntity, key);
+        public bool TryUseOnce(string key) => DeviceDurabilitySystem.TryUseOnce(C, deviceEntity, key);
+        public bool TryKeepActive(float seconds) => DeviceDurabilitySystem.KeepActive(C, deviceEntity, seconds);
         /// <summary>Accept one use for this callback. Trigger/Consume/TrySettle share the same use.</summary>
         public bool TryUse()
         {
@@ -75,12 +84,24 @@ namespace MarblesECS
         public double Get(string attribute) => AttributeRuntime.Get(C, ball, Parse(attribute));
         public double Global(string attribute) => AttributeRuntime.Global(C, Parse(attribute));
         public void Set(string attribute, double value) => AttributeRuntime.SetBase(C, ball, Parse(attribute), value);
+        /// <summary>Adds to the stored base attribute, then evaluates current modifiers once.</summary>
+        public void AddBase(string attribute, double amount)
+        {
+            var context = C;
+            var id = Parse(attribute);
+            double value = context.Manager.GetBuffer<AttributeValue>(ball)[(int)id].Base + amount;
+            if (!MarbleRules.IsFinite(amount) || !MarbleRules.IsFinite(value)) throw new ArgumentOutOfRangeException(nameof(amount));
+            AttributeRuntime.SetBase(context, ball, id, value);
+        }
         private static GameAttribute Parse(string name) => (GameAttribute)Enum.Parse(typeof(GameAttribute), name, false);
         /// <summary>Per-ball visit tracking without a device-wide cooldown.</summary>
         public bool Visit(long visitKey, int maximum) => BallInteractionSystem.MarkVisit(C, ball,
             visitKey == 0 ? contact.TargetId : visitKey, maximum);
         /// <summary>Rate, cooldown, per-ball visit limit and generic trigger modifiers.</summary>
-        public bool Trigger(long visitKey = 0)
+        public bool Trigger(long visitKey = 0) => PrepareTrigger(visitKey, true);
+        /// <summary>Trigger checks/modifiers without spending durability; the script charges the later effect explicitly.</summary>
+        public bool TryPrepareTrigger(long visitKey = 0) => PrepareTrigger(visitKey, false);
+        private bool PrepareTrigger(long visitKey, bool spendUse)
         {
             if (triggered || hold != null || (!usageGranted && RemainingDurability == 0)) return false;
             AttributeRuntime.Recompute(C, deviceEntity);
@@ -88,23 +109,36 @@ namespace MarblesECS
             var d = Device;
             if (rate <= 0 || d.NextTriggerAt > Time) return false;
             if (!BallInteractionSystem.MarkVisit(C, ball, visitKey != 0 ? visitKey : contact.TargetId, definition.MaxTriggersPerBall)) return false;
-            if (!TryUse()) return false;
+            if (spendUse && !TryUse()) return false;
             d = Device; // TryUse updates the same component; preserve its durability counters.
             d.NextTriggerAt = Time + Math.Max(C.StepSeconds, AttributeRuntime.Device(C, deviceEntity, GameAttribute.DEVICE_COOLDOWN) / rate);
             C.Manager.SetComponentData(deviceEntity, d); triggered = true;
             double multiplier = AttributeRuntime.Get(C, deviceEntity, GameAttribute.MACHINE_MULT);
-            if (multiplier != 1) Set("MACHINE_MULT", Get("MACHINE_MULT") * multiplier);
+            if (multiplier != 1) AddScoreMultiplier(multiplier);
             if (Features.Replicates) BallInteractionSystem.Replicate(C, ball, contact);
             return true;
         }
         public void Consume(bool refund)
         { if (TryUse()) BallInteractionSystem.Consume(C, ball, refund); }
+        /// <summary>Consumes only; composing a charge or settlement batch does not implicitly spend durability.</summary>
+        public bool TryConsume(bool refund)
+        {
+            if (C.Manager.GetComponentData<SettlementState>(ball).IsSettled || C.Manager.GetComponentData<DespawnState>(ball).PendingDespawn) return false;
+            BallInteractionSystem.Consume(C, ball, refund); return true;
+        }
         /// <summary>Finalize this ball for an explicit score amount, without implicit multipliers or Rush rolls.</summary>
         public bool TrySettle(double score)
         {
             _ = C;
             if (!MarbleRules.IsFinite(score) || score < 0 || C.Manager.GetComponentData<SettlementState>(ball).IsSettled ||
                 C.Manager.GetComponentData<DespawnState>(ball).PendingDespawn || !TryUse()) return false;
+            return ContentSettlementSystem.TrySettleAmount(C, ball, contact, score);
+        }
+        /// <summary>Exact settlement only. The script registers the owning effect's durability separately.</summary>
+        public bool TrySettleAmount(double score)
+        {
+            if (!MarbleRules.IsFinite(score) || score < 0 || C.Manager.GetComponentData<SettlementState>(ball).IsSettled ||
+                C.Manager.GetComponentData<DespawnState>(ball).PendingDespawn) return false;
             return ContentSettlementSystem.TrySettleAmount(C, ball, contact, score);
         }
         public void SetStatus(string text) => C.DeviceScripts.SetStatus(Device.InstanceId, RoundId, text);
@@ -142,8 +176,16 @@ namespace MarblesECS
         public void BreakPinsOnCross() => ((IMarblePhysicsCommands)C.Physics).BreakPinsOnCross(Device.InstanceId);
         public void RemoveDevice()
         { C.Manager.DestroyEntity(deviceEntity); var state = C.Campaign; state.LayoutRevision++; C.Campaign = state; }
-        public void MultiplyScore(double factor)
-        { var s = C.Manager.GetComponentData<MarbleScore>(ball); s.ScoreMultiplier = MarbleRules.CombineDeviceMultiplier(s.ScoreMultiplier, factor); C.Manager.SetComponentData(ball, s); }
+        /// <summary>Adds (amount - 1) to the device bonus; ordinary settlement applies 1 + total bonus.</summary>
+        public void AddScoreMultiplier(double amount)
+        {
+            var context = C;
+            var score = context.Manager.GetComponentData<MarbleScore>(ball);
+            score.AddDeviceMultiplier(amount);
+            context.Manager.SetComponentData(ball, score);
+        }
+        /// <summary>Legacy package name; now uses the same additive rule as AddScoreMultiplier.</summary>
+        public void MultiplyScore(double factor) => AddScoreMultiplier(factor);
         public void AddRushChance(double amount)
         { var r = C.Manager.GetComponentData<MarbleRush>(ball); r.RushChanceBonus = Math.Min(1, r.RushChanceBonus + amount); C.Manager.SetComponentData(ball, r); }
     }

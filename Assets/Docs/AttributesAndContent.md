@@ -15,7 +15,7 @@
 - 数值属性列可直接导入。药物总表中的自然语言效果不是脚本，需同步审阅配方；装置由 `.mres` 中的 Lua 和参数定义，Excel 导入不会覆盖它们。
 - `Editor/Balance/build_content.py` 只补充缺少的属性和药物，保留其已有数值；装置列表每次重新读取当前 MRes，不沿用旧 JSON。日常属性和药物修改内容 JSON，装置修改制作源并重新打包。
 - 重复原 ID（如 D009、M006）保留在 `SourceId`，运行 ID 按已注册内容名称分配：装置 100～114、表内药物 100～109，旧药物 1、2。
-- 全部装置位于 `Resources/Devices/*.mres`，当前为 8 种（7 个 MResPacker 成品和 Multi Ding），外观、碰撞体和 Lua 行为随包加载，不再绑定装置 prefab。详见 [MRes 装置目录](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
+- 全部装置位于 `Resources/Devices/*.mres`，当前为 15 种（14 个 MResPacker 成品和 Multi Ding），外观、碰撞体和 Lua 行为随包加载，不再绑定装置 prefab。详见 [MRes 装置目录](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
 - 传送门按一对购买，两门分别放置并共享配对 ID；两门都放置后才可传送。
 - 已有场景没有程序 HUD 时，控制器会提供可展开的药物库存面板。
 
@@ -23,7 +23,7 @@
 
 `Multi Ding` 的定义 ID 为 113，行为通过 Lua 实现；当前包的 `StartingCount` 为 1，没有额外的 C# 开局赠送规则。Rush Ding 已移出当前装置目录。旧药物保留 ID 1、2，在 `GameContent.json` 中配置。`SourceId` 继续记录原始来源编号。
 
-旧装置 `Multi Ding` 每球每装置得分倍率 ×1.85 一次，`Rush Ding` 每球每装置 RUSH 概率 +0.11 一次。旧药物 `Up Restitution` / `Down Restitution` 在 12 秒窗口内给新球的 `BALL_BOUNCE` 分别乘 1.5 / 0.65，独立计时叠加；与新药物共用属性运算顺序及字典上限 2。两种旧药物合计同时生效剂量仍受 `MaxActiveBounceDrugs` 限制，面板显示库存和剩余药效时间。
+`Multi Ding` 每球每装置提供 1.85 倍率一次，只累加其中的 0.85；全部装置到得分区以 `1 + Σ(倍率 - 1)` 统一计算，基础 ×1 只算一次。猪猪存钱罐每次有效撞击按钱包提供 `1 + 0.1 × floor(金币/10)`，两次 1.2 得到 1.4。旧 `Rush Ding` 每球每装置 RUSH 概率 +0.11 一次。旧药物 `Up Restitution` / `Down Restitution` 在 12 秒窗口内给新球的 `BALL_BOUNCE` 分别乘 1.5 / 0.65，独立计时叠加；与新药物共用属性运算顺序及字典上限 2。两种旧药物合计同时生效剂量仍受 `MaxActiveBounceDrugs` 限制，面板显示库存和剩余药效时间。
 
 ## 属性规则
 

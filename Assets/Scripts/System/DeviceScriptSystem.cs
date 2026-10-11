@@ -41,7 +41,7 @@ namespace MarblesECS
             if (!c.IsRunning || !AttributeRuntime.Enabled(c) ||
                 !CampaignStateUtility.FindDevice(c, instanceId, out var entity)) return false;
             var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
-            if (!DeviceDurabilitySystem.Available(c, device) || !(c.Physics is IMarblePhysicsCommands commands) ||
+            if (!device.Placed || (!DeviceDurabilitySystem.CanRun(c, entity) && !CanComplete(c, instanceId)) || !(c.Physics is IMarblePhysicsCommands commands) ||
                 !commands.TryGetDevicePose(instanceId, out _)) return false;
             var script = c.DeviceScripts.Get(instanceId, device.DefinitionId);
             if (!script.HasFunction(callback)) return false;
@@ -50,6 +50,10 @@ namespace MarblesECS
             catch (MResLuaException error) { Debug.LogException(error); return false; }
             finally { api.Close(); }
         }
+        internal static bool CanComplete(SimulationContext c, int instanceId) =>
+            c.IsRunning && CampaignStateUtility.FindDevice(c, instanceId, out var entity) &&
+            c.Manager.GetComponentData<OwnedDeviceData>(entity).Placed &&
+            (DeviceDurabilitySystem.Continuing(c, entity) || HeldMotionSystem.Count(c, instanceId, true) > 0);
         // Generic fixed-step callback. Lua chooses the affected region and composes motion commands.
         internal static void BallUpdate(SimulationContext c)
         {
@@ -67,13 +71,13 @@ namespace MarblesECS
             {
                 if (!c.Manager.Exists(entity)) continue;
                 var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
-                if (!DeviceDurabilitySystem.Available(c, device) || !commands.TryGetDevicePose(device.InstanceId, out var pose)) continue;
+                if (!DeviceDurabilitySystem.CanRun(c, entity) || !commands.TryGetDevicePose(device.InstanceId, out var pose)) continue;
                 var script = c.DeviceScripts.Get(device.InstanceId, device.DefinitionId);
                 if (!script.HasFunction("OnBallUpdate")) continue;
                 foreach (var key in keys)
                 {
                     if (!c.Manager.Exists(entity)) break;
-                    if (!DeviceDurabilitySystem.Available(c, device.InstanceId)) break;
+                    if (!DeviceDurabilitySystem.CanRun(c, entity)) break;
                     if (!c.TryGetFlying(key, out var ball) || c.Manager.HasComponent<HeldMotion>(ball) ||
                         c.Manager.GetComponentData<BallFeatures>(ball).MovedTick == c.Round.Tick) continue;
                     long expiry = c.Manager.GetComponentData<Lifetime>(ball).ExpireTick;
@@ -92,7 +96,8 @@ namespace MarblesECS
             int id = contact.TargetId - 100000;
             if (!CampaignStateUtility.FindDevice(c, id, out var entity)) return;
             var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
-            if (!DeviceDurabilitySystem.Available(c, device) || !(c.Physics is IMarblePhysicsCommands commands) || !commands.TryGetDevicePose(id, out var pose)) return;
+            if (!DeviceDurabilitySystem.CanRun(c, entity) || !(c.Physics is IMarblePhysicsCommands commands) || !commands.TryGetDevicePose(id, out var pose)) return;
+            if (contact.LinkKey == 0) TimedGravitySystem.Contact(c, ball, id);
             Invoke(c, ball, entity, device, contact, pose, "OnContact");
         }
         internal static void HoldEnd(SimulationContext c, Entity ball, HeldMotion hold)

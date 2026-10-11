@@ -62,7 +62,44 @@ namespace MarblesECS.Editor
                 Check(f.Simulation.SellDevice(owned.InstanceId), "real inventory can sell the device");
                 Near(995 + definition.SellPrice, f.C.Campaign.Coins, "sale credits value independently of original paid price and old sale ratio");
             }
-            Debug.Log("METADATA_DURABILITY_VALIDATION_PASSED: " + (assertions - start) + " assertions; metadata authority, exact wear, unlimited use and real purchase/sale.");
+            DeferredDurabilityApi();
+            Debug.Log("METADATA_DURABILITY_VALIDATION_PASSED: " + (assertions - start) + " assertions; metadata authority, exact wear, deferred batch uses, unlimited use and real purchase/sale.");
+        }
+
+        private static void DeferredDurabilityApi()
+        {
+            using (var f = new Fixture())
+            {
+                var definition = f.C.Balance.Devices.Single(d => d.Id == 113); definition.Durability = 1;
+                var owned = f.Add(definition);
+                CampaignStateUtility.FindDevice(f.C, owned.InstanceId, out var device);
+                var first = new DeviceEventContext(f.C, device);
+                Check(!first.TryUseOnce(null) && !first.TryUseOnce("") && !first.TryUseOnce(new string('界', 41)), "invalid batch keys never spend durability");
+                Check(first.CanUseOnce("batch:1") && first.RemainingDurability == 1, "batch preflight costs nothing");
+                Check(first.TryUseOnce("batch:1") && first.RemainingDurability == 0, "first successful batch member spends one use");
+                first.Close();
+                bool closed = false; try { first.TryUseOnce("batch:1"); } catch (InvalidOperationException) { closed = true; }
+                Check(closed, "deferred use rejects an expired context");
+                var next = new DeviceEventContext(f.C, device);
+                Check(next.CanUseOnce("batch:1") && next.TryUseOnce("batch:1"), "another callback can finish the same paid batch after exhaustion");
+                Check(!next.CanUseOnce("batch:2") && !next.TryUseOnce("batch:2"), "a new batch cannot reuse the final durability");
+                Check(!next.TryKeepActive(0) && !next.TryKeepActive(float.NaN) && !next.TryKeepActive(61), "invalid continuation durations rejected");
+                Check(next.TryKeepActive(.5f) && DeviceDurabilitySystem.CanRun(f.C, device), "last effect may finish during a bounded continuation");
+                var other = f.Add(f.C.Balance.Devices.Single(d => d.Id == 9000));
+                CampaignStateUtility.FindDevice(f.C, other.InstanceId, out var otherEntity);
+                var otherApi = new DeviceEventContext(f.C, otherEntity);
+                Check(otherApi.TryUseOnce("batch:1") && otherApi.RemainingDurability == 19, "batch keys are isolated per device"); otherApi.Close();
+                var round = f.C.Round; round.Time += .6; f.C.Round = round;
+                Check(!DeviceDurabilitySystem.CanRun(f.C, device), "bounded continuation expires without a callback"); next.Close();
+                round.Phase = (byte)RoundPhase.Build; f.C.Round = round; f.Simulation.BeginRound();
+                next = new DeviceEventContext(f.C, device);
+                Check(next.TryUseOnce("batch:1") && next.RemainingDurability == 0, "same batch name charges again in a new round");
+                Check(!DeviceDurabilitySystem.CanRun(f.C, device), "previous round's continuation never carries over"); next.Close();
+                definition.Durability = -1;
+                next = new DeviceEventContext(f.C, device);
+                for (int i = 0; i < 25; i++) Check(next.TryUseOnce("unlimited:" + i), "unlimited batches succeed beyond twenty");
+                Check(next.RemainingDurability == -1, "unlimited batch registration preserves minus one"); next.Close();
+            }
         }
     }
 }

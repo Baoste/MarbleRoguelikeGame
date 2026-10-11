@@ -1,0 +1,13 @@
+{
+  "Id": 9009,
+  "Radius": 0.25,
+  "ScoreMultiplier": 1,
+  "StartingCount": 0,
+  "PurchaseQuantity": 1,
+  "Cooldown": 0,
+  "MaxTriggersPerBall": 0,
+  "Range": 5,
+  "Strength": 6,
+  "Value": 8,
+  "SourceId": "StoneBurst"
+}

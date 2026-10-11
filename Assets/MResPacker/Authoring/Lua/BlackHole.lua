@@ -30,8 +30,9 @@ end
 
 function OnActivate(api)
     sync(api)
-    if not active and charge >= chargeRequired and api.Parameter > 0 then
+    if not active and charge >= chargeRequired and api.Parameter > 0 and api.Parameter <= 60 and api:TryUse() then
         active, endsAt = true, api.Time + api.Parameter
+        api:TryKeepActive(api.Parameter)
     end
     status(api)
 end
@@ -39,10 +40,9 @@ end
 function OnContact(api)
     sync(api)
     if active then
-        api:TrySettle(api.Value * api.ScoreMultiplier)
-    elseif charge < chargeRequired then
-        api:Consume(false)
-        charge = charge + 1
+        api:TrySettleAmount(api.Value * api.ScoreMultiplier)
+    elseif charge < chargeRequired and api.RemainingDurability ~= 0 then
+        if api:TryConsume(false) then charge = charge + 1 end
     end
     status(api)
 end

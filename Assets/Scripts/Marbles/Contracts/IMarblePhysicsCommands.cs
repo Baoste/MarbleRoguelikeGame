@@ -8,6 +8,14 @@ namespace MarblesECS
         void BindDeviceUsage(System.Func<int, bool> available, System.Func<int, bool> tryUse);
         void RefreshDeviceAvailability();
     }
+    public interface IMarbleDeviceInteractionSink
+    {
+        void BindDeviceInteraction(System.Func<int, bool> canComplete);
+    }
+    public interface IMarbleDeviceRotation
+    {
+        bool TrySetDeviceYaw(int instanceId, float degrees);
+    }
     public struct MarblePhysicalSettings
     {
         public float Radius, Mass, Bounce, Friction, Gravity, MaxSpeed, MagnetResponse, PierceChance, MagneticRadius;
@@ -31,5 +39,10 @@ namespace MarblesECS
     public interface IMarblePhysicsSuspension
     {
         bool TrySetSuspended(MarbleKey key, bool suspended);
+    }
+    /// <summary>Optional presentation capability. Hidden hold renderers are restored on resume or removal.</summary>
+    public interface IMarbleHeldVisibility
+    {
+        bool TrySetHeldVisible(MarbleKey key, bool visible);
     }
 }

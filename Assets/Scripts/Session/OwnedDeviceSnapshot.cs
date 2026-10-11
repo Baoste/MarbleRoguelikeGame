@@ -13,6 +13,7 @@ namespace MarblesECS
         public long SellPrice;
         public DeviceRarity Rarity;
         public int Durability, RemainingDurability;
+        public bool CompletingEffect;
         public bool Exhausted => RemainingDurability == 0;
         public double ScoreMultiplier;
         public double RushChanceAdd;

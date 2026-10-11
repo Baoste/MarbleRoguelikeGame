@@ -19,7 +19,7 @@ namespace MarblesECS
                 manager.SetComponentData(entity, new Owner { Player = context.PlayerEntity });
                 manager.SetComponentData(entity, new OnBoard { Board = context.BoardEntity });
                 manager.SetComponentData(entity, new DefinitionRef { DefinitionId = context.Tuning.MarbleDefinitionId });
-                manager.SetComponentData(entity, new MarbleScore { BaseScore = quote.BaseValue, ScoreMultiplier = quote.LauncherMultiplier });
+                manager.SetComponentData(entity, new MarbleScore { BaseScore = quote.BaseValue, ScoreMultiplier = quote.LauncherMultiplier, BaseMultiplier = quote.LauncherMultiplier });
                 manager.SetComponentData(entity, new MarbleRush { BaseRushChance = context.Tuning.BaseRushChance });
                 manager.SetComponentData(entity, new MarblePhysicsProperties
                 { Restitution = BounceDrugSystem.Restitution(context, out _, out _) });

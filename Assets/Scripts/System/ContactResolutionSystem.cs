@@ -25,7 +25,7 @@ namespace MarblesECS
                     if (visits[i].DeviceId == contact.TargetId) { visited = true; break; }
                 if (visited) continue;
                 var score = context.Manager.GetComponentData<MarbleScore>(entity);
-                score.ScoreMultiplier = MarbleRules.CombineDeviceMultiplier(score.ScoreMultiplier, contact.Multiplier);
+                if (contact.Kind == MarbleContactKind.Multiplier) score.AddDeviceMultiplier(contact.Multiplier);
                 context.Manager.SetComponentData(entity, score);
                 var rush = context.Manager.GetComponentData<MarbleRush>(entity);
                 rush.RushChanceBonus = System.Math.Min(1, rush.RushChanceBonus + contact.RushChanceAdd);

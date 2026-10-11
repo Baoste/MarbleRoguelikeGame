@@ -180,27 +180,48 @@ namespace MarblesECS.Editor
 
         private static void Durability()
         {
-            using (var r = new Rig(.02f, 20))
+            foreach (int durability in new[] { 20, 1 })
+            using (var r = new Rig(.02f, durability))
             {
                 r.Charge();
-                Near(10, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "charging costs ten uses");
-                r.Simulation.TryActivateDevice(r.Id);
-                Near(10, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "click costs no extra use");
+                Near(durability, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "charging ten marbles costs no durability");
+                Near(0, r.C.Round.Score, "charging earns no score");
+                Check(r.Simulation.TryActivateDevice(r.Id), "charged hole starts its effect");
+                double end = r.C.Round.Time + 10;
+                Near(durability - 1, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "activation costs one use");
+                if (durability == 1) Check(Presentation.DeviceDisplayText.Durability(r.Simulation.GetOwnedDevices().Single()).Contains("当前效果待完成"), "last active effect is not labelled already disabled");
+                Check(r.Simulation.TryActivateDevice(r.Id), "repeated active click is handled without another activation");
                 var key = r.Launch(new Vector3(2, .08f, 0)); r.Step(); r.Step();
-                Check(r.Body(key).velocity.magnitude > 0, "charged hole attracts an ordinary ball");
-                Near(10, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "global attraction does not charge field-entry uses");
+                Check(r.Body(key).velocity.magnitude > 0, "activated hole attracts even after spending the final use");
+                Near(durability - 1, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "attraction and repeated clicks cost no further uses");
                 r.Consume(key); // Fixture cleanup is not a device effect.
-                for (int i = 0; i < 10; i++) { key = r.Launch(new Vector3(0, .08f, 0)); r.Step(); }
-                Near(0, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "ten scored swallows exhaust remaining durability");
-                Check(!r.Simulation.TryActivateDevice(r.Id), "exhausted hole rejects clicks");
-                Check(r.View.Root.GetComponentsInChildren<Collider>().All(c => !c.enabled), "exhaustion disables the sensor");
-                key = r.Launch(new Vector3(0, .08f, 0)); r.Step();
-                Check(r.C.TryGetFlying(key, out _), "the twenty-first arrival is not swallowed");
-                r.Move(key, new Vector3(2, .08f, 0)); r.Step();
-                VectorNear(Vector3.zero, r.Body(key).velocity, "exhausted hole applies no force even while its Lua timer remains active");
+                for (int i = 0; i < 25; i++)
+                {
+                    key = r.Launch(new Vector3(0, .08f, 0));
+                    double before = r.C.Round.Score, value = r.ApiValue(key);
+                    r.Step();
+                    Check(!r.C.Marbles.ContainsKey(key), "every active arrival settles including arrivals beyond twenty");
+                    Near(before + value * 10, r.C.Round.Score, "active swallow keeps its tenfold award");
+                }
+                Near(durability - 1, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "all scored swallows belong to one activation");
+                var state = r.C.Round; state.Time = end - .12; r.C.Round = state;
+                key = r.Launch(new Vector3(2, .08f, 0)); r.Step();
+                Check(r.Body(key).velocity.magnitude > 0 && r.View.Root.GetComponentsInChildren<Collider>().All(c => c.enabled), "effect and sensor still work near the full ten-second deadline");
+                r.Consume(key);
+                state = r.C.Round; state.Time = end + .02; r.C.Round = state; r.Step();
+                key = r.Launch(new Vector3(2, .08f, 0)); r.Step();
+                VectorNear(Vector3.zero, r.Body(key).velocity, "attraction stops after ten seconds");
+                if (durability == 1)
+                {
+                    Check(!r.Simulation.TryActivateDevice(r.Id), "exhausted hole rejects activation after completing the effect");
+                    Check(r.View.Root.GetComponentsInChildren<Collider>().All(c => !c.enabled), "completed exhausted hole disables its sensor");
+                    r.Move(key, new Vector3(0, .08f, 0)); r.Step();
+                    Check(r.C.TryGetFlying(key, out _), "exhaustion prevents new charging");
+                }
+                else { r.Consume(key); r.Charge(); Check(r.Simulation.TryActivateDevice(r.Id), "next charge can activate again"); Near(18, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "second complete charge costs only its activation"); }
                 var round = r.C.Round; round.Phase = (byte)RoundPhase.Build; r.C.Round = round;
                 r.Simulation.BeginRound(); r.Step();
-                Near(20, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "new round restores the full metadata durability");
+                Near(durability, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "new round restores the full metadata durability");
                 Check(r.Status.Contains("0/10") && r.View.Root.GetComponentsInChildren<Collider>().All(c => c.enabled), "new round restores charging and collisions");
             }
         }
@@ -252,6 +273,7 @@ namespace MarblesECS.Editor
                 view.Root.transform.localPosition = offset; views.Add(view); view.Root.SetActive(true); Physics.SyncTransforms(); return view;
             }
             internal Entity Ball(MarbleKey key) => C.Marbles[key];
+            internal double ApiValue(MarbleKey key) { var api = Api(key); try { return api.Value; } finally { api.Close(); } }
             internal MarbleBody Marble(MarbleKey key) => Scene.GetRootGameObjects().Select(go => go.GetComponent<MarbleBody>()).Single(b => b != null && b.Key.Equals(key));
             internal Rigidbody Body(MarbleKey key) => Marble(key).Body;
             internal DeviceContactContext Api(MarbleKey key)

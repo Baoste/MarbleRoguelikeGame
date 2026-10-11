@@ -2,11 +2,13 @@
 -- Only plain data survives callbacks; no API, Motion or endpoint is retained.
 local roundId, endsAt = nil, 0
 local entries, slots = {}, {}
+local batchNumber, batchKey = 0, nil
 
 local function resetRound(api)
     if roundId ~= api.RoundId then
         roundId, endsAt = api.RoundId, 0
         entries, slots = {}, {}
+        batchNumber, batchKey = 0, nil
     end
 end
 
@@ -41,7 +43,11 @@ end
 
 local function release(api, entry)
     -- Keep the separated cluster positions: launching everyone at one exit would overlap them.
-    api.Motion:TrySetVelocity(api.Motion.Source.Down * entry.speed)
+    if api:CanUseOnce(entry.useKey) and api.Motion:TrySetVelocity(api.Motion.Source.Down * entry.speed) then
+        api:TryUseOnce(entry.useKey)
+        -- Complete every member, including balls still approaching when the last durability is spent.
+        api:TryKeepActive(math.max(0.001, api.DeltaTime))
+    end
     entries[api.BallId] = nil
 end
 
@@ -50,6 +56,7 @@ function OnBallUpdate(api)
     local motion = api.Motion
     local entry = entries[api.BallId]
     if entry == nil then
+        if api.RemainingDurability == 0 then return end
         local offset = motion.Position - motion.Source.Position
         if api.Vectors:ProjectOnPlane(offset, motion.Source.Up).magnitude > api.Range then return end
         if math.abs(api.Vectors:Dot(offset, motion.Source.Up)) > api.Radius + 0.15 then return end
@@ -60,13 +67,15 @@ function OnBallUpdate(api)
         local slot = findSlot(api)
         if slot == nil then return end
         if starting then
-            if not api:Trigger(0) then return end
+            if not api:TryPrepareTrigger(0) then return end
             endsAt = api.Time + math.min(60, api.Parameter)
-        elseif not api:Visit(0, 1) or not api:TryUse() then
+            batchNumber = batchNumber + 1
+            batchKey = "batch:" .. batchNumber
+        elseif not api:Visit(0, 1) then
             return
         end
         slots[#slots + 1] = slot
-        entry = { speed = motion.Speed, position = slot.position, endsAt = endsAt }
+        entry = { speed = motion.Speed, position = slot.position, endsAt = endsAt, useKey = batchKey }
         entries[api.BallId] = entry
     end
 
