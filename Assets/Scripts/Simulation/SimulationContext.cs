@@ -26,6 +26,7 @@ namespace MarblesECS
         internal readonly HashSet<ulong> CloverFamilies = new HashSet<ulong>();
         internal readonly HashSet<ulong> RefundedFamilies = new HashSet<ulong>();
         internal readonly DeviceScriptSystem DeviceScripts = new DeviceScriptSystem();
+        internal readonly DeviceTransientSystem Transients = new DeviceTransientSystem();
 
         internal SimulationContext(MarbleTuning tuning, GameBalance balance = null, GameContent content = null)
         {
@@ -80,6 +81,7 @@ namespace MarblesECS
 
         internal void RemoveAllMarbles()
         {
+            Transients.Clear(this);
             using (var entities = MarbleQuery.ToEntityArray(Allocator.Temp))
             {
                 for (int i = 0; i < entities.Length; i++)

@@ -16,6 +16,11 @@ namespace MarblesECS
     {
         bool TrySetDeviceYaw(int instanceId, float degrees);
     }
+    /// <summary>Reports successful per-ball field effects without turning them into collision events.</summary>
+    public interface IMarbleDeviceEffectSink
+    {
+        void BindDeviceEffect(System.Action<MarbleKey, int> recordEffect);
+    }
     public struct MarblePhysicalSettings
     {
         public float Radius, Mass, Bounce, Friction, Gravity, MaxSpeed, MagnetResponse, PierceChance, MagneticRadius;
@@ -44,5 +49,12 @@ namespace MarblesECS
     public interface IMarbleHeldVisibility
     {
         bool TrySetHeldVisible(MarbleKey key, bool visible);
+    }
+    /// <summary>Pure mesh presentation: transient visuals never collide or count as marbles.</summary>
+    public interface IDeviceTransientVisuals
+    {
+        bool TryCreateTransientVisual(int instanceId, int visualId, string nodePath, Vector3 position);
+        bool TryMoveTransientVisual(int visualId, Vector3 position);
+        void RemoveTransientVisual(int visualId);
     }
 }

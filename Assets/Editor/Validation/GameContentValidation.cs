@@ -62,6 +62,13 @@ namespace MarblesECS.Editor
                 GoldMineLuaApi();
                 GoldRushDeviceValidation.Validate();
                 PiggyBankLuaApi();
+                CashOutLuaApi();
+                MoneyTreeLuaApi();
+                SplitterLuaApi();
+                PuffMushroomLuaApi();
+                BombLuaApi();
+                DuplicatorLuaApi();
+                BloodFactoryLuaApi();
                 MetadataAndDurability();
                 EconomyAndGambling();
                 ShopGuarantees();
@@ -613,13 +620,21 @@ namespace MarblesECS.Editor
             try { api.RefundOnDespawn = true; }
             finally { api.Close(); }
         }
-        private sealed class FakePhysics : IMarblePhysics, IMarblePhysicsStateProvider, IMarblePhysicsCommands
+        private sealed class FakePhysics : IMarblePhysics, IMarblePhysicsStateProvider, IMarblePhysicsCommands, IDeviceTransientVisuals
         {
             internal readonly Dictionary<MarbleKey,MarbleSpawnData> Spawns=new Dictionary<MarbleKey,MarbleSpawnData>();
             internal readonly Dictionary<MarbleKey,MarblePhysicsState> States=new Dictionary<MarbleKey,MarblePhysicsState>();
             internal readonly Dictionary<int,DevicePose> Poses=new Dictionary<int,DevicePose>();
             internal int FailSpawnAt,Attempts,Moves,CannonShots;
             internal bool BlockMoves;
+            internal readonly Dictionary<int, (int Source, string Path, Vector3 Position)> Visuals = new Dictionary<int, (int, string, Vector3)>();
+            internal readonly Dictionary<int, Vector3> VisualOrigins = new Dictionary<int, Vector3>();
+            internal bool BlockVisuals;
+            public bool TryCreateTransientVisual(int source, int id, string path, Vector3 position)
+            { if (BlockVisuals || !Poses.ContainsKey(source)) return false; Visuals.Add(id, (source, path, position)); VisualOrigins.Add(id, position); return true; }
+            public bool TryMoveTransientVisual(int id, Vector3 position)
+            { if (!Visuals.TryGetValue(id, out var item)) return false; Visuals[id] = (item.Source, item.Path, position); return true; }
+            public void RemoveTransientVisual(int id) => Visuals.Remove(id);
             public bool TrySpawn(MarbleSpawnData data)
             {
                 if(++Attempts==FailSpawnAt)return false;

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edcc8d922cbaa444bbd823733e49714d, type: 3}
+  m_Name: Splitter
+  m_EditorClassIdentifier: 
+  SourcePrefab: {fileID: 5360731787392894691, guid: dea43ec5caff5094ea58752fae8e9c3a,
+    type: 3}
+  LuaScript: {fileID: 102900000, guid: 8c3f5127cf134ddaa50d7072067362f7, type: 3}
+  Metadata:
+    name: "\u5206\u6D41\u5668"
+    description: "\u5F39\u73E0\u8FDB\u5165\u540E\u5747\u5206\u4E3A3\u9897\u5C0F\u7403\uFF0C\u6BCF\u9897\u4EF7\u503C\u548C\u4F53\u79EF\u5404\u4E3A\u539F\u74031/3\uFF0C\u7EE7\u627F\u7D2F\u8BA1\u88C5\u7F6E\u500D\u7387\uFF0C\u4FDD\u6301\u5165\u53E3\u901F\u5EA6\u5927\u5C0F\u4ECE\u5411\u4E0B\u53CA\u5DE6\u53F330\xB0\u4E09\u53E3\u5C04\u51FA\u3002\u6210\u529F\u5206\u6D41\u62631\u8010\u4E45\uFF0C\u5206\u51FA\u7684\u7403\u518D\u6B21\u7ECF\u8FC7\u540C\u4E00\u53F0\u65F6\u76F4\u63A5\u7A7F\u8FC7\u3002"
+    value: 120
+    purchasePrice: 5
+    rarity: common
+    durability: 20
+    type: device
+  ShaderRegistry: {fileID: 11400000, guid: 862fccbabcba1ea43807c724b9994c58, type: 2}
+  OutputPath: Assets/MResPacker/Output/Splitter.mres
+  ExtraFiles:
+  - VirtualPath: game/device.json
+    Source: {fileID: 4900000, guid: 6e557aeb00684db8902a09a3f1e896c4, type: 3}

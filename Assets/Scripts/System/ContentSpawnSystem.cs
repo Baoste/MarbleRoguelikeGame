@@ -38,10 +38,14 @@ namespace MarblesECS
         }
 
         internal static bool Create(SimulationContext c, AttributeRuntime.Spawn spawn, Vector3 position,
-            Quaternion rotation, Vector3 velocity, out Entity entity)
+            Quaternion rotation, Vector3 velocity, out Entity entity, Entity replacement = default)
         {
             entity = Entity.Null;
-            if (c.Round.ActiveMarbleCount >= c.Tuning.MaxActiveMarbles) return false;
+            int replacementCredit = replacement != Entity.Null && c.Manager.Exists(replacement) &&
+                !c.Manager.GetComponentData<SettlementState>(replacement).IsSettled &&
+                !c.Manager.GetComponentData<DespawnState>(replacement).PendingDespawn ? 1 : 0;
+            int pendingCredit = replacementCredit > 0 ? PendingCount(c) : 0;
+            if (c.Round.ActiveMarbleCount - pendingCredit >= c.Tuning.MaxActiveMarbles + replacementCredit) return false;
             var key = new MarbleKey(c.Round.RoundId, checked(++c.NextSpawnSequence));
             Entity candidate = MarbleFactory.Create(c, key, spawn.Quote);
             bool committed = false;
@@ -52,6 +56,8 @@ namespace MarblesECS
                 if (features.Family == 0) { features.Family = key.Sequence; features.RefundBlood = spawn.Quote.Cost; features.BirthTick = c.Round.Tick; }
                 c.Manager.AddComponentData(candidate, features);
                 c.Manager.AddBuffer<DeviceVisit>(candidate);
+                c.Manager.AddBuffer<DeviceSplitSource>(candidate);
+                c.Manager.AddBuffer<DeviceCopySource>(candidate);
                 c.Manager.SetComponentData(candidate, new Lifetime { ExpireTick = c.Round.Tick + (long)Math.Ceiling(
                     spawn.Values[(int)GameAttribute.BALL_LIFETIME] / c.StepSeconds) });
                 var settings = AttributeRuntime.Properties(c, candidate);
@@ -73,6 +79,15 @@ namespace MarblesECS
             }
         }
 
+        // A synchronous area effect may have already replaced other parents in this same step.
+        // Their ordinary cleanup is deferred, but they no longer reserve surviving-ball capacity.
+        internal static int PendingCount(SimulationContext c)
+        {
+            int result = 0;
+            foreach (var entity in c.Marbles.Values)
+                if (c.Manager.GetComponentData<SettlementState>(entity).IsSettled || c.Manager.GetComponentData<DespawnState>(entity).PendingDespawn) result++;
+            return result;
+        }
         internal static void Rollback(SimulationContext c, Entity entity)
         {
             var shot = c.Manager.GetComponentData<ShotOrigin>(entity);
@@ -107,6 +122,8 @@ namespace MarblesECS
             var spawn = new AttributeRuntime.Spawn { Values = values, Features = features, Quote = quote, Count = 1 };
             var children = new List<Entity>();
             var visits = c.Manager.GetBuffer<DeviceVisit>(parent).ToNativeArray(Unity.Collections.Allocator.Temp);
+            var splitSources = c.Manager.GetBuffer<DeviceSplitSource>(parent).ToNativeArray(Unity.Collections.Allocator.Temp);
+            using var copySources = c.Manager.GetBuffer<DeviceCopySource>(parent).ToNativeArray(Unity.Collections.Allocator.Temp);
             var legacyVisits = c.Manager.GetBuffer<VisitedDeviceData>(parent).ToNativeArray(Unity.Collections.Allocator.Temp);
             var attributeCopy = c.Manager.GetBuffer<AttributeValue>(parent).ToNativeArray(Unity.Collections.Allocator.Temp);
             var effectCopy = c.Manager.GetBuffer<AttributeModifierData>(parent).ToNativeArray(Unity.Collections.Allocator.Temp);
@@ -125,6 +142,8 @@ namespace MarblesECS
                     if (!Create(c, spawn, position, state.Rotation, output * Mathf.Max(1, motion.LinearVelocity.magnitude), out var child)) return false;
                     children.Add(child);
                     c.Manager.GetBuffer<DeviceVisit>(child).CopyFrom(visits);
+                    c.Manager.GetBuffer<DeviceSplitSource>(child).CopyFrom(splitSources);
+                    c.Manager.GetBuffer<DeviceCopySource>(child).CopyFrom(copySources);
                     c.Manager.GetBuffer<VisitedDeviceData>(child).CopyFrom(legacyVisits);
                     c.Manager.GetBuffer<MarbleModifier>(child).CopyFrom(modifierCopy);
                     c.Manager.SetComponentData(child, parentRush);
@@ -145,7 +164,7 @@ namespace MarblesECS
             }
             finally
             {
-                visits.Dispose(); legacyVisits.Dispose(); attributeCopy.Dispose(); effectCopy.Dispose(); modifierCopy.Dispose();
+                visits.Dispose(); splitSources.Dispose(); legacyVisits.Dispose(); attributeCopy.Dispose(); effectCopy.Dispose(); modifierCopy.Dispose();
                 if (!success) foreach (var child in children) Rollback(c, child);
             }
         }

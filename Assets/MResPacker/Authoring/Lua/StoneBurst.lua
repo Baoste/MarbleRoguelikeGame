@@ -53,6 +53,7 @@ function OnContact(api)
     if charge < math.floor(api.Parameter) then
         if not api:Visit(0, 0) then return end
         charge = charge + 1
+        api:MarkTriggered() -- A successful Lua-only charge counts even before the later volley.
     end
     local source = api.Motion.Source
     fire(api, source.Position, source.Forward, source.Up, source.Radius)

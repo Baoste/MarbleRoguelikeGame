@@ -6,6 +6,16 @@ namespace MarblesECS
 {
     internal static class BallInteractionSystem
     {
+        // Keep only the information needed to distinguish this instance from any other.
+        // Stored on the ball, so copies inherit it and newly created balls start empty.
+        internal static void RecordDeviceEffect(SimulationContext c, Entity ball, int instanceId)
+        {
+            if (instanceId <= 0 || !c.Manager.Exists(ball) || !c.Manager.HasComponent<BallFeatures>(ball)) return;
+            var features = c.Manager.GetComponentData<BallFeatures>(ball);
+            if (features.FirstTriggeredDeviceId == 0) features.FirstTriggeredDeviceId = instanceId;
+            else if (features.FirstTriggeredDeviceId != instanceId) features.TriggeredMultipleDevices = true;
+            c.Manager.SetComponentData(ball, features);
+        }
         internal static void Execute(SimulationContext c, Entity ball, MarbleContact contact)
         {
             var features = c.Manager.GetComponentData<BallFeatures>(ball);

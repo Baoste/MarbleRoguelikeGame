@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edcc8d922cbaa444bbd823733e49714d, type: 3}
+  m_Name: Bomb
+  m_EditorClassIdentifier: 
+  SourcePrefab: {fileID: 6350835156637247723, guid: 3642df037b94b7b47b0a0fd99ce23f20,
+    type: 3}
+  LuaScript: {fileID: 102900000, guid: 13a00b9f611b4f939540b0a437ace200, type: 3}
+  Metadata:
+    name: "\u70B8\u5F39"
+    description: "\u6BCF5\u79D2\u6CBF\u968F\u673A\u65B9\u5411\u6295\u51FA\u70B8\u5F39\uFF0C\u901F\u5EA63\uFF0C1\u79D2\u540E\u7206\u70B8\uFF1B\u534A\u5F840.8\u5185\u6BCF\u9897\u5F39\u73E0\u5747\u52068\u7403\uFF0C\u4EF7\u503C\u548C\u4F53\u79EF\u5747\u5206\uFF0C\u7EE7\u627F\u7D2F\u8BA1\u500D\u7387\uFF0C\u4EE5\u901F\u5EA66\u5411\u56DB\u5468\u6563\u5F00\u3002\u6BCF\u6B21\u7206\u70B8\u62631\u8010\u4E45\uFF0C\u7A7A\u7206\u4E5F\u6263\uFF1B\u540E\u4EE3\u4E0D\u518D\u88AB\u540C\u4E00\u53F0\u5206\u88C2\u3002"
+    value: 120
+    purchasePrice: 5
+    rarity: common
+    durability: 20
+    type: device
+  ShaderRegistry: {fileID: 11400000, guid: 495976a03771f03449a036b5f6f771ff, type: 2}
+  OutputPath: Assets/MResPacker/Output/Bomb.mres
+  ExtraFiles:
+  - VirtualPath: game/device.json
+    Source: {fileID: 4900000, guid: c4a52a79d1e141688903d02a741d3cbb, type: 3}

@@ -36,7 +36,7 @@ namespace MarblesECS
             ids.Sort();
             foreach (int id in ids) DeviceEvent(c, id, "OnTick");
         }
-        internal static bool DeviceEvent(SimulationContext c, int instanceId, string callback)
+        internal static bool DeviceEvent(SimulationContext c, int instanceId, string callback, DeviceTransientSystem.Item ended = null)
         {
             if (!c.IsRunning || !AttributeRuntime.Enabled(c) ||
                 !CampaignStateUtility.FindDevice(c, instanceId, out var entity)) return false;
@@ -45,7 +45,7 @@ namespace MarblesECS
                 !commands.TryGetDevicePose(instanceId, out _)) return false;
             var script = c.DeviceScripts.Get(instanceId, device.DefinitionId);
             if (!script.HasFunction(callback)) return false;
-            var api = new DeviceEventContext(c, entity);
+            var api = new DeviceEventContext(c, entity, ended);
             try { script.Invoke(callback, api); return true; }
             catch (MResLuaException error) { Debug.LogException(error); return false; }
             finally { api.Close(); }
@@ -54,6 +54,39 @@ namespace MarblesECS
             c.IsRunning && CampaignStateUtility.FindDevice(c, instanceId, out var entity) &&
             c.Manager.GetComponentData<OwnedDeviceData>(entity).Placed &&
             (DeviceDurabilitySystem.Continuing(c, entity) || HeldMotionSystem.Count(c, instanceId, true) > 0);
+        internal static int ForEachBallInRadius(SimulationContext c, int instanceId, Vector3 center, float radius, string callback)
+        {
+            if (!SimulationContext.IsFinite(center) || !BallInteractionSystem.Finite(radius) || radius < 0 || radius > 100 ||
+                string.IsNullOrEmpty(callback) || callback.Length > 64) throw new System.ArgumentException("Invalid ball query.");
+            if (!c.IsRunning || !CampaignStateUtility.FindDevice(c, instanceId, out var entity) ||
+                !DeviceDurabilitySystem.CanRun(c, entity) || !(c.Physics is IMarblePhysicsCommands commands) ||
+                !commands.TryGetDevicePose(instanceId, out var pose)) return 0;
+            var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
+            if (!c.DeviceScripts.Get(instanceId, device.DefinitionId).HasFunction(callback)) return 0;
+            // Freeze membership before invoking any Lua: new descendants cannot enter the current query.
+            var keys = new List<MarbleKey>();
+            foreach (var pair in c.Marbles)
+            {
+                if (!c.TryGetFlying(pair.Key, out var ball) || c.Manager.HasComponent<HeldMotion>(ball)) continue;
+                long expiry = c.Manager.GetComponentData<Lifetime>(ball).ExpireTick;
+                if (expiry != 0 && expiry <= c.Round.Tick) continue;
+                var position = c.Manager.GetComponentData<Transform3D>(ball).Position;
+                float reach = radius + (float)AttributeRuntime.Get(c, ball, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
+                if ((position - center).sqrMagnitude <= reach * reach) keys.Add(pair.Key);
+            }
+            keys.Sort((a, b) => a.Sequence.CompareTo(b.Sequence));
+            int visited = 0;
+            foreach (var key in keys)
+            {
+                if (!c.Manager.Exists(entity) || !DeviceDurabilitySystem.CanRun(c, entity)) break;
+                if (!c.TryGetFlying(key, out var ball) || c.Manager.HasComponent<HeldMotion>(ball)) continue;
+                var contact = new MarbleContact { Key = key, Kind = MarbleContactKind.Device, TargetId = checked(100000 + instanceId),
+                    Multiplier = 1, RushDisabled = true, Position = c.Manager.GetComponentData<Transform3D>(ball).Position };
+                try { Invoke(c, ball, entity, device, contact, pose, callback); visited++; }
+                catch (MResLuaException error) { Debug.LogException(error); }
+            }
+            return visited;
+        }
         // Generic fixed-step callback. Lua chooses the affected region and composes motion commands.
         internal static void BallUpdate(SimulationContext c)
         {

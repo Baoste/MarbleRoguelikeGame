@@ -1,0 +1,13 @@
+{
+  "Id": 9015,
+  "Radius": 0.6,
+  "ScoreMultiplier": 1,
+  "StartingCount": 0,
+  "PurchaseQuantity": 1,
+  "Cooldown": 0,
+  "MaxTriggersPerBall": 0,
+  "Range": 30,
+  "Strength": 0,
+  "Value": 1,
+  "SourceId": "Splitter"
+}

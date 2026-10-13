@@ -8,6 +8,9 @@
     <type fullname="MarblesECS.DeviceImpactInfo" preserve="all" />
     <type fullname="MarblesECS.DeviceVectorApi" preserve="all" />
     <type fullname="MarblesECS.DeviceSpawnBatch" preserve="all" />
+    <type fullname="MarblesECS.DeviceSplitBatch" preserve="all" />
+    <type fullname="MarblesECS.DeviceCopy" preserve="all" />
+    <type fullname="MarblesECS.DeviceTransientInfo" preserve="all" />
     <type fullname="MarblesECS.PhysX.DeviceFieldContext" preserve="all" />
   </assembly>
 </linker>

@@ -39,8 +39,31 @@ namespace MarblesECS
         private OwnedDeviceData Device => C.Manager.GetComponentData<OwnedDeviceData>(deviceEntity);
         private BallFeatures Features => C.Manager.GetComponentData<BallFeatures>(ball);
         public double Value => Get("BALL_BASE_VALUE");
+        /// <summary>Device contributions only: one base plus accumulated factor-minus-one bonuses.</summary>
+        public double DeviceScoreMultiplier => Math.Max(0, Math.Min(1000,
+            1 + C.Manager.GetComponentData<MarbleScore>(ball).DeviceMultiplierBonus));
+        /// <summary>Successful effects from any other placed device instance during this ball's lifetime.</summary>
+        public bool HasTriggeredOtherDevice
+        {
+            get
+            {
+                var f = Features;
+                return f.TriggeredMultipleDevices || (f.FirstTriggeredDeviceId != 0 && f.FirstTriggeredDeviceId != InstanceId);
+            }
+        }
+        /// <summary>Records Lua-only effects; independent of visit limits, cooldown and durability.</summary>
+        public void MarkTriggered() => BallInteractionSystem.RecordDeviceEffect(C, ball, InstanceId);
+        internal bool RecordEffect(bool success) { if (success) MarkTriggered(); return success; }
         /// <summary>Current wallet balance as a Lua number; read only and exact through the wallet cap.</summary>
         public double Coins => C.Campaign.Coins;
+        public double Blood => C.Player.Blood;
+        public double BloodCapacity => C.Tuning.BloodCapacity;
+        public double RestoreBlood(double amount)
+        {
+            double restored = PlayerBloodSystem.Restore(C, amount);
+            if (restored > 0) MarkTriggered();
+            return restored;
+        }
         public double Parameter => definition.Value;
         public double Strength => definition.Strength;
         public double ScoreMultiplier => definition.ScoreMultiplier;
@@ -51,6 +74,20 @@ namespace MarblesECS
         public int InstanceId => Device.InstanceId;
         public int SpawnSourceId => Features.SpawnSourceId;
         public DeviceSpawnBatch CreateSpawnBatch() => new DeviceSpawnBatch(() => C, InstanceId);
+        public DeviceCopy CreateCopy() => new DeviceCopy(() => C, ball, InstanceId);
+        public bool HasCopiedFrom(int instanceId)
+        {
+            var sources = C.Manager.GetBuffer<DeviceCopySource>(ball);
+            foreach (var source in sources) if (source.InstanceId == instanceId) return true;
+            return false;
+        }
+        public DeviceSplitBatch CreateSplitBatch(int count) => new DeviceSplitBatch(() => C, ball, InstanceId, count);
+        public bool HasSplitFrom(int instanceId)
+        {
+            var sources = C.Manager.GetBuffer<DeviceSplitSource>(ball);
+            foreach (var source in sources) if (source.InstanceId == instanceId) return true;
+            return false;
+        }
         public double Time => C.Round.Time;
         public int RoundId => C.Round.RoundId;
         public string BallId
@@ -83,7 +120,12 @@ namespace MarblesECS
         public bool RefundOnDespawn { get => Features.Revive; set { var f = Features; f.Revive = value; C.Manager.SetComponentData(ball, f); } }
         public double Get(string attribute) => AttributeRuntime.Get(C, ball, Parse(attribute));
         public double Global(string attribute) => AttributeRuntime.Global(C, Parse(attribute));
-        public void Set(string attribute, double value) => AttributeRuntime.SetBase(C, ball, Parse(attribute), value);
+        public void Set(string attribute, double value)
+        {
+            var id = Parse(attribute); double before = AttributeRuntime.Get(C, ball, id);
+            AttributeRuntime.SetBase(C, ball, id, value);
+            if (AttributeRuntime.Get(C, ball, id) != before) MarkTriggered();
+        }
         /// <summary>Adds to the stored base attribute, then evaluates current modifiers once.</summary>
         public void AddBase(string attribute, double amount)
         {
@@ -91,9 +133,25 @@ namespace MarblesECS
             var id = Parse(attribute);
             double value = context.Manager.GetBuffer<AttributeValue>(ball)[(int)id].Base + amount;
             if (!MarbleRules.IsFinite(amount) || !MarbleRules.IsFinite(value)) throw new ArgumentOutOfRangeException(nameof(amount));
+            double before = AttributeRuntime.Get(context, ball, id);
             AttributeRuntime.SetBase(context, ball, id, value);
+            if (AttributeRuntime.Get(context, ball, id) != before) MarkTriggered();
         }
         private static GameAttribute Parse(string name) => (GameAttribute)Enum.Parse(typeof(GameAttribute), name, false);
+        /// <summary>Replace this attribute's current value and basis, removing its existing per-ball modifiers.</summary>
+        public void SetCurrent(string attribute, double value)
+        {
+            var context = C; var id = Parse(attribute);
+            if (!MarbleRules.IsFinite(value)) throw new ArgumentOutOfRangeException(nameof(value));
+            double replacement = context.Content.Definition(id).Clamp(value);
+            double before = AttributeRuntime.Get(context, ball, id);
+            var effects = context.Manager.GetBuffer<AttributeModifierData>(ball);
+            bool removed = false;
+            for (int i = effects.Length - 1; i >= 0; i--)
+                if (effects[i].Effect.Attribute == id) { effects.RemoveAt(i); removed = true; }
+            AttributeRuntime.SetBase(context, ball, id, replacement);
+            if (removed || replacement != before) MarkTriggered();
+        }
         /// <summary>Per-ball visit tracking without a device-wide cooldown.</summary>
         public bool Visit(long visitKey, int maximum) => BallInteractionSystem.MarkVisit(C, ball,
             visitKey == 0 ? contact.TargetId : visitKey, maximum);
@@ -147,6 +205,7 @@ namespace MarblesECS
             var state = C.Campaign;
             state.Coins = MarbleRules.AddScore(state.Coins, MarbleRules.RoundScore(value, CampaignStateUtility.MaxCoins), CampaignStateUtility.MaxCoins);
             C.Campaign = state;
+            if (value >= 1) MarkTriggered();
         }
         // Compatibility aliases for previously authored packages. New Lua uses Motion directly.
         public bool ScaleVelocity(float scale) => Motion.TryScaleSpeed(scale);
@@ -183,6 +242,7 @@ namespace MarblesECS
             var score = context.Manager.GetComponentData<MarbleScore>(ball);
             score.AddDeviceMultiplier(amount);
             context.Manager.SetComponentData(ball, score);
+            if (amount != 1) MarkTriggered();
         }
         /// <summary>Legacy package name; now uses the same additive rule as AddScoreMultiplier.</summary>
         public void MultiplyScore(double factor) => AddScoreMultiplier(factor);

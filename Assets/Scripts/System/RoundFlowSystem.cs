@@ -25,6 +25,7 @@ namespace MarblesECS
             round.RushEndTick = 0;
             round.RushRemaining = round.RushMeter = 0;
             context.Round = round;
+            context.Transients.Clear(context);
             context.ClearFireInput();
             context.Manager.GetBuffer<ActiveScoreEffectData>(context.PlayerEntity).Clear();
             BounceDrugSystem.Clear(context);

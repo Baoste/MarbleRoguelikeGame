@@ -18,6 +18,8 @@ namespace MarblesECS
     {
         public ulong Family;
         public int SpawnSourceId;
+        public int FirstTriggeredDeviceId;
+        public bool TriggeredMultipleDevices;
         public int Generation;
         public int ReplicationGeneration;
         public int PiercesUsed;
@@ -34,4 +36,6 @@ namespace MarblesECS
         public int Count;
         public long LastTick;
     }
+    internal struct DeviceSplitSource : IBufferElementData { public int InstanceId; }
+    internal struct DeviceCopySource : IBufferElementData { public int InstanceId; }
 }

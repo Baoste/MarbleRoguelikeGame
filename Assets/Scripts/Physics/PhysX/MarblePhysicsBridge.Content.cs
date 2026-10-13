@@ -4,13 +4,15 @@ using UnityEngine;
 
 namespace MarblesECS.PhysX
 {
-    public sealed partial class MarblePhysicsBridge : IMarblePhysicsCommands, IMarbleDeviceUsageSink, IMarbleDeviceInteractionSink, IMarbleDeviceRotation
+    public sealed partial class MarblePhysicsBridge : IMarblePhysicsCommands, IMarbleDeviceUsageSink, IMarbleDeviceInteractionSink, IMarbleDeviceRotation, IMarbleDeviceEffectSink
     {
         private readonly List<MResDeviceBody> contentDevices = new List<MResDeviceBody>();
         private RaycastHit[] pinHits = new RaycastHit[64];
         private readonly List<Collider> brokenPins = new List<Collider>();
         private readonly List<MarbleBody> orderedFieldBodies = new List<MarbleBody>();
         private Func<int, bool> deviceAvailable, useDevice;
+        private Action<MarbleKey, int> recordDeviceEffect;
+        public void BindDeviceEffect(Action<MarbleKey, int> recordEffect) { recordDeviceEffect = recordEffect; }
         private Func<int, bool> canCompleteDevice;
         public void BindDeviceInteraction(Func<int, bool> canComplete) { canCompleteDevice = canComplete; }
         public bool TrySetDeviceYaw(int instanceId, float degrees)
@@ -107,6 +109,7 @@ namespace MarblesECS.PhysX
                     try { device.Script.Invoke("OnField", api); }
                     catch (MRes.MResLuaException error) { Debug.LogException(error); }
                     finally { api.Close(); }
+                    if (api.Force.sqrMagnitude > 0) recordDeviceEffect?.Invoke(view.Key, device.InstanceId);
                     fieldForce += api.Force;
                 }
                 view.ActiveFields.Clear(); view.ActiveFields.UnionWith(view.StepFields);

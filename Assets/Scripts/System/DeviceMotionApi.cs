@@ -59,19 +59,19 @@ namespace MarblesECS
         public bool TryLaunch(DeviceEndpoint destination, Vector3 direction, float speed)
         {
             var c = Context;
-            return Owns(destination) && BallInteractionSystem.Exit(c, ball, destination.Pose, direction, speed);
+            return owner.RecordEffect(Owns(destination) && BallInteractionSystem.Exit(c, ball, destination.Pose, direction, speed));
         }
-        public bool TryMove(Vector3 position, Vector3 velocity) => BallInteractionSystem.Move(Context, ball, position, velocity);
+        public bool TryMove(Vector3 position, Vector3 velocity) => owner.RecordEffect(BallInteractionSystem.Move(Context, ball, position, velocity));
         /// <summary>Changes only world position, with clearance checks, retaining the current velocity and spin.</summary>
         public bool TrySetPosition(Vector3 position) => TryMove(position, Velocity);
-        public bool TrySetVelocity(Vector3 velocity) => BallInteractionSystem.SetVelocity(Context, ball, velocity);
+        public bool TrySetVelocity(Vector3 velocity) => owner.RecordEffect(BallInteractionSystem.SetVelocity(Context, ball, velocity));
         public bool TryScaleSpeed(float scale)
         {
             _ = Context;
             return BallInteractionSystem.Finite(scale) && scale >= 0 && TrySetVelocity(Velocity * scale);
         }
         /// <summary>Suspends in place for (0, 60] simulation seconds, restores motion, then invokes OnHoldEnd.</summary>
-        public bool TryHold(float seconds) => HeldMotionSystem.Begin(Context, ball, source.InstanceId, owner.Contact, seconds);
+        public bool TryHold(float seconds) => owner.RecordEffect(HeldMotionSystem.Begin(Context, ball, source.InstanceId, owner.Contact, seconds));
         /// <summary>Changes only the display of this device's existing hold; restored before completion or cancellation.</summary>
         public bool TrySetHeldVisible(bool visible)
         {
@@ -82,12 +82,12 @@ namespace MarblesECS
             return presentation.TrySetHeldVisible(new MarbleKey(shot.RoundId, shot.SpawnSequence), visible);
         }
         /// <summary>Suspends until the owning device requests ReleaseHeld, or lifecycle cleanup cancels it.</summary>
-        public bool TryHoldUntilReleased() => HeldMotionSystem.Begin(Context, ball, source.InstanceId, owner.Contact, 0, true);
+        public bool TryHoldUntilReleased() => owner.RecordEffect(HeldMotionSystem.Begin(Context, ball, source.InstanceId, owner.Contact, 0, true));
         /// <summary>Temporarily scales gravity only; a new call replaces the previous scale and deadline.</summary>
         public bool TrySetGravityScale(float scale, float seconds, bool resetOnOtherDevice) =>
-            TimedGravitySystem.Set(Context, ball, source.InstanceId, scale, seconds, resetOnOtherDevice);
+            owner.RecordEffect(TimedGravitySystem.Set(Context, ball, source.InstanceId, scale, seconds, resetOnOtherDevice));
         /// <summary>Removes the temporary scale, retaining current base gravity and unrelated modifiers.</summary>
-        public bool TryClearGravityScale() => TimedGravitySystem.Clear(Context, ball);
+        public bool TryClearGravityScale() => owner.RecordEffect(TimedGravitySystem.Clear(Context, ball));
         private bool Owns(DeviceEndpoint endpoint) => endpoint != null && ReferenceEquals(endpoint.Owner, this);
     }
 

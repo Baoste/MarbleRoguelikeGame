@@ -27,6 +27,7 @@ namespace MarblesECS.PhysX
                     Physics.SyncTransforms();
                     bridge.Simulate(step);
                     simulation.AfterPhysics(bridge);
+                    PublishBloodIfChanged();
                     PublishRandomScoreResultIfReady();
                 }
                 catch (Exception error)

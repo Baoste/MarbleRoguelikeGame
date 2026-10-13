@@ -310,3 +310,89 @@ Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据
 2026-10-11 首次验证：猪猪存钱罐专项 **114** 条断言、玩法回归 **2378** 条断言及全部 **15** 个包加载通过；该记录对应此前的累加规则，当前增量规则以以下最新验证为准。
 
 2026-10-11 增量累加规则验证：猪猪存钱罐与倍率专项 **120** 条断言、玩法回归 **2384** 条断言、全部 **15** 个包加载通过。覆盖两次 ×1.5 最终 ×2 并到得分区结算、混合装置、旧 API 兼容、通用触发修正、复制继承、中性倍率和边界输入。引擎、Lua、两个受影响的 MRes 及装置目录已同步。
+
+## 赚赚
+
+选择 `Authoring/Profiles/CashOut.asset` 执行 Analyze / Build MRes，或用菜单 `Tools > MRes > Create or Locate Cash Out Device` 定位配置。批处理入口 `MResPacker.MResCashOutCreator.CreateAndBuild`，输出 `Output/CashOut.mres`，运行时副本 `Resources/Devices/9013_CashOut.mres`。
+
+- Lua：`Authoring/Lua/CashOut.lua`。有其他装置实例成功作用记录时，吞噬弹珠并返还 `floor(当前价值 × 累计装置倍率 + 0.5)` 金币，没有额外 ×2；无其他记录则保留速度大小从棋盘下方射出。
+- 模型和制作资源：`Authoring/Models/CashOutCube.asset`、`CashOutCylinder.asset`，三份 `CashOut*.mat`，`Authoring/Prefabs/CashOut.prefab` 和 `Authoring/Scenes/CashOutAuthoring.unity`。金色兑换口与金币标志，入口为 BoxCollider Trigger，放置半径 0.32。
+- 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。两种成功处理各扣 1，受阻出口不扣；`-1` 无限。`Authoring/Data/CashOut.device.json` 的 `Value`、`Strength`、`Range` 不用于本效果。
+- 新通用 API 为 `HasTriggeredOtherDevice`、`MarkTriggered()` 和 `DeviceScoreMultiplier`。历史独立于访问与耐久；大石碎胸口的纯 Lua 蓄力已接入记录并重新打包。详细契约和算例见 [装置 Lua API](../Docs/Device_Lua_API.md)。
+
+2026-10-13 验证：赚赚专项 **169** 条断言、玩法回归 **2559** 条断言、全部 **16** 个包加载通过。覆盖当前价值与累计装置倍率兑换、四舍五入、同实例排除、失败操作不登记、复制与新球历史、纯 Lua 蓄力、钱包上限、有限/无限耐久、跨回合，以及真实旋转棋盘出射、加速力场和对象池复用。
+
+## 摇钱树
+
+选择 `Authoring/Profiles/MoneyTree.asset` 执行 Analyze / Build MRes，菜单 `Tools > MRes > Create or Locate Money Tree Device` 定位配置；批处理入口 `MResPacker.MResMoneyTreeCreator.CreateAndBuild`。输出 `Output/MoneyTree.mres`，运行时副本 `Resources/Devices/9014_MoneyTree.mres`。
+
+- Lua：`Authoring/Lua/MoneyTree.lua`，只组合现有 API。每次进入计 1，离开重入可以再次计数，停留不重复；每 10 次发放 5 金币并扣 1 耐久。每实例独立计数，新回合清零。
+- 参数：`Authoring/Data/MoneyTree.device.json` 的 `Value = 10` 为次数阈值，`Strength = 5` 为金币奖励，`Range` 未使用。成功累积通过 `MarkTriggered()` 记录，供“赚赚”等装置查询历史。
+- 制作资源：`Authoring/Models/MoneyTreeSphere.asset`、`MoneyTreeCylinder.asset`，三份 `MoneyTree*.mat`，`Authoring/Prefabs/MoneyTree.prefab` 和 `Authoring/Scenes/MoneyTreeAuthoring.unity`。树干、绿色树冠、金币果实均为纯视觉；仅根 BoxCollider Trigger 检测经过，无实体碰撞，不改弹珠运动。
+- 普通、耐久 20（每批产出扣 1）、购买价 5、出售价 120、初始库存 0。触发区域默认 0.7 × 0.3 × 0.7，放置半径 0.5；`-1` 无限耐久。
+
+2026-10-13 验证：摇钱树专项 **421** 条断言、玩法回归 **2986** 条断言、全部 **17** 个 MRes 加载通过。覆盖十次一批、同球重入、同一步多球、进度余量、跨回合清零、实例独立、钱包上限、有限/无限耐久、触发历史，以及两种固定步长下的真实静止停留、慢速/高速穿过与无实体碰撞。
+
+## 分流器制作资源
+
+选择 `Authoring/Profiles/Splitter.asset` 执行 Analyze / Build MRes，菜单 `Tools > MRes > Create or Locate Splitter Device` 定位配置；批处理入口 `MResPacker.MResSplitterCreator.CreateAndBuild`。输出 `Output/Splitter.mres`，运行时副本 `Resources/Devices/9015_Splitter.mres`。
+
+- Lua：`Authoring/Lua/Splitter.lua`。原球进入后均分为三球，各有原球 1/3 价值、体积和质量，继承累计装置倍率，沿棋盘向下和左右各 30°，保留速度大小。整批成功扣 1 耐久；失败保留原球。
+- 参数：`Authoring/Data/Splitter.device.json` 的 `Range = 30` 为侧口角度（1–80°），`Value`、`Strength` 未使用。修改角度时同步调整 Prefab 管口。
+- 制作资源：`Authoring/Models/SplitterCylinder.asset`、三份 `Splitter*.mat`、`Authoring/Prefabs/Splitter.prefab` 与 `Authoring/Scenes/SplitterAuthoring.unity`。圆柱集流仓与三管口均为纯视觉，根 BoxCollider Trigger 检测进入，无实体碰撞。
+- 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。分出的球及复制/再次分流的后代回到同一台时直接穿过，不再分裂或扣耐久；其他实例仍可分流，受通用代数、属性和数量上限约束。
+
+新增通用 `CreateSplitBatch(count)` 与 `HasSplitFrom(instanceId)`，由 Lua 选择出口，C# 负责等分、继承和原子回滚；完整接口与限制见 [装置 Lua API](../Docs/Device_Lua_API.md)。
+
+2026-10-13 验证：分流器专项 **190** 条断言、玩法回归 **3182** 条断言通过，元数据/耐久 **206** 条，全部 **18** 个包加载通过。覆盖价值、体积与质量均分，累计倍率和加分量结算，祖先/复制来源过滤，其他实例再次分流，容量边界，中途创建失败回滚，有限/无限耐久，跨回合，以及两种步长下真实倾斜棋盘的出口阻挡、零速/非零速出射和后代直接穿过。成品与游戏副本一致，目录和 JSON 已完整同步。
+
+## 大喷菇制作资源
+
+选择 `Authoring/Profiles/PuffMushroom.asset` 执行 Analyze / Build MRes，菜单 `Tools > MRes > Create or Locate Puff Mushroom Device` 定位配置；批处理入口 `MResPacker.MResPuffMushroomCreator.CreateAndBuild`。输出 `Output/PuffMushroom.mres`，运行时副本 `Resources/Devices/9016_PuffMushroom.mres`。
+
+- Lua：`Authoring/Lua/PuffMushroom.lua`。进入后均分八球，各有原球 1/8 的价值、体积和质量，继承累计装置倍率，沿棋盘上方 120° 扇形均匀射出，保留速度大小。全部成功扣 1 耐久；失败保留原球。
+- 参数：`Authoring/Data/PuffMushroom.device.json` 的 `Range = 60` 为半扇形角（1–90°），默认总角度 120°；数量为 Lua 中 `outlets = 8`，`Value` / `Strength` 未使用。角度或数量变化时同步修改 Prefab 喷口。
+- 制作资源：`Authoring/Models/PuffMushroomSphere.asset`、`PuffMushroomCylinder.asset`，三份 `PuffMushroom*.mat`、`Authoring/Prefabs/PuffMushroom.prefab` 与 `Authoring/Scenes/PuffMushroomAuthoring.unity`。紫色菌盖、浅色菌柄和八个喷口均为纯视觉，根 BoxCollider Trigger 检测进入。
+- 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。后代回到同一台直接穿过；等分仍遵守属性下限、代数和容量限制，默认八等分至少需要原球质量 0.8。
+
+完全复用 `CreateSplitBatch`、`HasSplitFrom`、`Motion.Source`、向量旋转与 `TryUse`，没有增加装置专用引擎接口。完整规则见 [装置 Lua API](../Docs/Device_Lua_API.md)。
+
+2026-10-13 验证：大喷菇专项 **314** 条断言、玩法回归 **3502** 条断言通过，元数据/耐久 **211** 条，全部 **19** 个包加载通过。覆盖八份价值/质量/体积守恒、倍率继承与最终计分、扇形夹角、零速、祖先过滤、跨实例和跨回合、容量边界、中途失败回滚、最终一次与无限耐久，以及两种步长下真实倾斜棋盘的八口出射、出口阻挡和后代穿过。制作成品与游戏副本一致，目录和 JSON 已完整同步。
+
+## 造血工厂制作资源
+
+选择 `Authoring/Profiles/BloodFactory.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Blood Factory Device` 定位配置。批处理入口 `MResPacker.MResBloodFactoryCreator.CreateAndBuild`。输出 `Output/BloodFactory.mres`，游戏副本 `Resources/Devices/9019_BloodFactory.mres`。
+
+- Lua：`Authoring/Lua/BloodFactory.lua`。真实撞击时，当前价值减半向下取整，再按减半后的价值 ×5 回复血量；如价值 5 → 2、回复 10 血。不计累计得分倍率，原球正常反弹。
+- 参数：`Authoring/Data/BloodFactory.device.json` 的 `Value = 0.5` 为保留比例，`Strength = 5` 为回血系数；ID 9019。默认普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 制作资源：`BloodFactoryCylinder.asset`、`BloodFactoryRed.mat` / `BloodFactoryIvory.mat`、`BloodFactory.prefab` 和 `BloodFactoryAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。红色圆柱罐体带浅色箍带、烟囱和阀门，罐体有实体碰撞。
+- 每次正价值处理扣 1 耐久；价值 1 会变为 0、回复 0，已为 0 不触发。满血仍减半，回复量按血量上限截断。同球可以离开后再次撞击；持续贴住不连续触发。
+- 组合通用 `SetCurrent` 与 `RestoreBlood`：前者替换指定属性并清除其旧修正，后者只回复玩家血量。血量耗尽后在场球仍可回血，足够支付最低档发射后恢复发射资格；主动提现不会被取消。接口契约见 `Docs/Device_Lua_API.md`。
+
+2026-10-13 验证：造血工厂专项 **240** 条断言、玩法回归 **4115** 条断言通过，元数据/耐久 **226** 条，全部 **22** 个包加载通过。覆盖奇数/小数取整、零价值、血量上限、属性修正、倍率结算、同球重撞、有限/无限耐久、回血后继续发射、提现保护、回调有效期，以及两种步长的真实倾斜棋盘碰撞。成品副本一致，目录和 JSON 已同步，原有 21 个包保持不变。
+
+## 复制体制作资源
+
+选择 `Authoring/Profiles/Duplicator.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Duplicator Device` 定位配置。批处理入口 `MResPacker.MResDuplicatorCreator.CreateAndBuild`。输出 `Output/Duplicator.mres`，游戏副本 `Resources/Devices/9018_Duplicator.mres`。
+
+- `Authoring/Lua/Duplicator.lua`：入射速度对碰撞法线做镜面反射，复制球保留速度大小、尺寸、质量，初始价值为 0；原球正常反弹。副本可触发其他装置并被增值。
+- 使用独立的 `Impact` / `Vectors:Reflect` / `CreateCopy` / `TrySetValue` / `TrySpawn` / `TryUse` API。每颗原球在同一实例成功复制一次，复制祖先过滤防止后代反复复制；成功扣 1，失败不扣且可以重试。
+- 制作资源：`Authoring/Models/DuplicatorCylinder.asset`、`Authoring/Materials/DuplicatorSilver.mat`、`Authoring/Prefabs/Duplicator.prefab`、`Authoring/Scenes/DuplicatorAuthoring.unity`，浅蓝金属圆柱，实体碰撞。自己的复制后代仍会正常碰撞，但不再复制。
+- 数据 `Authoring/Data/Duplicator.device.json`，ID 9018；默认普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 副本保留剩余寿命、家族和倍率，清除旧固定加分；不消耗玩家血量，不增加家族返还次数。受全局在场数量和复制代数限制。完整契约见 `Docs/Device_Lua_API.md`。
+
+2026-10-13 验证：复制体专项 **139** 条断言、玩法回归 **3869** 条断言通过，元数据/耐久 **221** 条，全部 **21** 个包加载通过。覆盖零价值和旧加分清理、其他装置增值、原球保留、来源祖先、失败重试、有限/无限耐久、容量和回调有效期，以及两种固定步长下真实倾斜棋盘的正撞、斜撞和后代再次碰撞。成品与运行时副本一致，目录和 JSON 已完整同步，原有 20 个包未改变。
+
+## 炸弹制作资源
+
+选择 `Authoring/Profiles/Bomb.asset` 执行 Analyze / Build MRes，菜单 `Tools > MRes > Create or Locate Bomb Device` 定位配置；批处理入口 `MResPacker.MResBombCreator.CreateAndBuild`。输出 `Output/Bomb.mres`，运行时副本 `Resources/Devices/9017_Bomb.mres`。
+
+- Lua：`Authoring/Lua/Bomb.lua`。每 5 秒沿棋盘平面随机投掷一次，速度 3，1 秒后爆炸；半径 0.8 内符合分裂条件的每颗球均分为 8 球，价值/体积/质量均分，继承倍率，以速度 6 向四周散开。
+- 每次爆炸扣 1 耐久，**空爆也扣**；投出、取消不扣。最后一次仍处理完整目标列表，同一台产生的后代不再次分裂。容量或出口阻挡时按每颗原球独立回滚，不丢失原球；爆炸仍扣耐久。
+- 参数：`Authoring/Data/Bomb.device.json` 的 `Value = 5` 为间隔、`Strength = 3` 为投掷速度、`Range = 0.8` 为爆炸半径。Lua 顶部 `flightSeconds = 1`、`scatterSpeed = 6`、`pieces = 8` 为引信、散射速度及份数。修改半径时同步调整闪光模板尺寸。
+- 制作资源：`Authoring/Models/BombSphere.asset`、`BombCylinder.asset`，三份 `Bomb*.mat`、`Authoring/Prefabs/Bomb.prefab` 与 `Authoring/Scenes/BombAuthoring.unity`。底座有实体碰撞；隐藏的 `BombTemplate` / `BlastTemplate` 供通用视觉 API 复制，飞行炸弹和闪光无碰撞、不占弹珠数、不计分。
+- 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。沿用通用分裂代数、质量/半径和容量限制；默认八等分至少需要原球质量 0.8。
+
+新增可复用的 `TrySpawnVisual`、`Transient`、`ForEachBallInRadius` 与装置事件 `RandomRange`，Lua 组合计时视觉、范围回调和已有等分 API。完整接口见 [装置 Lua API](../Docs/Device_Lua_API.md)。
+
+2026-10-13 验证：炸弹专项 **216** 条断言、玩法回归 **3724** 条断言通过，元数据/耐久 **216** 条，全部 **20** 个包加载通过。覆盖 5 秒投掷/1 秒引信、空爆扣除、最后一次多球及净容量、范围快照不重复选择子球、价值/倍率守恒、失败回滚、后代过滤、取消/回合清理、回调有效期与异常隔离，以及两种固定步下的真实飞行、倾斜棋盘碎片与闪光回收。日志中的 `EXPECTED_TRANSIENT_FAILURE` 是主动注入的异常测试。成品副本一致，目录与 JSON 已同步。

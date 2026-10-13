@@ -15,7 +15,7 @@
 - 数值属性列可直接导入。药物总表中的自然语言效果不是脚本，需同步审阅配方；装置由 `.mres` 中的 Lua 和参数定义，Excel 导入不会覆盖它们。
 - `Editor/Balance/build_content.py` 只补充缺少的属性和药物，保留其已有数值；装置列表每次重新读取当前 MRes，不沿用旧 JSON。日常属性和药物修改内容 JSON，装置修改制作源并重新打包。
 - 重复原 ID（如 D009、M006）保留在 `SourceId`，运行 ID 按已注册内容名称分配：装置 100～114、表内药物 100～109，旧药物 1、2。
-- 全部装置位于 `Resources/Devices/*.mres`，当前为 15 种（14 个 MResPacker 成品和 Multi Ding），外观、碰撞体和 Lua 行为随包加载，不再绑定装置 prefab。详见 [MRes 装置目录](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
+- 全部装置位于 `Resources/Devices/*.mres`，当前为 22 种（21 个 MResPacker 成品和 Multi Ding），外观、碰撞体和 Lua 行为随包加载，不再绑定装置 prefab。详见 [MRes 装置目录](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
 - 传送门按一对购买，两门分别放置并共享配对 ID；两门都放置后才可传送。
 - 已有场景没有程序 HUD 时，控制器会提供可展开的药物库存面板。
 

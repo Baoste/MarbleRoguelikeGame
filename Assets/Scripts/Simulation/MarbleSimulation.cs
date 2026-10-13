@@ -92,6 +92,11 @@ namespace MarblesECS
                 usage.BindDeviceUsage(id => DeviceDurabilitySystem.CanRun(context, id), id => DeviceDurabilitySystem.TryUse(context, id));
             if (physics is IMarbleDeviceInteractionSink interaction)
                 interaction.BindDeviceInteraction(id => DeviceScriptSystem.CanComplete(context, id));
+            if (physics is IMarbleDeviceEffectSink effects)
+                effects.BindDeviceEffect((key, id) =>
+                {
+                    if (IsAlive && context.TryGetFlying(key, out var ball)) BallInteractionSystem.RecordDeviceEffect(context, ball, id);
+                });
             started = true;
         }
 
@@ -133,6 +138,7 @@ namespace MarblesECS
                 TimedGravitySystem.Tick(context, true);
                 HeldMotionSystem.Execute(context);
                 ContactResolutionSystem.Execute(context);
+                context.Transients.Tick(context);
                 DeviceScriptSystem.BallUpdate(context);
                 LostMarbleSystem.Execute(context, physics);
                 DespawnSystem.Execute(context, physics);
@@ -167,6 +173,7 @@ namespace MarblesECS
         {
             if (disposed) return;
             disposed = true;
+            context.Transients.Clear(context);
             context.DeviceScripts.Clear();
             // Entities' global shutdown also disposes manually owned worlds before some MB callbacks.
             if (!context.World.IsCreated)

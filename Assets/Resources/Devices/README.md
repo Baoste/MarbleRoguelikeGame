@@ -1,6 +1,6 @@
 # MRes 装置目录
 
-本目录的原始 `.mres` 是装置外观、碰撞体、参数和行为的权威来源。当前包含以下 15 种装置，商店与背包使用这个目录；`Prefabs/Devices`、手工 prefab 绑定和 C# 装置行为分支已删除。
+本目录的原始 `.mres` 是装置外观、碰撞体、参数和行为的权威来源。当前包含以下 22 种装置，商店与背包使用这个目录；`Prefabs/Devices`、手工 prefab 绑定和 C# 装置行为分支已删除。
 
 | ID | 装置 | 包文件 |
 | --- | --- | --- |
@@ -19,6 +19,13 @@
 | 9010 | 矿老板 | `9010_GoldMine.mres` |
 | 9011 | 淘金热 | `9011_GoldRush.mres` |
 | 9012 | 猪猪存钱罐 | `9012_PiggyBank.mres` |
+| 9013 | 赚赚 | `9013_CashOut.mres` |
+| 9014 | 摇钱树 | `9014_MoneyTree.mres` |
+| 9015 | 分流器 | `9015_Splitter.mres` |
+| 9016 | 大喷菇 | `9016_PuffMushroom.mres` |
+| 9017 | 炸弹 | `9017_Bomb.mres` |
+| 9018 | 复制体 | `9018_Duplicator.mres` |
+| 9019 | 造血工厂 | `9019_BloodFactory.mres` |
 
 ## 添加或更新装置
 
@@ -70,6 +77,10 @@ end
 - `Get/Set/Global(attribute)`：读取、修改属性；`Value/Parameter/Strength/Speed` 等属性提供当前值和配置。
 - `AddBase(attribute, amount)`：增减弹珠未修正的基础属性，再计算现有修正，避免重复乘倍率。沙包用它叠加连击奖励；矿老板用它每次减 2（最低 0），再用 `AddCoins(4)` 产出金币。价值不足也触发，每座矿每回合最多 20 金币，每次实际产出扣 1 耐久；采完后不再扣值或耐久。
 - `CreateSpawnBatch()`：Lua 逐颗指定位置、速度和价值，整批提交生成；容量不足或物理受阻时整批撤销，不扣血。`SpawnSourceId` 提供来源信息。大石碎胸口在第 8 次撞击后均匀发射 16 颗，成功扣 1 耐久并冷却 5 秒。
+- `CreateSplitBatch(count)`：Lua 指定等分子球的出口，全部生成成功才消耗原球；继承倍率，价值、质量和体积按数量均分。分流器向下生成 3 球，大喷菇向棋盘上方 120° 扇形均匀生成 8 球，成功各扣 1 耐久；`HasSplitFrom(instanceId)` 排除来源祖先，同实例再次经过时直接穿过。遵守通用分裂代数及最小质量/半径限制。
+- `CreateCopy()` / `TrySetValue` / `TrySpawn`：复制并单独指定价值和出射位置/速度，保留原球。复制体生成零价值副本，沿镜面反射方向等速出射；其他装置可对其增值。每颗原球一次，自己的复制后代不再复制但仍正常碰撞，成功扣 1 耐久。
+- `SetCurrent(attribute, value)` / `RestoreBlood(amount)`：分别替换弹珠指定属性的当前值、按上限回复玩家血量。造血工厂将价值减半向下取整，按减半后价值 ×5 回复血量；正价值处理扣 1，零价值不触发。回血足够后可从耗尽血量状态继续发射，主动提现不会被取消。
+- `TrySpawnVisual` / `ForEachBallInRadius`：装置事件组合计时移动视觉、完成回调及范围逐球处理。炸弹每 5 秒投出一次，1 秒后爆炸，把范围内符合条件的每颗球八等分；爆炸一次扣 1 耐久，空爆也扣。投掷物不算弹珠，不参与物理碰撞和计分。
 - `TryConsume(refund)`、`TrySettleAmount(score)`、`AddCoins(amount)`、`Children(count, replace)`：只负责吞噬、精确结算、加金币、产生子球；耐久由 Lua 组合登记。旧 `Consume` / `TrySettle` 保留隐式计数兼容。
 - `ScaleVelocity(scale)`、`Exit(direction, speed, angle)`、`ExitPartner(direction, speed)`：运动操作；方向为 `down` 或 `forward`，出口仍执行障碍检查。
 - `StoredValue`、`RushOnSettlement`、`RefundOnDespawn`、`ExitDown`、`TransportLockedUntil`：装置或弹珠状态。

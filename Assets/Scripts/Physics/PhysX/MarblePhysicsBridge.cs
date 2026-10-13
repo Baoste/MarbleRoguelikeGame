@@ -79,6 +79,7 @@ namespace MarblesECS.PhysX
         public void Dispose()
         {
             if (disposed) return;
+            ClearTransientVisuals();
             foreach (var key in new List<MarbleKey>(bodies.Keys)) Remove(key);
             disposed = true;
             while (pool.Count > 0)

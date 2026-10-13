@@ -31,6 +31,7 @@ namespace MarblesECS
             campaign.LayoutRevision++;
             context.Manager.DestroyEntity(entity);
             context.DeviceScripts.Remove(instanceId);
+            context.Transients.RemoveSource(context, instanceId);
             context.Campaign = campaign;
             return true;
         }

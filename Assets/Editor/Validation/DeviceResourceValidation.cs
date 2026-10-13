@@ -46,7 +46,8 @@ namespace MarblesECS.Editor
                             Check(view.Root.scene == scene && !view.Root.activeSelf, "device joins the correct physics scene before activation");
                             view.Root.SetActive(true);
                             Check(view.Root.GetComponent<MResDeviceBody>().Script == script, "view and gameplay share the same Lua instance");
-                            Check(script.HasFunction("OnContact") || script.HasFunction("OnField") || script.HasFunction("OnBallUpdate"), "packaged Lua handles gameplay");
+                            Check(script.HasFunction("OnContact") || script.HasFunction("OnField") || script.HasFunction("OnBallUpdate") ||
+                                script.HasFunction("OnTick") || script.HasFunction("OnActivate"), "packaged Lua handles gameplay");
                         }
                         Check(!script.IsDisposed, "visual disposal preserves the session script");
                     }
