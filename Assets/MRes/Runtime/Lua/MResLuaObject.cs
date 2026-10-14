@@ -35,6 +35,19 @@ namespace MRes
         public string GetRarity() => metadata?.rarity ?? "common";
         public int GetDurability() => metadata?.durability ?? 20;
         public string GetItemType() => metadata?.type.ToString();
+        /// <summary>Changes only renderer visibility within this instance; never activates nodes or changes physics.</summary>
+        public bool TrySetRenderersVisible(string nodePath, bool visible)
+        {
+            if (gameObject == null || nodePath == null || nodePath.Length > 256) return false;
+            if (nodePath.Length != 0)
+                foreach (string part in nodePath.Split('/'))
+                    if (part.Length == 0 || part == "." || part == ".." || part.Contains("\\")) return false;
+            var node = nodePath.Length == 0 ? gameObject.transform : gameObject.transform.Find(nodePath);
+            if (node == null) return false;
+            var renderers = node.GetComponentsInChildren<Renderer>(true);
+            foreach (var renderer in renderers) renderer.enabled = visible;
+            return renderers.Length != 0;
+        }
         internal static MResLuaObject Other(GameObject go)
         {
             var owner = go.GetComponentInParent<MResLifetime>();

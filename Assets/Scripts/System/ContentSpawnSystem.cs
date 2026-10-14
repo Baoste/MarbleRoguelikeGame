@@ -13,7 +13,7 @@ namespace MarblesECS
             var launcher = c.Launcher;
             if (round.Phase != (byte)RoundPhase.Playing || (launcher.FireHeld == 0 && launcher.PendingSingleShots == 0) || round.Time < launcher.NextFireAt) return;
             var spawn = AttributeRuntime.Prepare(c, launcher.Flow);
-            double cost = spawn.Count * spawn.Quote.Cost;
+            double cost = RushSystem.ShotCost(c, spawn.Count * spawn.Quote.Cost);
             if (round.ActiveMarbleCount + spawn.Count > c.Tuning.MaxActiveMarbles || c.Player.Blood < cost) return;
             var created = new List<Entity>();
             bool committed = false;
@@ -29,7 +29,7 @@ namespace MarblesECS
                 var player = c.Player;
                 player.Blood -= (float)cost;
                 c.Player = player;
-                launcher.NextFireAt = round.Time + c.Tuning.FireIntervalSeconds;
+                launcher.NextFireAt = round.Time + RushSystem.FireInterval(c);
                 if (launcher.PendingSingleShots > 0) launcher.PendingSingleShots--;
                 c.Launcher = launcher;
                 committed = true;
@@ -53,7 +53,7 @@ namespace MarblesECS
             {
                 AttributeRuntime.Initialize(c, candidate, spawn.Values);
                 var features = spawn.Features;
-                if (features.Family == 0) { features.Family = key.Sequence; features.RefundBlood = spawn.Quote.Cost; features.BirthTick = c.Round.Tick; }
+                if (features.Family == 0) { features.Family = key.Sequence; features.RefundBlood = (float)RushSystem.ShotCost(c, spawn.Quote.Cost); features.BirthTick = c.Round.Tick; }
                 c.Manager.AddComponentData(candidate, features);
                 c.Manager.AddBuffer<DeviceVisit>(candidate);
                 c.Manager.AddBuffer<DeviceSplitSource>(candidate);
@@ -147,6 +147,7 @@ namespace MarblesECS
                     c.Manager.GetBuffer<VisitedDeviceData>(child).CopyFrom(legacyVisits);
                     c.Manager.GetBuffer<MarbleModifier>(child).CopyFrom(modifierCopy);
                     c.Manager.SetComponentData(child, parentRush);
+                    MarbleAppearanceSystem.Copy(c, parent, child);
                     var childScore = parentScore;
                     childScore.BaseScore = values[(int)GameAttribute.BALL_BASE_VALUE];
                     childScore.ScoreBonus *= retained;

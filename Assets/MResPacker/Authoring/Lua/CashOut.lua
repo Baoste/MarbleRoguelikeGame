@@ -4,8 +4,8 @@ function OnContact(api)
     local hasOther = api.HasTriggeredOtherDevice
     if not api:Visit(0, 0) then return end
     if hasOther then
-        -- Value already includes current base-value modifiers. Do not multiply by 2.
-        local coins = math.floor(api.Value * api.DeviceScoreMultiplier + 0.5)
+        -- Include the temporary board value bonus without storing it in the marble's base value.
+        local coins = math.floor(api.EffectiveValue * api.EffectiveDeviceScoreMultiplier + 0.5)
         if api:TryConsume(false) then
             api:TryUse()
             api:AddCoins(coins)

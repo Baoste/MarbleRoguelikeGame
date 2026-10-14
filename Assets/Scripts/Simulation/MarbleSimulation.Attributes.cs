@@ -29,8 +29,12 @@ namespace MarblesECS
         }
         public double GetMarbleAttribute(MarbleKey key, GameAttribute attribute) => context.TryGetFlying(key, out var entity)
             ? AttributeRuntime.Get(context, entity, attribute) : throw new ArgumentException("Marble is no longer active.");
-        public ShotQuote QuoteShot(float flow) => AttributeRuntime.Enabled(context)
-            ? AttributeRuntime.Prepare(context, flow).Quote : MarbleRules.Quote(context.Tuning, flow);
+        public ShotQuote QuoteShot(float flow)
+        {
+            var quote = AttributeRuntime.Enabled(context) ? AttributeRuntime.Prepare(context, flow).Quote : MarbleRules.Quote(context.Tuning, flow);
+            return RushSystem.Active(context) ? new ShotQuote(quote.Investment, 0, quote.Radius, quote.Mass,
+                quote.BaseValue + RushSystem.ValueBonus, quote.LauncherMultiplier) : quote;
+        }
         private bool AddAttributeEffect(Entity entity, uint source, GameAttribute attribute, AttributeOperation operation,
             double value, long durationTicks, int priority)
         {

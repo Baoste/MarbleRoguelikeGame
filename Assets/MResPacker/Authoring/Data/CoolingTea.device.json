@@ -1,0 +1,14 @@
+{
+    "Id": 9030,
+    "Radius": 0.47,
+    "ScoreMultiplier": 1,
+    "StartingCount": 0,
+    "PurchaseQuantity": 1,
+    "RushCategory": true,
+    "Cooldown": 0,
+    "MaxTriggersPerBall": 1,
+    "Range": 0.1,
+    "Strength": 0.2,
+    "Value": 5,
+    "SourceId": "CoolingTea"
+}

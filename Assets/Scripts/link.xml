@@ -2,6 +2,8 @@
   <assembly fullname="MarblesECS.Runtime">
     <type fullname="MarblesECS.DeviceContactContext" preserve="all" />
     <type fullname="MarblesECS.DeviceEventContext" preserve="all" />
+    <type fullname="MarblesECS.DeviceBoardApi" preserve="all" />
+    <type fullname="MarblesECS.DeviceOfferContext" preserve="all" />
     <type fullname="MarblesECS.DeviceMotionApi" preserve="all" />
     <type fullname="MarblesECS.DeviceEndpoint" preserve="all" />
     <type fullname="MarblesECS.DeviceHoldInfo" preserve="all" />
@@ -10,6 +12,7 @@
     <type fullname="MarblesECS.DeviceSpawnBatch" preserve="all" />
     <type fullname="MarblesECS.DeviceSplitBatch" preserve="all" />
     <type fullname="MarblesECS.DeviceCopy" preserve="all" />
+    <type fullname="MarblesECS.DevicePortion" preserve="all" />
     <type fullname="MarblesECS.DeviceTransientInfo" preserve="all" />
     <type fullname="MarblesECS.PhysX.DeviceFieldContext" preserve="all" />
   </assembly>

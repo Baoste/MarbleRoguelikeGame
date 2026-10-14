@@ -51,6 +51,7 @@ namespace MarblesECS
             var campaign = context.Campaign;
             campaign.LastCashoutCoins = 0;
             context.Campaign = campaign;
+            DeviceScriptSystem.RoundStart(context);
             return true;
         }
 

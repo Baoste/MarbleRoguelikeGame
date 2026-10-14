@@ -60,6 +60,8 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     float slide, nextRefresh;
     int drugPage, devicePage, hoverKind=-1, hoverIndex;
     bool initialized;
+    float deviceFeedbackUntil;
+    string deviceFeedback;
     public bool IsBoardOpen => slide >= .999f;
     public int VisibleDeviceCount { get; private set; }
     public int DrugPage => drugPage;
@@ -100,7 +102,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
             leverOnRotation*Quaternion.AngleAxis(on?0:LeverOffAngle,LeverAxis.normalized),Time.unscaledDeltaTime*240);
         if(LeverState)LeverState.text=on?(CanCashOut()?"CASH OUT  /  向下结算":"ON  /  目标未达成"):"OFF";
         if(Time.unscaledTime>=nextRefresh){RefreshInventory();nextRefresh=Time.unscaledTime+.1f;}
-        if(hoverKind>=0)UpdateTooltip();
+        if(hoverKind>=0 || (Placement && Placement.IsDraggingInventory) || deviceFeedbackUntil>0)UpdateTooltip();
     }
     public bool CanCashOut() => Controller && Controller.IsReady && !Controller.Paused && Controller.Session.Phase==RoundPhase.Playing && Controller.Session.CanCashOut;
     public bool TryCashOut()
@@ -137,6 +139,20 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     {
         int pages=Mathf.Max(1,(drugSlotIds.Count+3)/4);drugPage=(drugPage+step+pages)%pages;ClearHover();RefreshInventory();
     }
+    public bool BeginDeviceDrag(int index, Vector2 pointer)
+    {
+        if(!Controller||!Controller.IsReady||Controller.Paused||Controller.Session.Phase!=RoundPhase.Build||!IsBoardOpen||!Placement||index<0||index>=deviceIds.Length)return false;
+        return Placement.BeginInventoryDrag(deviceIds[index],pointer);
+    }
+    public void UpdateDeviceDrag(Vector2 pointer){if(Placement)Placement.UpdateInventoryDrag(pointer);}
+    public void EndDeviceDrag(Vector2 pointer, GameObject pointerTarget = null)
+    {
+        if(!Placement)return;
+        Placement.EndInventoryDrag(pointer,pointerTarget);
+        deviceFeedback=Placement.LastFeedback;deviceFeedbackUntil=Time.unscaledTime+3;
+        RefreshInventory();UpdateTooltip();
+    }
+    public void CancelDeviceDrag(){if(Placement && Placement.IsDraggingInventory)Placement.CancelPlacement();}
     public void ChangeDevicePage(int step)
     {
         int pages=Mathf.Max(1,(unplacedDevices.Count+5)/6);devicePage=(devicePage+step+pages)%pages;ClearHover();RefreshInventory();
@@ -197,7 +213,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         if(LeverHighlight)LeverHighlight.SetActive(false);
         foreach(var slot in DrugSlots)if(slot.Highlight)slot.Highlight.SetActive(false);
     }
-    void OnDisable(){ClearHover();}
+    void OnDisable(){ClearHover();CancelDeviceDrag();}
     void UpdateTooltip()
     {
         if(!Tooltip||!Controller||!Controller.IsReady)return;
@@ -214,6 +230,9 @@ public sealed class DiegeticMachineUI : MonoBehaviour
                 (d.ActiveDoses>0?$"\n生效 {d.ActiveDoses} 层 · 剩余 {d.SecondsRemaining:0.0} 秒":"")+
                 (Controller.Paused?"\n已暂停":Controller.Session.Phase==RoundPhase.Playing?"\n点击药剂使用":"\n回合开始后可使用");
         }
+        if(Placement && Placement.IsDraggingInventory)text=Placement.LastFeedback;
+        else if(deviceFeedbackUntil>Time.unscaledTime)text=deviceFeedback;
+        else deviceFeedbackUntil=0;
         if(string.IsNullOrEmpty(text)){Tooltip.gameObject.SetActive(false);return;}
         TooltipText.text=text;Tooltip.gameObject.SetActive(true);
         RectTransformUtility.ScreenPointToLocalPointInRectangle(Overlay,Input.mousePosition,null,out var p);

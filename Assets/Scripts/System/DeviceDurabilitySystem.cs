@@ -7,11 +7,26 @@ namespace MarblesECS
     internal struct DeviceEffectContinuation : IComponentData { internal int Round; internal double Until; }
     internal static class DeviceDurabilitySystem
     {
+        internal static int Limit(SimulationContext c, OwnedDeviceData device) => device.HasDurabilityLimit
+            ? device.DurabilityLimit : CampaignStateUtility.Device(c, device.DefinitionId).Durability;
+        internal static OwnedDeviceData WithLimit(OwnedDeviceData device, int maximum)
+        {
+            if (maximum < -1 || maximum > 10000) throw new System.ArgumentOutOfRangeException(nameof(maximum));
+            device.HasDurabilityLimit = true; device.DurabilityLimit = maximum; return device;
+        }
+        internal static OwnedDeviceData Restored(SimulationContext c, OwnedDeviceData device)
+        { device.DurabilityRound = c.Round.RoundId; device.UsesThisRound = 0; return device; }
+        internal static void Refresh(SimulationContext c)
+        { if (c.Physics is IMarbleDeviceUsageSink sink) sink.RefreshDeviceAvailability(); }
+        internal static void SetLimit(SimulationContext c, Entity entity, int maximum)
+        { c.Manager.SetComponentData(entity, WithLimit(c.Manager.GetComponentData<OwnedDeviceData>(entity), maximum)); Refresh(c); }
+        internal static void Restore(SimulationContext c, Entity entity)
+        { c.Manager.SetComponentData(entity, Restored(c, c.Manager.GetComponentData<OwnedDeviceData>(entity))); Refresh(c); }
         internal static int Remaining(SimulationContext c, OwnedDeviceData device)
         {
-            var definition = CampaignStateUtility.Device(c, device.DefinitionId);
-            if (definition.Durability == -1) return -1;
-            return System.Math.Max(0, definition.Durability - (device.DurabilityRound == c.Round.RoundId ? device.UsesThisRound : 0));
+            int limit = Limit(c, device);
+            if (limit == -1) return -1;
+            return System.Math.Max(0, limit - (device.DurabilityRound == c.Round.RoundId ? device.UsesThisRound : 0));
         }
         internal static bool Available(SimulationContext c, int instanceId) =>
             CampaignStateUtility.FindDevice(c, instanceId, out var entity) &&

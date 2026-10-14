@@ -15,7 +15,7 @@
 - 数值属性列可直接导入。药物总表中的自然语言效果不是脚本，需同步审阅配方；装置由 `.mres` 中的 Lua 和参数定义，Excel 导入不会覆盖它们。
 - `Editor/Balance/build_content.py` 只补充缺少的属性和药物，保留其已有数值；装置列表每次重新读取当前 MRes，不沿用旧 JSON。日常属性和药物修改内容 JSON，装置修改制作源并重新打包。
 - 重复原 ID（如 D009、M006）保留在 `SourceId`，运行 ID 按已注册内容名称分配：装置 100～114、表内药物 100～109，旧药物 1、2。
-- 全部装置位于 `Resources/Devices/*.mres`，当前为 22 种（21 个 MResPacker 成品和 Multi Ding），外观、碰撞体和 Lua 行为随包加载，不再绑定装置 prefab。详见 [MRes 装置目录](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
+- 全部装置位于 `Resources/Devices/*.mres`，当前为 35 种（34 个 MResPacker 成品和 Multi Ding），外观、碰撞体和 Lua 行为随包加载，不再绑定装置 prefab。详见 [MRes 装置目录](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
 - 传送门按一对购买，两门分别放置并共享配对 ID；两门都放置后才可传送。
 - 已有场景没有程序 HUD 时，控制器会提供可展开的药物库存面板。
 
@@ -23,7 +23,7 @@
 
 `Multi Ding` 的定义 ID 为 113，行为通过 Lua 实现；当前包的 `StartingCount` 为 1，没有额外的 C# 开局赠送规则。Rush Ding 已移出当前装置目录。旧药物保留 ID 1、2，在 `GameContent.json` 中配置。`SourceId` 继续记录原始来源编号。
 
-`Multi Ding` 每球每装置提供 1.85 倍率一次，只累加其中的 0.85；全部装置到得分区以 `1 + Σ(倍率 - 1)` 统一计算，基础 ×1 只算一次。猪猪存钱罐每次有效撞击按钱包提供 `1 + 0.1 × floor(金币/10)`，两次 1.2 得到 1.4。旧 `Rush Ding` 每球每装置 RUSH 概率 +0.11 一次。旧药物 `Up Restitution` / `Down Restitution` 在 12 秒窗口内给新球的 `BALL_BOUNCE` 分别乘 1.5 / 0.65，独立计时叠加；与新药物共用属性运算顺序及字典上限 2。两种旧药物合计同时生效剂量仍受 `MaxActiveBounceDrugs` 限制，面板显示库存和剩余药效时间。
+`Multi Ding` 每球每装置提供 1.85 倍率一次，只累加其中的 0.85；全部装置到得分区以 `1 + Σ(倍率 - 1)` 统一计算，基础 ×1 只算一次。猪猪存钱罐每次有效撞击按钱包提供 `1 + 0.1 × floor(金币/10)`，两次 1.2 得到 1.4。旧 `Rush Ding` 的概率字段仅兼容，不参与累积 RUSH。旧药物 `Up Restitution` / `Down Restitution` 在 12 秒窗口内给新球的 `BALL_BOUNCE` 分别乘 1.5 / 0.65，独立计时叠加；与新药物共用属性运算顺序及字典上限 2。两种旧药物合计同时生效剂量仍受 `MaxActiveBounceDrugs` 限制，面板显示库存和剩余药效时间。
 
 ## 属性规则
 
@@ -41,7 +41,7 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 | BALL_SPAWN_COUNT | 一次发射生成一排互不重叠的球；不足容量／余额／空间则整批回滚 |
 | BALL_BASE_VALUE | 出生、增值装置、银行和最终计分 |
 | BALL_GAMBLE_VALUE_MOD | 与 GAMBLE_POT_VALUE 合并为一次赌池价值乘区 |
-| BALL_RUSH_GAIN | 有效得分入区增加 RUSH 槽；默认阈值 10，可在内容配置调整 |
+| BALL_RUSH_GAIN | 旧兼容属性；当前球贡献从 2 开始，每次有效装置作用 +5，通过 RushContribution API 累积 |
 | BALL_RADIUS | 独立球体半径，乘 0.16 换算为世界单位；不随抽血档位变化 |
 | BALL_MASS | 直接设置实际刚体质量，不再乘抽血量 |
 | BALL_BOUNCE | 独立物理材质；静态／运动学障碍碰撞按球属性校正反弹，支持 0～2 |
@@ -55,12 +55,12 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 | BALL_CLONE_VALUE_RETENTION | 分裂子球价值比例；分流器明确使用 0.5，复制药物使用完整复制 |
 | BALL_PIERCE_COUNT | 穿过普通圆钉的有限次数，与药物的穿钉概率分开计数 |
 | MACHINE_MULT | 单球机器乘区，与既有装置／区域倍率合并后按字典 MaxValue 封顶，当前 100 |
-| GLOBAL_MULT | 结算时读取；RUSH 使用 max(GLOBAL_MULT, RUSH_MULT)，避免重复乘区 |
+| GLOBAL_MULT | 结算时读取；RUSH 不再自动乘全局倍率，而是临时价值 +5 |
 | SCORE_BY_SPEED | 入区速度 / 最大速度得到 0～1 权重，对球价值加成 |
 | SCORE_OVERKILL_RATE | 本轮新获得的超额分数 × 0.01 金币/分 × 此倍率；不重复兑换旧累计分 |
-| RUSH_DURATION | 球触发时读取其出生快照；默认 5 秒，重复触发保留较长的剩余窗口，上限与进度条均读取字典 MaxValue，当前 8 秒 |
-| RUSH_MULT | RUSH 状态对应的全局倍率 |
-| RUSH_DECAY | 每秒扣除 RUSH 剩余时间；非 RUSH 时扣槽，0 表示不衰减 |
+| RUSH_DURATION | 旧兼容属性；当前满 100 条值后固定 10 秒，再加触发球的 RushDurationBonus |
+| RUSH_MULT | 旧兼容属性；不再自动乘入 RUSH 得分 |
+| RUSH_DECAY | 旧兼容属性；当前条值不衰减，RUSH 每模拟秒倒计时 1 秒 |
 | GAMBLE_LOSS_CHANCE | ×0 的概率权重 |
 | GAMBLE_RETURN_CHANCE | ×1 的概率权重 |
 | GAMBLE_WIN_CHANCE | ×2 的概率权重 |
@@ -102,9 +102,9 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 
 | 运行 ID | 药物 | 出生效果 | 窗口／重复使用 |
 |---|---|---|---|
-| 100 | 肾上腺素 | RUSH 概率 +23 个百分点，血耗 ×1.15 | 6 秒，刷新 |
+| 100 | 肾上腺素 | 旧概率字段保留但不触发新 RUSH；血耗 ×1.15 | 6 秒，刷新 |
 | 101 | 烧烧果实 | RUSH 中该球得分 ×1.68，价值 ×0.9 | 6 秒，刷新 |
-| 102 | 延长药剂 | 该球触发的 RUSH 时长 ×1.45，血耗 ×1.15 | 6 秒，刷新 |
+| 102 | 延长药剂 | 旧时长属性不再控制核心 RUSH；血耗 ×1.15 | 6 秒，刷新 |
 | 103 | 润流剂 | 摩擦 ×0.6，弹性 +0.1，价值 ×0.9 | 10 秒，刷新 |
 | 104 | 凝血剂 | 价值 ×1.3，体积 ×1.5，血耗 ×1.2 | 10 秒，刷新 |
 | 105 | 摇头丸 | 弹性 +3 后按字典封顶 2，价值 ×1.3，血耗 ×1.2 | 10 秒，独立剂量叠加 |
@@ -121,3 +121,7 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 菜单 `Marbles ECS/Validate Attribute and Content Runtime` 在 Play 模式运行真实游戏系统和独立 PhysX 场景。
 批处理入口 `MarblesECS.Editor.GameContentValidation.Run` 创建临时空场景，不保存游戏场景。
 覆盖属性运算顺序、上下限、概率档位、批量回滚、10 种药物与快照、装置效果、传送配对、分裂守恒、复制继承、返血、经济，以及实际重力、限速、穿钉和磁力。
+
+## 当前 RUSH 规则
+
+全盘条值上限 100。普通球贡献 2，每次有效触发装置 +5，底部流失原值入账、得分区 ×1.5 入账。满条进入 10 秒 RUSH：免扣血、射速 +5 发/秒、所有球临时价值 +5；期间暂停条值入账，到期从 0 重新开始。降降火触发球额外 5 秒。装置增益 ×2 暂不实现，数值不变。台球和有锅气的 Lua 规则及迁移 API 见 [装置 Lua API](Device_Lua_API.md)。

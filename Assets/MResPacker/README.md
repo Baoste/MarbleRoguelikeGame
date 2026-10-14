@@ -320,6 +320,8 @@ Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据
 - 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。两种成功处理各扣 1，受阻出口不扣；`-1` 无限。`Authoring/Data/CashOut.device.json` 的 `Value`、`Strength`、`Range` 不用于本效果。
 - 新通用 API 为 `HasTriggeredOtherDevice`、`MarkTriggered()` 和 `DeviceScoreMultiplier`。历史独立于访问与耐久；大石碎胸口的纯 Lua 蓄力已接入记录并重新打包。详细契约和算例见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 
+当前赚赚兑换读取 `EffectiveDeviceScoreMultiplier`，包含仍在生效的全盘临时装置倍率；`DeviceScoreMultiplier` 继续表示球持有的累计值，供复制/分裂等继承使用。星星灯的 5 秒加成到期后，兑换也不再包含这份加成。
+
 2026-10-13 验证：赚赚专项 **169** 条断言、玩法回归 **2559** 条断言、全部 **16** 个包加载通过。覆盖当前价值与累计装置倍率兑换、四舍五入、同实例排除、失败操作不登记、复制与新球历史、纯 Lua 蓄力、钱包上限、有限/无限耐久、跨回合，以及真实旋转棋盘出射、加速力场和对象池复用。
 
 ## 摇钱树
@@ -359,6 +361,147 @@ Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据
 
 2026-10-13 验证：大喷菇专项 **314** 条断言、玩法回归 **3502** 条断言通过，元数据/耐久 **211** 条，全部 **19** 个包加载通过。覆盖八份价值/质量/体积守恒、倍率继承与最终计分、扇形夹角、零速、祖先过滤、跨实例和跨回合、容量边界、中途失败回滚、最终一次与无限耐久，以及两种步长下真实倾斜棋盘的八口出射、出口阻挡和后代穿过。制作成品与游戏副本一致，目录和 JSON 已完整同步。
 
+## RUSH 重构与制作资源
+
+RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置 Lua API](../Docs/Device_Lua_API.md)。装置倍率、金币、回血等数值不加倍。UI 同时显示未满条进度和 RUSH 倒计时。
+
+### 超大杯全冰美式
+
+制作配置 `Authoring/Profiles/IcedAmericano.asset`，菜单 `Tools > MRes > Create or Locate Iced Americano Device`；批处理 `MResPacker.MResIcedAmericanoCreator.CreateAndBuild`。可编辑源资源包括 `Authoring/Lua/IcedAmericano.lua`、`Authoring/Data/IcedAmericano.device.json`、`IcedAmericano*` 模型与材质、`Authoring/Prefabs/IcedAmericano.prefab` 和 `Authoring/Scenes/IcedAmericanoAuthoring.unity`。模型包含咖啡杯、冰块和吸管，杯身为实体碰撞体。
+
+输出 `Output/IcedAmericano.mres`，运行时 `Resources/Devices/9032_IcedAmericano.mres`。每次有效碰撞额外贡献 +20，当前基础价值 ×0.5，保留小数，扣 1 耐久；通用 +5 照常计入，RUSH 期间数值不翻倍。重复撞击可再次生效，价值 0 仍可增加贡献。只组合现有 `Visit`、`TryUse`、`SetCurrent`、`AddRushContribution`。
+
+业务参数 `Value=0.5` 为保留比例、`Strength=20` 为额外贡献；默认普通、耐久 20、购买 5、出售 120、初始库存 0。重新打包后更新游戏副本，装置目录与 `GameContent.json.Devices` 随 MRes 完整同步。
+
+2026-10-14 验证：冰美式专项 **357** 条断言、完整玩法回归 **10341** 条通过，元数据/耐久 **291** 条，全部 **35** 个包加载通过。制作输出与运行时包一致，原有 34 个包和非装置配置保持一致。
+
+### 台球
+
+制作配置 `Authoring/Profiles/Billiards.asset`，菜单 `Tools > MRes > Create or Locate Billiards Device`；批处理 `MResPacker.MResBilliardsCreator.CreateAndBuild`。源资源包含 `Billiards.lua`、`Billiards.device.json`、台面/框架/洞口模型与独立材质、Prefab 和 `BilliardsAuthoring.unity`。输出 `Output/Billiards.mres`，运行时 `Resources/Devices/9031_Billiards.mres`。
+
+吞入一球后编号并吐出，8 号 20%，其余七种平分 80%。基础价值不变，得分区仅按编号对 RUSH 条入账：8 号 −100，其余 +编号×10。成功吐出扣 1 耐久，冷却 15 秒。业务参数 `Value=.2` 为吞入时长、`Strength=6` 为最低吐球速度、`Range=15` 为冷却。
+
+### 有锅气
+
+原 `Wok` 源目录、Prefab 和场景保留。入锅后额外贡献 +10，连同成功触发 +5，普通新球贡献变为 17；无碰撞翻炒 1 秒后向上方 ±60° 随机抛出，保留入口速度。每颗成功释放扣 1 耐久，最后一球离锅后冷却 5 秒。`Strength=10`、`Range=60`、`Value=1`。不再设置全盘 RUSH 概率。
+
+### 降降火
+
+原 `CoolingTea` 源目录、模型和物理数值保留。摩擦 ×1.2、弹性 ×0.9，每球跨实例一次。额外 5 秒只在该球使条值累满时生效，本次 RUSH 为 15 秒；概率抽取与旧 8 秒上限已移除。
+
+以上装置均普通、购买 5、出售 120、耐久 20、初始库存 0。黑洞和赚赚使用通用 `EffectiveValue` 读取 RUSH 临时价值，原倍率与金币换算公式不变。成品与游戏副本、目录、`GameContent.json.Devices` 一起同步。
+
+## 种植牙制作资源
+
+选择 `Authoring/Profiles/DentalImplant.asset` 执行 Analyze / Build MRes，菜单 `Tools > MRes > Create or Locate Dental Implant Device` 定位配置；批处理入口 `MResPacker.MResDentalImplantCreator.CreateAndBuild`。输出 `Output/DentalImplant.mres`，运行时副本 `Resources/Devices/9028_DentalImplant.mres`。
+
+- Lua：`Authoring/Lua/DentalImplant.lua`。首次放置为洞；从背包拖入另一件种植牙逐级升为不锈钢牙、陶瓷牙、金刚钻牙，消耗一件并补满耐久。其他物品和最高阶段的继续升级均拒绝。
+- Lua 顶部阶段表定义实际倍率增量 `0 / 2 / 5 / 20`、阶段耐久 `0 / 5 / 8 / 20`。有效撞击扣 1；最后一次仍加倍率，随后退回无碰撞的洞。阶段跨回合保留，新回合恢复当前阶段耐久，洞需要重新种植。
+- 组合通用 `GetInstanceValue` / `SetInstanceValue`、`SetDurabilityLimit`、`RestoreDurability` 与 `OnOffer`。接受前暂存阶段和耐久，失败不消耗库存；`OnOfferAccepted` 更新表现缓存。接口契约见 [装置 Lua API](../Docs/Device_Lua_API.md)。
+- 制作资源：`Authoring/Models/DentalImplant*.asset`、五份 `DentalImplant*.mat`、`Authoring/Prefabs/DentalImplant.prefab`、`Authoring/Scenes/DentalImplantAuthoring.unity`。棕色底座配深色洞面，三种牙冠分别为金属灰、陶瓷白、钻石蓝；Lua 控制 Renderer 显隐，运行时零耐久上限关闭玩法碰撞。
+- Metadata 默认普通、购买 5、出售 120、耐久 20，初始库存 0；当前阶段的耐久上限由实例覆盖并在背包和场上显示。`Authoring/Data/DentalImplant.device.json` 定义 ID `9028`，阶段公式不在 C# 中。
+
+2026-10-14 验证：种植牙专项 **275** 条断言、玩法回归 **7414** 条断言通过，元数据/耐久 **271** 条，全部 **31** 个包加载通过。覆盖全部阶段、最后一次生效后退回洞、重复碰撞、跨回合补满、同类库存升级与拒绝、暂存数据的失败回滚、真实背包拖放，以及两种步长下倾斜棋盘的正常反弹、洞中穿过和模型重建。成品与运行时副本一致，目录和 JSON 完整同步；原有 30 个包及非装置内容保持不变。
+
+## 星星灯制作资源
+
+选择 `Authoring/Profiles/StarLamp.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Star Lamp Device` 定位配置，批处理入口 `MResPacker.MResStarLampCreator.CreateAndBuild`。输出 `Output/StarLamp.mres`，游戏副本 `Resources/Devices/9027_StarLamp.mres`。
+
+- Lua：`Authoring/Lua/StarLamp.lua`。未激活时弹珠进入切换开关；至少 2 盏且所有已放置星星灯全亮时启动一份全盘临时倍率，所有当前和随后产生的弹珠增加灯总数点倍率。
+- 持续 5 秒，期间灯保持开启，经过不叠加、不刷新时间。到期移除全盘加成、全部熄灭，每盏参与灯各扣 1 耐久；普通切换免费，最后一点耐久完成整轮，回合结束或来源移除取消未完成效果。
+- 组合 `Board:AddScoreMultiplier`、`ForEachPlacedDevice`、`GetRoundValue` / `SetRoundValue` 与 `TryUseOnce`；公式、全亮条件及完成扣耐久均在 Lua。全盘效果不会永久写进球的倍率，复制和分裂也不重复继承。接口见 [装置 Lua API](../Docs/Device_Lua_API.md)。
+- 参数：`Authoring/Data/StarLamp.device.json` 的 `Value = 5` 为持续秒数，`Strength = 1` 为每灯附加增量，`Range` 未使用；ID 9027。普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 制作资源：`StarLampStar.asset`、三份 `StarLamp*.mat`、`StarLamp.prefab`、`StarLampAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。横铺五角星、暗金关闭面和黄色发光开启面，共 4 节点、1 网格、3 材质、1 Trigger 和 1 运动学刚体。
+
+2026-10-14 验证：星星灯专项 **807** 条断言、玩法回归 **7127** 条断言通过，元数据/耐久 **266** 条，全部 **30** 个包加载通过。覆盖全亮启动、未经过灯和新发射的球、5 秒统一结束、每参与灯扣 1、重复碰撞不叠加或续时、复制/分裂不永久继承、普通/赌博结算、赚赚兑换、来源移除和回合清理，以及两种步长下真实穿过与同步熄灯。星星灯和赚赚已重新打包，制作成品与游戏副本一致，目录及 JSON 已同步，另外 28 个包和非装置内容未改变。
+
+## 大胃袋制作资源
+
+选择 `Authoring/Profiles/GluttonBag.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Glutton Bag Device` 定位配置，批处理入口 `MResPacker.MResGluttonBagCreator.CreateAndBuild`。输出 `Output/GluttonBag.mres`，游戏副本 `Resources/Devices/9026_GluttonBag.mres`。
+
+- Lua：`Authoring/Lua/GluttonBag.lua`。布置阶段接收拖入的库存装置，普通/稀有/史诗/传奇增加 2/4/6/8 点附加增量；来源只消耗一件，喂食不扣耐久、不奖励出售金币。
+- 弹珠每次真实碰撞调用 `AddScoreMultiplier(1 + 成长)`，有增量时扣 1 耐久，到得分区统一计算。初始无效果，原球正常反弹；每台独立成长。
+- 通用 `OnOffer` / `DeviceOfferContext` 把库存接受和回合数值同时提交。布置时通过 `SetRoundValue` 准备下一回合，开局保留，下一轮布置查询为 0。回调拒绝或报错不消耗物品、不增加成长。接口契约见 `Docs/Device_Lua_API.md`。
+- 参数：`Authoring/Data/GluttonBag.device.json` 的 `Value = 0` 为初始附加增量，`Strength = 2` 为每档稀有度增量，`Range` 未使用；ID 9026。普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 制作资源：`GluttonBagCylinder.asset`、三份 `GluttonBag*.mat`、`GluttonBag.prefab` 与 `GluttonBagAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。橄榄绿圆柱袋身、浅褐袋口和牙齿、深色口部，袋身使用实体凸碰撞。
+
+2026-10-14 验证：大胃袋专项 **226** 条断言、玩法回归 **6314** 条断言通过，元数据/耐久 **261** 条，全部 **29** 个包加载通过。覆盖四档稀有度、库存消耗与异常回滚、回合准备/清空、数值有效期和实例隔离、配对物品、耐久、两种背包控件的拖放/取消/暂停/库存重排，以及两种步长下真实碰撞与最终结算。无窗口测试中，UI 遮挡使用拖拽事件的明确控件命中验证，未依赖尚未绘制的测试画布。制作成品与运行时副本一致，目录和 JSON 已完整同步，原有 28 个包和非装置内容保持不变。
+
+## 雪糕机制作资源
+
+选择 `Authoring/Profiles/IceCreamMachine.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Ice Cream Machine Device` 定位配置，批处理入口 `MResPacker.MResIceCreamMachineCreator.CreateAndBuild`。输出 `Output/IceCreamMachine.mres`，游戏副本 `Resources/Devices/9025_IceCreamMachine.mres`。
+
+- Lua：`Authoring/Lua/IceCreamMachine.lua`。每台每回合独立记录有效触发次数，完整倍率从 ×10 开始，每次递减 1，依次到 ×2，之后最低 ×1、不再生效。不同弹珠共享同台次数，新回合重置，同回合收回再放置不重置。
+- 使用 `AddScoreMultiplier(完整倍率)`，每次只增加“倍率 − 1”；同球前两次累计为 18，九次为 46，到得分区统一结算。九次有效作用各扣 1 耐久，之后不扣；原球正常反弹。
+- 参数：`Authoring/Data/IceCreamMachine.device.json` 的 `Value = 10` 为初始完整倍率，`Strength = 1` 为每次递减量，`Range` 未使用；ID 9025。普通、20 耐久、购买价 5、出售价 120、初始库存 0。支持小数和零减量，递减最低钳制到 1。
+- 制作资源：`IceCreamMachineCylinder.asset`、三份 `IceCreamMachine*.mat`、`IceCreamMachine.prefab` 与 `IceCreamMachineAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。粉色圆柱底座搭配三层奶油色雪糕和薄荷色顶饰，底座有实体凸碰撞。
+- 复用现有 `RoundId`、`Visit`、`TryUse`、`AddScoreMultiplier` 和 `SetStatus`；递减规则与实例计数全部在 Lua 中，不新增装置专用引擎接口。
+
+2026-10-14 验证：雪糕机专项 **302** 条断言、玩法回归 **6082** 条断言通过，元数据/耐久 **256** 条，全部 **28** 个包加载通过。覆盖每次递减 1 的全部档位、同球去重与同时触发、实例隔离、跨回合重置、收回再放置、有限/无限耐久、参数和归零后恢复，以及两种步长下真实倾斜棋盘 11 次重新碰撞、正常反弹和最终结算。制作成品与游戏副本一致，目录和 JSON 已同步；原有 27 个包及非装置内容保持不变。
+
+## less is more 制作资源
+
+选择 `Authoring/Profiles/LessIsMore.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Less Is More Device` 定位配置，批处理入口 `MResPacker.MResLessIsMoreCreator.CreateAndBuild`。输出 `Output/LessIsMore.mres`，游戏副本 `Resources/Devices/9024_LessIsMore.mres`。
+
+- Lua：`Authoring/Lua/LessIsMore.lua`。单次附加倍率 `max(0, 20 - 其他已放置装置数 × 2)`；不计自身，耗尽但仍在场的装置计入，库存不计。
+- 附加倍率是实际增加量，调用 `AddScoreMultiplier(1 + 附加倍率)`。0 个其他装置增加 20，3 个增加 14，10 个及以上不增加；每次正增量扣 1 耐久，零增量不扣。重复撞击继续累加，原球正常反弹，到得分区统一结算。
+- 参数：`Authoring/Data/LessIsMore.device.json` 的 `Value = 20` 为初始附加倍率和单次上限，`Strength = 2` 为每个装置的减量；ID 9024。普通、20 耐久、购买价 5、出售价 120、初始库存 0。支持小数，`Strength = 0` 时不随数量衰减，`Value <= 0` 无效果。
+- 复用 `CountPlacedDevices`，公式全部在 Lua 中；盘面变化只影响未来的碰撞，不追溯修改球之前已获得的倍率。
+- 制作资源：`LessIsMoreCylinder.asset`、三份 `LessIsMore*.mat`、`LessIsMore.prefab` 与 `LessIsMoreAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。紫色圆柱底座带三根递减高度的橙银色立柱，底座使用实体凸碰撞。
+
+2026-10-14 验证：less is more 专项 **195** 条断言、玩法回归 **5774** 条断言通过，元数据/耐久 **251** 条，全部 **27** 个包加载通过。覆盖 0/1/2/3/9/10/11/20 个其他装置、零增量边界、动态放置/收回/移除、库存与耗尽、重复及跨实例累加、回合与有限/无限耐久、参数和归零后恢复，以及两种步长下真实倾斜棋盘碰撞、反弹与得分区结算。制作成品与游戏副本一致，目录和 JSON 已同步，原有 26 个包和其他内容配置保持不变。
+
+## more is more 制作资源
+
+选择 `Authoring/Profiles/MoreIsMore.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate More Is More Device` 定位配置，批处理入口 `MResPacker.MResMoreIsMoreCreator.CreateAndBuild`。输出 `Output/MoreIsMore.mres`，游戏副本 `Resources/Devices/9023_MoreIsMore.mres`。
+
+- Lua：`Authoring/Lua/MoreIsMore.lua`。每个其他已放置装置提供 +2，单次最多 +20；不计自身，耗尽但仍在场也计入，未放置库存不计。每个已放置传送门独立计 1。
+- 附加倍率作为实际增加量：3 个其他装置调用 `AddScoreMultiplier(7)`，增加 6。重复撞击继续累加，+20 为单次上限；数量为 0 时不生效、不扣耐久。正增量每次扣 1，原球正常反弹。
+- 参数：`Authoring/Data/MoreIsMore.device.json` 的 `Value = 20` 为单次增量上限，`Strength = 2` 为每个装置的增量；ID 9023。普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 新通用 API `CountPlacedDevices(excludedInstanceId = 0)` 支持弹珠回调和装置事件，查询当前已放置实例，可排除指定实例。Lua 决定排除自身及倍率公式；布局变化只影响之后碰撞，不修改以前的贡献。
+- 制作资源：`MoreIsMoreCylinder.asset`、三份 `MoreIsMore*.mat`、`MoreIsMore.prefab` 与 `MoreIsMoreAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。蓝色圆柱底座带三根递增高度的青金色立柱，底座使用实体凸碰撞。
+
+2026-10-14 验证：more is more 专项 **205** 条断言、玩法回归 **5573** 条断言通过，元数据/耐久 **246** 条，全部 **26** 个包加载通过。覆盖数量边界与上限、库存/耗尽/移除/配对门计数、动态布局、重复及跨实例累加、有限/无限耐久、查询有效期，以及两种步长下真实倾斜棋盘碰撞、反弹和得分区结算。制作成品与游戏副本一致，目录和 JSON 已同步，原有 25 个包保持不变。
+
+## 故障装置制作资源
+
+选择 `Authoring/Profiles/Malfunction.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Malfunction Device` 定位配置，批处理入口 `MResPacker.MResMalfunctionCreator.CreateAndBuild`。输出 `Output/Malfunction.mres`，游戏副本 `Resources/Devices/9022_Malfunction.mres`。
+
+- Lua：`Authoring/Lua/Malfunction.lua`。每次撞击等概率抽取 0、1、2、3、5、7、11、13，八项各 1/8。候选列表在 Lua 顶部调整；组合本局 `RandomRange` 与通用倍率 API。
+- 0 将当前累计装置倍率置零；后续仍按“倍率 − 1”增加。1 不增加，其他值正常累加；例如 13 → 0 → 1 → 3 后累计倍率为 2。保持基础价值与正常反弹，得分区统一计算。
+- 每次有效撞击扣 1 耐久，包括 0 和 1。重复碰撞可重抽，同球同一步去重，不同球无共享冷却；持续接触、Trigger、连线及耐久耗尽不抽取。状态显示最近一次结果，每回合清空。
+- 数据：`Authoring/Data/Malfunction.device.json`，ID 9022；`Value` / `Strength` / `Range` 未使用。普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 制作资源：`MalfunctionCylinder.asset`、三份 `Malfunction*.mat`、`Malfunction.prefab` 与 `MalfunctionAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。灰色金属圆柱带警戒环、红灯和断杆，柱体使用实体凸碰撞。
+- 新通用 API `SetDeviceScoreMultiplier(amount)` 替换当前累计装置倍率，保留独立基础倍率和其他属性；零值可被后续贡献增加，不添加独立结算开关。契约和行为验证见 `Docs/Device_Lua_API.md`。
+
+2026-10-14 验证：故障装置专项 **516** 条断言、玩法回归 **5362** 条断言通过，元数据/耐久 **241** 条，全部 **25** 个包加载通过。覆盖八种结果、固定种子序列、累计倍率归零后恢复、普通/赌博结算、跨装置和复制分裂继承、同帧去重、有限/无限耐久、回合重置、接口校验，以及两种步长下真实倾斜棋盘碰撞和正常反弹。制作成品与游戏副本一致，目录和 JSON 已同步，原有 24 个包保持不变。
+
+## 草皮制作资源
+
+选择 `Authoring/Profiles/Turf.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Turf Device` 定位配置，批处理入口 `MResPacker.MResTurfCreator.CreateAndBuild`。输出 `Output/Turf.mres`，游戏副本 `Resources/Devices/9021_Turf.mres`。
+
+- Lua：`Authoring/Lua/Turf.lua`。记录首次碰撞的球 ID、价值和累计装置倍率，5 秒内另一颗球碰撞则生成一颗新球，两项分别取平均，保留小数。原球均正常反弹，同球不刷新窗口。
+- 成功生成后重置并扣 1 耐久；超时清空，下次碰撞重新计时。失败保留首次快照，等待原窗口内下一次有效碰撞。自身后代不参与配对，仍正常物理反弹；各实例和回合独立。
+- 新球向棋盘下方以速度 6 射出；其他属性、尺寸、质量和剩余寿命沿用第二颗球，不抽血，不复制旧固定加分。通用 `CreateCopy` 增加 `TrySetDeviceScoreMultiplier`，只负责替换待生成球的累计装置倍率，公式由 Lua 组合。
+- 参数：`Authoring/Data/Turf.device.json` 的 `Value = 5` 为配对窗口，`Strength = 6` 为速度。ID 9021，默认普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 制作资源：`TurfCylinder.asset`、三份 `Turf*.mat`、`Turf.prefab` 与 `TurfAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。圆柱土层带绿色草冠和草叶，土层使用实体凸碰撞。
+
+2026-10-14 验证：草皮专项 **225** 条断言、玩法回归 **4840** 条断言通过，元数据/耐久 **236** 条，全部 **24** 个包加载通过。覆盖两球快照与平均、精确超时边界、同球/同帧去重、重置、失败重试、祖先过滤、有限/无限耐久、跨回合和接口有效期，以及两种步长下真实倾斜棋盘的碰撞、反弹、出口阻挡和向下出射。制作成品与游戏副本一致，目录和 JSON 已完整同步，原有 23 个包保持不变。
+
+## 弹珠机关枪制作资源
+
+选择 `Authoring/Profiles/MarbleMachineGun.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Marble Machine Gun Device` 定位配置。批处理入口 `MResPacker.MResMarbleMachineGunCreator.CreateAndBuild`。输出 `Output/MarbleMachineGun.mres`，游戏副本 `Resources/Devices/9020_MarbleMachineGun.mres`。
+
+- Lua：`Authoring/Lua/MarbleMachineGun.lua`。将当前基础价值拆成每颗价值 1 的小球，继承累计倍率；如 5.5 变为 5 颗，最后舍弃 0.5。整颗不足 1 直接放行。
+- 每 0.1 秒发射一颗、速度 6，在棋盘下方 ±22.5°（完整 45°）扇形左右扫射，完整往返 1 秒；忙碌时只处理已装填的一颗原球。小球世界半径 0.04、质量 0.1，固定尺寸，不按颗数守恒体积/质量。
+- 参数：`Authoring/Data/MarbleMachineGun.device.json` 的 `Value` 是射击间隔，`Strength` 是速度，`Range` 是完整扇形角度；Lua 顶部 `radius` / `mass` / `period` 是小球半径、质量和往返周期。
+- 组合通用 `CreatePortion`、`TrySetSize`、`TrySpawn` 与定时滞留；生成成功才扣原球对应价值，受阻或球数满时按射速重试。整批完成扣 1 耐久，存入、中途出射、失败和取消不扣。生命周期沿用原球剩余寿命。
+- 自己发出的球及其后代回到本装置直接穿过，其他经过的球在装填期间也直接穿过；入口只有 Trigger。原球取消后恢复可见和进入速度，并仅保留未发射价值。
+- 制作资源：`MarbleMachineGunCylinder.asset`、三份 `MarbleMachineGun*.mat`、`MarbleMachineGun.prefab` 与 `MarbleMachineGunAuthoring.unity`，分别放在 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。钢色弹仓、浅金进球口与扫射枪管。
+- 默认普通、20 耐久、购买价 5、出售价 120、初始库存 0。API 详细契约和行为验证入口见 `Docs/Device_Lua_API.md`。
+
+2026-10-14 验证：弹珠机关枪专项 **488** 条断言、玩法回归 **4609** 条断言通过，元数据/耐久 **231** 条，全部 **23** 个包加载通过。覆盖舍弃余数、定时扫射、倍率继承、逐颗扣值、出口阻挡与容量重试、整批耐久、取消恢复、剩余寿命，以及两种步长下真实倾斜棋盘的枪口朝向和后代穿过。制作成品与游戏副本一致，目录和 JSON 已完整同步，原有 22 个包保持不变。
+
 ## 造血工厂制作资源
 
 选择 `Authoring/Profiles/BloodFactory.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Blood Factory Device` 定位配置。批处理入口 `MResPacker.MResBloodFactoryCreator.CreateAndBuild`。输出 `Output/BloodFactory.mres`，游戏副本 `Resources/Devices/9019_BloodFactory.mres`。
@@ -396,3 +539,5 @@ Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据
 新增可复用的 `TrySpawnVisual`、`Transient`、`ForEachBallInRadius` 与装置事件 `RandomRange`，Lua 组合计时视觉、范围回调和已有等分 API。完整接口见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 
 2026-10-13 验证：炸弹专项 **216** 条断言、玩法回归 **3724** 条断言通过，元数据/耐久 **216** 条，全部 **20** 个包加载通过。覆盖 5 秒投掷/1 秒引信、空爆扣除、最后一次多球及净容量、范围快照不重复选择子球、价值/倍率守恒、失败回滚、后代过滤、取消/回合清理、回调有效期与异常隔离，以及两种固定步下的真实飞行、倾斜棋盘碎片与闪光回收。日志中的 `EXPECTED_TRANSIENT_FAILURE` 是主动注入的异常测试。成品副本一致，目录与 JSON 已同步。
+
+2026-10-14 RUSH 重构验证：完整玩法回归 **9978** 条断言通过；RUSH **63**、台球 **1649**、有锅气 **497**、降降火 **337**、元数据/耐久 **286** 条。全部 **34** 个包加载，制作输出与运行时副本、目录和 JSON 一致。

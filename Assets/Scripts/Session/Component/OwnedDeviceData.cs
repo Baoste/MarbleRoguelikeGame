@@ -13,6 +13,8 @@ namespace MarblesECS
         public float Angle;
         public int PairId;
         public int DurabilityRound, UsesThisRound;
+        public bool HasDurabilityLimit;
+        public int DurabilityLimit;
         public double NextTriggerAt, StoredValue;
     }
 }

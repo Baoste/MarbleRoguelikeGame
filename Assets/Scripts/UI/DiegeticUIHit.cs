@@ -15,11 +15,18 @@ public sealed class DiegeticUIHit : MonoBehaviour, IPointerEnterHandler, IPointe
     public void OnDeselect(BaseEventData e){if(Owner)Owner.Hover(Kind,Index,false);}
     public void OnPointerClick(PointerEventData e){if(!dragged && e.button==PointerEventData.InputButton.Left)Activate();}
     public void OnPointerDown(PointerEventData e){dragged=false;}
-    public void OnBeginDrag(PointerEventData e){if(Kind==0){dragged=true;dragStart=e.position;}}
-    public void OnDrag(PointerEventData e){}
+    public void OnBeginDrag(PointerEventData e)
+    {
+        if(e.button!=PointerEventData.InputButton.Left)return;
+        if(Kind==0){dragged=true;dragStart=e.position;}
+        else if(Kind==2 && Owner)dragged=Owner.BeginDeviceDrag(Index,e.position);
+    }
+    public void OnDrag(PointerEventData e){if(dragged && Kind==2 && Owner)Owner.UpdateDeviceDrag(e.position);}
     public void OnEndDrag(PointerEventData e)
     {
-        if(!Owner||Kind!=0||e.button!=PointerEventData.InputButton.Left)return;
+        if(!Owner||!dragged||e.button!=PointerEventData.InputButton.Left)return;
+        if(Kind==2){Owner.EndDeviceDrag(e.position,e.pointerCurrentRaycast.gameObject);return;}
+        if(Kind!=0)return;
         float dy=e.position.y-dragStart.y;
         float threshold=Mathf.Max(12,Screen.height*.012f);
         if(dy < -threshold)Owner.TryCashOut();else if(dy > threshold)Owner.TryContinue();
@@ -32,5 +39,5 @@ public sealed class DiegeticUIHit : MonoBehaviour, IPointerEnterHandler, IPointe
         switch(Kind){case 0:Owner.TryToggleLever();break;case 1:Owner.TryUseDrug(Index);break;case 2:Owner.SelectDevice(Index);break;
             case 3:Owner.ChangeDrugPage(Index);break;case 4:Owner.ChangeDevicePage(Index);break;case 5:Owner.TryContinue();break;}
     }
-    void OnDisable(){if(Owner)Owner.Hover(Kind,Index,false);}
+    void OnDisable(){if(Owner){Owner.Hover(Kind,Index,false);if(dragged && Kind==2)Owner.CancelDeviceDrag();}}
 }

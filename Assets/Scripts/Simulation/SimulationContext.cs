@@ -27,6 +27,8 @@ namespace MarblesECS
         internal readonly HashSet<ulong> RefundedFamilies = new HashSet<ulong>();
         internal readonly DeviceScriptSystem DeviceScripts = new DeviceScriptSystem();
         internal readonly DeviceTransientSystem Transients = new DeviceTransientSystem();
+        internal readonly BoardScoreEffectSystem BoardScores = new BoardScoreEffectSystem();
+        internal readonly BoardRushEffectSystem BoardRush = new BoardRushEffectSystem();
 
         internal SimulationContext(MarbleTuning tuning, GameBalance balance = null, GameContent content = null)
         {
@@ -81,6 +83,8 @@ namespace MarblesECS
 
         internal void RemoveAllMarbles()
         {
+            BoardScores.Clear();
+            BoardRush.Clear();
             Transients.Clear(this);
             using (var entities = MarbleQuery.ToEntityArray(Allocator.Temp))
             {

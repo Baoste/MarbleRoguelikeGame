@@ -1,0 +1,13 @@
+{
+  "Id": 9020,
+  "Radius": 0.45,
+  "ScoreMultiplier": 1,
+  "StartingCount": 0,
+  "PurchaseQuantity": 1,
+  "Cooldown": 0,
+  "MaxTriggersPerBall": 0,
+  "Range": 45,
+  "Strength": 6,
+  "Value": 0.1,
+  "SourceId": "MarbleMachineGun"
+}

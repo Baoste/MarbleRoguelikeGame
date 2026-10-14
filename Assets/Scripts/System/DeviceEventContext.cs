@@ -22,6 +22,7 @@ namespace MarblesECS
             instanceId = owned.InstanceId;
             definition = CampaignStateUtility.Device(c, owned.DefinitionId);
             Vectors = new DeviceVectorApi(() => C);
+            Board = new DeviceBoardApi(() => C, instanceId);
             if (ended != null) transient = new DeviceTransientInfo(() => C, ended.Id,
                 ended.Origin + ended.Velocity * ended.Duration, ended.Velocity, ended.Duration);
         }
@@ -44,9 +45,23 @@ namespace MarblesECS
             context.Round = round; return result;
         }
         public int InstanceId { get { _ = C; return instanceId; } }
+        public uint DefinitionId { get { _ = C; return definition.Id; } }
+        public int CountPlacedDevices(int excludedInstanceId = 0) => CampaignStateUtility.CountPlacedDevices(C, excludedInstanceId);
+        public int CountPlacedDevicesWithRoundValue(uint definitionId, string key, double value)
+            => DeviceRoundState.CountPlaced(C, definitionId, key, value);
+        public int CountPlacedDevicesOfDefinition(uint definitionId) => CampaignStateUtility.CountPlacedDevicesOfDefinition(C, definitionId);
+        public int ForEachPlacedDevice(uint definitionId, string callback, double value)
+            => DeviceScriptSystem.ForEachPlacedDevice(C, InstanceId, definitionId, callback, value);
         public int RemainingDurability => CampaignStateUtility.FindDevice(C, instanceId, out var entity)
             ? DeviceDurabilitySystem.Remaining(C, C.Manager.GetComponentData<OwnedDeviceData>(entity)) : 0;
         public int RoundId => C.Round.RoundId;
+        public double GetRoundValue(string key) => DeviceRoundState.Get(C, deviceEntity, key);
+        public void SetRoundValue(string key, double value) => DeviceRoundState.Set(C, deviceEntity, key, value);
+        public double GetInstanceValue(string key) => DeviceInstanceState.Get(C, deviceEntity, key);
+        public void SetInstanceValue(string key, double value) => DeviceInstanceState.Set(C, deviceEntity, key, value);
+        public int DurabilityLimit => DeviceDurabilitySystem.Limit(C, C.Manager.GetComponentData<OwnedDeviceData>(deviceEntity));
+        public void SetDurabilityLimit(int maximum) => DeviceDurabilitySystem.SetLimit(C, deviceEntity, maximum);
+        public void RestoreDurability() => DeviceDurabilitySystem.Restore(C, deviceEntity);
         /// <summary>Current wallet balance, readable without an associated ball.</summary>
         public double Coins => C.Campaign.Coins;
         public double Blood => C.Player.Blood;
@@ -60,6 +75,7 @@ namespace MarblesECS
         public float Range { get { _ = C; return definition.Range; } }
         public int HeldCount => HeldMotionSystem.Count(C, instanceId);
         public DeviceVectorApi Vectors { get; }
+        public DeviceBoardApi Board { get; }
         public DeviceSpawnBatch CreateSpawnBatch() { _ = C; return new DeviceSpawnBatch(() => C, instanceId); }
         public bool TryUse() { _ = C; return usageGranted || (usageGranted = DeviceDurabilitySystem.TryUse(C, deviceEntity)); }
         public bool CanUseOnce(string key) => DeviceDurabilitySystem.CanUseOnce(C, deviceEntity, key);
@@ -70,6 +86,7 @@ namespace MarblesECS
         private DevicePose Pose => C.Physics is IMarblePhysicsCommands commands && commands.TryGetDevicePose(instanceId, out var pose)
             ? pose : throw new InvalidOperationException("The device has no placed physical view.");
         public Vector3 Forward => Pose.Forward.normalized;
+        public Vector3 Down => BallInteractionSystem.Down(Pose).normalized;
         public Vector3 Up => Pose.Up.normalized;
         public Vector3 Position => Pose.Position;
         public float Radius => Pose.Radius;
@@ -79,6 +96,6 @@ namespace MarblesECS
             var context = C;
             return BallInteractionSystem.Finite(degrees) && context.Physics is IMarbleDeviceRotation rotation && rotation.TrySetDeviceYaw(instanceId, degrees);
         }
-        public void SetStatus(string text) => C.DeviceScripts.SetStatus(instanceId, RoundId, text);
+        public void SetStatus(string text) => C.DeviceScripts.SetStatus(instanceId, DeviceRoundState.Round(C), text);
     }
 }

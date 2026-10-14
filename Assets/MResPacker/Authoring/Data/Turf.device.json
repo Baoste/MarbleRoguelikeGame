@@ -1,0 +1,13 @@
+{
+    "Id": 9021,
+    "Radius": 0.28,
+    "ScoreMultiplier": 1.0,
+    "StartingCount": 0,
+    "PurchaseQuantity": 1,
+    "Cooldown": 0.0,
+    "MaxTriggersPerBall": 0,
+    "Range": 0.2,
+    "Strength": 6.0,
+    "Value": 5.0,
+    "SourceId": "Turf"
+}

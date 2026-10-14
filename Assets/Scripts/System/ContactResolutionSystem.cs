@@ -31,6 +31,7 @@ namespace MarblesECS
                 rush.RushChanceBonus = System.Math.Min(1, rush.RushChanceBonus + contact.RushChanceAdd);
                 context.Manager.SetComponentData(entity, rush);
                 visits.Add(new VisitedDeviceData { DeviceId = contact.TargetId });
+                RushSystem.RecordTrigger(context, entity, contact.TargetId);
             }
             foreach (var contact in context.Contacts)
             {

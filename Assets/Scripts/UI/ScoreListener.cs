@@ -93,21 +93,26 @@ public class ScoreListener : MonoBehaviour
 
     private void RefreshRushText()
     {
-        bool rushActive = Controller != null && Controller.IsReady &&
-            Controller.Snapshot.RushSecondsRemaining > 0;
+        bool ready = Controller != null && Controller.IsReady;
+        var snapshot = ready ? Controller.Snapshot : default;
+        bool rushActive = ready && snapshot.RushSecondsRemaining > 0;
 
         if (RushText != null)
-            RushText.enabled = rushActive;
+        {
+            RushText.enabled = ready;
+            if (ready) RushText.text = rushActive ? $"RUSH {snapshot.RushSecondsRemaining:0.0}s · 锁血"
+                : $"RUSH {snapshot.RushMeter:0.#} / {snapshot.RushMaximum:0}";
+        }
 
         if (RushSlider != null)
         {
-            if (RushSlider.gameObject.activeSelf != rushActive)
-                RushSlider.gameObject.SetActive(rushActive);
-            if (Controller != null && Controller.IsReady)
+            if (RushSlider.gameObject.activeSelf != ready)
+                RushSlider.gameObject.SetActive(ready);
+            if (ready)
             {
                 RushSlider.minValue = 0f;
-                RushSlider.maxValue = (float)Controller.Balance.Content.Definition(GameAttribute.RUSH_DURATION).MaxValue;
-                RushSlider.value = (float)Controller.Snapshot.RushSecondsRemaining;
+                RushSlider.maxValue = (float)snapshot.RushMaximum;
+                RushSlider.value = rushActive ? RushSlider.maxValue : (float)snapshot.RushMeter;
             }
             else
             {

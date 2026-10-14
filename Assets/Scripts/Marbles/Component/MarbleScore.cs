@@ -10,6 +10,13 @@ namespace MarblesECS
         public double BaseMultiplier;
         public double DeviceMultiplierBonus;
 
+        internal void SetDeviceMultiplier(double amount)
+        {
+            if (!MarbleRules.IsFinite(amount) || amount < 0 || amount > 1000) throw new System.ArgumentOutOfRangeException(nameof(amount));
+            DeviceMultiplierBonus = amount - 1d;
+            ScoreMultiplier = System.Math.Min(1000d, BaseMultiplier * amount);
+        }
+
         internal void AddDeviceMultiplier(double amount)
         {
             if (!MarbleRules.IsFinite(amount) || amount < 0) throw new System.ArgumentOutOfRangeException(nameof(amount));

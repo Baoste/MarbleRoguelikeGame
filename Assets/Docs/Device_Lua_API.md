@@ -4,6 +4,61 @@
 
 没有当前弹珠的装置事件 `OnTick(a)`、`OnActivate(a)` 以及移动视觉对象的完成回调使用 `DeviceEventContext`；连续力 `OnField(a)` 使用 `DeviceFieldContext`。不同上下文提供各自阶段的能力，不能互换或跨回调保存。
 
+布置阶段向已放置装置提交背包物品时，`OnOffer(a)` 使用独立的 `DeviceOfferContext`，提供库存物品信息、暂存的回合/实例数值、耐久设置和接受操作，不提供弹珠运动或计分接口。
+
+## RUSH 累积机制（2026-10-14 重构）
+
+全盘共用一条 0～100 的 RUSH 条，普通球的积累贡献从 **2** 开始。每次成功触发装置加 **5**，同一装置再次有效触发也计数；同一步重复通知和同一次回调调用多个效果 API 只登记一次。触发概率不再决定是否进入 RUSH，未激活时条值不衰减。
+
+- 流失到底部：条值增加该球贡献；普通/赌博得分区：增加 `贡献 ×1.5`。同球终结只结算一次，关闭 RUSH 的得分区不增加贡献。超时、丢失物理体、回合清理、被装置吞掉以及 `TrySettleAmount` 不冒充底部/得分区。
+- 达到 100 后清空条值并进入 **10 秒 RUSH**，溢出不保留。RUSH 期间不向条值入账、不刷新时长；结束后从 0 重新积累。贡献仍保存在存活球上，之后正常结算。
+- 期间发射不扣血，0 血也能发射，回血照常。免费发射不会制造家族返血。因缺血进入排空的回合，若最后的球累满条，可恢复发射；主动提现不恢复发射。
+- 发射器射速增加 **每秒 5 发**：`新间隔 = 1 / (1 / 原间隔 + 5)`，不改变球的飞行速度。固定物理步仍是实际发射频率的上限。
+- 所有现有球和新球临时价值 **+5**，结束后撤销。基础价值、分球守恒和永久属性保持独立，避免复制或分裂把临时加成保存为永久价值。得分区、黑洞直接计分和赚赚兑换使用当前有效价值。
+- 本次**不实现装置增益 ×2**。装置附加倍率、连击、金币、回血、耐久、冷却等现有数值保持原规则；有锅气按下文专门调整。旧 RUSH 全局得分倍率不再自动乘入；独立药物效果仍按自身规则处理。
+- 降降火的额外 5 秒保留：只有带效果的球将条值累满时，该次时长为 15 秒。持续时间按模拟秒倒计时，暂停不流逝，不再读取旧 `RUSH_DECAY`。
+
+引擎入口为 `Scripts/System/RushSystem.cs`。普通球接触、分球成功、持续力场首次进入分别登记；同一次滞留完成不重复登记，力场每次进入加一次，不逐帧累加。回合结束和重开会话清空 RUSH。
+
+| Lua API | 契约 |
+| --- | --- |
+| `RushContribution` | 当前球的普通贡献，只读，默认 2。 |
+| `AddRushContribution(amount)` | 增加当前球贡献，有限范围 `[0,1000000]`，总值上限 1000000；只记录，不立即增加全盘条值，不扣耐久。非零修改登记一次有效装置作用。 |
+| `SetScoreRushContribution(amount)` | 为当前球设置得分区的固定入账值，有限范围 `[-1000000,1000000]`；替代普通 `贡献×1.5`，不会再乘 1.5。仅得分区使用，底部流失仍使用普通贡献。 |
+| `ClearScoreRushContribution()` | 清除固定入账覆盖，恢复普通结算。 |
+| `RushDurationBonus` | 球把条值累满时额外增加的秒数，读写，默认 0，有限范围 `[0,3600]`。不启动、不刷新正在进行的 RUSH。 |
+| `RushActive` / `Board.RushActive` | 当前是否在 RUSH 中，只读。 |
+| `Board.RushMeter` / `Board.RushMaximum` | 全盘当前积累值和上限 100，只读。 |
+| `Value` / `Get("BALL_BASE_VALUE")` | 当前基础价值，包含其属性修正，不包含临时 RUSH +5；供永久增减和分球使用。 |
+| `EffectiveValue` | 基础价值加当前 RUSH 临时增量，供即时结算/兑换使用。 |
+| `SetAppearance(label, r, g, b)` | 设置当前球的文字与颜色。文字 UTF-8 最多 60 字节，RGB 为有限 `[0,1]`；不改变价值或贡献，不扣耐久。物理桥即时同步，物体池再用时清理。 |
+
+上述球状态随复制、等分和按价值分球完整继承；临时 +5 由当前全盘状态实时计算，**不被复制或均分进永久价值**。API 只在所属回调有效；非法参数不部分写入。`MarbleStateSnapshot` 提供 `RushContribution`、`HasScoreRushContribution`、`ScoreRushContribution`、`EffectiveValue`；`MarbleSnapshot` 提供条值、上限、剩余秒数和当前每秒发射数。
+
+旧 `AddRushChance`、`RushOnSettlement`、`Board.SetRushChanceBonus`、区域 `BaseRushChance` 及概率药物字段保留兼容读取，但不参与新的 RUSH 触发。旧 `RUSH_DURATION/RUSH_MULT/RUSH_DECAY/BALL_RUSH_GAIN` 属性也不再控制条值触发和核心计时；后续装置请使用本节 API，不把概率换算成贡献。
+
+## 超大杯全冰美式（已实现）
+
+业务 ID `9032`，源脚本 `MResPacker/Authoring/Lua/IcedAmericano.lua`，运行时 `Resources/Devices/9032_IcedAmericano.mres`。模型为大杯咖啡、六块冰和吸管，使用实体碰撞体，弹珠正常反弹。
+
+每次有效碰撞将当前基础价值乘 **0.5**，保留小数，同时增加 **20 点额外 RUSH 贡献**。通用装置触发仍加 5：新球贡献从 2 变为 27，第二次碰撞后变为 52。此时不直接增加 RUSH 条；到底部按贡献入账，到得分区按贡献 ×1.5 入账。价值为 0 也可触发；同一步重复碰撞通知只处理一次，之后再次撞击可继续生效。
+
+Lua 组合已有 `Visit(0, 0)`、`TryUse()`、`SetCurrent("BALL_BASE_VALUE", api.Value * api.Parameter)` 和 `AddRushContribution(api.Strength)`，无需新增引擎接口。`SetCurrent` 转换包含属性修正后的基础价值，不重复应用旧价值修正；累计得分倍率、物理运动、其他属性保持原状。RUSH 期间临时 +5 独立计算，例如基础价值 10 在碰杯后变为 5，当时有效价值为 10，RUSH 结束后为 5。
+
+`game/device.json` 的 `Value=0.5` 为保留价值比例，`Strength=20` 为额外贡献。每次成功处理扣 1 耐久，最后一次完整生效，耗尽后本回合停用。默认普通、耐久 20（支持 -1）、购买价 5、出售价 120、初始库存 0。
+
+2026-10-14 验证：冰美式专项 **357** 条断言、完整玩法回归 **10341** 条通过，元数据/耐久 **291** 条，全部 **35** 个 MRes 加载通过。覆盖小数与零价值、重复/同时碰撞、最终和无限耐久、回合恢复、已有属性修正、RUSH 临时价值、底部/得分区入账，以及两种固定步下的真实倾斜棋盘碰撞。
+
+## 台球（已实现）
+
+业务 ID `9031`，源脚本 `MResPacker/Authoring/Lua/Billiards.lua`，运行时 `Resources/Devices/9031_Billiards.mres`。制作源包含绿色台面、框架、洞口与装饰球的模型、Prefab、材质、配置和 `BilliardsAuthoring.unity`。
+
+一次吞入一球，无碰撞隐藏 0.2 秒，然后向棋盘下方吐出一颗编号球，速度至少 6（保留更高的入口速度），基础价值、尺寸、质量和原有效果保留。8 号概率 20%，1～7 号均分剩余 80%，编号和颜色在球上显示。进入得分区时，黑八使全盘条值减 100、最低到 0，其他编号使条值增加 `编号×10`；这替代普通贡献入账，不另外乘 1.5。黑八不结束已激活的 RUSH。
+
+吐出成功才扣 1 耐久并开始 15 秒冷却；吞入中和冷却时其他球直接经过，受阻则继续短暂滞留并重试，重试不重复抽号或扣耐久。每回合重置冷却。`game/device.json`：`Value=0.2` 为滞留秒数，`Strength=6` 为最低吐球速度，`Range=15` 为冷却。普通、购买 5、出售 120、耐久 20（支持 -1）、初始库存 0。
+
+2026-10-14 重构验证：完整玩法回归 **9978** 条断言通过，RUSH 专项 **63** 条、台球专项 **1649** 条、有锅气 **497** 条、降降火 **337** 条；元数据/耐久 **286** 条，全部 **34** 个 MRes 加载通过。覆盖真实台球吞吐、文字/颜色与物体池清理、出口受阻重试、无限/最后耐久，以及两种固定步下的物理行为。
+
 ## API 设计标准（后续装置统一遵循）
 
 - 基础 API 职责单一、可以独立使用。例如滞留 `TryHold`、出射 `TryLaunch`、仅修改位置 `TrySetPosition`、属性修改 `Set` 分别提供；具体效果由 Lua 组合。
@@ -284,9 +339,11 @@ end
 | `Trigger(key)` | 在 `OnContact` 或 `OnBallUpdate` 中检查触发率、装置冷却和每球次数，成功后应用通用机器倍率/复制修正。`0` 使用当前装置 ID，连线用 `LinkKey`，配对装置可用 `-PairId`。在 `OnHoldEnd` 中返回 `false`。 |
 | `TryUse()` / `RemainingDurability` | 接受一次有效作用、读取当前剩余耐久；`-1` 表示无限耐久。与 `Trigger` / 吞噬 / 结算共享本回调的一次扣除，详细契约见 Metadata 与耐久章节。 |
 | `Visit(key, maximum)` | 只记录每球访问次数，无装置公共冷却；`maximum = 0` 表示不限制总次数，同一帧不重复。 |
+| `Visit(key, maximum, inheritOnCopy)` | 同上；传 `true` 时，成功登记的这条记录随 `CreateCopy` 副本继承，适合已继承效果的防重复标记。普通访问记录仍从空开始；等分和按价值分球始终继承全部访问记录。只登记访问，不扣耐久、不施加效果。 |
 | `HasTriggeredOtherDevice` | 只读：当前弹珠此前是否已受到其他装置实例的有效作用，排除当前实例；相同装置类型的另一实例仍算其他装置。与访问次数、耐久独立，具体记录规则见“有效触发历史”。 |
 | `MarkTriggered()` | 为当前球记录当前装置的一次有效作用，重复调用幂等。仅供 Lua 自行完成的纯状态效果（如成功蓄力）显式登记；不扣耐久、不增加访问或倍率、不设置冷却。 |
-| `DeviceScoreMultiplier` | 当前球累计的装置倍率，只读：`max(0, min(1000, 1 + Σ(amount - 1)))`。无贡献时为 1；不包含发射器、独立永久修正、全局、药物、Rush 或得分区倍率。与 `ScoreMultiplier`（当前装置的配置倍率）不同。 |
+| `DeviceScoreMultiplier` | 当前球持有的累计装置倍率，只读：`max(0, min(1000, 1 + Σ(amount - 1)))`。无贡献时为 1；不包含临时全盘装置效果、发射器、独立永久修正、全局属性、药物、Rush 或得分区倍率。复制、分裂或平均球的持有倍率时用此值，避免永久继承临时加成。与 `ScoreMultiplier`（当前装置的配置倍率）不同。 |
+| `EffectiveDeviceScoreMultiplier` | 当前有效装置倍率：在球持有的增量上，加上仍生效的全盘装置增量，再以 1 为基础钳制到 0–1000。用于需要当前完整装置倍率的兑换等效果；不包含发射器及其他独立倍率。 |
 | `Get(attribute)` / `Set(attribute, value)` / `Global(attribute)` | 读取弹珠属性、设置基础属性、读取全局属性。名称使用 `GameAttribute` 中的大写字符串。 |
 | `AddBase(attribute, amount)` | 给当前弹珠保存的基础属性加上一个有限增量，再重新计算当前属性修正；支持负增量，遵守属性上下限。无返回值，NaN/无穷或相加溢出抛出参数异常且不修改值。只负责属性运算，不扣耐久、不结算、不设置计时。 |
 | `SetCurrent(attribute, value)` | 将指定属性的当前值和基础值替换为目标值，并清除这颗球在该属性上已有的 ADD/MUL/SET 修正，避免当前值再次参与旧修正。遵守属性上下限；NaN/无穷抛出异常且不修改。其他属性修正、累计装置倍率、固定得分加成保持原样。只负责属性替换，不扣耐久。 |
@@ -294,27 +351,30 @@ end
 | `Coins` | 当前玩家持有的金币，只读；弹珠回调和 `OnTick` / `OnActivate` 的装置上下文均可读取。返回 Lua number，钱包上限 9,000,000,000,000,000 范围内整数精确；不预留或消耗金币，不缓存历史余额，跨回调读取旧上下文会报失效。 |
 | `Blood` / `BloodCapacity` | 当前可用于发射的血量、血量上限，只读；弹珠和装置事件上下文均可读取。 |
 | `RestoreBlood(amount)` | 给玩家回复血量，返回实际回复量；弹珠和装置事件上下文均可调用。支持非负有限小数，超过容量的部分舍弃，满血或传 0 返回 0；负数/NaN/无穷抛出异常。只操作血量，不修改弹珠价值、不发金币、不扣耐久。详见造血章节。 |
-| `ScoreMultiplier` / `RushChanceAdd` | 装置的计分、Rush 配置。 |
+| `ScoreMultiplier` / `RushChanceAdd` | 装置的计分配置与旧概率兼容字段；概率字段不触发累积 RUSH。 |
 | `Time` / `PairId` / `LinkKey` | 当前回合秒数、库存配对 ID、当前连线标识。 |
 | `RoundId` / `BallId` | 当前回合 ID；弹珠的稳定字符串 ID，格式为 `回合:出生序号`，避免 Lua 数字丢失 64 位序号精度。 |
 | `InstanceId` / `SpawnSourceId` | 当前装置的库存实例 ID；当前弹珠的生成来源装置 ID，玩家发射为 `0`。`CreateCopy` / `CreateSplitBatch` 记录本次来源；旧 `Children` 继承原来源。祖先链分别用 `HasCopiedFrom` / `HasSplitFrom` 查询。引擎只提供信息，是否允许反哺来源装置由 Lua 判断。 |
 | `CreateSpawnBatch()` | 创建当前回调内使用的 `DeviceSpawnBatch`，逐颗指定位置、速度、价值并整批提交；不消费当前弹珠，详见批量生成章节。 |
 | `CreateSplitBatch(count)` | 创建当前弹珠的等分批次 `DeviceSplitBatch`，由 Lua 指定出口位置和速度，全部生成成功才消耗原球；见等分章节。 |
 | `CreateCopy()` | 创建当前回调内使用的一次性复制请求 `DeviceCopy`；保留原球，由 Lua 设置副本价值、位置和速度，见复制章节。 |
+| `CreatePortion(value)` | 创建当前回调的一次性价值分出请求 `DevicePortion`。成功生成一颗子球才从原球扣除指定价值，失败不扣；可组合滞留实现连续发射，见按价值分出章节。 |
 | `HasCopiedFrom(instanceId)` | 当前球是否包含此装置实例的复制祖先记录。再次复制、等分及旧 `Children` 均保留记录；新发射和独立生成从空记录开始。只查询，由 Lua 决定是否跳过。 |
 | `HasSplitFrom(instanceId)` | 当前球是否由该实例的等分批次产生，包含继承的祖先记录。复制及再次分流保留记录，新发射和独立生成从空记录开始；是否跳过由 Lua 决定。 |
 | `DeltaTime` | 当前固定模拟步的秒数，不是渲染帧间隔。 |
 | `Radius` / `Range` | 当前弹珠世界半径；来源装置配置的作用范围。引擎不自动用 `Range` 过滤更新事件。 |
 | `StoredValue` | 可读写的装置储存数值。 |
 | `TransportLockedUntil` / `ExitDown` | 可读写的弹珠传送锁截止时间、旧一次下坡出射标志。当前只改位置的传送门不使用/消费 `ExitDown`；需要方向覆盖的其他脚本可自行读取和清除。 |
-| `RushOnSettlement` / `RefundOnDespawn` | 可读写的弹珠结算 Rush 概率、消失返还标志。 |
+| `RushOnSettlement` / `RefundOnDespawn` | 可读写的旧 Rush 概率兼容字段、消失返还标志。 |
 | `TryConsume(refund)` / `AddCoins(value)` | 吞噬当前弹珠（参数控制是否保留返还资格）、增加金币，均不隐式扣耐久。重复吞噬返回 `false`；吞噬后应结束本次回调。旧 `Consume(refund)` 保留自动登记耐久的兼容语义。 |
 | `TrySettleAmount(score)` | 按指定最终分数立即结算并消耗当前弹珠，不隐式扣耐久，成功返回 `true`。Lua 决定公式；不额外套用机器/全局/药物/Rush 倍率，不触发 Rush 抽签或增长。非法、负数、已经结算/待消失的弹珠返回 `false`；有限大值遵守单球/回合上限。保留小数累计、计分事件与消失返还资格；成功后不要继续操作弹珠。旧 `TrySettle(score)` 另有自动登记耐久的兼容行为。 |
 | `SetStatus(text)` | 发布当前装置的显示文字，最多 256 字符，`nil` 清空；用于进度/提示/倒计时。只改变表现信息，不激活效果或推进时间。结算后仍可更新装置的文字。 |
 | `Children(count, replace)` | 通过通用生成系统产生子球，可替换父球；继承、代数与数量上限由引擎处理。 |
 | `AddScoreMultiplier(amount)` | 传入本次完整倍率，引擎累加 `amount - 1`，最终装置倍率为 `1 + Σ(amount - 1)`；两次 1.5 为 2。只记录，得分区统一计算，不改基础价值、不立即加分、不隐式扣耐久。有限非负数有效，1 为中性、0 贡献 -1；负数、NaN、无穷抛错且不修改状态。增量最高 999，最终装置倍率最低 0、最高 1000；负增量保留用于后续相加。正常结算另遵守 `MACHINE_MULT` 等内容上限。 |
 | `MultiplyScore(factor)` | 旧包兼容名称，内部转发 `AddScoreMultiplier`，同样只累加 `factor - 1`；新脚本使用新名称。 |
-| `AddRushChance(amount)` | 增加当前弹珠 Rush 概率。 |
+| `SetDeviceScoreMultiplier(amount)` | 将当前弹珠的完整累计装置倍率替换为 `amount`，内部增量改为 `amount - 1`；接受 0–1000 的有限数，非法数值抛错且不改变状态。保留基础价值、固定加分和独立基础倍率，不立即计分、不隐式扣耐久；实际改变时登记触发历史。设为 0 后，后续 `AddScoreMultiplier(3)` 会得到 2，不锁定最终得分。仅当前弹珠回调有效。 |
+| `AddRushChance(amount)` | 旧概率兼容写入，不参与新的累积触发；新装置使用 `AddRushContribution`。 |
+| `RushDurationBonus` | 当前球使 RUSH 条累满时的额外秒数，默认 0，有限范围 `[0,3600]`；不刷新已经激活的 RUSH，详见重构章节。 |
 | `Roll(probability)` | 使用本局统一随机状态进行概率判定。 |
 | `RandomRange(minimum, maximum)` | 使用本局统一随机状态在指定区间均匀取数；有限数值且下界不大于上界。上下界相等时直接返回该值，不消耗随机状态。 |
 | `BreakPinsOnCross()` / `RemoveDevice()` | 清除当前装置十字范围内的普通钉子、消耗当前装置。 |
@@ -329,7 +389,251 @@ end
 
 Lua 的 `AddScoreMultiplier`、旧包的 `MultiplyScore`、`Trigger` / `TryPrepareTrigger` 接受的装置 `MACHINE_MULT` 修正，以及旧倍率钉接触都走同一规则；中性的通用修正 ×1、普通钉、Rush 钉不额外提供倍率。装置各自的访问次数、冷却和耐久规则不变，例如 Multi Ding 仍每球每实例一次。复制/分裂继承已累计的装置倍率增量及独立基础倍率，发射器新发射的球从空累计开始。
 
-发射器、非装置永久修正、全局、药物、Rush、得分区倍率继续在正常结算公式中应用；它们不混入装置贡献和。基础价值加减（如沙包、矿老板）仍修改基础属性。黑洞的专用 `TrySettleAmount(Value × 10)` 是原有吞球即时结算效果，保留显式金额语义，不经过撞击倍率累计。
+发射器、非装置永久修正、全局、药物、得分区倍率继续在正常结算公式中应用；RUSH 核心改为临时价值 +5；它们不混入装置贡献和。基础价值加减（如沙包、矿老板）仍修改基础属性。黑洞的专用 `TrySettleAmount(EffectiveValue × 10)` 是原有吞球即时结算效果，保留显式金额语义，不经过撞击倍率累计。
+
+需要重置累计值的效果使用 `SetDeviceScoreMultiplier(amount)`。例如当前 ×13，调用 `SetDeviceScoreMultiplier(0)` 后为 ×0，再调用 `AddScoreMultiplier(1)` 仍为 ×0，随后 `AddScoreMultiplier(3)` 为 ×2。复制、分裂和逐颗分出继承这个普通累计值，之后也可以继续增加；新发射的球仍从 ×1 开始。现有 `AddScoreMultiplier(0)` 的贡献 -1 语义保持不变。
+
+## 已放置装置数量查询
+
+弹珠回调 `DeviceContactContext` 与装置事件 `DeviceEventContext` 均提供 `CountPlacedDevices(excludedInstanceId = 0)`，实时读取当前游戏会话的已放置库存实例数量：
+
+- 不传参数或传 0：统计全部已放置实例，包括调用者；传入某个实例 ID：只排除该实例。未知 ID 或未放置实例的 ID 不影响结果；负数抛出参数异常。
+- 以库存实例的 `Placed` 状态为准，已耗尽耐久但仍在场也计数；未放置库存、商店商品、固定钉子和制作/预览对象不计数。每扇已放置传送门独立计 1，按实例而非种类或购买份数计数。
+- 放置、收回、出售、移除立即影响之后的查询，不缓存到下一回合，也不依赖模型或碰撞体是否启用。此 API 不修改倍率、不扣耐久、不登记触发历史；回调结束后不可继续调用。
+- “是否排除自身”和数量转效果的公式由 Lua 决定。例如 `api:CountPlacedDevices(api.InstanceId)` 查询其他已放置装置数。
+
+`CountPlacedDevicesOfDefinition(definitionId)` 在 `DeviceContactContext` 与 `DeviceEventContext` 中按定义 ID 统计全部已放置同类实例，包含自己及耗尽耐久的实例，排除未放置库存；未知 ID 返回 0，0 为非法参数。查询不扣耐久、不登记触发，回调结束后失效。
+
+### 向已放置装置发送事件
+
+两种上下文提供 `ForEachPlacedDevice(definitionId, callback, value)`：先取得指定定义的已放置实例快照，按实例 ID 升序，在各自的 Lua 环境调用 `callback(api, value)`。每次创建独立的 `DeviceEventContext`，接收者包含调用者；只传递有限数值 `value`，不可借此共享旧上下文。
+
+- 仅在运行回合、来源装置可执行时发送。接收者必须仍已放置、有物理展示且能执行或完成已有持续效果；耗尽且无待完成效果、缺少回调的实例跳过。数量查询仍会计入耗尽的已放置实例，因此查询数量与成功回调数可能不同。
+- 返回正常完成的回调数。某一接收者抛出 Lua 异常时记录异常并继续其他接收者；已经执行的修改不回滚。定义 ID 不得为 0，回调名非空且最多 64 字符；嵌套事件最多 8 层。
+- 发送不自动扣耐久、改状态、设置计时或改变倍率。接收者自行组合已有能力；本次回调结束后，其上下文和 `Board` 等派生 API 均失效。
+
+### 临时全盘装置倍率
+
+接触和装置事件上下文都提供 `api.Board`（`DeviceBoardApi`）：
+
+| API | 含义 |
+| --- | --- |
+| `Board:AddScoreMultiplier(amount, seconds)` | 注册一份全盘临时装置倍率，传完整倍率，实际贡献 `amount - 1`；返回正整数效果 ID。不能执行或达到同时 256 份效果的上限时返回 0。 |
+| `Board:GetScoreMultiplierEndTime(effectId)` | 返回有效效果的回合时间截止点；未知、过期、所属回合结束、来源装置移除或收回时返回 0。可用于让多件装置同步到同一效果的截止时间。 |
+
+`amount` 必须为 0–1000 的有限数，持续时间必须大于 0 且不超过 60 秒。不同效果分别计时、增量相加；注册本身不扣耐久，也不自动合并同一来源的多次调用，Lua 应控制一轮只注册一次。计时使用模拟回合时间，暂停时不推进。来源耗尽耐久不提前撤销已开始的效果；来源移除/收回、回合结束会取消，超时清理不依赖 Lua 成功回调。
+
+普通和赌博得分区、弹珠快照在读取时实时合成 `1 + 球持有增量 + 当前全盘增量`，再应用既有基础及其他倍率和上限。效果适用于当前和之后产生的所有弹珠，包含被滞留的球；不会写入 `MarbleScore.DeviceMultiplierBonus`，复制/分裂只继承持有增量，不会把临时效果变成永久倍率或重复继承。到期只移除该效果，其他装置贡献保持。有效的非中性效果会登记作用历史，赚赚兑换使用 `EffectiveDeviceScoreMultiplier`；显式传入最终分数的 `TrySettleAmount(score)` 仍不暗中追加任何倍率。
+
+例如球原本累计 ×1.5，`Board:AddScoreMultiplier(4, 5)` 在 5 秒内提供 +3，全盘当前有效倍率为 ×4.5；期间新球为 ×4，到期分别恢复 ×1.5 和 ×1。
+
+## 库存提交与装置回合数值
+
+### 按回合数值查询同类装置
+
+接触回调 `DeviceContactContext` 和装置事件 `DeviceEventContext` 提供：
+
+| API | 含义 |
+| --- | --- |
+| `DefinitionId` | 当前装置的定义 ID（同类装置相同）；`InstanceId` 是这件库存物品的独立实例 ID。 |
+| `CountPlacedDevicesWithRoundValue(definitionId, key, value)` | 统计指定定义下，当前回合 `GetRoundValue(key)` 与 `value` **精确相等**的已放置实例数，包含自身。 |
+
+查询实时读取实例状态，不依赖模型、碰撞体、Lua 局部变量或剩余耐久；已耗尽但仍放置的实例计入，背包、商店与预览不计。缺失 key 或其他回合的值视为 0；因此查询 0 也包含尚未写入这个 key 的实例。布置阶段查询即将开始的回合，与 `GetRoundValue` / `SetRoundValue` 一致。放置、收回、删除和数值写入立即影响查询。
+
+`definitionId` 必须非 0，未知定义返回 0；key 与回合数值接口限制一致，value 必须有限。此 API 只查询，不扣耐久、不登记触发、不修改倍率；回调结束后不可继续使用。需要按同类状态计数时可写 `api:CountPlacedDevicesWithRoundValue(api.DefinitionId, "lit", 1)`，引擎中不含装置名称、亮灯条件或奖励公式。
+
+### 模型节点的可见性
+
+`self:TrySetRenderersVisible(nodePath, visible)` 仅切换当前 MRes 实例指定节点及其后代的 `Renderer.enabled`。`nodePath` 是相对包根节点的路径，空字符串表示整个实例；不存在、没有 Renderer、路径无效或对象已销毁时返回 `false`。路径最多 256 字符，不接受绝对路径、空路径段、`.`、`..` 或反斜杠。
+
+这个接口不更改 GameObject 激活状态、碰撞体、刚体或其他实例，不修改共享材质，也不自动生成灯光；即使节点未激活也可设置 Renderer 状态，但不会将节点激活。亮灭模型和发光材质由制作端提供，Lua 选择显示哪个面。没有展示对象时 `self == nil`，Lua 应跳过显示操作。重新绑定展示对象时可在 MRes 的 `Start()` 中恢复外观，不跨回调保存游戏上下文。
+
+### 库存提交事件
+
+`OnOffer(api)` 是通用库存提交事件。游戏界面从背包拖动一件装置，松开在已放置且含 `OnOffer` 的装置上时，调用控制器 / 模拟器 `TryOfferDevice(offeredId, targetId)`。`CanOfferDevice` 只查询提交资格和是否有回调，不运行 Lua、不消耗物品，不代表脚本一定接受。提交限定为 Build：来源必须是本会话未放置的库存实例，目标必须已放置，不能提交自己；暂停、战斗阶段或拖到界面控件上均不允许。布置阶段可给上回合已耗尽耐久的装置准备下一回合。
+
+| `DeviceOfferContext` API | 含义 |
+| --- | --- |
+| `InstanceId` / `RoundId` | 接收装置实例和**即将开始的回合 ID**。布置阶段的 `RoundId` 为当前模拟回合 ID + 1。 |
+| `DefinitionId` | 接收装置的定义 ID；可与 `OfferedDefinitionId` 比较，由 Lua 决定是否只接受同种物品。 |
+| `OfferedInstanceId` / `OfferedDefinitionId` | 本次提交的库存实例和定义 ID。一次只提交一件，不自动处理同批购买或配对的其他实例。 |
+| `OfferedName` / `OfferedRarity` | 来源名称和 `common` / `rare` / `epic` / `legendary` 稀有度，从当前 MRes 定义读取。 |
+| `Parameter` / `Strength` | 接收装置的业务 `Value` / `Strength`，由 Lua 用于自己的公式。 |
+| `GetRoundValue(key)` | 读取该实例在目标回合的命名数值，不存在返回 0；能读到同一次回调暂存的新值。 |
+| `SetRoundValue(key, value)` | 暂存数值；key 非空且 UTF-8 最多 120 字节，value 必须有限，每实例每回合最多 32 个不同 key。 |
+| `GetInstanceValue(key)` / `SetInstanceValue(key, value)` | 读取/暂存跨回合保留的实例数值，详见下节；与本次物品消耗一起提交。 |
+| `DurabilityLimit` / `RemainingDurability` | 读取接收实例的当前耐久上限/剩余耐久，包含本次暂存的修改。 |
+| `SetDurabilityLimit(maximum)` / `RestoreDurability()` | 分别暂存上限调整、补满耐久；契约见下节。 |
+| `Accept()` | 标记接受本次提交；重复调用仍只处理这一件物品。 |
+| `SetStatus(text)` | 暂存接受后的状态提示，最多显示 256 字符。 |
+
+回调正常结束且调用 `Accept()` 后，引擎提交回合/实例数值、耐久设置与状态提示，删除来源库存实例并递增 `LayoutRevision`，刷新碰撞可用性，最后分发独立的新 `OnOfferAccepted(api)`。没有调用 `Accept()` 或 `OnOffer` 回调异常时，上述修改全部不提交，来源物品保留。接受不奖励出售金币、不继承来源自身的成长，也不扣接收装置耐久。原有点击选择和点击放置保持原行为，消耗物品使用明确的拖放动作；拖动开始时捕获实例 ID，翻页或库存重排不改变所提交的物品。
+
+接触回调 `DeviceContactContext` 和装置事件 `DeviceEventContext` 同样提供 `GetRoundValue(key)`、`SetRoundValue(key, value)`，但它们操作当前回合，写入立即生效。布置写入的数据属于下一回合，开始这一回合时保留；再次进入 Build 时查询新回合，旧值视为 0，不喂食则下一场仍为 0。收回再放置不丢失同一轮准备的数据，出售或删除实例移除其数值。它与每次开局直接清空的旧 `StoredValue` 不同。
+
+上下文仅在本次回调有效，结束后调用属性、数值方法或 `Accept` 都会报错。事务保证覆盖这些 API 暂存的数值、耐久与状态，不回滚 Lua 自己的局部变量；需要与物品消耗同时提交的成长应通过 `SetRoundValue` 或 `SetInstanceValue` 保存。表现缓存可在 `OnOfferAccepted` 中从已提交的实例状态更新；该通知出错只记录异常，不撤销已经完成的接受。
+
+```lua
+function OnOffer(api)
+    local gains = { common = 2, rare = 4, epic = 6, legendary = 8 }
+    local gain = gains[api.OfferedRarity]
+    if gain == nil then return end
+    api:SetRoundValue("bonus", api:GetRoundValue("bonus") + gain)
+    api:Accept()
+end
+
+-- 在 OnContact 中另行判定有效碰撞，再扣耐久并施加效果：
+-- api:AddScoreMultiplier(1 + api:GetRoundValue("bonus"))
+```
+
+## 降降火（已实现）
+
+制作源 `MResPacker/Authoring/Lua/CoolingTea.lua`，业务 ID `9030`，游戏包 `Resources/Devices/9030_CoolingTea.mres`。保留青瓷凉茶壶、壶嘴、弧形把手和壶盖的模型、独立材质、Prefab 与制作场景。
+
+首次有效实体碰撞将当前 `BALL_FRICTION ×1.2`、`BALL_BOUNCE ×0.9`，记录 `RushDurationBonus=5`，扣 1 耐久。只有该球在底部/得分区累满 RUSH 条时，才使本次 RUSH 由 10 秒变为 15 秒；未累满或已在 RUSH 中均不加时。物理参数换算、同球一次、跨实例去重保持原规则。
+
+Lua 用共享定义键 `-(4294967296 + DefinitionId)` 和 `Visit(key, 1, true)`；复制/等分/按价值分球继承效果和防重复记录。`SetCurrent` 以实际当前物理属性换算，清除对应旧修正，其他属性不变；下个物理步同步 PhysX 静/动摩擦与弹性，不改已经求解的反弹速度。新球默认额外时长 0，球消失时清理。`Strength=.2`、`Range=.1`、`Value=5` 的数值不变。
+
+## 旧限时 RUSH 概率 API（兼容）
+
+`Board.SetRushChanceBonus(key, amount, seconds)`、`RemoveRushChanceBonus(key)`、`GetRushChanceBonusEndTime(key)` 和 `RushChanceBonus` 保留原有存储、生命周期和参数校验，供旧包加载。**新的累积结算不读取这些概率。** 有锅气已迁移到球贡献，不再调用这组接口。
+
+## 有锅气（已实现）
+
+业务 ID `9029`，源 `MResPacker/Authoring/Lua/Wok.lua`，运行时 `Resources/Devices/9029_Wok.mres`。敞口锅、双把手、传感器模型保持。
+
+1. 成功入锅调用 `Motion:TryHold(1)`：可见、无碰撞，暂停平移与旋转。
+2. `AddRushContribution(10)` 给当前球记录额外贡献，加上这次成功装置作用的 5，共增加 15。普通新球从 2 变为 **17**；未落底之前不改变全盘条值，其他球不受影响。不同锅可继续给同一颗球增加贡献。
+3. 完整 1 秒后使用新的 `OnHoldEnd`，向棋盘上方 ±60° 随机抛出，保留入口速度。出射受阻时原位恢复该方向速度。滞留结束不会再次计入同一装置作用。
+4. 每颗成功释放扣 1 耐久，入锅、取消不扣。最后一颗离锅后保持原有 **5 秒冷却**，冷却时穿过；结束后可再次入锅并再次增加贡献。同锅容量按剩余耐久预留，最后一点完成释放，-1 无限。
+
+`game/device.json` 的 `Strength=10` 为额外贡献，`Range=60` 为抛射角，`Value=1` 为翻炒时长。每回合清理滞留与冷却；球上已获得的贡献随球存活，不随离锅撤销。普通、购买 5、出售 120、耐久 20。
+
+## 跨回合实例数值、动态耐久和生命周期
+
+接触上下文 `DeviceContactContext`、装置事件 `DeviceEventContext`、库存提交 `DeviceOfferContext` 提供以下独立基础能力：
+
+| API | 契约 |
+| --- | --- |
+| `GetInstanceValue(key)` | 读取该库存实例的命名数值，未写入时为 0。 |
+| `SetInstanceValue(key, value)` | 保存有限数值，key 非空且 UTF-8 最多 120 字节，每实例最多 32 个不同 key。跨回合、收回再放置、模型重建均保留；出售/消耗/删除实例或重开会话时移除。不是磁盘存档接口。 |
+| `DurabilityLimit` | 当前实例的有效上限；未覆盖时使用 Metadata，覆盖后不修改包的 Metadata 或其他实例。 |
+| `SetDurabilityLimit(maximum)` | 只设置当前实例上限，**保留已消耗次数**。合法整数 `-1～10000`：`-1` 无限，`0` 表示休眠，正数为有效次数。上限覆盖跨回合保留；库存快照和碰撞可用性随之更新。 |
+| `RestoreDurability()` | 清除当前实例已消耗次数，恢复到当前上限。不改变上限、实例状态、访问次数、冷却或批次去重记录。新回合引擎也会按实例有效上限自动恢复。 |
+
+接触/装置事件调用立即生效；`OnOffer` 调用先暂存，只有接受成功才提交。API 不自动选择阶段、倍率或升级条件，不隐式登记触发/扣耐久。Metadata 的 `durability` 仍仅接受 `-1` 或 `1～10000`；运行时上限允许 `0`，用于由 Lua 控制的休眠阶段。
+
+以下生命周期事件使用每次新建的 `DeviceEventContext`，**不要求已放置、物理视图或剩余耐久**：
+
+| 事件 | 时机 |
+| --- | --- |
+| `OnCreated(api)` | 每个库存实例创建后一次，可初始化阶段、耐久上限；商店购买、配对购买的每件物品和初始库存均适用。 |
+| `OnOfferAccepted(api)` | 向当前实例提交物品的事务成功后一次，读取已提交状态、刷新外观/文字。 |
+| `OnRoundStart(api)` | `BeginRound` 完成回合重置和耐久恢复后，按实例 ID 通知所有已拥有装置，包括背包与休眠实例。 |
+
+以上事件不扣耐久；没有物理视图时不要读取 `Position` / `Forward` 等姿态属性。回调异常会记录并关闭上下文，已经生效的操作不回滚。状态文字在 Build 对应下一回合，在战斗中对应当前回合。模型 `Start()` 无参数，只恢复缓存的普通外观状态；不得缓存旧 `api`。
+
+## 种植牙（已实现）
+
+制作源 `MResPacker/Authoring/Lua/DentalImplant.lua`，业务 ID `9028`，游戏包 `Resources/Devices/9028_DentalImplant.mres`。制作目录包含可编辑模型、材质、Prefab、配置和 `DentalImplantAuthoring.unity` 场景。
+
+“五个阶段”按未放置、挖洞、不锈钢牙、陶瓷牙、金刚钻牙理解。第一次购买并放置留下无效果、无碰撞的洞；布置时将背包中的另一件种植牙拖到洞/牙上，消耗一件，逐级升级并补满耐久。其他装置、已放置的来源、自身或最高阶段的继续升级都会拒绝，物品保留。
+
+| 已放置阶段 | 每次撞击附加增量 | `AddScoreMultiplier` 参数 | 阶段耐久 |
+| --- | --- | --- | --- |
+| 挖洞 | 无 | 不调用 | 0，弹珠直接穿过 |
+| 不锈钢牙 | +2 | 3 | 5 |
+| 陶瓷牙 | +5 | 6 | 8 |
+| 金刚钻牙 | +20 | 21 | 20 |
+
+每次有效实体撞击扣 1，原球正常反弹；同一步重复报告只算一次。最后一次仍完整增加倍率，然后立即退回洞、关闭碰撞并切换外观，之后必须重新种植。未耗尽的阶段跨回合保留，新回合补满该阶段耐久；洞不会自动长回牙。倍率沿用累计增量，到得分区统一计算。
+
+Lua 以 `GetInstanceValue/SetInstanceValue("stage", ...)` 保存阶段，`OnOffer` 组合同种检查、上限设置、补满和 `Accept`。`OnOfferAccepted` / `OnRoundStart` 刷新外观与状态。阶段表中的倍率和耐久可在 Lua 顶部调整并重新打包；C# 不含种植牙名称、ID、档位或倍率公式。
+
+Metadata 默认普通、购买 5、出售 120、耐久 20，初始库存 0。Metadata 是商店基础配置，当前阶段的有效耐久由实例 API 覆盖并显示在背包和场上。
+
+## 星星灯（已实现）
+
+制作源 `MResPacker/Authoring/Lua/StarLamp.lua`，配置 `Authoring/Profiles/StarLamp.asset`，成品 `Output/StarLamp.mres`，运行时 `Resources/Devices/9027_StarLamp.mres`。模型为沿棋盘平面铺开的立体五角星，深色边框、暗金关闭面和黄色发光开启面，只有 Trigger 区域，弹珠直接穿过。
+
+1. 未激活时，每颗弹珠每次进入切换当前灯一次；停留不重复触发，离开重入可再切换，同球同一步报告去重。至少有 2 盏已放置星星灯，且**全部点亮**才开始一轮效果；3 盏只亮 2 盏没有倍率加成。其他类型、背包库存和预览不计。
+2. 最后一盏点亮时，Lua 只注册一份 `Board:AddScoreMultiplier(1 + 灯总数, 5)`，为**全盘所有弹珠**临时增加灯总数点装置倍率。3 盏灯为 +3，普通新球当前 ×4；球已持有 ×1.5 时为 ×4.5。包括没有经过灯的球、新发射和复制/分裂的球，作用范围不限于灯区。按激活时数量确定本轮增量，到得分区按当时是否仍处于效果期计算。
+3. **持续 5 秒**，参与灯保持亮着，弹珠经过不切换、不叠加、不刷新截止时间。结束时移除临时全盘加成、所有参与灯熄灭，并且**每盏参与灯各扣 1 耐久**；不按弹珠数量或经过次数扣。未凑齐全亮时免费，最后一点耐久完整支持整轮 5 秒；`-1` 无限。
+4. 熄灭后，可重新逐盏点亮开始下一轮。耗尽的灯关闭且无法切换，仍放在场上时计入“全部灯”条件，需要下回合恢复或在布置阶段收回；不会保留旧规则的“耗尽亮灯”。每回合开始所有灯关闭、恢复耐久，未完成的上一回合效果取消，不额外扣费。
+5. 通过通用装置事件把效果 ID 和截止时间分发给参与灯，各自保存普通回合数值，不保存旧上下文。模型重建通过 `Start()` 恢复外观。倒计时遵循游戏模拟时间，暂停不会推进；来源装置被移除/收回会取消全盘效果，其余灯检测到取消后熄灭、不扣完成耐久。
+6. 临时加成不会永久写入球的累计倍率；5 秒结束后，即使球还没结算也会失去这份加成，保留其他已获得的装置增量。正常计分、赌博计分、弹珠信息和赚赚兑换都读取当前有效倍率；只有一次全盘效果，不会因为有多盏灯而再乘或叠加多份。
+
+`Authoring/Data/StarLamp.device.json`：ID 9027，`Value = 5` 为持续秒数（Lua 限制最多 60 秒），`Strength = 1` 为每盏灯的附加增量，`Range` 未使用。这里业务 `Value` 是时长，metadata `value` 仍是售价。默认普通、20 耐久、购买价 5、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Star Lamp Device` 定位配置。
+
+验证源 `Editor/Validation/GameContentValidation.StarLamp.cs`、`GameContentValidation.StarLampApi.cs`、`GameContentValidation.StarLampPhysics.cs` 覆盖全亮条件、同步窗口、未经过灯和新产生的球、永久/临时倍率合成、复制分裂不永久继承、正常/赌博结算与兑换、有限/无限耐久、回合与来源清理、接口有效期，以及两种步长下真实穿过、停留、高速穿越、展示重建和统一熄灯。
+
+## 大胃袋（已实现）
+
+制作源 `MResPacker/Authoring/Lua/GluttonBag.lua`，配置 `Authoring/Profiles/GluttonBag.asset`，成品 `Output/GluttonBag.mres`，运行时 `Resources/Devices/9026_GluttonBag.mres`。模型为橄榄绿圆柱袋身、浅褐色袋口与牙齿、深色口部，袋身有实体凸碰撞。
+
+1. 先放置大胃袋，布置阶段从背包拖入其他装置；普通、稀有、史诗、传奇分别增加 **2、4、6、8 点附加增量**，消耗提交的单件。不同大胃袋独立成长，喂入另一台大胃袋也只按其稀有度计算，不转移它的成长。
+2. 初始增量为 0，不产生效果。喂入普通装置后增量为 2，弹珠碰撞调用 `AddScoreMultiplier(3)`，实际增加 2；同球两次为 `1 + 2 + 2 = 5`。四档各喂一件共增加 20，碰撞提供完整 ×21。重复碰撞继续累加，到得分区统一结算，基础价值不直接修改；仍遵守通用倍率上限 1000。
+3. 喂食不扣耐久；有正增量的真实碰撞每次扣 1，同球同一步重复报告去重，不同球各自生效。无成长、Trigger 和连线不生效；最后一点耐久完整作用，`-1` 无限。弹珠正常反弹。
+4. 成长用于即将开始的这一回合，进入该回合保留，下一轮布置清空。界面在拖放前提示会消耗库存，接受后显示成长；失败、取消、越界、松开在控件上或离开布置阶段时保留物品。实体物品板与旧 uGUI 背包均支持拖放，拖到合法空白区域仍可正常放置。
+
+`Authoring/Data/GluttonBag.device.json`：ID 9026，`Value = 0` 为初始附加增量，`Strength = 2` 为每档稀有度增量，Lua 使用档位 1/2/3/4；`Range` 未使用。`Strength <= 0` 时拒绝喂食。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Glutton Bag Device` 定位配置。
+
+验证源 `Editor/Validation/GameContentValidation.GluttonBag.cs`、`GameContentValidation.GluttonBagUI.cs` 覆盖四档稀有度、原子提交和回调异常、库存实例校验、配对物品、回合准备与清空、独立实例、耐久、真实拖放控件和两种步长下的实际物理碰撞与得分结算。
+
+## 雪糕机（已实现）
+
+制作源 `MResPacker/Authoring/Lua/IceCreamMachine.lua`，配置 `Authoring/Profiles/IceCreamMachine.asset`，成品 `Output/IceCreamMachine.mres`，运行时 `Resources/Devices/9025_IceCreamMachine.mres`。模型为粉色圆柱底座、三层奶油色圆柱雪糕和薄荷色顶饰，底座有实体凸碰撞。
+
+1. 每台独立记录本回合成功触发次数 `n`，本次完整倍率为 `max(1, 10 - n × 1)`。首次 `n = 0`，依次提供 ×10、×9、×8、×7、×6、×5、×4、×3、×2，之后最低 ×1。同台由不同弹珠共享次数，不同实例互不影响。
+2. Lua 调用 `AddScoreMultiplier(本次完整倍率)`，引擎只增加“倍率 − 1”。同一颗球前两次累计倍率为 `1 + 9 + 8 = 18`，全部九次后为 `1 + 9 + 8 + … + 1 = 46`；不是把这些倍率连乘。碰撞时不结算，到得分区统一计算。
+3. 倍率大于 1 才调用 `Visit(0, 0)`、`TryUse()` 登记，施加倍率后次数加 1；默认前九次各扣 1 耐久，降至 ×1 后不生效、不登记成功触发、不扣耐久，不改变球已经获得的倍率。最后一点耐久完整生效；无限耐久也不会绕过本回合的倍率递减。
+4. 同球同一步重复碰撞报告去重，不同球同一步按处理顺序取得连续档位；持续贴住、Trigger 和连线不生效。原球正常反弹，基础价值、钱包、血量和运动均不修改。此前归零的累计倍率也可获得新的增量。
+5. Lua 只跨回调保存 `roundId` 和 `uses` 普通数值，`RoundId` 变化时重置次数为 0；同回合收回再放置不补充次数。状态显示本回合已触发次数、下次完整倍率和用尽提示。默认耐久 20，因此正常九次后剩余 11 耐久，但倍率已降至 ×1；新回合次数和耐久均重置。
+
+`Authoring/Data/IceCreamMachine.device.json`：ID 9025，`Value = 10` 为初始完整倍率，`Strength = 1` 为每次有效触发后的减量，`Range` 未使用。支持小数；初始倍率不大于 1 时无效果，减量为 0 时一直提供初始倍率，减量跨过 1 时钳制到 1。这里的业务 `Value` 与 metadata 的出售价 `value` 不同。默认普通、20 耐久、购买价 5、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Ice Cream Machine Device` 定位配置。
+
+无需新增引擎 API，计数和递减公式由 Lua 组合已有能力。`Editor/Validation/GameContentValidation.IceCreamMachine.cs` 验证全部倍率档位、重复与同时碰撞、实例和回合隔离、收回再放置、无效事件、有限/无限耐久、参数、归零后恢复和最终结算，以及两种步长下真实倾斜棋盘的 11 次重新碰撞与反弹。
+
+## less is more（已实现）
+
+制作源 `MResPacker/Authoring/Lua/LessIsMore.lua`，配置 `Authoring/Profiles/LessIsMore.asset`，成品 `Output/LessIsMore.mres`，运行时 `Resources/Devices/9024_LessIsMore.mres`。模型为紫色圆柱底座与三根逐渐降低的橙银色立柱，底座有实体凸碰撞。
+
+1. 每次真实碰撞用 `CountPlacedDevices(api.InstanceId)` 查询其他已放置装置数 `n`，本次附加倍率为 `max(0, 20 - n × 2)`。不计自身，耗尽但仍在场的装置计入，库存不计；配对门按实际已放置的实例分别计数。
+2. 附加倍率是实际增加量，Lua 调用 `AddScoreMultiplier(1 + 附加倍率)`。没有其他装置时增加 20；3 个时增加 14，球初始倍率为 1，撞击一次为 15、两次为 29；9 个时增加 2，10 个及以上不增加。20 是单次增量上限，重复碰撞仍继续累加，到得分区统一计算。
+3. 正增量的有效碰撞扣 1 耐久，零增量不登记触发、不扣耐久，也不减少弹珠之前已有的倍率。同球同一步重复报告去重，不同球独立生效；持续贴住、Trigger 和连线不生效。最后一点耐久完整作用，`-1` 无限。原球正常反弹，基础价值、钱包、血量和运动不修改。
+4. 状态实时显示其他装置数和本次增量；放置、收回或移除只影响之后的碰撞，不追溯修改已获得的倍率。每个实例只排除自己，新回合恢复耐久并按当前布局查询；此前被归零的累计倍率也能重新增加。
+
+`Authoring/Data/LessIsMore.device.json`：ID 9024，`Value = 20` 为没有其他装置时的附加倍率和单次增量上限，`Strength = 2` 为每个其他装置的减量，`Range` 未使用。支持小数；`Value <= 0` 无效果，`Strength = 0` 表示不随数量衰减。这里的业务 `Value` 与 metadata 的出售价 `value` 不同。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Less Is More Device` 定位制作配置。
+
+无需新增引擎 API；数量查询、去重、耐久登记和倍率累加使用已有通用能力，衰减公式由 Lua 组合。`Editor/Validation/GameContentValidation.LessIsMore.cs` 覆盖数量边界、动态布局、库存与耗尽、重复及跨实例累加、回合与有限/无限耐久、归零后恢复、参数，以及两种步长下真实倾斜棋盘的反弹、零增量边界和结算。
+
+## more is more（已实现）
+
+制作源 `MResPacker/Authoring/Lua/MoreIsMore.lua`，配置 `Authoring/Profiles/MoreIsMore.asset`，成品 `Output/MoreIsMore.mres`，运行时 `Resources/Devices/9023_MoreIsMore.mres`。模型为蓝色圆柱底座与三根逐渐增高的青金色立柱，底座有实体凸碰撞。
+
+1. 每次真实碰撞查询其他已放置装置数 `n`，本次附加倍率为 `min(20, n × 2)`；不计自身，耗尽但仍在场的装置照常计数，库存里的装置不计。
+2. “附加倍率”是直接增加量。Lua 调用 `AddScoreMultiplier(1 + 附加倍率)`，让引擎恰好增加该数值。3 个其他装置每次增加 6；球初始倍率为 1，碰撞一次为 7、两次为 13，到得分区统一计算。
+3. +20 是单次作用上限，达到 10 个其他装置后饱和，继续放置不提高单次增量。重复撞击仍按通用规则累加，不将弹珠的最终累计倍率限制为 20。没有其他装置时增量为 0，不生效、不扣耐久。
+4. 有正增量的有效碰撞扣 1 耐久；同球同一步重复报告去重，不同球同一步各自生效，持续贴住、Trigger、连线不生效。最后一点耐久仍完整作用，`-1` 无限。原球正常反弹，基础价值、钱包、血量和运动均不修改。
+5. 状态显示实时数量和本次增量。盘面增减只影响之后碰撞，不追溯修改球已经获得的倍率；各实例只排除自己，每回合按当前盘面重新查询。归零后的弹珠也可获得正常增量。
+
+`Authoring/Data/MoreIsMore.device.json`：ID 9023，`Value = 20` 为单次附加倍率上限，`Strength = 2` 为每个其他装置的增量；`Range` 未使用。上限或增量非正时无效果；支持小数参数。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate More Is More Device` 定位制作配置。
+
+`Editor/Validation/GameContentValidation.MoreIsMore.cs` 覆盖 0/1/9/10/11/20 个装置、上限与重复累加、库存/耗尽/移除/传送门计数、独立实例、动态布局、回合与耐久、归零后恢复、查询有效期和副作用，以及两种步长下真实倾斜棋盘的碰撞、反弹和结算。
+
+## 故障装置（已实现）
+
+制作源 `MResPacker/Authoring/Lua/Malfunction.lua`，配置 `Authoring/Profiles/Malfunction.asset`，成品 `Output/Malfunction.mres`，运行时 `Resources/Devices/9022_Malfunction.mres`。模型为灰色金属圆柱、黄色警戒环、红色警报灯和倾斜断杆，圆柱有实体凸碰撞。
+
+- 每次真实碰撞从 `{0, 1, 2, 3, 5, 7, 11, 13}` 等概率抽取一个结果，每项概率 1/8。Lua 用 `floor(RandomRange(0, 8)) + 1` 选择索引，使用本局随机序列，不使用独立的 `math.random`。
+- 抽到 0：调用 `SetDeviceScoreMultiplier(0)`，清空先前所有装置贡献，将当前累计倍率置为 0；保持基础价值和物理运动，后续仍可增加。抽到 1 不增加累计倍率；其余调用 `AddScoreMultiplier(result)`，每次增加 `result - 1`。
+- 例：球价值 10，依次抽到 13 → 0 → 1 → 3，累计倍率依次为 13 → 0 → 0 → 2，进入普通得分区最终得到 20。若归零后未获得新倍率，价值部分按 ×0 结算。没有独立的归零标记，也不改写原有固定加分、黑洞显式金额等结算规则。
+- 组合 `Impact`、`Visit(0, 0)`、`TryUse()`、随机接口与倍率接口。八种结果均扣 1 耐久，最后一次仍完成抽取；`-1` 无限。重复碰撞可再次抽取，同球同一步重复报告只算一次；不同球同一步各抽一次。持续接触、Trigger、连线及耗尽耐久不抽签、不推进随机状态。
+- 每次有效处理均调用 `MarkTriggered()`，抽到 1 或再次归零也登记效果历史。原球正常反弹，不消耗、不传送、不改价值、不直接计分。装置显示最近一次结果，每回合清空显示；球的累计倍率随复制/分裂按通用规则继承。
+
+`Authoring/Data/Malfunction.device.json`：ID 9022，默认普通、耐久 20、购买价 5、出售价 120、初始库存 0；本装置不使用 `Value` / `Strength` / `Range`。候选倍率在 Lua 顶部 `factors` 修改，等概率随列表长度计算。菜单 `Tools > MRes > Create or Locate Malfunction Device` 定位制作配置。
+
+`Editor/Validation/GameContentValidation.Malfunction.cs` 验证全部八种结果、固定种子序列、归零与恢复、跨装置累加、得分区/赌博区结算、复制分裂继承、有效历史、同帧去重、有限/无限耐久、回合重置、接口范围与有效期，以及两种步长的真实倾斜棋盘碰撞和正常反弹。
 
 ## 有效触发历史
 
@@ -356,7 +660,7 @@ Lua 的 `AddScoreMultiplier`、旧包的 `MultiplyScore`、`Trigger` / `TryPrepa
 
 制作源 `MResPacker/Authoring/Lua/CashOut.lua`，配置 `Authoring/Profiles/CashOut.asset`，成品 `Output/CashOut.mres`，运行时 `Resources/Devices/9013_CashOut.mres`。模型为金色立柱、绿色横梁和金币标志的兑换口，根节点 BoxCollider 为入口触发器。
 
-- 进入时先查询 `HasTriggeredOtherDevice`。存在其他装置有效作用时，金币为 `floor(Value × DeviceScoreMultiplier + 0.5)`，**没有额外 ×2**。例如价值 10、累计装置倍率 ×2，返还 20 金币；价值 10.5、倍率 ×1，返还 11 金币。使用当前 `Value`（含基础价值修正），累计倍率按 `1 + Σ(倍率 - 1)` 计算。
+- 进入时先查询 `HasTriggeredOtherDevice`。存在其他装置有效作用时，金币为 `floor(Value × EffectiveDeviceScoreMultiplier + 0.5)`，**没有额外 ×2**。例如价值 10、累计装置倍率 ×2，返还 20 金币；价值 10.5、倍率 ×1，返还 11 金币。使用当前 `Value`（含基础价值修正），累计倍率按 `1 + Σ(倍率 - 1)` 计算。
 - Lua 组合 `TryConsume(false)` 与 `AddCoins`，吞噬成功后只加一次金币，不计回合得分、不返还发射血量、不触发同一步的得分区结算。零价值也消耗；金额遵守钱包上限。`AddCoins` 本身仍向下取整，四舍五入由本装置 Lua 完成。
 - 无其他装置有效作用时，组合 `Motion.Source.Down` 与 `TryLaunch`，从棋盘下方出口射出，保留进入速度大小（包括零速，仍受弹珠速度上限约束）。受阻则留在原处、不给金币、不扣耐久，后续重新进入可重试。不把当前实例以前的放行算作其他装置。
 - 两种成功处理均通过 `TryUse()` 扣 1；第 20 次完整执行，之后本回合失效，`-1` 无限。`Visit(0, 0)` 排除同一步重复进入，连线事件不参与。不同球可在同一步分别处理。
@@ -449,6 +753,40 @@ local restored = api:RestoreBlood(api.Value * api.Strength) -- 默认 5
 
 验证入口 `Editor/Validation/GameContentValidation.BloodFactory.cs`：奇数/小数/零价值、满血截断、倍率与属性修正、重复碰撞、耐久/跨回合、血量耗尽后恢复发射、提现不恢复发射、通用 API 有效期，以及两种固定步长下的真实倾斜棋盘碰撞。
 
+## 通用按价值分出 `DevicePortion`
+
+`api:CreatePortion(value)` 从当前弹珠向新球转移指定价值。`value` 必须是大于 0 的有限数；构造时不生成球、不修改价值，不会扣耐久。请求及其全部属性只在创建它的回调期间有效，不能保存到下一次计时回调。
+
+| 成员 | 契约 |
+| --- | --- |
+| `Value` / `Radius` / `Mass` | 请求分出的价值、世界半径和质量。默认尺寸/质量沿用原球当前值。 |
+| `TrySetSize(worldRadius, mass)` | 单独配置新球的半径和质量，必须符合属性上下限；无效或已提交返回 `false`。不缩放原球，也不自动按价值比例计算体积/质量。 |
+| `CanSplit` | 原球存活、未滞留、价值足够、来源有效，且分裂代数、容量与回合状态允许。空间检查在提交时执行。 |
+| `TrySpawn(position, velocity)` | 按明确的世界位置和速度生成一颗球，允许零速；受当前最大速度限制。成功才扣原球价值，失败回滚候选球，保留全部未发射价值。请求仅能提交一次。全部价值转出时消耗原球，并按替换计算球数容量；部分转出时原球继续保留。 |
+
+子球继承累计倍率、访问与有效作用历史、复制/分裂祖先、家族、剩余寿命及临时重力截止时间；分裂代数增加 1，来源加入 `HasSplitFrom` 祖先列表。原球的代数不变，可继续分出其余价值。容量、`MaxSplitGeneration` 和回合排空时限仍生效，不收取发射血量，也不增加家族返还次数。
+
+固定 `ScoreBonus` / `ScoreAdd` 按本次价值占当前剩余价值的比例转移，原球同步减去这部分，避免每颗小球重复获得整份加分。指定新价值、尺寸与质量不会再次套用这些属性的旧修正；原球已分出的价值也不会在下次属性计算时重新出现，其他属性的修正及其到期时间保持。若需要守恒体积/质量，由 Lua 显式计算尺寸或使用 `CreateSplitBatch`。
+
+这里不包含“每颗 1 价值”、射速、扫射角度、舍弃余数或下一步动作。Lua 可以在每次 `OnHoldEnd` 重新创建请求，成功转出后重新滞留；最后一颗完成再用 `TryUseOnce(key)` 计数。取消或异常恢复的原球只保留尚未转出的价值。
+
+## 弹珠机关枪（已实现）
+
+Lua 为 `MResPacker/Authoring/Lua/MarbleMachineGun.lua`，配置 `Authoring/Profiles/MarbleMachineGun.asset`，成品 `Output/MarbleMachineGun.mres`，运行时 `Resources/Devices/9020_MarbleMachineGun.mres`。模型包含弹仓、进球口和扫射炮管；只有入口触发器，没有实体阻挡。
+
+- 按当前基础价值分成每颗价值 1 的球，继承累计得分倍率。例如 **5.5 → 5 颗价值 1**，余数 0.5 在最后一颗成功出射后舍弃；整颗价值不足 1 时直接穿过，不存储、不扣耐久。
+- 一次储存一颗原球，默认每 0.1 秒发射一颗、速度 6，朝棋盘下方 **±22.5°，总宽 45°** 扇形来回扫射，完整往返 1 秒。炮管表现与出射方向一致，旋转和计时随模拟暂停。
+- 小球世界半径 0.04、质量 0.1，当前制作参数采用固定尺寸，不按份数守恒体积/质量。球价值与固定加分按份额转移，倍率仍在得分区统一计算。
+- 存储和中途出射不扣耐久，**整批完成扣 1**；最后一点耐久能完成整批。出口被挡或球数暂满时保留未发射价值，按正常间隔重试，不卡着连发补偿；忙碌时其他球直接穿过。
+- 自己产出的球及其复制/分裂后代回到同一台时直接穿过，不再装填。其他实例可处理符合通用分裂代数条件的球。
+- 沿用原球剩余寿命，存储不暂停寿命。装置移除或视图消失时，剩余原球恢复可见和进入速度；寿命结束、回合结束或排空超时按现有生命周期清理未发射部分。未完成批次不扣耐久。
+
+`Authoring/Data/MarbleMachineGun.device.json`：`Value = 0.1` 是发射间隔，`Strength = 6` 是速度，`Range = 45` 是完整扇形宽度。Lua 顶部 `radius = 0.04`、`mass = 0.1`、`period = 1` 控制小球尺寸与扫射往返时间。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。
+
+装置事件新增只读 `Down`，返回棋盘平面内的世界下坡方向；水平棋盘时回退到当前装置朝向。Lua 组合 `TrySetYaw(0)`、`Down`、`Vectors:Rotate` / `SignedAngle` 和 `TrySetYaw` 计算表现朝向，避免视图重建时累计旋转。分出后重新隐藏原球仍使用既有 `TryHold` 与 `TrySetHeldVisible`，不跨回调保存 API 对象。
+
+验证见 `Editor/Validation/GameContentValidation.MarbleMachineGun.cs`：每颗价值、余数、分数守恒、节奏/扫射方向、容量与受阻重试、完成时耐久、祖先排除、取消/到期恢复，以及真实倾斜棋盘下两种固定步长的连续发射与穿过。
+
 ## 通用复制 `DeviceCopy`
 
 `api:CreateCopy()` 创建一次性请求，对象只在当前弹珠回调内有效。C# 不决定复制球的价值、出射方向或装置每球次数；原球始终保留。新接口与旧 `Children(count, false)` 的固定角度出射分开。
@@ -458,11 +796,12 @@ local restored = api:RestoreBlood(api.Value * api.Strength) -- 默认 5
 | `Value` / `Radius` | 待复制的基础价值、世界半径。未覆盖价值时读取原球当前属性。 |
 | `CanCopy` | 检查请求未提交、原球存活且未滞留、来源装置有效、回合/容量及复制代数允许。空间是否受阻要在提交时检查。 |
 | `TrySetValue(value)` | 设置副本基础价值，并清除副本继承的基础价值属性修正、固定 `ScoreBonus` 和 `ScoreAdd`，保留倍率；这样设为 0 就不会带入旧固定加分。非法数值、超出属性范围或已提交时返回 `false`。不修改原球，也不创建球。 |
+| `TrySetDeviceScoreMultiplier(amount)` | 设置副本的完整累计装置倍率，接受 0–1000 的有限数；内部保存 `amount - 1`，覆盖副本继承的装置贡献，保留独立基础倍率及其他属性。不修改原球、不生成球、不扣耐久。非法数值或请求已提交时返回 `false`；未调用时照常继承。平均、混合等公式由 Lua 计算。 |
 | `TrySpawn(position, velocity)` | 以明确的世界位置和速度提交一次复制；允许零速，遵守当前最大速度。成功返回 `true`，失败清理候选实体/物理球并保留原球。请求无论成功失败均不可重复提交；后续需要重试时新建请求。不隐式扣耐久。 |
 
-副本继承尺寸、质量、当前属性及其尚未到期的修正、累计倍率、Rush、临时重力的原截止时间、家族和剩余寿命；不会重启计时、额外扣血或多返还家族血量。默认未调用 `TrySetValue` 时也继承价值和固定加分。普通旋转沿用原球姿态，新物理球不复制自转速度。
+副本继承尺寸、质量、当前属性及其尚未到期的修正、累计倍率、Rush、临时重力的原截止时间、家族和剩余寿命；不会重启计时、额外扣血或多返还家族血量。默认未调用 `TrySetValue` 时也继承价值和固定加分；未调用 `TrySetDeviceScoreMultiplier` 时继承累计装置倍率。普通旋转沿用原球姿态，新物理球不复制自转速度。
 
-副本的访问次数从空记录开始，允许触发原球之前碰过的其他装置；有效效果历史及复制/等分祖先记录继续继承。`SpawnSourceId` 为本次来源实例。副本的 `ReplicationGeneration` 增加 1，沿用内容规则 `MaxSplitGeneration` 的复制代数上限（当前 2），不增加普通等分代数 `Generation`；同时遵守在场数量上限。
+副本的普通访问次数从空记录开始，允许触发原球之前碰过的其他装置；通过 `Visit(key, maximum, true)` 明确标记的记录保留次数和最后访问步，防止已继承效果重复施加。有效效果历史及复制/等分祖先记录继续继承。`SpawnSourceId` 为本次来源实例。副本的 `ReplicationGeneration` 增加 1，沿用内容规则 `MaxSplitGeneration` 的复制代数上限（当前 2），不增加普通等分代数 `Generation`；同时遵守在场数量上限。
 
 ```lua
 local request = api:CreateCopy()
@@ -472,6 +811,21 @@ if request.CanCopy and request:TrySetValue(0) then
     end
 end
 ```
+
+## 草皮（已实现）
+
+制作源 `MResPacker/Authoring/Lua/Turf.lua`，配置 `Authoring/Profiles/Turf.asset`，成品 `Output/Turf.mres`，运行时 `Resources/Devices/9021_Turf.mres`。模型为棕色圆柱土层、绿色草冠与草叶，土层有实体凸碰撞体。
+
+- 首次真实碰撞只记录球 ID、碰撞时的当前基础价值、累计装置倍率和截止时间；5 秒内另一颗不同弹珠碰撞，生成一颗新球。恰好 5 秒仍可配对，超过截止时间清空记录，下一次有效碰撞重新开始。
+- 新球价值为 `(首次价值 + 当前价值) / 2`，保留小数；累计装置倍率为两次快照倍率的平均值。例如价值 4 和 10、倍率 2 和 4，生成价值 7、倍率 3 的球，到得分区结算。原球的价值、倍率和正常反弹均不改变。
+- Lua 组合 `CreateCopy()`、`TrySetValue()`、`TrySetDeviceScoreMultiplier()` 和 `TrySpawn()`，新球从棋盘下方以速度 6 发出。尺寸、质量、其他属性和剩余寿命沿用第二颗球；不额外抽血，不复制旧固定加分。遵守通用复制代数及在场数量上限。
+- 同球重复碰撞不配对、不延长窗口；同一步不同球可组成一对，第三颗开始下一对。成功生成后立即重置并扣 1 耐久，第二颗不会同时成为下一对的第一颗。存入、超时、无效碰撞、失败不扣；最后一点耐久仍完整生成，`-1` 无限。
+- 出口阻挡、球数或代数限制导致生成失败时，保留首次快照，等待原窗口内下一次不同球的有效碰撞，不自动逐帧出球。超时照常清空。首次球消失不影响已经保存的数值；各实例独立，每回合清空状态，不保存过期上下文或球对象。
+- `HasCopiedFrom(api.InstanceId)` 排除本实例产生的球及其复制/分裂后代。它们仍会物理反弹，但不占配对位置、不扣耐久，可以触发其他装置。
+
+`Authoring/Data/Turf.device.json`：ID 9021，`Value = 5` 是配对窗口秒数，`Strength = 6` 是出射速度。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Turf Device` 定位制作配置。
+
+`Editor/Validation/GameContentValidation.Turf.cs` 覆盖价值/倍率快照与平均、小数/零价值、5 秒边界、同球与同帧去重、重置、祖先过滤、独立实例、容量/物理失败重试、有限/无限耐久、球消失/跨回合、接口有效期，以及两种步长下真实倾斜棋盘的碰撞、反弹、出口阻挡和向下出射。
 
 ## 复制体（已实现）
 
@@ -763,7 +1117,7 @@ ID 9004，初始库存 0、购买价 5、出售价格 120。配置 `Radius = 0.6
 
 ## 无当前弹珠的装置事件
 
-引擎仅向已放置且有有效物理视图的装置分发以下事件。暂停时不推进模拟时间；建造、商店、回合结束阶段不会运行这些事件。事件参数每次新建，用完关闭，缓存后再调用会抛出异常。
+引擎仅向已放置且有有效物理视图的装置分发以下战斗事件。暂停时不推进模拟时间；建造、商店、回合结束阶段不会运行这些战斗事件。`OnCreated` / `OnOfferAccepted` / `OnRoundStart` 属于前述独立的生命周期事件，不受此限制。事件参数每次新建，用完关闭，缓存后再调用会抛出异常。
 
 | 事件/API | 契约 |
 | --- | --- |

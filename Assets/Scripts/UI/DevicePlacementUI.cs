@@ -8,7 +8,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
-public sealed class DevicePlacementUI : MonoBehaviour
+public sealed partial class DevicePlacementUI : MonoBehaviour
 {
     public MarbleGameController Controller;
     public Camera ViewCamera;
@@ -48,6 +48,7 @@ public sealed class DevicePlacementUI : MonoBehaviour
 
     public void CancelPlacement()
     {
+        IsDraggingInventory = false;
         SelectedInstanceId = 0;
         preview?.Dispose();
         preview = null;
@@ -66,6 +67,14 @@ public sealed class DevicePlacementUI : MonoBehaviour
         }
         if (SelectedInstanceId == 0 || previewObject == null)
             return;
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
+        {
+            CancelPlacement();
+            return;
+        }
+#endif
 
         if (ViewCamera == null)
             ViewCamera = Camera.main;
@@ -88,14 +97,9 @@ public sealed class DevicePlacementUI : MonoBehaviour
 
 #if ENABLE_LEGACY_INPUT_MANAGER
         if (Input.GetKeyDown(KeyCode.R)) Controller.RotateDevice(SelectedInstanceId, 45);
-        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
-        {
-            CancelPlacement();
-            return;
-        }
         bool pointerBlocked = BlockClicksOverUI && EventSystem.current != null &&
             EventSystem.current.IsPointerOverGameObject();
-        if (Input.GetMouseButtonDown(0) && !pointerBlocked)
+        if (Input.GetMouseButtonDown(0) && !pointerBlocked && !IsDraggingInventory)
         {
             Vector3 scale = previewObject.transform.lossyScale;
             if (IsInsidePlacementPlane(previewObject.transform.position) &&
@@ -115,10 +119,13 @@ public sealed class DevicePlacementUI : MonoBehaviour
     }
 
     private bool TryGetBoardPoint(out Vector3 localPoint)
+        => TryGetBoardPoint(IsDraggingInventory ? dragPointer : (Vector2)Input.mousePosition, out localPoint);
+
+    private bool TryGetBoardPoint(Vector2 screenPoint, out Vector3 localPoint)
     {
         GetPlacementPlanePose(out Vector3 planePosition, out Quaternion planeRotation);
         Vector3 planeUp = planeRotation * Vector3.up;
-        Ray ray = ViewCamera.ScreenPointToRay(Input.mousePosition);
+        Ray ray = ViewCamera.ScreenPointToRay(screenPoint);
         var plane = new Plane(planeUp, planePosition);
         if (plane.Raycast(ray, out float distance))
         {

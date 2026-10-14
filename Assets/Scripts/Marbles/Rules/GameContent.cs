@@ -14,7 +14,7 @@ namespace MarblesECS
         public AttributeDefinition[] Attributes;
         public DeviceDefinition[] Devices;
         public DrugDefinition[] Drugs;
-        public double RushThreshold = 10;
+        public double RushThreshold = 100;
         public double OverkillCoinsPerScore = 0.01;
         public double FlowValueExponent = 1.15;
         public float CentimetersToUnits = 0.01f;

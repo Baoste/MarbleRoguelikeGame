@@ -17,8 +17,11 @@ namespace MarblesECS
                 DefinitionId = context.Manager.GetComponentData<DefinitionRef>(entity).DefinitionId,
                 BloodInvestment = context.Manager.GetComponentData<ShotOrigin>(entity).BloodInvestment,
                 BaseScore = AttributeRuntime.Enabled(context) ? AttributeRuntime.Get(context, entity, GameAttribute.BALL_BASE_VALUE) : score.BaseScore,
-                ScoreBonus = score.ScoreBonus, ScoreMultiplier = score.ScoreMultiplier,
+                ScoreBonus = score.ScoreBonus, ScoreMultiplier = context.BoardScores.Multiplier(context, score),
                 BaseRushChance = rush.BaseRushChance, RushChanceBonus = rush.RushChanceBonus,
+                RushDurationBonus = rush.DurationBonus,
+                RushContribution = rush.Contribution, EffectiveValue = RushSystem.BallValue(context, entity),
+                HasScoreRushContribution = rush.HasScoreContribution, ScoreRushContribution = rush.ScoreContribution,
                 Restitution = AttributeRuntime.Enabled(context) ? (float)AttributeRuntime.Get(context, entity, GameAttribute.BALL_BOUNCE) : context.Manager.GetComponentData<MarblePhysicsProperties>(entity).Restitution
             };
             return true;

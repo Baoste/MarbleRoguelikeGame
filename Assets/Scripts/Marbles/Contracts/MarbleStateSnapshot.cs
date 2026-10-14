@@ -9,6 +9,10 @@ namespace MarblesECS
         public float BloodInvestment;
         public double BaseScore, ScoreBonus, ScoreMultiplier;
         public double BaseRushChance, RushChanceBonus;
+        public double RushDurationBonus;
+        public double RushContribution, EffectiveValue;
+        public bool HasScoreRushContribution;
+        public double ScoreRushContribution;
         public float Restitution;
     }
 }

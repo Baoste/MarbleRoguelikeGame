@@ -13,6 +13,8 @@ namespace MarblesECS
         public int ActiveMarbles;
         public double TimeSeconds;
         public double RushSecondsRemaining;
+        public double RushMeter, RushMaximum;
+        public double ShotsPerSecond;
         public double DrugSecondsRemaining;
         public double DrugMultiplier;
         public float Flow;

@@ -64,6 +64,8 @@ namespace MarblesECS.PhysX
         public bool BuyOffer(int index) => simulation != null && simulation.BuyOffer(index);
         public bool RefreshShop() => simulation != null && simulation.RefreshShop();
         public bool SellDevice(int id) => simulation != null && simulation.SellDevice(id);
+        public bool CanOfferDevice(int offeredId, int targetId) => IsReady && !Paused && simulation.CanOfferDevice(offeredId, targetId);
+        public bool TryOfferDevice(int offeredId, int targetId) => IsReady && !Paused && simulation.TryOfferDevice(offeredId, targetId);
         /// <summary>For placements expressed directly in PhysicsRoot's local XZ plane.</summary>
         public bool PlaceDevice(int id, float x, float z)
         {

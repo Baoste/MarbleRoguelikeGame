@@ -38,7 +38,7 @@ namespace MarblesECS
             DeviceScriptSystem.Contact(c, ball, contact);
         }
 
-        internal static bool MarkVisit(SimulationContext c, Entity ball, long key, int maximum)
+        internal static bool MarkVisit(SimulationContext c, Entity ball, long key, int maximum, bool inheritOnCopy = false)
         {
             var visits = c.Manager.GetBuffer<DeviceVisit>(ball);
             for (int i = 0; i < visits.Length; i++)
@@ -46,9 +46,10 @@ namespace MarblesECS
                 var visit = visits[i];
                 if (visit.Key != key) continue;
                 if (visit.LastTick == c.Round.Tick || (maximum > 0 && visit.Count >= maximum)) return false;
-                visit.Count++; visit.LastTick = c.Round.Tick; visits[i] = visit; return true;
+                visit.Count++; visit.LastTick = c.Round.Tick; visit.InheritOnCopy |= inheritOnCopy;
+                visits[i] = visit; return true;
             }
-            visits.Add(new DeviceVisit { Key = key, Count = 1, LastTick = c.Round.Tick }); return true;
+            visits.Add(new DeviceVisit { Key = key, Count = 1, LastTick = c.Round.Tick, InheritOnCopy = inheritOnCopy }); return true;
         }
         internal static Vector3 Down(DevicePose pose)
         {

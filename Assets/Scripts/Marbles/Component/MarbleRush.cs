@@ -6,5 +6,9 @@ namespace MarblesECS
     {
         public double BaseRushChance;
         public double RushChanceBonus;
+        public double DurationBonus;
+        public double Contribution;
+        public bool HasScoreContribution;
+        public double ScoreContribution;
     }
 }

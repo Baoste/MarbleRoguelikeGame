@@ -109,7 +109,11 @@ namespace MarblesECS.PhysX
                     try { device.Script.Invoke("OnField", api); }
                     catch (MRes.MResLuaException error) { Debug.LogException(error); }
                     finally { api.Close(); }
-                    if (api.Force.sqrMagnitude > 0) recordDeviceEffect?.Invoke(view.Key, device.InstanceId);
+                    if (api.Force.sqrMagnitude > 0)
+                    {
+                        if (!view.ActiveFields.Contains(device.InstanceId)) recordDeviceEffect?.Invoke(view.Key, device.InstanceId);
+                        view.StepFields.Add(device.InstanceId);
+                    }
                     fieldForce += api.Force;
                 }
                 view.ActiveFields.Clear(); view.ActiveFields.UnionWith(view.StepFields);

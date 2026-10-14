@@ -53,7 +53,7 @@ namespace MarblesECS
                         InstanceId = item.InstanceId, DefinitionId = item.DefinitionId, Name = definition.Name,
                         Placed = item.Placed, X = item.X, Z = item.Z, Radius = definition.Radius,
                         PurchasePrice = item.PurchasePrice,
-                        SellPrice = definition.SellPrice, Rarity = definition.Rarity, Durability = definition.Durability,
+                        SellPrice = definition.SellPrice, Rarity = definition.Rarity, Durability = DeviceDurabilitySystem.Limit(context, item),
                         RemainingDurability = DeviceDurabilitySystem.Remaining(context, item),
                         CompletingEffect = DeviceDurabilitySystem.Remaining(context, item) == 0 && DeviceScriptSystem.CanComplete(context, item.InstanceId),
                         ScoreMultiplier = definition.ScoreMultiplier, RushChanceAdd = definition.RushChanceAdd,

@@ -1,0 +1,14 @@
+{
+    "Id": 9031,
+    "Radius": 0.43,
+    "ScoreMultiplier": 1.0,
+    "StartingCount": 0,
+    "PurchaseQuantity": 1,
+    "RushCategory": true,
+    "Cooldown": 0,
+    "MaxTriggersPerBall": 0,
+    "Range": 15,
+    "Strength": 6,
+    "Value": 0.2,
+    "SourceId": "Billiards"
+}

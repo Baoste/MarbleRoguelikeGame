@@ -69,6 +69,20 @@ namespace MarblesECS.Editor
                 BombLuaApi();
                 DuplicatorLuaApi();
                 BloodFactoryLuaApi();
+                MarbleMachineGunLuaApi();
+                TurfLuaApi();
+                MalfunctionLuaApi();
+                MoreIsMoreLuaApi();
+                LessIsMoreLuaApi();
+                IceCreamMachineLuaApi();
+                GluttonBagLuaApi();
+                StarLampLuaApi();
+                DentalImplantLuaApi();
+                WokLuaApi();
+                CoolingTeaLuaApi();
+                RushReworkValidation();
+                BilliardsValidation();
+                IcedAmericanoLuaApi();
                 MetadataAndDurability();
                 EconomyAndGambling();
                 ShopGuarantees();
@@ -217,7 +231,7 @@ namespace MarblesECS.Editor
                     Multiplier = 50, BaseRushChance = 1 });
                 Near(pending ? 1890 : 630, pending ? f.C.Round.PendingScore : f.C.Round.Score,
                     "combined multipliers respect authored caps, pending=" + pending);
-                Near(180, f.C.Round.RushRemaining, "authored Rush cap can exceed the old 120-second constant");
+                Near(0, f.C.Round.RushRemaining, "old probability and duration attributes do not bypass the new meter");
             }
         }
 
@@ -594,12 +608,12 @@ namespace MarblesECS.Editor
             using (var f = new Fixture())
             {
                 var key = f.Launch();
-                f.Simulation.ApplyAttribute(key, 8, GameAttribute.BALL_RUSH_GAIN, AttributeOperation.Set, 10);
+                RushSystem.AddContribution(f.C, f.Ball(key), 100);
                 f.Step(new MarbleContact { Key = key, TargetId = 1, Kind = MarbleContactKind.Score, Multiplier = 1 });
                 Check(f.C.Round.RushRemaining > 0, "rush contribution activates meter");
                 double remaining = f.C.Round.RushRemaining;
                 f.Simulation.ApplyGlobalAttribute(9, GameAttribute.RUSH_DECAY, AttributeOperation.Set, 0);
-                f.Step(); Near(remaining, f.C.Round.RushRemaining, "zero rush decay");
+                f.Step(); Near(remaining - .1, f.C.Round.RushRemaining, "Rush always counts real simulation seconds");
             }
             using (var f = new Fixture())
             {
@@ -620,13 +634,32 @@ namespace MarblesECS.Editor
             try { api.RefundOnDespawn = true; }
             finally { api.Close(); }
         }
-        private sealed class FakePhysics : IMarblePhysics, IMarblePhysicsStateProvider, IMarblePhysicsCommands, IDeviceTransientVisuals
+        private sealed class FakePhysics : IMarblePhysics, IMarblePhysicsStateProvider, IMarblePhysicsCommands, IDeviceTransientVisuals,
+            IMarblePhysicsSuspension, IMarbleHeldVisibility, IMarbleDeviceRotation
         {
             internal readonly Dictionary<MarbleKey,MarbleSpawnData> Spawns=new Dictionary<MarbleKey,MarbleSpawnData>();
             internal readonly Dictionary<MarbleKey,MarblePhysicsState> States=new Dictionary<MarbleKey,MarblePhysicsState>();
             internal readonly Dictionary<int,DevicePose> Poses=new Dictionary<int,DevicePose>();
             internal int FailSpawnAt,Attempts,Moves,CannonShots;
             internal bool BlockMoves;
+            internal readonly HashSet<MarbleKey> Suspended = new HashSet<MarbleKey>();
+            internal readonly HashSet<MarbleKey> Hidden = new HashSet<MarbleKey>();
+            private readonly Dictionary<int, Vector3> yawBasis = new Dictionary<int, Vector3>();
+            public bool TrySetSuspended(MarbleKey key, bool suspended)
+            {
+                if (!States.TryGetValue(key, out var state)) return false;
+                if (suspended) { Suspended.Add(key); state.LinearVelocity = state.AngularVelocity = Vector3.zero; States[key] = state; }
+                else { Suspended.Remove(key); Hidden.Remove(key); }
+                return true;
+            }
+            public bool TrySetHeldVisible(MarbleKey key, bool visible)
+            { if (!Suspended.Contains(key)) return false; if (visible) Hidden.Remove(key); else Hidden.Add(key); return true; }
+            public bool TrySetDeviceYaw(int id, float degrees)
+            {
+                if (!Poses.TryGetValue(id, out var pose)) return false;
+                if (!yawBasis.TryGetValue(id, out var basis)) { basis = pose.Forward; yawBasis.Add(id, basis); }
+                pose.Forward = Quaternion.AngleAxis(degrees, pose.Up) * basis; Poses[id] = pose; return true;
+            }
             internal readonly Dictionary<int, (int Source, string Path, Vector3 Position)> Visuals = new Dictionary<int, (int, string, Vector3)>();
             internal readonly Dictionary<int, Vector3> VisualOrigins = new Dictionary<int, Vector3>();
             internal bool BlockVisuals;
@@ -642,7 +675,7 @@ namespace MarblesECS.Editor
             }
             public bool TryGetPosition(MarbleKey key,out Vector3 p){bool ok=States.TryGetValue(key,out var s);p=s.Position;return ok;}
             public bool TryGetState(MarbleKey key,out MarblePhysicsState state)=>States.TryGetValue(key,out state);
-            public void Remove(MarbleKey key){Spawns.Remove(key);States.Remove(key);}
+            public void Remove(MarbleKey key){Spawns.Remove(key);States.Remove(key);Suspended.Remove(key);Hidden.Remove(key);}
             public bool TryMove(MarbleKey key,Vector3 p,Vector3 v){if(BlockMoves || !States.TryGetValue(key,out var s))return false;s.Position=p;s.LinearVelocity=v;States[key]=s;Moves++;return true;}
             public bool TrySetVelocity(MarbleKey key,Vector3 v){if(!States.TryGetValue(key,out var s))return false;s.LinearVelocity=v;States[key]=s;return true;}
             public void SetProperties(MarbleKey key,MarblePhysicalSettings settings){}

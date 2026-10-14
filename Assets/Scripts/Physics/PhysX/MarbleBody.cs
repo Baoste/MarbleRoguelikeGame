@@ -35,6 +35,7 @@ namespace MarblesECS.PhysX
 
         internal void PrepareForSpawn()
         {
+            GetComponent<MarbleAppearanceView>()?.ResetAppearance();
             Suspended = false;
             foreach (var pin in IgnoredPins) if (pin != null) Physics.IgnoreCollision(GetComponent<SphereCollider>(), pin, false);
             IgnoredPins.Clear(); PierceAttempts.Clear(); InsideDevices.Clear(); StepDevices.Clear();

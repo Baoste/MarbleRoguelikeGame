@@ -39,6 +39,26 @@ namespace MarblesECS
                 CreateSingleDevice(context, definition, price / quantity + (i < price % quantity ? 1 : 0), pair);
         }
 
+        internal static int CountPlacedDevices(SimulationContext context, int excludedInstanceId)
+        {
+            if (excludedInstanceId < 0) throw new System.ArgumentOutOfRangeException(nameof(excludedInstanceId));
+            int count = 0;
+            using (var devices = context.DeviceQuery.ToComponentDataArray<OwnedDeviceData>(Allocator.Temp))
+                foreach (var device in devices)
+                    if (device.Placed && device.InstanceId != excludedInstanceId) count++;
+            return count;
+        }
+
+        internal static int CountPlacedDevicesOfDefinition(SimulationContext context, uint definitionId)
+        {
+            if (definitionId == 0) throw new System.ArgumentOutOfRangeException(nameof(definitionId));
+            int count = 0;
+            using (var devices = context.DeviceQuery.ToComponentDataArray<OwnedDeviceData>(Allocator.Temp))
+                foreach (var device in devices)
+                    if (device.Placed && device.DefinitionId == definitionId) count++;
+            return count;
+        }
+
         private static void CreateSingleDevice(SimulationContext context, DeviceDefinition definition, long price, int pair)
         {
             var campaign = context.Campaign;
@@ -61,6 +81,7 @@ namespace MarblesECS
             campaign.NextDeviceId = instanceId;
             campaign.LayoutRevision++;
             context.Campaign = campaign;
+            DeviceScriptSystem.InstanceEvent(context, instanceId, "OnCreated");
         }
 
         internal static bool CanCashOut(SimulationContext context)

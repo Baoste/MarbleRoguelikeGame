@@ -10,6 +10,7 @@ namespace MarblesECS
     {
         private readonly Dictionary<int, MResLuaScript> scripts = new Dictionary<int, MResLuaScript>();
         private readonly Dictionary<int, (int round, string text)> statuses = new Dictionary<int, (int, string)>();
+        private int deviceDispatchDepth;
         internal void SetStatus(int instanceId, int round, string text)
         {
             text = text ?? string.Empty;
@@ -26,6 +27,26 @@ namespace MarblesECS
         internal void Clear() { foreach (var script in scripts.Values) script.Dispose(); scripts.Clear(); statuses.Clear(); }
         internal void Remove(int instanceId)
         { if (scripts.TryGetValue(instanceId, out var script)) { script.Dispose(); scripts.Remove(instanceId); } statuses.Remove(instanceId); }
+        // Lifecycle callbacks also reach inventory and dormant instances; they do not imply a gameplay trigger.
+        internal static bool InstanceEvent(SimulationContext c, int instanceId, string callback)
+        {
+            if (!AttributeRuntime.Enabled(c) || !CampaignStateUtility.FindDevice(c, instanceId, out var entity)) return false;
+            var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
+            var script = c.DeviceScripts.Get(instanceId, device.DefinitionId);
+            if (!script.HasFunction(callback)) return false;
+            var api = new DeviceEventContext(c, entity);
+            try { script.Invoke(callback, api); return true; }
+            catch (MResLuaException error) { Debug.LogException(error); return false; }
+            finally { api.Close(); }
+        }
+        internal static void RoundStart(SimulationContext c)
+        {
+            var ids = new List<int>();
+            using (var devices = c.DeviceQuery.ToComponentDataArray<OwnedDeviceData>(Allocator.Temp))
+                foreach (var device in devices) ids.Add(device.InstanceId);
+            ids.Sort();
+            foreach (int id in ids) InstanceEvent(c, id, "OnRoundStart");
+        }
         // Runs once at the START of a simulation step, including when no marbles exist.
         internal static void Tick(SimulationContext c)
         {
@@ -36,7 +57,7 @@ namespace MarblesECS
             ids.Sort();
             foreach (int id in ids) DeviceEvent(c, id, "OnTick");
         }
-        internal static bool DeviceEvent(SimulationContext c, int instanceId, string callback, DeviceTransientSystem.Item ended = null)
+        internal static bool DeviceEvent(SimulationContext c, int instanceId, string callback, DeviceTransientSystem.Item ended = null, double? value = null)
         {
             if (!c.IsRunning || !AttributeRuntime.Enabled(c) ||
                 !CampaignStateUtility.FindDevice(c, instanceId, out var entity)) return false;
@@ -46,9 +67,34 @@ namespace MarblesECS
             var script = c.DeviceScripts.Get(instanceId, device.DefinitionId);
             if (!script.HasFunction(callback)) return false;
             var api = new DeviceEventContext(c, entity, ended);
-            try { script.Invoke(callback, api); return true; }
+            try
+            {
+                if (value.HasValue) script.Invoke(callback, api, value.Value);
+                else script.Invoke(callback, api);
+                return true;
+            }
             catch (MResLuaException error) { Debug.LogException(error); return false; }
             finally { api.Close(); }
+        }
+        internal static int ForEachPlacedDevice(SimulationContext c, int sourceId, uint definitionId, string callback, double value)
+        {
+            if (definitionId == 0 || string.IsNullOrEmpty(callback) || callback.Length > 64 || !MarbleRules.IsFinite(value))
+                throw new System.ArgumentException("Invalid device event query.");
+            if (!c.IsRunning || !AttributeRuntime.Enabled(c) || !DeviceDurabilitySystem.CanRun(c, sourceId)) return 0;
+            if (c.DeviceScripts.deviceDispatchDepth >= 8) throw new System.InvalidOperationException("Device event nesting exceeds eight levels.");
+            var ids = new List<int>();
+            using (var devices = c.DeviceQuery.ToComponentDataArray<OwnedDeviceData>(Allocator.Temp))
+                foreach (var device in devices)
+                    if (device.Placed && device.DefinitionId == definitionId) ids.Add(device.InstanceId);
+            ids.Sort();
+            int invoked = 0; c.DeviceScripts.deviceDispatchDepth++;
+            try
+            {
+                foreach (int id in ids)
+                    if (DeviceEvent(c, id, callback, value: value)) invoked++;
+            }
+            finally { c.DeviceScripts.deviceDispatchDepth--; }
+            return invoked;
         }
         internal static bool CanComplete(SimulationContext c, int instanceId) =>
             c.IsRunning && CampaignStateUtility.FindDevice(c, instanceId, out var entity) &&
@@ -145,7 +191,7 @@ namespace MarblesECS
         private static void Invoke(SimulationContext c, Entity ball, Entity entity, OwnedDeviceData device,
             MarbleContact contact, DevicePose pose, string callback, HeldMotion? hold = null)
         {
-            var api = new DeviceContactContext(c, ball, entity, contact, pose, hold);
+            var api = new DeviceContactContext(c, ball, entity, contact, pose, hold, callback != "OnBallUpdate");
             try { c.DeviceScripts.Get(device.InstanceId, device.DefinitionId).Invoke(callback, api); }
             finally
             {

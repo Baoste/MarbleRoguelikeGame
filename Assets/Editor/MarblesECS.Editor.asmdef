@@ -5,7 +5,8 @@
     "MRes.Runtime", "MarblesECS.Runtime",
     "MarblesECS.Rules",
     "Unity.Entities",
-    "Unity.Collections"
+    "Unity.Collections",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [
     "Editor"

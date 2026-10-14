@@ -68,7 +68,7 @@ public sealed class OwnedDevicePanelUI : MonoBehaviour
                 continue;
 
             OwnedDeviceButtonUI item = GetOrCreateItem(visibleCount++);
-            item.Bind(device, canSelect, PlacementUI != null ? PlacementUI.BeginPlacement : null);
+            item.Bind(device, canSelect, PlacementUI != null ? PlacementUI.BeginPlacement : null, PlacementUI);
             item.gameObject.SetActive(true);
         }
 

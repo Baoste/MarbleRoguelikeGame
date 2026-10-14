@@ -41,6 +41,7 @@ namespace MarblesECS.Editor
                             VectorNear(r.Body(key).velocity, r.C.Manager.GetComponentData<Motion3D>(r.Ball(key)).LinearVelocity, "force readback synchronizes ECS");
                         }
                         VectorNear(spin, r.Body(key).angularVelocity, "center-applied force introduces no torque");
+                        Near(7, r.C.Manager.GetComponentData<MarbleRush>(r.Ball(key)).Contribution, "continuous force contributes once per stay rather than each physics substep");
                         Check(!r.C.Manager.GetComponentData<BallFeatures>(r.Ball(key)).Magnetic, "ordinary non-magnetic balls are affected");
                         Check(r.C.Manager.GetBuffer<DeviceVisit>(r.Ball(key)).Length == 0, "continuous field consumes no contact visits or cooldown");
                     }

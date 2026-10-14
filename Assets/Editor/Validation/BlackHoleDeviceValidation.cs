@@ -58,8 +58,8 @@ namespace MarblesECS.Editor
                 r.Step();
                 Check(!r.C.Marbles.ContainsKey(ball), "active hole removes a ball through the real sensor");
                 Check(r.Simulation.TryDequeueScore(out var score), "direct settlement emits the normal score event");
-                Near(75, score.Score, "current value times ten is not multiplied again by global, machine or Rush modifiers");
-                Near(75, r.C.Round.Score, "score reaches the actual round account");
+                Near(125, score.Score, "temporary Rush value is included; unrelated global and machine multipliers are not applied again");
+                Near(125, r.C.Round.Score, "score reaches the actual round account");
                 Check(!score.IsPending && !r.Simulation.TryDequeueScore(out _), "one immediate settlement only");
                 Check(score.Key.Equals(ball) && score.ZoneId == 100000 + r.Id, "event keeps ball and device identities");
             }

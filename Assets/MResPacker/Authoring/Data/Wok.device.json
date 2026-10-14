@@ -1,0 +1,14 @@
+{
+    "Id": 9029,
+    "Radius": 0.46,
+    "ScoreMultiplier": 1,
+    "StartingCount": 0,
+    "PurchaseQuantity": 1,
+    "RushCategory": true,
+    "Cooldown": 0,
+    "MaxTriggersPerBall": 0,
+    "Range": 60,
+    "Strength": 10,
+    "Value": 1,
+    "SourceId": "Wok"
+}

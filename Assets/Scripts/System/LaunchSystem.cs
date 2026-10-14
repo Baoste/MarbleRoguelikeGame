@@ -16,7 +16,8 @@ namespace MarblesECS
             if (round.ActiveMarbleCount >= context.Tuning.MaxActiveMarbles) return;
             var quote = MarbleRules.Quote(context.Tuning, launcher.Flow);
             var player = context.Player;
-            if (player.Blood < quote.Cost) return;
+            double cost = RushSystem.ShotCost(context, quote.Cost);
+            if (player.Blood < cost) return;
 
             var key = new MarbleKey(round.RoundId, checked(context.NextSpawnSequence + 1));
             Quaternion launchRotation = rotation.normalized;
@@ -37,8 +38,8 @@ namespace MarblesECS
                 context.Manager.SetComponentData(entity, new Motion3D { LinearVelocity = launchVelocity });
                 // Publish the mapping before committing resources. A failed bridge never consumes blood or cooldown.
                 context.Marbles.Add(key, entity);
-                player.Blood -= quote.Cost;
-                launcher.NextFireAt = round.Time + context.Tuning.FireIntervalSeconds;
+                player.Blood -= (float)cost;
+                launcher.NextFireAt = round.Time + RushSystem.FireInterval(context);
                 if (launcher.PendingSingleShots > 0) launcher.PendingSingleShots--;
                 round.ActiveMarbleCount++;
                 context.Player = player;

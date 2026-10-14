@@ -19,9 +19,11 @@ namespace MarblesECS
         private readonly float radius;
         private readonly List<Item> items = new List<Item>();
         private bool submitted;
-        internal DeviceSplitBatch(Func<SimulationContext> context, Entity parent, int sourceId, int count)
+        private readonly bool registerRush;
+        internal DeviceSplitBatch(Func<SimulationContext> context, Entity parent, int sourceId, int count, bool registerRush = true)
         {
             this.context = context; this.parent = parent; this.sourceId = sourceId;
+            this.registerRush = registerRush;
             var c = context();
             if (count < 2 || count > 256) throw new ArgumentOutOfRangeException(nameof(count));
             targetCount = count;
@@ -100,6 +102,7 @@ namespace MarblesECS
                     if (!ContentSpawnSystem.Create(c, spawn, item.Position, rotation, item.Velocity, out var child, parent)) return false;
                     created.Add(child);
                     c.Manager.SetComponentData(child, score); c.Manager.SetComponentData(child, rush);
+                    MarbleAppearanceSystem.Copy(c, parent, child);
                     c.Manager.GetBuffer<DeviceVisit>(child).CopyFrom(visits);
                     c.Manager.GetBuffer<DeviceCopySource>(child).CopyFrom(copies);
                     c.Manager.GetBuffer<VisitedDeviceData>(child).CopyFrom(legacyVisits);
@@ -123,6 +126,7 @@ namespace MarblesECS
                     BallInteractionSystem.RecordDeviceEffect(c, child, sourceId);
                 }
                 // Keep the parent until every child exists. Normal end-of-step cleanup removes it without a refund.
+                RushSystem.RecordSpawn(c, parent, created, sourceId, registerRush);
                 BallInteractionSystem.Consume(c, parent, false);
                 committed = true; return true;
             }

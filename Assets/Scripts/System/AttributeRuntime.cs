@@ -134,10 +134,6 @@ namespace MarblesECS
             var drugs = c.Manager.GetBuffer<ActiveDrugData>(c.PlayerEntity);
             for (int i = drugs.Length - 1; i >= 0; i--) if (drugs[i].EndsAt <= c.Round.Time) drugs.RemoveAt(i);
             Recompute(c, c.PlayerEntity);
-            var round = c.Round;
-            round.RushRemaining = Math.Max(0, round.RushRemaining - c.StepSeconds * Global(c, GameAttribute.RUSH_DECAY));
-            if (round.RushRemaining == 0) round.RushMeter = Math.Max(0, round.RushMeter - c.StepSeconds * Global(c, GameAttribute.RUSH_DECAY));
-            c.Round = round;
             using (var entities = c.MarbleQuery.ToEntityArray(Unity.Collections.Allocator.Temp))
                 foreach (var entity in entities)
                 {

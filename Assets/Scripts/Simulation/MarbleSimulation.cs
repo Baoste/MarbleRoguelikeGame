@@ -95,7 +95,8 @@ namespace MarblesECS
             if (physics is IMarbleDeviceEffectSink effects)
                 effects.BindDeviceEffect((key, id) =>
                 {
-                    if (IsAlive && context.TryGetFlying(key, out var ball)) BallInteractionSystem.RecordDeviceEffect(context, ball, id);
+                    if (IsAlive && context.TryGetFlying(key, out var ball))
+                    { BallInteractionSystem.RecordDeviceEffect(context, ball, id); RushSystem.RecordTrigger(context, ball, id); }
                 });
             started = true;
         }
@@ -117,11 +118,13 @@ namespace MarblesECS
                 round.Time += dt;
                 round.Tick = checked(round.Tick + 1);
                 context.Round = round;
+                RushSystem.Tick(context);
                 TimedGravitySystem.Tick(context, false);
                 AttributeRuntime.Tick(context);
                 BounceDrugSystem.Expire(context);
                 EffectLifecycleSystem.Execute(context);
                 LaunchSystem.Execute(context, physics, launchPosition, launchRotation);
+                context.BoardScores.Tick(context);
             }
             // Set only after pre-physics succeeds, so a failed spawn can be inspected/retried safely.
             insidePhysicsStep = true;

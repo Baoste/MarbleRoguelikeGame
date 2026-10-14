@@ -18,13 +18,16 @@ namespace MarblesECS
         private readonly DeviceImpactInfo impact;
         private bool triggered;
         private bool usageGranted;
+        private bool rushGranted, allowRushContribution;
         internal DeviceContactContext(SimulationContext c, Entity ball, Entity device, MarbleContact contact, DevicePose pose,
-            HeldMotion? completedHold = null)
+            HeldMotion? completedHold = null, bool allowRushContribution = true)
         {
             this.c = c; this.ball = ball; deviceEntity = device; this.contact = contact; this.pose = pose;
+            this.allowRushContribution = allowRushContribution && !completedHold.HasValue;
             definition = CampaignStateUtility.Device(c, c.Manager.GetComponentData<OwnedDeviceData>(device).DefinitionId);
             Motion = new DeviceMotionApi(this, ball, device, Device.InstanceId, pose);
             Vectors = new DeviceVectorApi(this);
+            Board = new DeviceBoardApi(() => C, Device.InstanceId);
             if (completedHold.HasValue) hold = new DeviceHoldInfo(this, completedHold.Value, c.Round.Time);
             else if (contact.HasImpact) impact = new DeviceImpactInfo(this, contact);
         }
@@ -36,12 +39,43 @@ namespace MarblesECS
         public DeviceHoldInfo Hold { get { _ = C; return hold; } }
         public DeviceImpactInfo Impact { get { _ = C; return impact; } }
         public DeviceVectorApi Vectors { get; }
+        public DeviceBoardApi Board { get; }
+        public double EffectiveDeviceScoreMultiplier => C.BoardScores.DeviceMultiplier(C, C.Manager.GetComponentData<MarbleScore>(ball));
         private OwnedDeviceData Device => C.Manager.GetComponentData<OwnedDeviceData>(deviceEntity);
         private BallFeatures Features => C.Manager.GetComponentData<BallFeatures>(ball);
         public double Value => Get("BALL_BASE_VALUE");
+        public double EffectiveValue => RushSystem.BallValue(C, ball);
+        public bool RushActive => RushSystem.Active(C);
+        public void SetAppearance(string label, float red, float green, float blue) => MarbleAppearanceSystem.Set(C, ball, label, red, green, blue);
+        public double RushContribution => C.Manager.GetComponentData<MarbleRush>(ball).Contribution;
+        public void AddRushContribution(double amount)
+        { RushSystem.AddContribution(C, ball, amount); if (amount > 0) MarkTriggered(); }
+        public void SetScoreRushContribution(double amount)
+        {
+            var context = C;
+            if (!MarbleRules.IsFinite(amount) || Math.Abs(amount) > 1000000) throw new ArgumentOutOfRangeException(nameof(amount));
+            var rush = context.Manager.GetComponentData<MarbleRush>(ball);
+            rush.HasScoreContribution = true; rush.ScoreContribution = amount;
+            context.Manager.SetComponentData(ball, rush);
+        }
+        public void ClearScoreRushContribution()
+        {
+            var context = C; var rush = context.Manager.GetComponentData<MarbleRush>(ball);
+            rush.HasScoreContribution = false; rush.ScoreContribution = 0; context.Manager.SetComponentData(ball, rush);
+        }
         /// <summary>Device contributions only: one base plus accumulated factor-minus-one bonuses.</summary>
         public double DeviceScoreMultiplier => Math.Max(0, Math.Min(1000,
             1 + C.Manager.GetComponentData<MarbleScore>(ball).DeviceMultiplierBonus));
+        /// <summary>Replaces the current device multiplier; later AddScoreMultiplier calls still accumulate normally.</summary>
+        public void SetDeviceScoreMultiplier(double amount)
+        {
+            var context = C;
+            var score = context.Manager.GetComponentData<MarbleScore>(ball);
+            double before = score.DeviceMultiplierBonus;
+            score.SetDeviceMultiplier(amount);
+            context.Manager.SetComponentData(ball, score);
+            if (score.DeviceMultiplierBonus != before) MarkTriggered();
+        }
         /// <summary>Successful effects from any other placed device instance during this ball's lifetime.</summary>
         public bool HasTriggeredOtherDevice
         {
@@ -52,7 +86,16 @@ namespace MarblesECS
             }
         }
         /// <summary>Records Lua-only effects; independent of visit limits, cooldown and durability.</summary>
-        public void MarkTriggered() => BallInteractionSystem.RecordDeviceEffect(C, ball, InstanceId);
+        public void MarkTriggered()
+        {
+            BallInteractionSystem.RecordDeviceEffect(C, ball, InstanceId);
+            RecordRushTrigger();
+        }
+        private void RecordRushTrigger()
+        {
+            if (allowRushContribution && !rushGranted)
+            { RushSystem.RecordTrigger(C, ball, InstanceId); rushGranted = true; }
+        }
         internal bool RecordEffect(bool success) { if (success) MarkTriggered(); return success; }
         /// <summary>Current wallet balance as a Lua number; read only and exact through the wallet cap.</summary>
         public double Coins => C.Campaign.Coins;
@@ -72,16 +115,24 @@ namespace MarblesECS
         public long LinkKey => contact.LinkKey;
         public int PairId => Device.PairId;
         public int InstanceId => Device.InstanceId;
+        public uint DefinitionId { get { _ = C; return definition.Id; } }
+        public int CountPlacedDevices(int excludedInstanceId = 0) => CampaignStateUtility.CountPlacedDevices(C, excludedInstanceId);
+        public int CountPlacedDevicesWithRoundValue(uint definitionId, string key, double value)
+            => DeviceRoundState.CountPlaced(C, definitionId, key, value);
+        public int CountPlacedDevicesOfDefinition(uint definitionId) => CampaignStateUtility.CountPlacedDevicesOfDefinition(C, definitionId);
+        public int ForEachPlacedDevice(uint definitionId, string callback, double value)
+            => DeviceScriptSystem.ForEachPlacedDevice(C, InstanceId, definitionId, callback, value);
         public int SpawnSourceId => Features.SpawnSourceId;
         public DeviceSpawnBatch CreateSpawnBatch() => new DeviceSpawnBatch(() => C, InstanceId);
-        public DeviceCopy CreateCopy() => new DeviceCopy(() => C, ball, InstanceId);
+        public DeviceCopy CreateCopy() => new DeviceCopy(() => C, ball, InstanceId, allowRushContribution);
+        public DevicePortion CreatePortion(double value) => new DevicePortion(() => C, ball, InstanceId, value, allowRushContribution);
         public bool HasCopiedFrom(int instanceId)
         {
             var sources = C.Manager.GetBuffer<DeviceCopySource>(ball);
             foreach (var source in sources) if (source.InstanceId == instanceId) return true;
             return false;
         }
-        public DeviceSplitBatch CreateSplitBatch(int count) => new DeviceSplitBatch(() => C, ball, InstanceId, count);
+        public DeviceSplitBatch CreateSplitBatch(int count) => new DeviceSplitBatch(() => C, ball, InstanceId, count, allowRushContribution);
         public bool HasSplitFrom(int instanceId)
         {
             var sources = C.Manager.GetBuffer<DeviceSplitSource>(ball);
@@ -90,6 +141,13 @@ namespace MarblesECS
         }
         public double Time => C.Round.Time;
         public int RoundId => C.Round.RoundId;
+        public double GetRoundValue(string key) => DeviceRoundState.Get(C, deviceEntity, key);
+        public void SetRoundValue(string key, double value) => DeviceRoundState.Set(C, deviceEntity, key, value);
+        public double GetInstanceValue(string key) => DeviceInstanceState.Get(C, deviceEntity, key);
+        public void SetInstanceValue(string key, double value) => DeviceInstanceState.Set(C, deviceEntity, key, value);
+        public int DurabilityLimit => DeviceDurabilitySystem.Limit(C, Device);
+        public void SetDurabilityLimit(int maximum) => DeviceDurabilitySystem.SetLimit(C, deviceEntity, maximum);
+        public void RestoreDurability() => DeviceDurabilitySystem.Restore(C, deviceEntity);
         public string BallId
         {
             get
@@ -104,19 +162,34 @@ namespace MarblesECS
         public int RemainingDurability => DeviceDurabilitySystem.Remaining(C, Device);
         public int HeldCount => HeldMotionSystem.Count(C, Device.InstanceId);
         public bool CanUseOnce(string key) => DeviceDurabilitySystem.CanUseOnce(C, deviceEntity, key);
-        public bool TryUseOnce(string key) => DeviceDurabilitySystem.TryUseOnce(C, deviceEntity, key);
+        public bool TryUseOnce(string key)
+        { bool success = DeviceDurabilitySystem.TryUseOnce(C, deviceEntity, key); if (success) RecordRushTrigger(); return success; }
         public bool TryKeepActive(float seconds) => DeviceDurabilitySystem.KeepActive(C, deviceEntity, seconds);
         /// <summary>Accept one use for this callback. Trigger/Consume/TrySettle share the same use.</summary>
         public bool TryUse()
         {
             _ = C;
             if (hold != null) return true; // Completion of a previously accepted effect is not another use.
-            return usageGranted || (usageGranted = DeviceDurabilitySystem.TryUse(C, deviceEntity));
+            bool success = usageGranted || (usageGranted = DeviceDurabilitySystem.TryUse(C, deviceEntity));
+            if (success) RecordRushTrigger(); return success;
         }
         public double TransportLockedUntil { get => Features.PortalLockedUntil; set { var f = Features; f.PortalLockedUntil = value; C.Manager.SetComponentData(ball, f); } }
         public bool ExitDown { get => Features.ExitDown; set { var f = Features; f.ExitDown = value; C.Manager.SetComponentData(ball, f); } }
         public double StoredValue { get => Device.StoredValue; set { var d = Device; d.StoredValue = value; C.Manager.SetComponentData(deviceEntity, d); } }
         public double RushOnSettlement { get => Features.CloverChance; set { var f = Features; f.CloverChance = (float)value; C.Manager.SetComponentData(ball, f); } }
+        /// <summary>Extra seconds applied only when this marble actually starts or refreshes Rush.</summary>
+        public double RushDurationBonus
+        {
+            get => C.Manager.GetComponentData<MarbleRush>(ball).DurationBonus;
+            set
+            {
+                var context = C;
+                if (!MarbleRules.IsFinite(value) || value < 0 || value > 3600) throw new ArgumentOutOfRangeException(nameof(value));
+                var rush = context.Manager.GetComponentData<MarbleRush>(ball);
+                bool changed = rush.DurationBonus != value; rush.DurationBonus = value;
+                context.Manager.SetComponentData(ball, rush); if (changed) MarkTriggered();
+            }
+        }
         public bool RefundOnDespawn { get => Features.Revive; set { var f = Features; f.Revive = value; C.Manager.SetComponentData(ball, f); } }
         public double Get(string attribute) => AttributeRuntime.Get(C, ball, Parse(attribute));
         public double Global(string attribute) => AttributeRuntime.Global(C, Parse(attribute));
@@ -153,8 +226,14 @@ namespace MarblesECS
             if (removed || replacement != before) MarkTriggered();
         }
         /// <summary>Per-ball visit tracking without a device-wide cooldown.</summary>
-        public bool Visit(long visitKey, int maximum) => BallInteractionSystem.MarkVisit(C, ball,
-            visitKey == 0 ? contact.TargetId : visitKey, maximum);
+        public bool Visit(long visitKey, int maximum) => Visit(visitKey, maximum, false);
+        /// <summary>Opt in to retaining this record on copied balls, for effects whose state is also inherited.</summary>
+        public bool Visit(long visitKey, int maximum, bool inheritOnCopy)
+        {
+            bool success = BallInteractionSystem.MarkVisit(C, ball, visitKey == 0 ? contact.TargetId : visitKey, maximum, inheritOnCopy);
+            if (success && hold == null) allowRushContribution = true;
+            return success;
+        }
         /// <summary>Rate, cooldown, per-ball visit limit and generic trigger modifiers.</summary>
         public bool Trigger(long visitKey = 0) => PrepareTrigger(visitKey, true);
         /// <summary>Trigger checks/modifiers without spending durability; the script charges the later effect explicitly.</summary>
@@ -166,7 +245,7 @@ namespace MarblesECS
             double rate = Get("DEVICE_TRIGGER_RATE") * AttributeRuntime.Get(C, deviceEntity, GameAttribute.DEVICE_TRIGGER_RATE);
             var d = Device;
             if (rate <= 0 || d.NextTriggerAt > Time) return false;
-            if (!BallInteractionSystem.MarkVisit(C, ball, visitKey != 0 ? visitKey : contact.TargetId, definition.MaxTriggersPerBall)) return false;
+            if (!Visit(visitKey, definition.MaxTriggersPerBall)) return false;
             if (spendUse && !TryUse()) return false;
             d = Device; // TryUse updates the same component; preserve its durability counters.
             d.NextTriggerAt = Time + Math.Max(C.StepSeconds, AttributeRuntime.Device(C, deviceEntity, GameAttribute.DEVICE_COOLDOWN) / rate);
@@ -182,7 +261,7 @@ namespace MarblesECS
         public bool TryConsume(bool refund)
         {
             if (C.Manager.GetComponentData<SettlementState>(ball).IsSettled || C.Manager.GetComponentData<DespawnState>(ball).PendingDespawn) return false;
-            BallInteractionSystem.Consume(C, ball, refund); return true;
+            MarkTriggered(); BallInteractionSystem.Consume(C, ball, refund); return true;
         }
         /// <summary>Finalize this ball for an explicit score amount, without implicit multipliers or Rush rolls.</summary>
         public bool TrySettle(double score)

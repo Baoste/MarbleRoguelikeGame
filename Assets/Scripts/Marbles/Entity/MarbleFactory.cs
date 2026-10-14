@@ -15,12 +15,13 @@ namespace MarblesECS
             {
                 manager.SetComponentData(entity, new StableIdentity { StableId = checked(++context.NextStableId) });
                 manager.SetComponentData(entity, new ShotOrigin { RoundId = key.RoundId, SpawnSequence = key.Sequence,
-                    Launcher = context.LauncherEntity, BloodInvestment = quote.Cost });
+                    Launcher = context.LauncherEntity, BloodInvestment = (float)RushSystem.ShotCost(context, quote.Cost) });
                 manager.SetComponentData(entity, new Owner { Player = context.PlayerEntity });
                 manager.SetComponentData(entity, new OnBoard { Board = context.BoardEntity });
                 manager.SetComponentData(entity, new DefinitionRef { DefinitionId = context.Tuning.MarbleDefinitionId });
                 manager.SetComponentData(entity, new MarbleScore { BaseScore = quote.BaseValue, ScoreMultiplier = quote.LauncherMultiplier, BaseMultiplier = quote.LauncherMultiplier });
-                manager.SetComponentData(entity, new MarbleRush { BaseRushChance = context.Tuning.BaseRushChance });
+                manager.SetComponentData(entity, new MarbleRush { BaseRushChance = context.Tuning.BaseRushChance, Contribution = RushSystem.InitialContribution });
+                manager.AddBuffer<RushTriggerVisit>(entity);
                 manager.SetComponentData(entity, new MarblePhysicsProperties
                 { Restitution = BounceDrugSystem.Restitution(context, out _, out _) });
                 manager.SetComponentData(entity, new Lifetime { ExpireTick = checked(context.Round.Tick +

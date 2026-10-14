@@ -1,0 +1,13 @@
+{
+    "Id": 9026,
+    "Radius": 0.28,
+    "ScoreMultiplier": 1,
+    "StartingCount": 0,
+    "PurchaseQuantity": 1,
+    "Cooldown": 0,
+    "MaxTriggersPerBall": 0,
+    "Range": 0.2,
+    "Strength": 2,
+    "Value": 0,
+    "SourceId": "GluttonBag"
+}

@@ -1,0 +1,13 @@
+{
+    "Id": 9022,
+    "Radius": 0.28,
+    "ScoreMultiplier": 1,
+    "StartingCount": 0,
+    "PurchaseQuantity": 1,
+    "Cooldown": 0,
+    "MaxTriggersPerBall": 0,
+    "Range": 0.2,
+    "Strength": 1,
+    "Value": 1,
+    "SourceId": "Malfunction"
+}

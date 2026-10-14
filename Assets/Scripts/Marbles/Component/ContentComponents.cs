@@ -35,6 +35,7 @@ namespace MarblesECS
         public long Key;
         public int Count;
         public long LastTick;
+        public bool InheritOnCopy;
     }
     internal struct DeviceSplitSource : IBufferElementData { public int InstanceId; }
     internal struct DeviceCopySource : IBufferElementData { public int InstanceId; }

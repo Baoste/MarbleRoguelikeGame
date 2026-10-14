@@ -40,7 +40,7 @@ end
 function OnContact(api)
     sync(api)
     if active then
-        api:TrySettleAmount(api.Value * api.ScoreMultiplier)
+        api:TrySettleAmount(api.EffectiveValue * api.ScoreMultiplier)
     elseif charge < chargeRequired and api.RemainingDurability ~= 0 then
         if api:TryConsume(false) then charge = charge + 1 end
     end

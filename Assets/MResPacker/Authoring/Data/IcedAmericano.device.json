@@ -1,0 +1,14 @@
+{
+    "Id": 9032,
+    "Radius": 0.35,
+    "ScoreMultiplier": 1,
+    "StartingCount": 0,
+    "PurchaseQuantity": 1,
+    "RushCategory": true,
+    "Cooldown": 0,
+    "MaxTriggersPerBall": 0,
+    "Range": 0.35,
+    "Strength": 20,
+    "Value": 0.5,
+    "SourceId": "IcedAmericano"
+}

@@ -9,7 +9,7 @@ namespace MarblesECS
             var round = context.Round;
             // Compare the cheapest possible shot, so reducing flow remains possible when a large shot is unaffordable.
             var cheapest = AttributeRuntime.Enabled(context) ? AttributeRuntime.Prepare(context, 0) : null;
-            if (round.Phase == (byte)RoundPhase.Playing && context.Player.Blood <
+            if (round.Phase == (byte)RoundPhase.Playing && !RushSystem.Active(context) && context.Player.Blood <
                 (cheapest == null ? MarbleRules.Quote(context.Tuning, 0).Cost : cheapest.Quote.Cost * cheapest.Count))
             {
                 context.BeginDraining();
@@ -26,6 +26,8 @@ namespace MarblesECS
             round.RushRemaining = round.RushMeter = 0;
             context.Round = round;
             context.Transients.Clear(context);
+            context.BoardScores.Clear();
+            context.BoardRush.Clear();
             context.ClearFireInput();
             context.Manager.GetBuffer<ActiveScoreEffectData>(context.PlayerEntity).Clear();
             BounceDrugSystem.Clear(context);

@@ -1,6 +1,6 @@
 # MRes 装置目录
 
-本目录的原始 `.mres` 是装置外观、碰撞体、参数和行为的权威来源。当前包含以下 22 种装置，商店与背包使用这个目录；`Prefabs/Devices`、手工 prefab 绑定和 C# 装置行为分支已删除。
+本目录的原始 `.mres` 是装置外观、碰撞体、参数和行为的权威来源。当前包含以下 35 种装置，商店与背包使用这个目录；`Prefabs/Devices`、手工 prefab 绑定和 C# 装置行为分支已删除。
 
 | ID | 装置 | 包文件 |
 | --- | --- | --- |
@@ -26,6 +26,19 @@
 | 9017 | 炸弹 | `9017_Bomb.mres` |
 | 9018 | 复制体 | `9018_Duplicator.mres` |
 | 9019 | 造血工厂 | `9019_BloodFactory.mres` |
+| 9020 | 弹珠机关枪 | `9020_MarbleMachineGun.mres` |
+| 9021 | 草皮 | `9021_Turf.mres` |
+| 9022 | 故障装置 | `9022_Malfunction.mres` |
+| 9023 | more is more | `9023_MoreIsMore.mres` |
+| 9024 | less is more | `9024_LessIsMore.mres` |
+| 9025 | 雪糕机 | `9025_IceCreamMachine.mres` |
+| 9026 | 大胃袋 | `9026_GluttonBag.mres` |
+| 9027 | 星星灯 | `9027_StarLamp.mres` |
+| 9028 | 种植牙 | `9028_DentalImplant.mres` |
+| 9029 | 有锅气 | `9029_Wok.mres` |
+| 9030 | 降降火 | `9030_CoolingTea.mres` |
+| 9031 | 台球 | `9031_Billiards.mres` |
+| 9032 | 超大杯全冰美式 | `9032_IcedAmericano.mres` |
 
 ## 添加或更新装置
 
@@ -80,12 +93,17 @@ end
 - `CreateSplitBatch(count)`：Lua 指定等分子球的出口，全部生成成功才消耗原球；继承倍率，价值、质量和体积按数量均分。分流器向下生成 3 球，大喷菇向棋盘上方 120° 扇形均匀生成 8 球，成功各扣 1 耐久；`HasSplitFrom(instanceId)` 排除来源祖先，同实例再次经过时直接穿过。遵守通用分裂代数及最小质量/半径限制。
 - `CreateCopy()` / `TrySetValue` / `TrySpawn`：复制并单独指定价值和出射位置/速度，保留原球。复制体生成零价值副本，沿镜面反射方向等速出射；其他装置可对其增值。每颗原球一次，自己的复制后代不再复制但仍正常碰撞，成功扣 1 耐久。
 - `SetCurrent(attribute, value)` / `RestoreBlood(amount)`：分别替换弹珠指定属性的当前值、按上限回复玩家血量。造血工厂将价值减半向下取整，按减半后价值 ×5 回复血量；正价值处理扣 1，零价值不触发。回血足够后可从耗尽血量状态继续发射，主动提现不会被取消。
+- `CreatePortion(value)`：成功生成一颗子球才从原球转移指定价值，失败保留剩余值。机关枪组合滞留回调逐颗射出价值 1 的小球，0.1 秒一颗，在下方 45° 扇形往返扫射；不足 1 的余数舍弃，完成一批扣 1 耐久，忙碌时其他球及自身后代直接穿过。
 - `TrySpawnVisual` / `ForEachBallInRadius`：装置事件组合计时移动视觉、完成回调及范围逐球处理。炸弹每 5 秒投出一次，1 秒后爆炸，把范围内符合条件的每颗球八等分；爆炸一次扣 1 耐久，空爆也扣。投掷物不算弹珠，不参与物理碰撞和计分。
 - `TryConsume(refund)`、`TrySettleAmount(score)`、`AddCoins(amount)`、`Children(count, replace)`：只负责吞噬、精确结算、加金币、产生子球；耐久由 Lua 组合登记。旧 `Consume` / `TrySettle` 保留隐式计数兼容。
 - `ScaleVelocity(scale)`、`Exit(direction, speed, angle)`、`ExitPartner(direction, speed)`：运动操作；方向为 `down` 或 `forward`，出口仍执行障碍检查。
 - `StoredValue`、`RushOnSettlement`、`RefundOnDespawn`、`ExitDown`、`TransportLockedUntil`：装置或弹珠状态。
 - `Coins`：只读当前钱包；猪猪存钱罐每满 10 金币提供 `1 + 0.1 × 档数` 的倍率，不花金币。
 - `AddScoreMultiplier(amount)`：传入完整倍率，累加 `amount - 1`，到得分区以 `1 + 累计增量` 统一计算。两次 1.5 得到 2，两次 1.2 得到 1.4；基础 1 只算一次。`MultiplyScore` 是相同语义的旧包兼容名。Multi Ding、猪猪存钱罐、装置通用倍率修正与旧倍率钉统一使用此规则。
+- `SetDeviceScoreMultiplier(amount)`：替换当前累计装置倍率；故障装置抽到 0 时设为 0，随后仍可通过 `AddScoreMultiplier` 增加，进入得分区按当前累计值结算。
+- `CountPlacedDevices(excludedInstanceId = 0)`：实时统计已放置实例，可排除指定实例。more is more 排除自身，每个其他装置提供 +2，单次最多 +20；less is more 同样排除自身，从 +20 起每个其他装置减 2，最低为 0。耗尽但仍在场的装置计入，库存不计；公式由各自 Lua 决定。
+- `RoundId` 配合 Lua 实例状态：雪糕机每回合依次提供 ×10、×9 至 ×2，之后 ×1 无效果；每次只累加“倍率 − 1”，有效作用扣耐久，下一回合重置次数。
+- `OnOffer` / `Accept` 与 `GetRoundValue` / `SetRoundValue`：接受库存物品并准备下一回合的实例数值；回调成功才同时保存数值并消耗物品。大胃袋用 Lua 按普通/稀有/史诗/传奇增加 2/4/6/8，碰撞时施加增量，下一轮布置清空。
 - `AddRushChance`、`Roll`、`BreakPinsOnCross`、`RemoveDevice`：概率、随机与通用场景操作。
 
 磁力脚本通过 `DeviceFieldContext` 的距离、方向、磁性参数计算作用力，再调用 `AddRadialForce`。C# 只负责通用物理执行及总力/速度上限，磁极方向与距离衰减公式在包内 Lua。
@@ -99,3 +117,5 @@ end
 - `Marbles ECS/实体UI/验证跨回合购买与鼠标点击`：真实 TestScene 的购买、预览、摆放和跨回合交互。
 
 原 `Prefabs/DeviceItem.prefab` 是库存 UI 卡片，继续使用；普通固定钉和弹珠也保留其通用组件。
+
+RUSH 已迁移为 100 点累积条。`RushChanceAdd`、`RushOnSettlement`、`AddRushChance` 只保留兼容，不参与新触发。球贡献、固定得分区入账、临时价值和编号显示 API 统一见 [装置 Lua API](../../Docs/Device_Lua_API.md)。当前台球为 `9031_Billiards.mres`，有锅气的额外贡献为 +10，装置增益不翻倍。
