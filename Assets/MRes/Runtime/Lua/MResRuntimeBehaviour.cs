@@ -10,6 +10,7 @@ namespace MRes
             "OnCollisionExit", "OnTriggerEnter", "OnTriggerStay", "OnTriggerExit" };
         private MResLuaScript script;
         private bool ownsScript;
+        private bool started;
         internal void Initialize(string source, MResMetadata metadata, string name, MResLuaScript shared = null)
         {
             ownsScript = shared == null;
@@ -23,9 +24,11 @@ namespace MRes
             catch (Exception e) { enabled = false; Debug.LogException(e, this); }
         }
         internal void PhysicsEvent(int index, GameObject other) => Invoke(index, MResLuaObject.Other(other));
-        private void Start() => Invoke(0);
-        private void Update() => Invoke(1, Time.deltaTime);
-        private void FixedUpdate() => Invoke(2, Time.fixedDeltaTime);
+        private void Start() { if (!MResManualSimulation.Enabled) StartScript(); }
+        private void StartScript() { if (!started) { started = true; Invoke(0); } }
+        private void Update() { if (!MResManualSimulation.Enabled) Invoke(1, Time.deltaTime); }
+        private void FixedUpdate() { if (!MResManualSimulation.Enabled) Invoke(2, Time.fixedDeltaTime); }
+        internal void ManualTick(float seconds) { StartScript(); Invoke(1, seconds); Invoke(2, seconds); }
         private void OnCollisionEnter(Collision c) => PhysicsEvent(3, c.gameObject);
         private void OnCollisionStay(Collision c) => PhysicsEvent(4, c.gameObject);
         private void OnCollisionExit(Collision c) => PhysicsEvent(5, c.gameObject);

@@ -1,9 +1,0 @@
-{
-  "fingerprint": "c9348c251b15706404b91251209e8a517d7a039436bc8c1db9838cf1d9b4ddee",
-  "seed": 20260930,
-  "runs_per_strategy": 10000,
-  "physical_profile": "66b4d03589ec2c1839a82caf5ccec8c0",
-  "zone_multipliers": {
-    "2": 6.0
-  }
-}

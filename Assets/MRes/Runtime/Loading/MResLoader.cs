@@ -32,7 +32,7 @@ namespace MRes
         {
             options = options ?? new MResLoadOptions();
             if (package == null) throw new ArgumentNullException(nameof(package));
-            if (package.Materials.Count > 0 && registry == null) throw new MResShaderException("Set MResLoader.ShaderRegistry or pass a registry to Load.");
+            if (options.LoadRenderingResources && package.Materials.Count > 0 && registry == null) throw new MResShaderException("Set MResLoader.ShaderRegistry or pass a registry to Load.");
             var handle = new MResLoadHandle(package.Metadata);
             try
             {
@@ -40,11 +40,13 @@ namespace MRes
                 var meshes = new Dictionary<string, Mesh>(StringComparer.Ordinal);
                 var physics = new Dictionary<string, PhysicsMaterialType>(StringComparer.Ordinal);
                 var materials = new Dictionary<string, Material>(StringComparer.Ordinal);
-                foreach (var pair in package.Textures) textures.Add(pair.Key, MResTextureReader.Create(pair.Value, handle));
+                if (options.LoadRenderingResources)
+                    foreach (var pair in package.Textures) textures.Add(pair.Key, MResTextureReader.Create(pair.Value, handle));
                 foreach (var pair in package.Meshes) meshes.Add(pair.Key, MResMeshReader.Create(pair.Value, handle));
                 foreach (var pair in package.PhysicsMaterials) physics.Add(pair.Key, MResPhysicsMaterialReader.Create(pair.Value, handle));
                 foreach (var pair in package.Materials)
-                    materials.Add(pair.Key, MResMaterialReader.Create(pair.Value, registry.Resolve(pair.Value.ShaderId), textures, handle));
+                    materials.Add(pair.Key, options.LoadRenderingResources ?
+                        MResMaterialReader.Create(pair.Value, registry.Resolve(pair.Value.ShaderId), textures, handle) : null);
                 var nodes = MResPrefabBuilder.Build(package.Prefab, meshes, materials, physics, handle);
                 handle.Root.AddComponent<MResLifetime>().Handle = handle;
                 if (options.ExecuteLua && package.LuaSource != null)

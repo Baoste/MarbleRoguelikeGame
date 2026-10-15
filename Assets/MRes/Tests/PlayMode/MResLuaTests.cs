@@ -24,6 +24,7 @@ namespace MRes.Tests
             foreach (var handle in handles) handle.Dispose(); handles.Clear();
             if (other != null) Object.Destroy(other);
             Object.Destroy(registry); Physics.autoSimulation = autoSimulation;
+            MResManualSimulation.Enabled = false;
             MResLuaRuntime.Dispose(); yield return null;
         }
         private MResLoadHandle Load(string lua, string nodes = null)
@@ -47,10 +48,47 @@ namespace MRes.Tests
             Assert.AreSame(vm, MResLuaRuntime.Env); float value = b.Metadata.value; yield return null;
             Assert.Greater(b.Metadata.value, value);
         }
+        [UnityTest] public IEnumerator ManualClockAdvancesOnlyOnExplicitStepsAndStartsOnce()
+        {
+            MResManualSimulation.Enabled = true;
+            var h = Load("starts=0; function Start() starts=starts+1; self:SetPosition(starts,0,0) end " +
+                "function Update(dt) metadata.value=metadata.value+dt end " +
+                "function FixedUpdate(dt) self:Translate(0,dt,0) end", MResFixture.Node(1,-1,"Manual"));
+            float initial = h.Metadata.value;
+            yield return null; yield return new WaitForFixedUpdate(); yield return null;
+            Assert.AreEqual(Vector3.zero, h.Root.transform.position);
+            Assert.AreEqual(initial, h.Metadata.value);
+            MResManualSimulation.Step(h.Root.scene, 0.02f);
+            Assert.AreEqual(new Vector3(1, 0.02f, 0), h.Root.transform.position);
+            Assert.That(h.Metadata.value, Is.EqualTo(initial + 0.02f).Within(0.00001f));
+            yield return null; yield return new WaitForFixedUpdate(); yield return null;
+            Assert.AreEqual(new Vector3(1, 0.02f, 0), h.Root.transform.position);
+            MResManualSimulation.Step(h.Root.scene, 0.02f);
+            Assert.AreEqual(new Vector3(1, 0.04f, 0), h.Root.transform.position);
+            Assert.That(h.Metadata.value, Is.EqualTo(initial + 0.04f).Within(0.00002f));
+        }
         [UnityTest] public IEnumerator RealCollisionCallsLuaAndAppliesForceToOtherBody()
         {
             Physics.autoSimulation = false;
             var h = Load("function OnCollisionEnter(other) metadata.value=1; other:AddForce(0,600,0) end");
+            other = GameObject.CreatePrimitive(PrimitiveType.Sphere); other.transform.localScale = Vector3.one * 0.5f;
+            other.transform.position = new Vector3(0,0.24f,0); var body = other.AddComponent<Rigidbody>(); body.useGravity = false;
+            yield return null;
+            Physics.SyncTransforms(); Physics.Simulate(0.02f); Physics.Simulate(0.02f);
+            Assert.AreEqual(1, h.Metadata.value); Assert.Greater(body.velocity.y, 1);
+        }
+        [UnityTest] public IEnumerator HeadlessResourcesKeepCollidersMeshesRenderersAndLuaCollisions()
+        {
+            Physics.autoSimulation = false;
+            var package = MResLoader.Read(MResFixture.Create(lua:
+                "function OnCollisionEnter(other) metadata.value=1; other:AddForce(0,600,0) end"));
+            var h = MResLoader.Load(package, null, new MResLoadOptions { LoadRenderingResources = false });
+            handles.Add(h);
+            Assert.AreEqual(3, h.Root.GetComponent<MeshRenderer>().sharedMaterials.Length);
+            Assert.IsTrue(h.Root.GetComponent<MeshRenderer>().sharedMaterials.All(m => m == null));
+            Assert.IsNotNull(h.Root.GetComponent<MeshFilter>().sharedMesh);
+            Assert.IsNotNull(h.Root.GetComponentInChildren<MeshCollider>(true).sharedMesh);
+            Assert.AreEqual(0.5f, h.Root.GetComponent<BoxCollider>().sharedMaterial.bounciness);
             other = GameObject.CreatePrimitive(PrimitiveType.Sphere); other.transform.localScale = Vector3.one * 0.5f;
             other.transform.position = new Vector3(0,0.24f,0); var body = other.AddComponent<Rigidbody>(); body.useGravity = false;
             yield return null;

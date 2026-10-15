@@ -39,6 +39,7 @@ namespace MarblesECS.PhysX
         public bool Paused { get; private set; }
         public bool RequiresRestart { get; private set; }
         public bool IsReady => simulation != null && simulation.IsAlive;
+        internal bool AutomationControlled { get; set; }
         public MarbleSnapshot Snapshot => !IsReady ? default : simulation.Snapshot;
         public event Action<MarbleScoreEvent> Scored;
         public event Action<float> BloodChanged;
@@ -115,7 +116,7 @@ namespace MarblesECS.PhysX
                 return;
 
             bool canFire = !Paused && simulation.Snapshot.Phase == RoundPhase.Playing;
-            bool held = canFire && (externalFireHeld || SpaceHeld());
+            bool held = canFire && (externalFireHeld || (!AutomationControlled && SpaceHeld()));
             if (held == submittedFireHeld)
                 return;
 

@@ -1,0 +1,7 @@
+{
+  "name": "GameAI.Tests.Editor",
+  "references": ["MarblesECS.Runtime", "MarblesECS.Rules", "Unity.Entities", "Unity.Collections"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}

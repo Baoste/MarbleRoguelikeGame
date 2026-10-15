@@ -15,7 +15,9 @@ namespace MarblesECS.Presentation
             var catalog = DeviceResourceCatalog.Current;
             var resource = catalog.Get(device.DefinitionId);
             var handle = MResLoader.Load(resource.Package, catalog.Shaders,
-                new MResLoadOptions { ExecuteLua = !preview, ActivateRoot = false, SharedScript = script });
+                new MResLoadOptions { ExecuteLua = !preview, ActivateRoot = false, SharedScript = script,
+                    LoadRenderingResources = !(MResManualSimulation.Enabled &&
+                        SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) });
             try
             {
                 var root = handle.Root;

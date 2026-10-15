@@ -152,7 +152,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
             Mathf.Abs(point.z) <= PlacementPlaneSize.y * 0.5f;
     }
 
-    private void SyncPlacedObjects()
+    public void SyncPlacedObjects()
     {
         int revision = Controller.Session.LayoutRevision;
         int roundId = Controller.Snapshot.RoundId;
@@ -178,6 +178,36 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
 
     private void SetDeviceTransform(Transform device, float boardX, float boardZ)
     {
+        GetDevicePose(boardX, boardZ, out Vector3 position, out Quaternion rotation);
+        device.SetPositionAndRotation(position, rotation);
+    }
+
+    public bool CanPlaceAt(int instanceId, float boardX, float boardZ)
+    {
+        if (Controller == null || BoardRoot == null) return false;
+        GetDevicePose(boardX, boardZ, out Vector3 position, out _);
+        float scale = Mathf.Max(Mathf.Abs(BoardRoot.lossyScale.x), Mathf.Abs(BoardRoot.lossyScale.z));
+        return IsInsidePlacementPlane(position) && Controller.CanPlaceDevice(instanceId, boardX, boardZ, position, scale);
+    }
+
+    public bool PlaceAt(int instanceId, float boardX, float boardZ)
+    {
+        if (!CanPlaceAt(instanceId, boardX, boardZ)) return false;
+        GetDevicePose(boardX, boardZ, out Vector3 position, out _);
+        float scale = Mathf.Max(Mathf.Abs(BoardRoot.lossyScale.x), Mathf.Abs(BoardRoot.lossyScale.z));
+        bool placed = Controller.PlaceDevice(instanceId, boardX, boardZ, position, scale);
+        if (placed) SyncPlacedObjects();
+        return placed;
+    }
+
+    public Vector3 PlanePointToBoard(float x, float z)
+    {
+        GetPlacementPlanePose(out Vector3 position, out Quaternion rotation);
+        return BoardRoot.InverseTransformPoint(position + rotation * new Vector3(x, 0, z));
+    }
+
+    public void GetDevicePose(float boardX, float boardZ, out Vector3 position, out Quaternion rotation)
+    {
         GetPlacementPlanePose(out Vector3 planePosition, out Quaternion planeRotation);
         Vector3 planeUp = planeRotation * Vector3.up;
         Vector3 boardPoint = BoardRoot.TransformPoint(new Vector3(boardX, 0f, boardZ));
@@ -196,9 +226,8 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
             pointOnPlane = plane.ClosestPointOnPlane(boardPoint);
         }
 
-        device.SetPositionAndRotation(
-            pointOnPlane + planeUp * DevicePlaneDistance,
-            planeRotation);
+        position = pointOnPlane + planeUp * DevicePlaneDistance;
+        rotation = planeRotation;
     }
 
     private void GetPlacementPlanePose(out Vector3 position, out Quaternion rotation)

@@ -7,6 +7,7 @@ namespace MarblesECS.PhysX
     {
         private void Update()
         {
+            if (AutomationControlled) return;
             if (!IsReady) return;
             CompleteRandomScoreRevealIfDue();
             UpdateFireInput();
@@ -21,14 +22,7 @@ namespace MarblesECS.PhysX
                 try
                 {
                     if (LaunchPoint == null) throw new InvalidOperationException("LaunchPoint在运行中被销毁。");
-                    StepLauncher(step);
-                    simulation.BeforePhysics(step, bridge, LaunchWorldPosition, LaunchPoint.rotation);
-                    PublishBloodIfChanged();
-                    Physics.SyncTransforms();
-                    bridge.Simulate(step);
-                    simulation.AfterPhysics(bridge);
-                    PublishBloodIfChanged();
-                    PublishRandomScoreResultIfReady();
+                    AdvanceGameTick(false);
                 }
                 catch (Exception error)
                 {
@@ -47,6 +41,25 @@ namespace MarblesECS.PhysX
             // 超载时丢弃额外积欠时间，整局模拟一起放慢，不用巨大dt追赶导致穿透。
             if (accumulator >= step) accumulator %= step;
             FlushScores();
+        }
+
+        // Shared by the player loop and the training runner; both use the same bridge substeps.
+        private void AdvanceGameTick(bool automated)
+        {
+            if (automated)
+            {
+                simulation.SetLauncherMovementInput(0, AutoMoveLauncher);
+                simulation.StepLauncherMovement(step);
+                SyncLauncherTransform();
+            }
+            else StepLauncher(step);
+            simulation.BeforePhysics(step, bridge, LaunchWorldPosition, LaunchPoint.rotation);
+            PublishBloodIfChanged();
+            Physics.SyncTransforms();
+            bridge.Simulate(step);
+            simulation.AfterPhysics(bridge);
+            PublishBloodIfChanged();
+            if (!automated) PublishRandomScoreResultIfReady();
         }
 
     }

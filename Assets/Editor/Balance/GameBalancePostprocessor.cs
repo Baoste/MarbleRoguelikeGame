@@ -7,6 +7,8 @@ namespace MarblesECS.Editor
     {
         private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
         {
+            // AI builds must use the checked/edited JSON, even on a fresh Library import.
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "--game-ai-build") >= 0) return;
             foreach (string path in imported)
             {
                 // Content Excel imports are explicit; saving the workbook must not overwrite GameContent.json.

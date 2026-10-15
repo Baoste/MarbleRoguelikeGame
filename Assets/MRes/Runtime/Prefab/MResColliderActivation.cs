@@ -41,6 +41,10 @@ namespace MRes
         private void OnDisable() { foreach (var state in states) state.WasEnabled = false; }
         private void FixedUpdate()
         {
+            if (!MResManualSimulation.Enabled) ManualTick();
+        }
+        internal void ManualTick()
+        {
             foreach (var state in states)
             {
                 if (state.Collider == null) continue;

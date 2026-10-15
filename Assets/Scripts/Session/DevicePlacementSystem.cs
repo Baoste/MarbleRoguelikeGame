@@ -6,6 +6,19 @@ namespace MarblesECS
     {
         internal static bool Place(SimulationContext context, int instanceId, float x, float z, float clearance)
         {
+            if (!CanPlace(context, instanceId, x, z, clearance) ||
+                !CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
+            var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+            device.X = x; device.Z = z; device.Placed = true;
+            context.Manager.SetComponentData(entity, device);
+            var campaign = context.Campaign;
+            campaign.LayoutRevision++;
+            context.Campaign = campaign;
+            return true;
+        }
+
+        internal static bool CanPlace(SimulationContext context, int instanceId, float x, float z, float clearance)
+        {
             if (!MarbleRules.IsFinite(x) || !MarbleRules.IsFinite(z) ||
                 !MarbleRules.IsFinite(clearance) || clearance < 0 ||
                 !CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
@@ -23,13 +36,6 @@ namespace MarblesECS
                         distance = radius + CampaignStateUtility.Device(context, other.DefinitionId).Radius + definition.GroupClearance;
                     if (Overlaps(x, z, other.X, other.Z, distance)) return false;
                 }
-            device.X = x;
-            device.Z = z;
-            device.Placed = true;
-            context.Manager.SetComponentData(entity, device);
-            var campaign = context.Campaign;
-            campaign.LayoutRevision++;
-            context.Campaign = campaign;
             return true;
         }
 
