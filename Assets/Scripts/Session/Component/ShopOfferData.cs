@@ -2,7 +2,7 @@ using Unity.Entities;
 
 namespace MarblesECS
 {
-    public enum ShopItemKind : byte { Device, Drug }
+    public enum ShopItemKind : byte { Device }
 
     internal struct ShopOfferData : IBufferElementData
     {

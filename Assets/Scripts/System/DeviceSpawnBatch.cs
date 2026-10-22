@@ -63,7 +63,7 @@ namespace MarblesECS
                     var spawn = new AttributeRuntime.Spawn
                     {
                         Values = values, Count = 1,
-                        Features = new BallFeatures { SpawnSourceId = sourceId, RushScoreMultiplier = 1 },
+                        Features = new BallFeatures { SpawnSourceId = sourceId },
                         Quote = new ShotQuote(0, 0, radius, mass, values[(int)GameAttribute.BALL_BASE_VALUE], 1)
                     };
                     if (!ContentSpawnSystem.Create(c, spawn, item.Position, Quaternion.identity, item.Velocity, out var ball)) return false;

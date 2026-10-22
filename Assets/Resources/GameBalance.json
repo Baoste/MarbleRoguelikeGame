@@ -5,12 +5,11 @@
         "MinInvestment": 1.0,
         "MaxInvestment": 5.0,
         "MarbleDefinitionId": 1,
-        "FireIntervalSeconds": 0.1,
+        "FireIntervalSeconds": 0.30000001192092898,
         "MaxActiveMarbles": 256,
         "DrainTimeoutSeconds": 15.0,
         "DespawnBelowY": -10.0,
         "WorldBoundsExtent": 200.0,
-        "MaxActiveBounceDrugs": 16,
         "MaxPerMarbleScore": 1000000000,
         "MaxRoundScore": 9000000000000,
         "TargetScore": 350,
@@ -22,7 +21,6 @@
         "ShopOfferCount": 4,
         "SellRatio": 0.5,
         "MaxOwnedDevices": 20,
-        "MaxDrugInventory": 30,
         "MaxTotalScore": 9000000000000000
     },
     "Stages": [

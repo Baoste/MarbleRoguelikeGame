@@ -18,12 +18,7 @@ namespace MarblesECS
                     Stage(3, 960, 60, 30, 1.1), Stage(4, 1650, 80, 40, 1.2),
                     Stage(5, 2520, 105, 52, 1.3), Stage(6, 3750, 135, 68, 1.4)
                 },
-                Devices = System.Array.Empty<DeviceDefinition>(),
-                Drugs = new[]
-                {
-                    new DrugDefinition { Id = 1, Name = "弹性剂", Price = 10, RestitutionMultiplier = 1.5f, StartingCount = 1 },
-                    new DrugDefinition { Id = 2, Name = "缓弹剂", Price = 8, RestitutionMultiplier = 0.65f, StartingCount = 1 }
-                }
+                Devices = System.Array.Empty<DeviceDefinition>()
             };
         }
 

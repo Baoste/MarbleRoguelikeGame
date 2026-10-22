@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
@@ -20,7 +19,7 @@ namespace MarblesECS.Editor
             string json = JsonUtility.ToJson(result, true) + "\n";
             if (File.ReadAllText(Output) != json) BalanceAssetWriter.Write(Output, json);
             AssetDatabase.ImportAsset(Output);
-            Debug.Log("Imported " + result.Attributes.Length + " attributes, " + result.Devices.Length + " devices and " + result.Drugs.Length + " drugs. Restart Play to apply.");
+            Debug.Log("Imported " + result.Attributes.Length + " attributes, " + result.Devices.Length + " devices. Restart Play to apply.");
         }
         public static GameContent Read(string path, GameContent recipes)
         {
@@ -48,26 +47,7 @@ namespace MarblesECS.Editor
                 Debug.LogWarning("Workbook has the previous three-outcome schema. Applying the confirmed four outcomes at 25%; add GAMBLE_QUADRUPLE_CHANCE to the workbook to author probabilities directly.");
             }
             result.Attributes = attributes.ToArray();
-            var drugs = new List<DrugDefinition>();
-            foreach (var row in sheets["设计总表"])
-            {
-                string kind = Cell(row, 2), name = Cell(row, 1);
-                if (kind == "药物")
-                {
-                    var recipe = recipes.Drugs.SingleOrDefault(x => x.Name == name);
-                    if (recipe == null) throw new InvalidDataException("Drug behavior is not registered: " + name);
-                    if (recipe.Description != Cell(row, 7)) throw new InvalidDataException(name + ": behavior prose changed. Review its AttributeEffect recipe before importing.");
-                    var drug = recipe.Copy(); drug.SourceId = Cell(row, 0);
-                    var match = Regex.Match(Cell(row, 10), @"(\d+(?:\.\d+)?)秒");
-                    if (!match.Success) throw new InvalidDataException("Drug window must specify seconds: " + name);
-                    drug.DurationSeconds = float.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
-                    drug.Stackable = Cell(row, 12) == "不限次数";
-                    drugs.Add(drug);
-                }
-            }
-            // Legacy definitions were migrated from GameBalance and are not authored in this workbook.
-            drugs.AddRange(recipes.Drugs.Where(x => x.Kind == DrugKind.LegacyBounce).Select(x => x.Copy()));
-            result.Drugs = drugs.ToArray(); result.Validate();
+            result.Validate();
             double probabilities = result.Definition(GameAttribute.GAMBLE_LOSS_CHANCE).DefaultValue + result.Definition(GameAttribute.GAMBLE_RETURN_CHANCE).DefaultValue +
                 result.Definition(GameAttribute.GAMBLE_WIN_CHANCE).DefaultValue + result.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue;
             if (Math.Abs(probabilities - 1) > .000001) throw new InvalidDataException("Base gambling probabilities must sum to 1.");

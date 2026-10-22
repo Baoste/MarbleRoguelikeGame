@@ -32,26 +32,8 @@ namespace MarblesECS.Presentation
             GUI.enabled = true;
             GUILayout.Label(Controller.Session.CanCashOut ? "目标已达成；提现把剩余血量换成金币，仍会等待场内球排空。" : "继续得分达到当前累计目标后，可提前提现。");
             GUILayout.Label(lastScore);
-            DrawDrugs(true);
         }
 
-        private void DrawDrugs(bool usable)
-        {
-            GUILayout.Space(5);
-            GUILayout.Label("药物库存（只影响药效期间新发射的球）");
-            var drugs = Controller.GetDrugInventory();
-            if (drugs.Length == 0) GUILayout.Label("暂无药物。通关后可在商店购买。");
-            foreach (var drug in drugs)
-            {
-                GUILayout.Label(drug.Name + " ×" + drug.Count + " / " + drug.DurationSeconds.ToString("0") + "s");
-                GUILayout.Label(drug.Description);
-                if (drug.ActiveDoses > 0) GUILayout.Label("生效 " + drug.ActiveDoses + " 层 · 剩余 " + drug.SecondsRemaining.ToString("0.0") + "s");
-                if (!usable) continue;
-                GUI.enabled = !Controller.Paused && drug.Count > 0;
-                if (GUILayout.Button("使用 " + drug.Name))
-                    feedback = Controller.UseDrug(drug.DefinitionId) ? "药物已使用，将影响窗口内新发射的球。" : "当前不能使用（库存不足或阶段不允许）。";
-                GUI.enabled = true;
-            }
-        }
+
     }
 }

@@ -53,7 +53,7 @@ namespace MarblesECS.Editor.Diegetic
             var models=new GameObject("模型_保留原有材质").transform;models.SetParent(root.transform,false);
             foreach(var p in source.objects)
             {
-                if(p.group=="物品板")continue; // Import the inclined panel, matching the player's view in the supplied layout.
+                if(p.group=="物品板" || p.group=="药剂架子" || p.group=="Original / 药品槽")continue; // Import the inclined panel, matching the player's view in the supplied layout.
                 if(!groups.TryGetValue(p.group,out var group)){group=new GameObject(p.group).transform;group.SetParent(models,false);groups[p.group]=group;}
                 var mesh=ReadMesh(SourceData+"/"+p.file);string asset=Art+"/Meshes/"+Path.GetFileNameWithoutExtension(p.file)+".asset";
                 var existing=AssetDatabase.LoadAssetAtPath<Mesh>(asset);
@@ -86,18 +86,6 @@ namespace MarblesECS.Editor.Diegetic
             rig.LeverPivot.rotation=Quaternion.AngleAxis(-25,rig.LeverAxis);
             rig.LeverHighlight=Highlight(rig.LeverPivot,rig.OutlineMaterial);
             rig.LeverAnchor=Anchor("结算触控锚点",anchors,P(aux,new Vector3(5.55f,-.085f,1.10f)),rig.ViewCamera.transform.rotation);
-            string drug="药剂架子";
-            string[][] bottles={new[]{"Cylinder.024","Cylinder.025","COLLECTOR / 原始三联血柱.004"},new[]{"Cylinder.028","Cylinder.029","COLLECTOR / 原始三联血柱.005"},new[]{"Cylinder.020","Cylinder.021","COLLECTOR / 原始三联血柱.001"},new[]{"Cylinder.016","Cylinder.017","COLLECTOR / 原始三联血柱.026"}};
-            var centers=new[]{new Vector3(6.33f,-.068f,1.872f),new Vector3(6.16f,.008f,1.872f),new Vector3(6.232f,.174f,1.872f),new Vector3(6.176f,.293f,1.872f)};
-            rig.DrugSlots=new DiegeticMachineUI.DrugSlot[4];
-            for(int i=0;i<4;i++)
-            {
-                var contents=new GameObject("药剂内容_槽"+(i+1)).transform;contents.SetParent(groups[drug],false);
-                foreach(string n in bottles[i])pieces[drug+"/"+n].SetParent(contents,true);
-                var slot=new DiegeticMachineUI.DrugSlot{Contents=contents.gameObject,Anchor=Anchor("药剂槽"+(i+1)+"_触控锚点",anchors,P(drug,centers[i])+rig.ViewCamera.transform.forward*-.32f,rig.ViewCamera.transform.rotation)};
-                slot.Highlight=Highlight(contents,rig.OutlineMaterial);rig.DrugSlots[i]=slot;
-            }
-            rig.DrugPagerAnchor=Anchor("药架翻页锚点",anchors,P(drug,new Vector3(6.0f,.1f,1.56f)),rig.ViewCamera.transform.rotation);
             string board="物品板2";rig.ItemBoard=groups[board];
             var bounds=new Bounds();bool first=true;foreach(var r in rig.ItemBoard.GetComponentsInChildren<Renderer>()){if(first){bounds=r.bounds;first=false;}else bounds.Encapsulate(r.bounds);}
             var children=rig.ItemBoard.Cast<Transform>().ToArray();foreach(var child in children)child.SetParent(models,true);
@@ -119,9 +107,7 @@ namespace MarblesECS.Editor.Diegetic
             rig.BuildVisuals();rig.BindScoreListener();
             foreach(var name in new[]{"ScorePanel","DrugPanel","DevicePanel","BloodSlider","CashOutButton","ContinueButton"})
             {var t=GameObject.Find("Canvas").transform.Find(name);if(t)t.gameObject.SetActive(false);}
-            foreach(var ui in UnityEngine.Object.FindObjectsOfType<OwnedDrugPanelUI>())ui.enabled=false;
             foreach(var ui in UnityEngine.Object.FindObjectsOfType<OwnedDevicePanelUI>())ui.enabled=false;
-            foreach(var ui in UnityEngine.Object.FindObjectsOfType<ContentDrugPanel>())ui.enabled=false;
             rig.Placement.BlockClicksOverUI=true;
             EditorUtility.SetDirty(rig);AssetDatabase.SaveAssets();EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);
             DiegeticUIProbe.Capture(rig.ViewCamera,W+"/previews/02_Unity_installed.png",1920,1080);

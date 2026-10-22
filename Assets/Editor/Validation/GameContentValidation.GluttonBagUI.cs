@@ -72,7 +72,6 @@ namespace MarblesECS.Editor
                     // Exercise the active diegetic card's real pointer handlers as well as the legacy inventory button.
                     rigObject = new GameObject("Diegetic offer test"); rigObject.SetActive(false);
                     var rig = rigObject.AddComponent<DiegeticMachineUI>(); rig.Controller = controller; rig.Placement = placement;
-                    rig.DrugSlots = Array.Empty<DiegeticMachineUI.DrugSlot>();
                     typeof(DiegeticMachineUI).GetField("slide", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(rig, 1f);
                     var ids = (int[])typeof(DiegeticMachineUI).GetField("deviceIds", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(rig); ids[0] = source;
                     var hit = cardObject.AddComponent<DiegeticUIHit>(); hit.Owner = rig; hit.Kind = 2; hit.Index = 0;

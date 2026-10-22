@@ -9,11 +9,7 @@ namespace MarblesECS
         public AttributeEffect Effect;
         public long ExpireTick;
     }
-    internal struct ActiveDrugData : IBufferElementData
-    {
-        public uint DefinitionId;
-        public double EndsAt;
-    }
+
     internal struct BallFeatures : IComponentData
     {
         public ulong Family;
@@ -24,8 +20,8 @@ namespace MarblesECS
         public int ReplicationGeneration;
         public int PiercesUsed;
         public long BirthTick;
-        public bool Replicates, Magnetic, ExitDown, Revive, SplitConsumed;
-        public double RushChanceAdd, RushScoreMultiplier, PortalLockedUntil;
+        public bool Magnetic, ExitDown, Revive, SplitConsumed;
+        public double RushChanceAdd, PortalLockedUntil;
         public float PierceChance, MagneticRadius, CloverChance;
         public float RefundBlood;
         public long MovedTick;

@@ -57,7 +57,7 @@ namespace MarblesECS.Editor
                 Check(DeviceCatalogBuilder.SyncContentSnapshot(path, expected), "outdated snapshot is replaced");
                 content = JsonUtility.FromJson<GameContent>(File.ReadAllText(path));
                 Check(Devices(content.Devices) == Devices(expected), "exact current MRes definitions, no legacy rows");
-                Check(OtherContent(content) == others, "attributes/drugs/content rules are preserved");
+                Check(OtherContent(content) == others, "attributes/content rules are preserved");
                 string text = File.ReadAllText(path);
                 Check(!DeviceCatalogBuilder.SyncContentSnapshot(path, expected) && text == File.ReadAllText(path), "unchanged sync does not rewrite");
                 var changed = expected.Skip(1).Select(d => d.Copy()).ToArray();

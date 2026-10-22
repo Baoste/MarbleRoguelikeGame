@@ -50,26 +50,7 @@ namespace MarblesECS
             if (CanAcceptInput) context.BeginDraining();
         }
 
-        /// <summary>One score-drug type: use again to replace strength and refresh duration.</summary>
-        public bool ApplyScoreDrug(double multiplier, float durationSeconds)
-        {
-            ThrowIfDisposed();
-            MarbleRules.CheckMultiplier(multiplier);
-            if (!MarbleRules.IsFinite(durationSeconds) || durationSeconds <= 0)
-                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
-            if (!CanAcceptInput) return false;
-            var effects = context.Manager.GetBuffer<ActiveScoreEffectData>(context.PlayerEntity);
-            effects.Clear();
-            effects.Add(new ActiveScoreEffectData
-            {
-                EffectId = 1, Multiplier = multiplier, EndsAt = context.Round.Time + durationSeconds
-            });
-            // UI observes the newly applied effect immediately; existing balls are recomputed pre-physics.
-            var player = context.Player;
-            player.DrugScoreMultiplier = multiplier;
-            context.Player = player;
-            return true;
-        }
+
 
     }
 }

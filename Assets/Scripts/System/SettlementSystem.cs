@@ -18,10 +18,9 @@ namespace MarblesECS
             var marble = manager.GetComponentData<MarbleScore>(entity);
             var chance = manager.GetComponentData<MarbleRush>(entity);
             var modifiers = MarbleModifierSystem.Aggregate(context, entity);
-            double drug = context.Player.DrugScoreMultiplier;
             double rush = 1d;
             long score = MarbleRules.Settle(RushSystem.BallValue(context, entity), marble.ScoreBonus, modifiers.ScoreAdd,
-                marble.ScoreMultiplier, MarbleRules.CombineDeviceMultiplier(modifiers.ScoreMul, drug),
+                marble.ScoreMultiplier, modifiers.ScoreMul,
                 contact.Multiplier, contact.FlatScore, rush, context.Tuning.MaxPerMarbleScore);
             bool isPending = contact.Kind == MarbleContactKind.RandomScore && context.Balance != null;
             if (isPending) round.PendingScore = MarbleRules.AddScore(round.PendingScore, score, context.Tuning.MaxRoundScore);
@@ -33,7 +32,7 @@ namespace MarblesECS
             {
                 Key = contact.Key, ZoneId = contact.TargetId, Position = contact.Position,
                 BaseValue = marble.BaseScore, ScoreBonus = marble.ScoreBonus, ScoreAdd = modifiers.ScoreAdd,
-                FlatScore = contact.FlatScore, DrugMultiplier = drug,
+                FlatScore = contact.FlatScore,
                 PermanentMultiplier = marble.ScoreMultiplier, ModifierMultiplier = modifiers.ScoreMul,
                 DeviceMultiplier = marble.ScoreMultiplier, ZoneMultiplier = contact.Multiplier,
                 LauncherMultiplier = 1, RushMultiplier = rush, Score = score, RoundScore = round.Score,

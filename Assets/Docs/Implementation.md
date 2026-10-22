@@ -20,7 +20,7 @@
 
 Rush 只让入区分数 ×2，当前球先结算再触发；同一步后续球可以获得新 Rush。赌博待定分在入区时已经包含 Rush，开奖时不再次乘 Rush。重复触发叠加剩余时间并封顶。旧独立模拟保留刷新时长的默认行为，新战役配置启用叠加时长。
 
-“碰撞系数”定义为 PhysX 材质的恢复系数 Bounciness。药效仅改变药效期间发射的血珠：`e = clamp(BaseRestitution × 所有有效药物倍率, 0, 1)`。剂量独立到期；已经发射的血珠保留自己的 e，不受玩家后续服药或药效结束影响。每个池化球持有独立材质，重用时重设，避免修改共享资产。
+“碰撞系数”定义为 PhysX 材质的恢复系数 Bounciness，由当前属性决定。每个池化球持有独立材质，重用时重设，避免修改共享资产；旧弹性药物计时和叠乘已删除。
 
 盘面采用 Unity 局部 XZ 平面、+Y 为法线，与工作簿的引擎无关坐标约定存在差异；血珠位姿回写使用 PhysX 世界空间，安装位置使用盘面局部坐标并由视图转换。盘面在游玩期间固定。球保持三维自由度，不锁轴、不用第二套积分器。
 
@@ -36,13 +36,13 @@ Rush 只让入区分数 ×2，当前球先结算再触发；同一步后续球�
 
 ## ECS 与扩展接口
 
-`MarbleSimulation(GameBalance)` 创建配置副本和独立 Entities World；`StartSession` 重开整局，`BeginRound` 仅从 Build 开局。`Session`、`Snapshot`、`GetOwnedDevices`、`GetShopOffers`、`GetDrugInventory` 都返回脱离 ECS 存储的快照。
+`MarbleSimulation(GameBalance)` 创建配置副本和独立 Entities World；`StartSession` 重开整局，`BeginRound` 仅从 Build 开局。`Session`、`Snapshot`、`GetOwnedDevices`、`GetShopOffers` 都返回脱离 ECS 存储的快照。
 
-金币、阶段、库存、待定分、布局、单球效果和药效都由组件或 DynamicBuffer 保存。MonoBehaviour 用公开命令入口请求变化，物理回调只上报事实。商店与放置系统在物理步外提交；球的发射创建成功后才扣血，实体和后端对象失败时一起回滚。
+金币、阶段、库存、待定分、布局、单球效果都由组件或 DynamicBuffer 保存。MonoBehaviour 用公开命令入口请求变化，物理回调只上报事实。商店与放置系统在物理步外提交；球的发射创建成功后才扣血，实体和后端对象失败时一起回滚。
 
 发射器移动同样由 ECS 负责：`LauncherMovementConfig` 保存初始局部位置、速度和移动范围；`LauncherMovementInput` 保存 A / D 方向、自动模式和滑条位置请求；`LauncherMovementState` 保存当前位置和往返进度。`LauncherMovementSystem` 处理位移、边界、自动往返及回合复位。控制器每个固定步采集输入并调用移动系统，然后将 ECS 位置同步到 `LaunchPoint`，再执行 `BeforePhysics` 发射，保证新血珠使用本步更新后的发射位置。滑条提交一次性请求，HUD 从 ECS 读取位置；暂停不执行移动系统。初始化时从 Excel 的 Board 配置复制移动参数。
 
-本版保留旧 `MarbleSimulation(MarbleTuning)`、`ApplyScoreDrug` 等回归兼容接口；正式游戏只出售和使用弹性药物。工作簿中的通用 EffectEmitter、球分裂、病理、拾取物、其他发射头、多盘面、通用三维安装形状和完整命令回放不在本版内容范围内。
+旧 `ApplyScoreDrug`、`ApplyBounceDrug`、`UseDrug` 和药物库存接口已移除。未来药物将用 Lua 重做；当前保留通用属性、复制、物理及装置能力。
 
 ## 退出与资源释放
 

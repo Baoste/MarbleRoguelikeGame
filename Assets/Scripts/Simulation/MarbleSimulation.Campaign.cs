@@ -25,10 +25,6 @@ namespace MarblesECS
                 RandomState = context.Tuning.RandomSeed
             };
             context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity).Clear();
-            var inventory = context.Manager.GetBuffer<DrugInventoryData>(context.PlayerEntity);
-            inventory.Clear();
-            foreach (var drug in context.Balance.Drugs)
-                inventory.Add(new DrugInventoryData { DefinitionId = drug.Id, Count = drug.StartingCount });
             foreach (var device in context.Balance.Devices)
                 for (int i = 0; i < device.StartingCount; i++)
                     CampaignStateUtility.CreateDevice(context, device, device.Price);

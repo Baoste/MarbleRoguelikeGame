@@ -77,10 +77,7 @@ namespace MarblesECS.PhysX
         public void SetFlow(float normalized) { simulation?.SetFlow(normalized); }
         public void EndFiring() { if (simulation != null && !Paused) simulation.EndFiring(); }
 
-        public bool ApplyScoreDrug(double multiplier, float durationSeconds)
-        {
-            return simulation != null && !Paused && simulation.ApplyScoreDrug(multiplier, durationSeconds);
-        }
+
 
         public void SetPaused(bool paused)
         {

@@ -1,7 +1,7 @@
 """Build the reviewed gameplay catalog. No third-party Excel dependency.
 
-The dictionary supplies numerical attribute rules; explicit recipes implement the
-design master's behavior. The obsolete effect-parameter sheet is not imported.
+The dictionary supplies numerical attribute rules. Legacy drug rows and the
+obsolete effect-parameter sheet are not imported.
 """
 from pathlib import Path
 import json
@@ -49,42 +49,14 @@ def generate():
         attrs.append(dict(Id='GAMBLE_QUADRUPLE_CHANCE', Name='四倍概率', Unit='%', DefaultValue=.25,
                           MinValue=0, MaxValue=1, Operators='ADD,MUL,SET', StackRule='ADD→MUL→CLAMP',
                           AppliesTo='Drug,Item,Global', StackOrder=20))
-    import re
-    enum_source = (ROOT/'Scripts/Marbles/Rules/GameAttributes.cs').read_text(encoding='utf-8')
-    enum_body = enum_source.split('public enum GameAttribute : byte')[1].split('}')[0]
-    enum_ids = re.findall(r'\b[A-Z][A-Z_]+\b', enum_body)
-    attr_index = {name: i for i, name in enumerate(enum_ids)}
-    def effect(name, op, value):
-        return dict(Attribute=attr_index[name], Operation={'ADD': 0, 'MUL': 1, 'SET': 2}[op], Value=value, Priority=0)
-    drug_names = ['肾上腺素','烧烧果实','延长药剂','润流剂','凝血剂','摇头丸','稀血剂','无限增值','磁堕','定向试剂（补全名）']
-    prices = {'Common': 10, 'Uncommon': 18, 'Rare': 28, 'Epic': 40, 'Legendary': 60}
-    drugs = []
-    for row in sheets[1][1]:
-        category, name = row.get('C'), row.get('B')
-        if category == '药物':
-            i = drug_names.index(name)
-            effects = []
-            def add(attr, op, value): effects.append(effect(attr,op,value))
-            if i in (0,2,4,5,6,8): add('BLOOD_COST','MUL',1.2)
-            if i in (1,3,9): add('BALL_BASE_VALUE','MUL',.9)
-            if i in (4,5,6): add('BALL_BASE_VALUE','MUL',1.3)
-            if i == 2: add('RUSH_DURATION','MUL',1.2)
-            if i == 3:
-                add('BALL_FRICTION','MUL',.6); add('BALL_BOUNCE','ADD',.1)
-            if i == 5: add('BALL_BOUNCE','ADD',3)
-            if i == 7: add('BLOOD_COST','MUL',2)
-            if i == 8: add('BALL_BASE_VALUE','MUL',1.1)
-            drugs.append(dict(Id=100+i, SourceId=row['A'], Name=name, Description=row.get('H',''), Kind=i+1,
-                              Price=prices[row['N']], RestitutionMultiplier=1, DurationSeconds=20 if i==9 else 10,
-                              StartingCount=1 if i in (0,3) else 0, Stackable=i in (5,6,7,8), VolumeMultiplier=1.5 if i in (4,7) else 1, Effects=effects))
     output = ROOT/'Resources/GameContent.json'
-    data = dict(Attributes=attrs, Drugs=drugs, RushThreshold=10,
+    data = dict(Attributes=attrs, RushThreshold=100,
                 OverkillCoinsPerScore=.01, CentimetersToUnits=.01, MaxSplitGeneration=2)
     # Read first: invalid packages abort before publishing any content changes.
     data['Devices'] = read_devices(ROOT/'Resources/Devices')
     if output.exists():
         previous = json.loads(output.read_text(encoding='utf-8-sig'))
-        for key in ('Attributes', 'Drugs'):
+        for key in ('Attributes',):
             existing = previous.get(key, [])
             ids = {row['Id'] for row in existing}
             data[key] = existing + [row for row in data[key] if row['Id'] not in ids]
@@ -95,6 +67,6 @@ def generate():
             print('GameContent.json is complete; Devices match current MRes packages.')
             return
     output.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-    print(f"Built {len(data['Attributes'])} attributes, {len(data['Drugs'])} drugs.")
+    print(f"Built {len(data['Attributes'])} attributes and {len(data['Devices'])} devices.")
 
 if __name__ == '__main__': generate()

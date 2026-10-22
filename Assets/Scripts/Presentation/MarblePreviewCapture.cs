@@ -49,8 +49,6 @@ namespace MarblesECS.Presentation
             if (!Controller.BeginRound()) return false;
             Controller.AutoMoveLauncher = true;
             Controller.SetFlow(.25f);
-            var drugs = Controller.GetDrugInventory();
-            if (drugs.Length > 0 && drugs[0].Count > 0) Controller.UseDrug(drugs[0].DefinitionId);
             Controller.SetFireHeld(true);
             return true;
         }

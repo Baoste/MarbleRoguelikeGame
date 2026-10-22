@@ -29,7 +29,7 @@ namespace MarblesECS.Editor.Diegetic
                     mesh=mf&&mf.sharedMesh?AssetDatabase.GetAssetPath(mf.sharedMesh):"", materials=r?r.sharedMaterials.Select(m=>m?AssetDatabase.GetAssetPath(m):"").ToArray():Array.Empty<string>(),
                     min=r?r.bounds.min:Vector3.zero,max=r?r.bounds.max:Vector3.zero,components=t.GetComponents<Component>().Select(c=>c?c.GetType().FullName:"MISSING").ToArray() });
                 foreach(var c in t.GetComponents<MonoBehaviour>())
-                    if(c&&(c is MarbleGameController||c is ScoreListener||c is DevicePlacementUI||c is OwnedDrugPanelUI||c is OwnedDevicePanelUI||c is CashOutButtonUI||c is ShopUI))
+                    if(c&&(c is MarbleGameController||c is ScoreListener||c is DevicePlacementUI||c is OwnedDevicePanelUI||c is CashOutButtonUI||c is ShopUI))
                         report.scripts.Add(new ScriptInfo{path=PathOf(t),type=c.GetType().FullName,json=EditorJsonUtility.ToJson(c)});
             }
             var cam=Camera.main;report.camera=cam?PathOf(cam.transform):"";report.fov=cam?cam.fieldOfView:0;

@@ -59,9 +59,6 @@ namespace MarblesECS
             context.Physics = physics;
             context.Contacts.Clear();
             context.ScoreEvents.Clear();
-            context.Manager.GetBuffer<ActiveScoreEffectData>(context.PlayerEntity).Clear();
-            BounceDrugSystem.Clear(context);
-            context.Manager.GetBuffer<ActiveDrugData>(context.PlayerEntity).Clear();
             context.CloverFamilies.Clear();
             context.RefundedFamilies.Clear();
             if (AttributeRuntime.Enabled(context))
@@ -83,7 +80,7 @@ namespace MarblesECS
             context.Player = new PlayerData
             {
                 Blood = context.Tuning.InitialBlood,
-                BloodCostMultiplier = context.Tuning.BloodCostMultiplier, DrugScoreMultiplier = 1
+                BloodCostMultiplier = context.Tuning.BloodCostMultiplier
             };
             context.Launcher = new LauncherData();
             LauncherMovementSystem.Reset(context);
@@ -121,7 +118,6 @@ namespace MarblesECS
                 RushSystem.Tick(context);
                 TimedGravitySystem.Tick(context, false);
                 AttributeRuntime.Tick(context);
-                BounceDrugSystem.Expire(context);
                 EffectLifecycleSystem.Execute(context);
                 LaunchSystem.Execute(context, physics, launchPosition, launchRotation);
                 context.BoardScores.Tick(context);

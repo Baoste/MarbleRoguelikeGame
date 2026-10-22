@@ -36,8 +36,8 @@ public sealed class DiegeticUIHit : MonoBehaviour, IPointerEnterHandler, IPointe
     {
         if(!Owner || !isActiveAndEnabled)return;
         var button=GetComponent<Button>();if(button && !button.IsInteractable())return;
-        switch(Kind){case 0:Owner.TryToggleLever();break;case 1:Owner.TryUseDrug(Index);break;case 2:Owner.SelectDevice(Index);break;
-            case 3:Owner.ChangeDrugPage(Index);break;case 4:Owner.ChangeDevicePage(Index);break;case 5:Owner.TryContinue();break;}
+        switch(Kind){case 0:Owner.TryToggleLever();break;case 2:Owner.SelectDevice(Index);break;
+            case 4:Owner.ChangeDevicePage(Index);break;case 5:Owner.TryContinue();break;}
     }
     void OnDisable(){if(Owner){Owner.Hover(Kind,Index,false);if(dragged && Kind==2)Owner.CancelDeviceDrag();}}
 }

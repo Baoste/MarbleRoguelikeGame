@@ -45,16 +45,12 @@ namespace MarblesECS
             Manager.AddComponentData(PlayerEntity, new StableIdentity { StableId = ++NextStableId });
             Manager.AddComponentData(LauncherEntity, new StableIdentity { StableId = ++NextStableId });
             Manager.SetComponentData(BoardEntity, new StableIdentity { StableId = ++NextStableId });
-            Manager.AddBuffer<ActiveScoreEffectData>(PlayerEntity);
-            Manager.AddBuffer<ActiveBounceDrugData>(PlayerEntity);
-            Manager.AddBuffer<ActiveDrugData>(PlayerEntity);
             Manager.AddComponentData(RoundEntity, new CampaignData());
-            Manager.AddBuffer<DrugInventoryData>(PlayerEntity);
             Manager.AddBuffer<ShopOfferData>(RoundEntity);
             MarbleQuery = Manager.CreateEntityQuery(typeof(MarbleTag), typeof(ShotOrigin), typeof(DespawnState));
             DeviceQuery = Manager.CreateEntityQuery(typeof(OwnedDeviceData));
             Round = new RoundData { Phase = (byte)RoundPhase.Lost, TargetScore = tuning.TargetScore };
-            Player = new PlayerData { DrugScoreMultiplier = 1 };
+            Player = new PlayerData();
             if (Content != null) AttributeRuntime.Initialize(this, PlayerEntity);
         }
 

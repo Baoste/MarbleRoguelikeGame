@@ -29,7 +29,6 @@ namespace MarblesECS
             if (contact.Kind == MarbleContactKind.Pin)
             {
                 if (!MarkVisit(c, ball, contact.TargetId, 0)) return;
-                if (features.Replicates) Replicate(c, ball, contact);
                 int splits = (int)AttributeRuntime.Get(c, ball, GameAttribute.BALL_SPLIT_COUNT);
                 if (splits > 0 && !features.SplitConsumed)
                     ContentSpawnSystem.Children(c, ball, splits, true, Direction(c, ball), Vector3.up);
@@ -61,16 +60,7 @@ namespace MarblesECS
             var velocity = c.Manager.GetComponentData<Motion3D>(ball).LinearVelocity;
             return velocity.sqrMagnitude > .0001f ? velocity.normalized : Vector3.down;
         }
-        internal static void Replicate(SimulationContext c, Entity ball, MarbleContact contact)
-        {
-            var features = c.Manager.GetComponentData<BallFeatures>(ball);
-            if (features.ReplicationGeneration >= c.Content.MaxSplitGeneration) return;
-            features.ReplicationGeneration++;
-            c.Manager.SetComponentData(ball, features);
-            Vector3 normal = Vector3.up;
-            if (c.Physics is IMarblePhysicsCommands commands && commands.TryGetDevicePose(contact.TargetId - 100000, out var pose)) normal = pose.Up;
-            ContentSpawnSystem.Children(c, ball, 1, false, Direction(c, ball), normal);
-        }
+
         internal static bool Exit(SimulationContext c, Entity ball, DevicePose pose, Vector3 direction, float speed)
         {
             if (!ValidExit(pose, direction, speed)) return false;

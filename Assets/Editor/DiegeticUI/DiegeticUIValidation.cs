@@ -64,12 +64,7 @@ namespace MarblesECS.Editor.Diegetic
         static void Click(DiegeticUIHit hit)
         {ExecuteEvents.Execute(hit.gameObject,new PointerEventData(EventSystem.current){button=PointerEventData.InputButton.Left},ExecuteEvents.pointerClickHandler);}
         static DiegeticUIHit Hit(int kind,int index=0)=>rig.GetComponentsInChildren<DiegeticUIHit>(true).First(h=>h.Kind==kind&&h.Index==index);
-        static void Drugs(int count,int types)
-        {
-            var buffer=context.Manager.GetBuffer<DrugInventoryData>(context.PlayerEntity);
-            for(int i=0;i<buffer.Length;i++){var d=buffer[i];d.Count=i<types?count:0;buffer[i]=d;}
-            rig.RefreshInventory();
-        }
+
         static IEnumerator Scenario()
         {
             rig=UnityEngine.Object.FindObjectOfType<DiegeticMachineUI>();Check(rig,"Rig exists in saved scene");
@@ -78,8 +73,6 @@ namespace MarblesECS.Editor.Diegetic
             Check(rig.Controller.PhysicsRoot && rig.Placement.BoardRoot,"Original physics and placement roots remain connected");
             Check(rig.GetComponentsInChildren<Collider>(true).Length==0,"Imported UI props do not add gameplay collisions");
             Check(rig.GetComponentsInChildren<Renderer>(true).All(r=>r.sharedMaterials.All(m=>m && m.shader && m.shader.isSupported)),"All imported materials use supported shaders");
-            Drugs(0,0);Check(rig.DrugSlots.All(s=>!s.Contents.activeSelf),"All four slots are empty without owned drugs");
-            Capture("08_Empty_slots",1920,1080);
             for(int i=0;i<7;i++)CampaignStateUtility.CreateDevice(context,context.Balance.Devices[i%context.Balance.Devices.Length],0);
             var round=context.Round;round.Phase=(byte)RoundPhase.Build;context.Round=round;rig.RefreshInventory();
             // Restart the panel motion, covering the state immediately before its animation completes.
@@ -96,7 +89,7 @@ namespace MarblesECS.Editor.Diegetic
             for(float x=-1.4f;x<=1.4f&&!placed;x+=.35f)for(float z=-1.9f;z<=1.9f&&!placed;z+=.35f)
             {var w=plane.TransformPoint(new Vector3(x,0,z));var local=rig.Placement.BoardRoot.InverseTransformPoint(w);placed=rig.Controller.PlaceDevice(firstId,local.x,local.z,w,1);}
             Check(placed,"A selected device can still be placed on the original playfield");rig.Placement.CancelPlacement();rig.RefreshInventory();
-            Drugs(2,4);wait=Wait(.2f);while(wait.MoveNext())yield return null;
+            wait=Wait(.2f);while(wait.MoveNext())yield return null;
             Capture("03_Build_1080p",1920,1080);Capture("04_Build_4K",3840,2160);
             CheckViewport();
             Click(Hit(5));Check(rig.Controller.Session.Phase==RoundPhase.Playing,"Physical Continue starts the original round");
@@ -104,14 +97,6 @@ namespace MarblesECS.Editor.Diegetic
             Check(rig.ItemGroup.alpha==0&&!rig.ItemGroup.blocksRaycasts,"Device UI becomes hidden and non-interactive when leaving Build");
             wait=Wait(.75f);while(wait.MoveNext())yield return null;
             Check(Vector3.Distance(rig.ItemBoard.localPosition,rig.BoardClosedPosition)<.01f,"Board retracts after Build");
-            Check(rig.DrugSlots.All(s=>s.Contents.activeSelf),"Owned drugs appear in four physical slots");
-            uint drugId=rig.DrugSlots[0].DefinitionId;int count=rig.Controller.GetDrugInventory().First(d=>d.DefinitionId==drugId).Count;
-            Click(Hit(1,0));Check(rig.Controller.GetDrugInventory().First(d=>d.DefinitionId==drugId).Count==count-1,"Clicking a physical bottle consumes exactly one drug through controller");
-            rig.Controller.SetPaused(true);Check(!rig.TryUseDrug(0)&&!rig.TryCashOut(),"Pause blocks both physical drug and cashout interactions");rig.Controller.SetPaused(false);
-            Drugs(1,4);uint neighbour=rig.DrugSlots[1].DefinitionId;drugId=rig.DrugSlots[0].DefinitionId;Click(Hit(1,0));Check(!rig.DrugSlots[0].Contents.activeSelf,"Using last dose empties the physical slot");
-            Check(rig.DrugSlots[1].DefinitionId==neighbour&&!rig.TryUseDrug(0),"Consuming a bottle does not move or accidentally consume its neighbour");
-            Drugs(1,6);uint before=rig.DrugSlots[0].DefinitionId;rig.ChangeDrugPage(1);Check(rig.DrugSlots[0].DefinitionId!=before&&rig.DrugPager.activeSelf,"Drug inventories above four types paginate");rig.ChangeDrugPage(-1);
-            Drugs(2,4);rig.Hover(1,0,true);Check(rig.Tooltip.gameObject.activeSelf&&rig.DrugSlots[0].Highlight.activeSelf,"Drug hover shows detail tooltip and model outline");rig.ClearHover();
             Capture("05_Play_1080p",1920,1080);Capture("06_Play_4K",3840,2160);
             round=context.Round;round.Score=0;context.Round=round;
             float blood=rig.Controller.Snapshot.Blood;Click(Hit(0));Check(rig.Controller.Session.Phase==RoundPhase.Playing&&Mathf.Approximately(blood,rig.Controller.Snapshot.Blood),"Lever cannot bypass target score");
@@ -121,9 +106,9 @@ namespace MarblesECS.Editor.Diegetic
             Click(Hit(0));Check(rig.Controller.Snapshot.Blood==0&&rig.Controller.Session.Phase!=RoundPhase.Playing,"Lever closes supply and starts real cashout flow");Check(!rig.TryCashOut(),"Double activation cannot settle twice");
             // A shop purchase is executed by the real shop API; only the test offer and test funds are seeded.
             context.RemoveAllMarbles();round=context.Round;round.Phase=(byte)RoundPhase.Shop;context.Round=round;
-            var campaign=context.Campaign;campaign.Coins=100000;context.Campaign=campaign;Drugs(0,0);
-            var offers=context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);offers.Clear();offers.Add(new ShopOfferData{Kind=ShopItemKind.Drug,DefinitionId=context.Balance.Drugs[0].Id,Price=1});
-            Check(rig.Controller.BuyOffer(0),"Existing shop purchase succeeds");rig.RefreshInventory();Check(rig.DrugSlots.Count(s=>s.Contents.activeSelf)==1,"Purchased drug appears in an empty slot");
+            var campaign=context.Campaign;campaign.Coins=100000;context.Campaign=campaign;
+            var offers=context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);offers.Clear();offers.Add(new ShopOfferData{Kind=ShopItemKind.Device,DefinitionId=context.Balance.Devices[0].Id,Price=1});
+            Check(rig.Controller.BuyOffer(0),"Existing shop purchase succeeds");rig.RefreshInventory();Check(rig.Controller.GetOwnedDevices().Any(d=>!d.Placed),"Purchased device enters inventory");
             Check(rig.Controller.EnterBuild(),"Shop Continue still enters Build");
             yield return null;Check(rig.ItemGroup.alpha==0,"Board UI waits until slide-out has finished");
             wait=Wait(.75f);while(wait.MoveNext())yield return null;Check(rig.ItemGroup.alpha==1&&rig.IsBoardOpen,"Next Build correctly opens the board again");
@@ -136,7 +121,7 @@ namespace MarblesECS.Editor.Diegetic
         static void CheckViewport()
         {
             float oldAspect=rig.ViewCamera.aspect;rig.ViewCamera.aspect=16f/9f;
-            foreach(var a in rig.DrugSlots.Select(s=>s.Anchor).Concat(rig.ScoreAnchors).Concat(new[]{rig.BloodAnchor,rig.LeverAnchor}))
+            foreach(var a in rig.ScoreAnchors.Concat(new[]{rig.BloodAnchor,rig.LeverAnchor}))
             {var v=rig.ViewCamera.WorldToViewportPoint(a.position);Check(v.z>0&&v.x>.015f&&v.x<.985f&&v.y>.015f&&v.y<.985f,"Visible physical anchor: "+a.name+" "+v);}
             rig.ViewCamera.ResetAspect();
         }
@@ -148,9 +133,9 @@ namespace MarblesECS.Editor.Diegetic
             Canvas.ForceUpdateCanvases();cam.Render();var active=RenderTexture.active;RenderTexture.active=texture;
             var image=new Texture2D(w,h,TextureFormat.RGB24,false);image.ReadPixels(new Rect(0,0,w,h),0,0);image.Apply();File.WriteAllBytes(DiegeticUIProbe.Work+"/previews/"+name+".png",image.EncodeToPNG());
             // Check that world-space UI receives pointer raycasts at both resolutions.
-            var hit=Hit(1,0);var p=cam.WorldToScreenPoint(hit.transform.position);var results=new List<RaycastResult>();
+            var hit=Hit(0);var p=cam.WorldToScreenPoint(hit.transform.position);var results=new List<RaycastResult>();
             EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current){position=p},results);
-            Check(results.Any(r=>r.gameObject==hit.gameObject),$"{w}x{h} pointer raycasts reach physical drug slot");
+            Check(results.Any(r=>r.gameObject==hit.gameObject),$"{w}x{h} pointer raycasts reach settlement lever");
             foreach(var c in overlays)c.renderMode=RenderMode.ScreenSpaceOverlay;
             cam.targetTexture=old;cam.ResetAspect();RenderTexture.active=active;texture.Release();UnityEngine.Object.DestroyImmediate(image);UnityEngine.Object.DestroyImmediate(texture);
         }

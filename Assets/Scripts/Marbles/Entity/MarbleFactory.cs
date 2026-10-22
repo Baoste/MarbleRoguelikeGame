@@ -23,7 +23,7 @@ namespace MarblesECS
                 manager.SetComponentData(entity, new MarbleRush { BaseRushChance = context.Tuning.BaseRushChance, Contribution = RushSystem.InitialContribution });
                 manager.AddBuffer<RushTriggerVisit>(entity);
                 manager.SetComponentData(entity, new MarblePhysicsProperties
-                { Restitution = BounceDrugSystem.Restitution(context, out _, out _) });
+                { Restitution = context.Tuning.BaseRestitution });
                 manager.SetComponentData(entity, new Lifetime { ExpireTick = checked(context.Round.Tick +
                     (long)System.Math.Ceiling(context.Tuning.MaxLifeSeconds / (double)context.StepSeconds)) });
                 manager.AddBuffer<VisitedDeviceData>(entity);

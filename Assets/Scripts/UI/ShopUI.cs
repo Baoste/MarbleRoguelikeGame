@@ -19,10 +19,12 @@ public sealed class ShopUI : MonoBehaviour
     public TMP_Text RefreshCostText;
     public Button RefreshButton;
     public Button ContinueButton;
+    public TMP_Text FeedbackText;
 
     private readonly List<ShopOfferItemUI> offerItems = new List<ShopOfferItemUI>();
     private bool wasOpen;
     private int displayedRefreshCount = -1;
+    private int displayedOfferCount = -1;
 
     private void OnEnable()
     {
@@ -64,7 +66,7 @@ public sealed class ShopUI : MonoBehaviour
         if (CoinsText != null)
             CoinsText.text = session.Coins.ToString();
         if (RefreshCostText != null)
-            RefreshCostText.text = refreshCost.ToString();
+            RefreshCostText.text = "刷新商品 · " + refreshCost + " 金币";
         if (RefreshButton != null)
             RefreshButton.interactable = session.Coins >= refreshCost;
         if (ContinueButton != null)
@@ -72,6 +74,8 @@ public sealed class ShopUI : MonoBehaviour
 
         bool offersChanged = forceOffers || !wasOpen ||
             displayedRefreshCount != session.ShopRefreshCount;
+        if (!wasOpen && FeedbackText != null)
+            FeedbackText.text = "每件商品限购一次，购买后可在布置阶段放置。";
         if (offersChanged)
         {
             RebuildOffers();
@@ -112,13 +116,14 @@ public sealed class ShopUI : MonoBehaviour
             if (active)
                 offerItems[i].Bind(offers[i], Controller.Session.Coins, HandleBuyRequested);
         }
+        displayedOfferCount = offers.Length;
     }
 
     private void RefreshOfferStates()
     {
         if (Controller == null) return;
         ShopOfferSnapshot[] offers = Controller.GetShopOffers();
-        if (offers.Length != offerItems.Count)
+        if (offers.Length != displayedOfferCount)
         {
             RebuildOffers();
             return;
@@ -131,14 +136,20 @@ public sealed class ShopUI : MonoBehaviour
 
     private void HandleBuyRequested(int offerIndex)
     {
-        if (Controller != null && Controller.BuyOffer(offerIndex))
-            RefreshView(true);
+        if (Controller == null) return;
+        bool bought = Controller.BuyOffer(offerIndex);
+        RefreshView(true);
+        if (FeedbackText != null)
+            FeedbackText.text = bought ? "购买成功，装置已加入背包。" : "购买失败，请检查金币、库存容量或商品状态。";
     }
 
     private void HandleRefreshClicked()
     {
-        if (Controller != null && Controller.RefreshShop())
-            RefreshView(true);
+        if (Controller == null) return;
+        bool refreshed = Controller.RefreshShop();
+        RefreshView(true);
+        if (FeedbackText != null)
+            FeedbackText.text = refreshed ? "商品已刷新。" : "金币不足，无法刷新商品。";
     }
 
     private void HandleContinueClicked()

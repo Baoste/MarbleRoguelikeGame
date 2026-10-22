@@ -6,6 +6,5 @@ namespace MarblesECS
     {
         public float Blood;
         public float BloodCostMultiplier;
-        public double DrugScoreMultiplier;
     }
 }

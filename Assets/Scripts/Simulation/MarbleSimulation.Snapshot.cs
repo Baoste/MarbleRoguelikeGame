@@ -12,13 +12,9 @@ namespace MarblesECS
                 ThrowIfDisposed();
                 var round = context.Round;
                 var player = context.Player;
-                float restitution = BounceDrugSystem.Restitution(context, out int doseCount, out double bounceRemaining);
+                float restitution = context.Tuning.BaseRestitution;
                 if (AttributeRuntime.Enabled(context))
                     restitution = (float)AttributeRuntime.Prepare(context, context.Launcher.Flow).Values[(int)GameAttribute.BALL_BOUNCE];
-                double drugRemaining = 0;
-                var effects = context.Manager.GetBuffer<ActiveScoreEffectData>(context.PlayerEntity);
-                for (int i = 0; i < effects.Length; i++)
-                    drugRemaining = Math.Max(drugRemaining, effects[i].EndsAt - round.Time);
                 return new MarbleSnapshot
                 {
                     RoundId = round.RoundId, Tick = round.Tick, Phase = (RoundPhase)round.Phase,
@@ -27,10 +23,8 @@ namespace MarblesECS
                     RushSecondsRemaining = round.RushRemaining,
                     RushMeter = round.RushMeter, RushMaximum = RushSystem.Threshold,
                     ShotsPerSecond = 1 / RushSystem.FireInterval(context),
-                    DrugSecondsRemaining = Math.Max(0, drugRemaining),
-                    DrugMultiplier = player.DrugScoreMultiplier, Flow = context.Launcher.Flow,
-                    NextMarbleRestitution = restitution, ActiveBounceDrugs = doseCount,
-                    BounceDrugSecondsRemaining = bounceRemaining
+                    Flow = context.Launcher.Flow,
+                    NextMarbleRestitution = restitution
                 };
             }
         }

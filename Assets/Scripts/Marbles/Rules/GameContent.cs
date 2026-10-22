@@ -4,7 +4,6 @@ using System.Collections.Generic;
 namespace MarblesECS
 {
     public enum DeviceKind { LegacyPin, Bank, Amplifier, Centrifuge, Portal, Clover, Splitter, Paddle, Lens, Capital, BloodCannon, Slow, Revive, Magnet }
-    public enum DrugKind { LegacyBounce, Adrenaline, RushFruit, RushDuration, Lubricant, Coagulant, Ecstasy, ThinBlood, Replicator, Magnetic, Direction }
     [AttributeUsage(AttributeTargets.Field)]
     public sealed class OptionalBalanceFieldAttribute : Attribute { }
 
@@ -13,7 +12,6 @@ namespace MarblesECS
     {
         public AttributeDefinition[] Attributes;
         public DeviceDefinition[] Devices;
-        public DrugDefinition[] Drugs;
         public double RushThreshold = 100;
         public double OverkillCoinsPerScore = 0.01;
         public double FlowValueExponent = 1.15;
@@ -33,7 +31,7 @@ namespace MarblesECS
         public GameContent Copy() => new GameContent
         {
             Attributes = Array.ConvertAll(Attributes, x => x.Copy()),
-            Devices = Array.ConvertAll(Devices, x => x.Copy()), Drugs = Array.ConvertAll(Drugs, x => x.Copy()),
+            Devices = Array.ConvertAll(Devices, x => x.Copy()),
             RushThreshold = RushThreshold, OverkillCoinsPerScore = OverkillCoinsPerScore,
             FlowValueExponent = FlowValueExponent, CentimetersToUnits = CentimetersToUnits,
             MaxSplitGeneration = MaxSplitGeneration
@@ -50,15 +48,9 @@ namespace MarblesECS
                 !MarbleRules.IsFinite(OverkillCoinsPerScore) || FlowValueExponent < 1 || FlowValueExponent > 2 ||
                 !MarbleRules.IsFinite(FlowValueExponent) || CentimetersToUnits <= 0 || MaxSplitGeneration < 1)
                 throw new ArgumentException("Invalid content rules.");
-            if (Devices == null || Drugs == null) throw new ArgumentException("Missing content catalog.");
+            if (Devices == null) throw new ArgumentException("Missing content catalog.");
             foreach (var device in Devices) device.Validate();
-            foreach (var drug in Drugs)
-            {
-                drug.Validate();
-                foreach (var effect in drug.Effects)
-                    if (!Definition(effect.Attribute).Allows(effect.Operation) || !MarbleRules.IsFinite(effect.Value))
-                        throw new ArgumentException("Invalid drug effect " + drug.Name);
-            }
+
         }
     }
 }

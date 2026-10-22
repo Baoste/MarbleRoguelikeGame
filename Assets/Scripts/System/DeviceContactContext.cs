@@ -252,7 +252,6 @@ namespace MarblesECS
             C.Manager.SetComponentData(deviceEntity, d); triggered = true;
             double multiplier = AttributeRuntime.Get(C, deviceEntity, GameAttribute.MACHINE_MULT);
             if (multiplier != 1) AddScoreMultiplier(multiplier);
-            if (Features.Replicates) BallInteractionSystem.Replicate(C, ball, contact);
             return true;
         }
         public void Consume(bool refund)

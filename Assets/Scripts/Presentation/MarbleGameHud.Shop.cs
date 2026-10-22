@@ -11,7 +11,7 @@ namespace MarblesECS.Presentation
             GUILayout.Label("商店 SHOP · 每个货位本次刷新只能买一次");
             foreach (var offer in Controller.GetShopOffers())
             {
-                string kind = offer.Kind == ShopItemKind.Device ? "装置" : "药物";
+                string kind = "装置";
                 GUI.enabled = !offer.Sold && Controller.Session.Coins >= offer.Price;
                 if (GUILayout.Button((offer.Sold ? "已售出 " : "购买 " + kind + " ") + offer.Name + "　" + offer.Price + " 金"))
                     feedback = Controller.BuyOffer(offer.Index) ? "购买成功，已加入库存。" : "购买失败：金币不足、货位已售出或库存已满。";
@@ -24,7 +24,6 @@ namespace MarblesECS.Presentation
                 feedback = Controller.RefreshShop() ? "商品已刷新并扣除金币。" : "刷新失败，金币不足。";
             GUI.enabled = true;
             DrawOwnedDevices(false);
-            DrawDrugs(false);
             if (GUILayout.Button("购买完成 → 布置装置")) Controller.EnterBuild();
         }
 
@@ -34,7 +33,6 @@ namespace MarblesECS.Presentation
             GUILayout.Label("先选下方库存，再点击盘面。点击已放钉子可选中，下一次点击空白位置即可移动。按住 Shift 可对齐网格，右键取消选择。");
             DrawOwnedDevices(true);
             if (Board != null) GUILayout.Label(Board.Feedback);
-            DrawDrugs(false);
             if (GUILayout.Button("开始回合 → 补满血量"))
             {
                 if (Controller.BeginRound())

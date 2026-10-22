@@ -16,8 +16,7 @@ namespace MarblesECS.Presentation
             GUILayout.Label("累计已结算 " + session.TotalScore + "　目标 " + session.TargetScore);
             GUILayout.Label("本回合得分 " + session.RoundScore + "　待定 " + session.PendingScore);
             GUILayout.Label("当前确认分 " + session.ConfirmedScore + " / " + session.TargetScore + "（待定分不计入提现门槛）");
-            GUILayout.Label("Rush " + marble.RushSecondsRemaining.ToString("0.0") + "s　药效 " +
-                marble.BounceDrugSecondsRemaining.ToString("0.0") + "s / " + marble.ActiveBounceDrugs + " 层");
+            GUILayout.Label("Rush " + marble.RushSecondsRemaining.ToString("0.0") + "s");
             GUILayout.Label("下一颗碰撞系数 e = " + marble.NextMarbleRestitution.ToString("0.00"));
             GUILayout.Space(6);
         }

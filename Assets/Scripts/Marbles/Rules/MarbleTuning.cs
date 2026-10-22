@@ -32,7 +32,6 @@ namespace MarblesECS
         [NonSerialized] public float RushTimeScale = 1f;
         [NonSerialized] public bool RushExtendsDuration;
         [NonSerialized] public float BaseRestitution = 0.45f;
-        public int MaxActiveBounceDrugs = 16;
         public long MaxPerMarbleScore = 1000000000L;
         public long MaxRoundScore = 9000000000000L;
         public long TargetScore = 1000L;
@@ -64,8 +63,6 @@ namespace MarblesECS
             if (MaxRushSeconds < RushDurationSeconds) throw new ArgumentOutOfRangeException(nameof(MaxRushSeconds));
             if (!MarbleRules.IsFinite(BaseRestitution) || BaseRestitution < 0 || BaseRestitution > 1)
                 throw new ArgumentOutOfRangeException(nameof(BaseRestitution));
-            if (MaxActiveBounceDrugs < 1 || MaxActiveBounceDrugs > 128)
-                throw new ArgumentOutOfRangeException(nameof(MaxActiveBounceDrugs));
             if (!MarbleRules.IsFinite(DespawnBelowY)) throw new ArgumentOutOfRangeException(nameof(DespawnBelowY));
             if (MaxActiveMarbles < 1 || MaxActiveMarbles > 100000) throw new ArgumentOutOfRangeException(nameof(MaxActiveMarbles));
             if (MaxPerMarbleScore < 1 || MaxPerMarbleScore > MaxRoundScore || MaxRoundScore > 9000000000000000L)

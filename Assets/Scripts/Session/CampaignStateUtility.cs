@@ -14,12 +14,7 @@ namespace MarblesECS
             return null;
         }
 
-        internal static DrugDefinition Drug(SimulationContext context, uint id)
-        {
-            foreach (var definition in context.Balance.Drugs)
-                if (definition.Id == id) return definition;
-            return null;
-        }
+
 
         internal static bool FindDevice(SimulationContext context, int instanceId, out Entity entity)
         {

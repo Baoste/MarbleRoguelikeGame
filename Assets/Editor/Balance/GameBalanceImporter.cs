@@ -10,7 +10,7 @@ namespace MarblesECS.Editor
         public const string WorkbookPath = "Assets/Config/GameBalance.xlsx";
         public const string JsonPath = "Assets/Resources/GameBalance.json";
 
-        // Attributes/drugs are authored in GameContent.json; devices are authored in MRes.
+        // Attributes are authored in GameContent.json; devices are authored in MRes.
         // Board geometry, placement settings and zones are authored in the scene.
         [Serializable]
         private sealed class BaseBalanceJson

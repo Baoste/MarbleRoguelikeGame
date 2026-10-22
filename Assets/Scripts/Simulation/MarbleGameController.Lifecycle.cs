@@ -63,8 +63,6 @@ namespace MarblesECS.PhysX
                 BeginRoundWhenInventoryIsEmpty();
                 if (GetComponent<MarblesECS.Presentation.DeviceActivationUI>() == null)
                     gameObject.AddComponent<MarblesECS.Presentation.DeviceActivationUI>().Controller = this;
-                if (Balance.Content != null && FindObjectOfType<MarblesECS.Presentation.MarbleGameHud>() == null && GetComponent<ContentDrugPanel>() == null)
-                    gameObject.AddComponent<ContentDrugPanel>().Controller = this;
                 publishedGamblingRoundId = int.MinValue;
                 gamblingRevealDeadline = -1f;
                 PublishBloodIfChanged();

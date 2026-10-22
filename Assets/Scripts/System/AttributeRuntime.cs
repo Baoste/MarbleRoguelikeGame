@@ -90,34 +90,11 @@ namespace MarblesECS
             values[(int)GameAttribute.BALL_BASE_VALUE] *= Math.Pow(investmentScale, c.Content.FlowValueExponent);
             values[(int)GameAttribute.BALL_RADIUS] *= Math.Pow(investmentScale, 1d / 3d);
             values[(int)GameAttribute.BALL_MASS] *= investmentScale;
-            var features = new BallFeatures { RushScoreMultiplier = 1 };
-            double volume = 1;
+            var features = new BallFeatures();
             var effects = new List<AttributeEffect>();
             var globalEffects = c.Manager.GetBuffer<AttributeModifierData>(c.PlayerEntity);
             for (int i = 0; i < globalEffects.Length; i++)
                 if (globalEffects[i].ExpireTick == 0 || globalEffects[i].ExpireTick > c.Round.Tick) effects.Add(globalEffects[i].Effect);
-            var doses = c.Manager.GetBuffer<ActiveDrugData>(c.PlayerEntity);
-            for (int i = 0; i < doses.Length; i++)
-            {
-                if (doses[i].EndsAt <= c.Round.Time) continue;
-                var drug = CampaignStateUtility.Drug(c, doses[i].DefinitionId);
-                effects.AddRange(drug.Effects);
-                volume *= drug.VolumeMultiplier;
-                switch (drug.Kind)
-                {
-                    case DrugKind.LegacyBounce:
-                        effects.Add(new AttributeEffect { Attribute = GameAttribute.BALL_BOUNCE,
-                            Operation = AttributeOperation.Multiply, Value = drug.RestitutionMultiplier });
-                        break;
-                    case DrugKind.Adrenaline: features.RushChanceAdd += drug.RushChanceAdd; break;
-                    case DrugKind.RushFruit: features.RushScoreMultiplier *= drug.RushScoreMultiplier; break;
-                    case DrugKind.ThinBlood: features.PierceChance = 1 - (1 - features.PierceChance) * .7f; break;
-                    case DrugKind.Replicator: features.Replicates = true; break;
-                    case DrugKind.Magnetic: features.Magnetic = true; features.MagneticRadius = 10 * c.Content.CentimetersToUnits; break;
-                    case DrugKind.Direction: features.ExitDown = true; break;
-                }
-            }
-            values[(int)GameAttribute.BALL_RADIUS] *= Math.Pow(volume, 1d / 3d);
             for (int i = 0; i < values.Length; i++) values[i] = AttributeMath.Evaluate(c.Content.Definition((GameAttribute)i), values[i], effects);
             return new Spawn
             {
@@ -131,8 +108,6 @@ namespace MarblesECS
         internal static void Tick(SimulationContext c)
         {
             if (!Enabled(c)) return;
-            var drugs = c.Manager.GetBuffer<ActiveDrugData>(c.PlayerEntity);
-            for (int i = drugs.Length - 1; i >= 0; i--) if (drugs[i].EndsAt <= c.Round.Time) drugs.RemoveAt(i);
             Recompute(c, c.PlayerEntity);
             using (var entities = c.MarbleQuery.ToEntityArray(Unity.Collections.Allocator.Temp))
                 foreach (var entity in entities)

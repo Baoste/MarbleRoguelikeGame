@@ -15,11 +15,7 @@ namespace MarblesECS
         public double RushSecondsRemaining;
         public double RushMeter, RushMaximum;
         public double ShotsPerSecond;
-        public double DrugSecondsRemaining;
-        public double DrugMultiplier;
         public float Flow;
         public float NextMarbleRestitution;
-        public int ActiveBounceDrugs;
-        public double BounceDrugSecondsRemaining;
     }
 }

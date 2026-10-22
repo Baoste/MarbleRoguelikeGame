@@ -26,11 +26,11 @@ namespace MarblesECS
             return tuning.MinInvestment + (tuning.MaxInvestment - tuning.MinInvestment) * t;
         }
 
-        public static long Score(double baseValue, double drug, double device, double zone, double launcher, double rush, long cap)
+        public static long Score(double baseValue, double globalMultiplier, double device, double zone, double launcher, double rush, long cap)
         {
             if (baseValue < 0) throw new ArgumentOutOfRangeException(nameof(baseValue));
-            CheckMultiplier(drug); CheckMultiplier(device); CheckMultiplier(zone); CheckMultiplier(launcher); CheckMultiplier(rush);
-            return Settle(baseValue, 0, 0, CombineDeviceMultiplier(device, launcher), drug, zone, 0, rush, cap);
+            CheckMultiplier(globalMultiplier); CheckMultiplier(device); CheckMultiplier(zone); CheckMultiplier(launcher); CheckMultiplier(rush);
+            return Settle(baseValue, 0, 0, CombineDeviceMultiplier(device, launcher), globalMultiplier, zone, 0, rush, cap);
         }
 
         /// <summary>DesignRules 27: temporary additions precede multipliers; flat reward precedes Rush.</summary>

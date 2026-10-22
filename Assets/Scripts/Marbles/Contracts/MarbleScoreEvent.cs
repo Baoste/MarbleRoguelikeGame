@@ -12,7 +12,7 @@ namespace MarblesECS
         public double ScoreBonus, ScoreAdd;
         public double PermanentMultiplier, ModifierMultiplier;
         public long FlatScore;
-        public double DrugMultiplier, DeviceMultiplier, ZoneMultiplier, LauncherMultiplier, RushMultiplier;
+        public double DeviceMultiplier, ZoneMultiplier, LauncherMultiplier, RushMultiplier;
         public long Score;
         public long RoundScore;
         public bool IsPending;

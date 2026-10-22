@@ -45,7 +45,8 @@ namespace MarblesECS.Editor
                 BounceAuthority();
                 Placement();
                 DevicePlacementValidation.Run();
-                SpawnAndDrugs();
+                SpawnBatch();
+                LegacyDrugRemoval();
                 LegacyContent();
                 Devices();
                 DeviceLuaApi();
@@ -110,14 +111,12 @@ namespace MarblesECS.Editor
             b.Content.Definition(GameAttribute.BALL_BASE_VALUE).DefaultValue = 10;
             b.Marble.FireIntervalSeconds = .01f;
             foreach (var d in b.Devices) d.StartingCount = 0;
-            foreach (var d in b.Drugs) d.StartingCount = 5;
-            b.Campaign.MaxDrugInventory = 100;
             b.Validate(); return b;
         }
         private static void Rules()
         {
             var b = Balance(); var content = b.Content;
-            Check(content.Attributes.Length == 34 && content.Devices.Length == DeviceResourceCatalog.Current.Entries.Length && content.Drugs.Length == 12, "catalog coverage including migrated legacy definitions");
+            Check(content.Attributes.Length == 34 && content.Devices.Length == DeviceResourceCatalog.Current.Entries.Length, "catalog coverage including migrated legacy definitions");
             foreach (var a in content.Attributes) a.Validate();
             var effects = new[] { new AttributeEffect { Attribute = GameAttribute.BLOOD_COST, Operation = AttributeOperation.Add, Value = 1 },
                 new AttributeEffect { Attribute = GameAttribute.BLOOD_COST, Operation = AttributeOperation.Multiply, Value = 2 } };
@@ -157,7 +156,7 @@ namespace MarblesECS.Editor
             balance.Marble.MaxLifeSeconds = 70; balance.Campaign.CashoutCoinsPerBlood = 3.5;
             balance.Stages[0].CashoutRate = 1.2;
             var copied = balance.Copy();
-            Check(ReferenceEquals(copied.Devices, copied.Content.Devices) && ReferenceEquals(copied.Drugs, copied.Content.Drugs), "catalogs share the copied content source");
+            Check(ReferenceEquals(copied.Devices, copied.Content.Devices), "catalogs share the copied content source");
             Check(!ReferenceEquals(copied.Content.Devices, balance.Content.Devices), "session catalog remains isolated from authoring");
             var physics = new FakePhysics();
             using (var simulation = new MarbleSimulation(balance))
@@ -224,7 +223,6 @@ namespace MarblesECS.Editor
                 f.Simulation.ApplyGlobalAttribute(3, GameAttribute.BALL_GAMBLE_VALUE_MOD, AttributeOperation.Set, 2);
                 f.Simulation.ApplyGlobalAttribute(4, GameAttribute.GAMBLE_POT_VALUE, AttributeOperation.Set, 3);
                 f.Simulation.ApplyGlobalAttribute(5, GameAttribute.RUSH_DURATION, AttributeOperation.Set, 180);
-                var player = f.C.Player; player.DrugScoreMultiplier = 2; f.C.Player = player;
                 var key = f.Launch();
                 f.Step(new MarbleContact { Key = key, TargetId = 1,
                     Kind = pending ? MarbleContactKind.RandomScore : MarbleContactKind.Score,
@@ -337,7 +335,7 @@ namespace MarblesECS.Editor
             internal Entity Ball(MarbleKey key) => C.Marbles[key];
             public void Dispose() { Simulation.Dispose(); }
         }
-        private static void SpawnAndDrugs()
+        private static void SpawnBatch()
         {
             using (var f = new Fixture())
             {
@@ -349,30 +347,6 @@ namespace MarblesECS.Editor
                 f.Physics.FailSpawnAt=0; f.Step();
                 Check(f.C.Marbles.Count==3,"batch count");
                 Near(997,f.C.Player.Blood,"batch costs each ball");
-            }
-            foreach (var kind in Enum.GetValues(typeof(DrugKind)).Cast<DrugKind>().Where(x=>x!=DrugKind.LegacyBounce))
-            using (var f = new Fixture())
-            {
-                var before=f.Launch();
-                var definition=f.C.Balance.Drugs.Single(x=>x.Kind==kind);
-                Check(f.Simulation.UseDrug(definition.Id),"use drug "+kind);
-                var after=f.Launch();
-                Near(10,f.Simulation.GetMarbleAttribute(before,GameAttribute.BALL_BASE_VALUE),"old ball snapshot "+kind);
-                var features=f.C.Manager.GetComponentData<BallFeatures>(f.Ball(after));
-                if(kind==DrugKind.Adrenaline) Near(definition.RushChanceAdd,features.RushChanceAdd,"adrenaline");
-                if(kind==DrugKind.RushFruit) Near(definition.RushScoreMultiplier,features.RushScoreMultiplier,"rush fruit");
-                if(kind==DrugKind.RushDuration) Near(f.C.Content.Definition(GameAttribute.RUSH_DURATION).DefaultValue *
-                    definition.Effects.Single(x=>x.Attribute==GameAttribute.RUSH_DURATION && x.Operation==AttributeOperation.Multiply).Value,
-                    f.Simulation.GetMarbleAttribute(after,GameAttribute.RUSH_DURATION),"duration");
-                if(kind==DrugKind.Lubricant) Near(.15,f.Simulation.GetMarbleAttribute(after,GameAttribute.BALL_FRICTION),"lubricant");
-                if(kind==DrugKind.Coagulant) Check(f.Physics.Spawns[after].Quote.Radius>f.Physics.Spawns[before].Quote.Radius,"volume radius conversion");
-                if(kind==DrugKind.Ecstasy) Near(2,f.Simulation.GetMarbleAttribute(after,GameAttribute.BALL_BOUNCE),"ecstasy clamp");
-                if(kind==DrugKind.ThinBlood) Near(.3,features.PierceChance,"thin blood");
-                if(kind==DrugKind.Replicator) Check(features.Replicates,"replicator inherited flag");
-                if(kind==DrugKind.Magnetic) Check(features.Magnetic,"magnetic tag");
-                if(kind==DrugKind.Direction) Check(features.ExitDown,"direction tag");
-                Check(f.Simulation.UseDrug(definition.Id),"reuse drug");
-                Check(f.Simulation.GetDrugInventory().Single(x=>x.DefinitionId==definition.Id).ActiveDoses==(definition.Stackable?2:1),"stack policy "+kind);
             }
         }
 
@@ -386,57 +360,27 @@ namespace MarblesECS.Editor
                     CampaignShopSystem.Generate(f.C);
                     var offers = f.C.Manager.GetBuffer<ShopOfferData>(f.C.RoundEntity);
                     Check(offers.Length == f.C.Balance.Campaign.ShopOfferCount, "shop offer count");
-                    bool rushDevice = false, rushDrug = false;
+                    bool rushDevice = false;
                     var unique = new HashSet<ulong>();
                     for (int i = 0; i < offers.Length; i++)
                     {
                         var offer = offers[i];
+                        Check(offer.Kind == ShopItemKind.Device, "only device offers remain");
                         Check(unique.Add(((ulong)offer.Kind << 32) | offer.DefinitionId), "shop offers are unique");
                         if (offer.Kind == ShopItemKind.Device)
                         {
                             var definition = CampaignStateUtility.Device(f.C, offer.DefinitionId);
                             rushDevice |= definition.RushCategory || definition.RushChanceAdd > 0;
                         }
-                        else
-                        {
-                            var definition = CampaignStateUtility.Drug(f.C, offer.DefinitionId);
-                            rushDrug |= definition.Kind == DrugKind.Adrenaline || definition.Kind == DrugKind.RushFruit ||
-                                definition.Kind == DrugKind.RushDuration;
-                        }
+
                     }
                     Check(!f.C.Balance.Devices.Any(d => d.RushCategory || d.RushChanceAdd > 0) || rushDevice,
                         "shop guarantees a Rush device only when the current catalog contains one");
-                    Check(rushDrug, "shop guarantees a Rush drug");
                 }
             }
         }
         private static void LegacyContent()
         {
-            foreach (uint id in new uint[] { 1, 2 })
-            using (var f = new Fixture())
-            {
-                var definition = f.C.Balance.Drugs.Single(x => x.Id == id);
-                var before = f.Launch();
-                double original = f.Simulation.GetMarbleAttribute(before, GameAttribute.BALL_BOUNCE);
-                Check(f.Simulation.UseDrug(id), "use migrated bounce drug " + id);
-                var after = f.Launch();
-                Near(original * definition.RestitutionMultiplier, f.Physics.Spawns[after].Settings.Bounce, "legacy drug reaches physics " + id);
-                Near(original, f.Simulation.GetMarbleAttribute(before, GameAttribute.BALL_BOUNCE), "legacy drug preserves old ball " + id);
-                var inventory = f.Simulation.GetDrugInventory().Single(x => x.DefinitionId == id);
-                Check(inventory.Count == 4 && inventory.ActiveDoses == 1 && inventory.SecondsRemaining > 0, "legacy drug UI inventory and timer " + id);
-                Check(f.Simulation.UseDrug(id) && f.Simulation.GetDrugInventory().Single(x => x.DefinitionId == id).ActiveDoses == 2, "legacy doses stack independently " + id);
-                for (int i = 0; i < 130; i++) f.Step();
-                Check(f.Simulation.GetDrugInventory().Single(x => x.DefinitionId == id).ActiveDoses == 0, "legacy drug window expires " + id);
-                var expired = f.Launch();
-                Near(original, f.Physics.Spawns[expired].Settings.Bounce, "expired legacy drug does not affect new balls " + id);
-                Near(original * definition.RestitutionMultiplier, f.Simulation.GetMarbleAttribute(after, GameAttribute.BALL_BOUNCE), "legacy ball keeps launch snapshot after expiry " + id);
-            }
-            using (var f = new Fixture())
-            {
-                f.C.Tuning.MaxActiveBounceDrugs = 1;
-                Check(f.Simulation.UseDrug(1) && !f.Simulation.UseDrug(2), "legacy shared dose capacity");
-                Check(f.Simulation.GetDrugInventory().Single(x => x.DefinitionId == 2).Count == 5, "rejected legacy dose does not consume inventory");
-            }
             using (var f = new Fixture())
             {
                 var key = f.Launch();
@@ -484,22 +428,6 @@ namespace MarblesECS.Editor
                 var key=f.Launch(); GrantRefund(f, key);
                 f.Step(new MarbleContact { Key=key,TargetId=1,Kind=MarbleContactKind.Drain,Multiplier=0 });
                 Near(1000,f.C.Player.Blood,"generic refund API refunds on drain");
-            }
-            using(var f=new Fixture())
-            {
-                f.Simulation.UseDrug(f.C.Balance.Drugs.Single(x=>x.Kind==DrugKind.Replicator).Id);
-                var key=f.Launch();
-                f.Step(new MarbleContact{Key=key,TargetId=42,Kind=MarbleContactKind.Pin,Multiplier=1});
-                Check(f.C.Marbles.Count==2,"pin replication");
-                Check(f.C.Marbles.Values.All(e=>f.C.Manager.GetComponentData<BallFeatures>(e).Replicates),"recursive clone inheritance");
-                Check(f.C.Marbles.Values.All(e=>f.C.Manager.GetComponentData<BallFeatures>(e).ReplicationGeneration==1),"replication generation one");
-                var generationOne=f.C.Marbles.Keys.ToArray();
-                f.Step(generationOne.Select(k=>new MarbleContact{Key=k,TargetId=43,Kind=MarbleContactKind.Pin,Multiplier=1}).ToArray());
-                Check(f.C.Marbles.Count==4,"replication reaches configured generation cap");
-                Check(f.C.Marbles.Values.All(e=>f.C.Manager.GetComponentData<BallFeatures>(e).ReplicationGeneration==2),"replication generation two");
-                var capped=f.C.Marbles.Keys.ToArray();
-                f.Step(capped.Select(k=>new MarbleContact{Key=k,TargetId=44,Kind=MarbleContactKind.Pin,Multiplier=1}).ToArray());
-                Check(f.C.Marbles.Count==4,"replication stops at configured generation cap");
             }
         }
         private static void EconomyAndGambling()
@@ -577,11 +505,9 @@ namespace MarblesECS.Editor
         {
             var recipes = Balance().Content;
             var imported = GameContentImporter.Read(GameContentImporter.Workbook, recipes);
-            Check(imported.Attributes.Length == 34 && imported.Devices.Length == DeviceResourceCatalog.Current.Entries.Length && imported.Drugs.Length == 12, "real workbook import preserves migrated legacy definitions");
+            Check(imported.Attributes.Length == 34 && imported.Devices.Length == DeviceResourceCatalog.Current.Entries.Length, "real workbook import preserves current devices and attributes");
             foreach (var definition in DeviceResourceCatalog.Current.Definitions())
                 Check(JsonUtility.ToJson(definition) == JsonUtility.ToJson(imported.Devices.Single(x => x.Id == definition.Id)), "Excel import preserves MRes device authority " + definition.Id);
-            foreach (var legacy in recipes.Drugs.Where(x => x.Kind == DrugKind.LegacyBounce))
-                Check(JsonUtility.ToJson(legacy) == JsonUtility.ToJson(imported.Drugs.Single(x => x.Id == legacy.Id)), "import preserves legacy drug values " + legacy.Id);
             Near(recipes.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue,
                 imported.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue,
                 "import preserves authored fourth outcome");
@@ -617,13 +543,15 @@ namespace MarblesECS.Editor
             }
             using (var f = new Fixture())
             {
-                f.Simulation.UseDrug(f.C.Balance.Drugs.Single(x => x.Kind == DrugKind.Replicator).Id);
                 var key = f.Launch(); GrantRefund(f, key);
-                f.Step(new MarbleContact { Key = key, TargetId = 123, Kind = MarbleContactKind.Pin, Multiplier = 1 });
+                var device = f.Add(f.C.Balance.Devices.Single(d => d.Id == 9018));
+                var copyApi = CashApi(f, key, device);
+                Check(copyApi.CreateCopy().TrySpawn(new Vector3(30, 2, 0), Vector3.zero), "generic copy preserves refund family"); copyApi.Close();
+                Check(f.C.Marbles.Count == 2, "copy creates another ball");
                 var keys = f.C.Marbles.Keys.ToArray();
                 var player = f.C.Player; player.Blood = 100; f.C.Player = player;
                 f.Step(keys.Select(k => new MarbleContact { Key = k, TargetId = 1, Kind = MarbleContactKind.Drain }).ToArray());
-                Near(102, f.C.Player.Blood, "clone family refunds original cost exactly once");
+                Near(101, f.C.Player.Blood, "clone family refunds original cost exactly once");
             }
         }
         private static void GrantRefund(Fixture f, MarbleKey key)

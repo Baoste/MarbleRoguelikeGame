@@ -29,11 +29,6 @@ namespace MarblesECS
             context.BoardScores.Clear();
             context.BoardRush.Clear();
             context.ClearFireInput();
-            context.Manager.GetBuffer<ActiveScoreEffectData>(context.PlayerEntity).Clear();
-            BounceDrugSystem.Clear(context);
-            var player = context.Player;
-            player.DrugScoreMultiplier = 1;
-            context.Player = player;
         }
     }
 }

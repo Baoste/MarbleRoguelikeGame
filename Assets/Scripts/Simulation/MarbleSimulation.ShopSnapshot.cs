@@ -20,11 +20,7 @@ namespace MarblesECS
                     var definition = CampaignStateUtility.Device(context, offer.DefinitionId);
                     name = definition.Name; description = definition.Description; basePrice = definition.Price;
                 }
-                else
-                {
-                    var definition = CampaignStateUtility.Drug(context, offer.DefinitionId);
-                    name = definition.Name; description = definition.Description; basePrice = definition.Price;
-                }
+                else throw new InvalidOperationException("Unsupported shop item kind.");
                 if (!offer.Sold) offer.Price = CampaignShopSystem.Price(context, basePrice);
                 result[i] = new ShopOfferSnapshot
                 {
@@ -41,27 +37,6 @@ namespace MarblesECS
             return result;
         }
 
-        public DrugInventorySnapshot[] GetDrugInventory()
-        {
-            ThrowIfDisposed();
-            if (context.Balance == null) return Array.Empty<DrugInventorySnapshot>();
-            var inventory = context.Manager.GetBuffer<DrugInventoryData>(context.PlayerEntity);
-            var result = new DrugInventorySnapshot[inventory.Length];
-            for (int i = 0; i < inventory.Length; i++)
-            {
-                var item = inventory[i];
-                var definition = CampaignStateUtility.Drug(context, item.DefinitionId);
-                result[i] = new DrugInventorySnapshot
-                {
-                    DefinitionId = item.DefinitionId, Name = definition.Name, Count = item.Count, Description = definition.Description,
-                    RestitutionMultiplier = definition.RestitutionMultiplier, DurationSeconds = definition.DurationSeconds
-                };
-                var doses = context.Manager.GetBuffer<ActiveDrugData>(context.PlayerEntity);
-                for (int d = 0; d < doses.Length; d++)
-                    if (doses[d].DefinitionId == item.DefinitionId && doses[d].EndsAt > context.Round.Time)
-                    { result[i].ActiveDoses++; result[i].SecondsRemaining = Math.Max(result[i].SecondsRemaining, doses[d].EndsAt - context.Round.Time); }
-            }
-            return result;
-        }
+
     }
 }

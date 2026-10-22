@@ -13,7 +13,6 @@ namespace MarblesECS
             CheckRows(b.Stages, 1, 100, x => x.Id, x => x.Validate(), "Stages");
             b.Content?.Validate();
             CheckRows(b.Devices, b.Content == null ? 0 : 1, 200, x => x.Id, x => x.Validate(), "Devices");
-            CheckRows(b.Drugs, b.Content == null ? 0 : 1, 200, x => x.Id, x => x.Validate(), "Drugs");
             ValidateStages(b); ValidateInventory(b);
         }
 
@@ -30,13 +29,12 @@ namespace MarblesECS
 
         private static void ValidateInventory(GameBalance b)
         {
-            int deviceCount = 0, drugCount = 0;
+            int deviceCount = 0;
             foreach (var device in b.Devices)
             {
                 deviceCount += device.StartingCount * device.PurchaseQuantity;
             }
-            foreach (var drug in b.Drugs) drugCount += drug.StartingCount;
-            if (deviceCount > b.Campaign.MaxOwnedDevices || drugCount > b.Campaign.MaxDrugInventory)
+            if (deviceCount > b.Campaign.MaxOwnedDevices)
                 throw new ArgumentException("Starting inventory exceeds capacity.");
         }
 
