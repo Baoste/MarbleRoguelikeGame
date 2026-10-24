@@ -14,14 +14,14 @@ namespace MarblesECS
                 Reason = contact.Kind == MarbleContactKind.Drain ? MarbleDespawnReason.Drained : MarbleDespawnReason.Scored });
             if (contact.Kind == MarbleContactKind.Drain) { RushSystem.Settle(context, entity, contact); return; }
 
+            double zoneMultiplier = ScoreStackSystem.RegisterScore(context, contact);
             var round = context.Round;
             var marble = manager.GetComponentData<MarbleScore>(entity);
-            var chance = manager.GetComponentData<MarbleRush>(entity);
             var modifiers = MarbleModifierSystem.Aggregate(context, entity);
             double rush = 1d;
             long score = MarbleRules.Settle(RushSystem.BallValue(context, entity), marble.ScoreBonus, modifiers.ScoreAdd,
                 marble.ScoreMultiplier, modifiers.ScoreMul,
-                contact.Multiplier, contact.FlatScore, rush, context.Tuning.MaxPerMarbleScore);
+                zoneMultiplier, contact.FlatScore, rush, context.Tuning.MaxPerMarbleScore);
             bool isPending = contact.Kind == MarbleContactKind.RandomScore && context.Balance != null;
             if (isPending) round.PendingScore = MarbleRules.AddScore(round.PendingScore, score, context.Tuning.MaxRoundScore);
             else round.Score = MarbleRules.AddScore(round.Score, score, context.Tuning.MaxRoundScore);
@@ -34,7 +34,8 @@ namespace MarblesECS
                 BaseValue = marble.BaseScore, ScoreBonus = marble.ScoreBonus, ScoreAdd = modifiers.ScoreAdd,
                 FlatScore = contact.FlatScore,
                 PermanentMultiplier = marble.ScoreMultiplier, ModifierMultiplier = modifiers.ScoreMul,
-                DeviceMultiplier = marble.ScoreMultiplier, ZoneMultiplier = contact.Multiplier,
+                DeviceMultiplier = marble.ScoreMultiplier, ZoneMultiplier = zoneMultiplier,
+                ScoreStackBonus = zoneMultiplier - contact.Multiplier,
                 LauncherMultiplier = 1, RushMultiplier = rush, Score = score, RoundScore = round.Score,
                 IsPending = isPending, PendingScore = round.PendingScore
             });

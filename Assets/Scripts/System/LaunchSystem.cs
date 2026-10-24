@@ -8,11 +8,11 @@ namespace MarblesECS
     {
         internal static void Execute(SimulationContext context, IMarblePhysics physics, Vector3 position, Quaternion rotation)
         {
+            if (!LauncherFireSystem.TryConsumeInput(context)) return;
             if (AttributeRuntime.Enabled(context)) { ContentSpawnSystem.Launch(context, position, rotation); return; }
             var round = context.Round;
             if (round.Phase != (byte)RoundPhase.Playing) return;
             var launcher = context.Launcher;
-            if ((launcher.FireHeld == 0 && launcher.PendingSingleShots == 0) || round.Time < launcher.NextFireAt) return;
             if (round.ActiveMarbleCount >= context.Tuning.MaxActiveMarbles) return;
             var quote = MarbleRules.Quote(context.Tuning, launcher.Flow);
             var player = context.Player;
@@ -40,7 +40,6 @@ namespace MarblesECS
                 context.Marbles.Add(key, entity);
                 player.Blood -= (float)cost;
                 launcher.NextFireAt = round.Time + RushSystem.FireInterval(context);
-                if (launcher.PendingSingleShots > 0) launcher.PendingSingleShots--;
                 round.ActiveMarbleCount++;
                 context.Player = player;
                 context.Launcher = launcher;

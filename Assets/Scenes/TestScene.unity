@@ -7183,6 +7183,10 @@ MonoBehaviour:
     MaxInvestment: 5
     MarbleDefinitionId: 1
     FireIntervalSeconds: 0.15
+    HoldAccelerationSeconds: 2
+    ScoreStackIncrement: 0.05
+    ScoreStackInitialSeconds: 1
+    ScoreStackMinimumSeconds: 0.1
     MaxActiveMarbles: 256
     DrainTimeoutSeconds: 15
     DespawnBelowY: -10
@@ -18282,8 +18286,8 @@ MonoBehaviour:
   TargetId: 5
   Priority: 0
   Multiplier: 1
-  BaseRushChance: 0
-  RushEnabled: 0
+  RushEnabled: 1
+  ScoreStackEnabled: 1
   FlatScore: 0
 --- !u!65 &340758007
 BoxCollider:
@@ -47936,8 +47940,8 @@ MonoBehaviour:
   TargetId: 2
   Priority: 0
   Multiplier: 6
-  BaseRushChance: 0.12
   RushEnabled: 1
+  ScoreStackEnabled: 1
   FlatScore: 0
 --- !u!1 &953050888
 GameObject:
@@ -86407,8 +86411,8 @@ MonoBehaviour:
   TargetId: 1
   Priority: 0
   Multiplier: 1
-  BaseRushChance: 0
   RushEnabled: 0
+  ScoreStackEnabled: 1
   FlatScore: 0
 --- !u!136 &1662052446
 CapsuleCollider:

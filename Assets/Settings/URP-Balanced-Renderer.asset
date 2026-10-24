@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: faa3769977887c647934aea406b8b56c, type: 3}
-  m_Name: "\u7C97\u50CF\u7D20\u90AA\u5178\uFF08\u7531 Volume \u8C03\u8282\uFF09"
+  m_Name: ' Volume '
   m_EditorClassIdentifier: 
   m_Active: 1
   shader: {fileID: 4800000, guid: 7decd5079e2d40245911de0b33ebaa6e, type: 3}

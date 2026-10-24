@@ -4,7 +4,6 @@ namespace MarblesECS
 {
     internal struct MarbleRush : IComponentData
     {
-        public double BaseRushChance;
         public double RushChanceBonus;
         public double DurationBonus;
         public double Contribution;

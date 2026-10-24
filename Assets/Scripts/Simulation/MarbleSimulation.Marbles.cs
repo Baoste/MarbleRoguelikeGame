@@ -18,7 +18,7 @@ namespace MarblesECS
                 BloodInvestment = context.Manager.GetComponentData<ShotOrigin>(entity).BloodInvestment,
                 BaseScore = AttributeRuntime.Enabled(context) ? AttributeRuntime.Get(context, entity, GameAttribute.BALL_BASE_VALUE) : score.BaseScore,
                 ScoreBonus = score.ScoreBonus, ScoreMultiplier = context.BoardScores.Multiplier(context, score),
-                BaseRushChance = rush.BaseRushChance, RushChanceBonus = rush.RushChanceBonus,
+                RushChanceBonus = rush.RushChanceBonus,
                 RushDurationBonus = rush.DurationBonus,
                 RushContribution = rush.Contribution, EffectiveValue = RushSystem.BallValue(context, entity),
                 HasScoreRushContribution = rush.HasScoreContribution, ScoreRushContribution = rush.ScoreContribution,

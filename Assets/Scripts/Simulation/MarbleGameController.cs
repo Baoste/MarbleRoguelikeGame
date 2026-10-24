@@ -11,6 +11,7 @@ namespace MarblesECS.PhysX
         [HideInInspector] public MarbleTuning Tuning = new MarbleTuning();
         [Header("Gameplay")]
         [Min(0f)] public float StartingBlood = 100f;
+        [Tooltip("独立模式的最高发射频率；战役使用 GameBalance.Marble.FireIntervalSeconds 的倒数。")]
         [Min(0.01f)] public float BallsPerSecond = 6.666667f;
         public Transform LaunchPoint;
         [Tooltip("发射位置相对于 LaunchPoint 的局部 XYZ 偏移，跟随发射点的移动、旋转和缩放。")]

@@ -13,6 +13,7 @@ namespace MarblesECS
         public double PermanentMultiplier, ModifierMultiplier;
         public long FlatScore;
         public double DeviceMultiplier, ZoneMultiplier, LauncherMultiplier, RushMultiplier;
+        public double ScoreStackBonus;
         public long Score;
         public long RoundScore;
         public bool IsPending;

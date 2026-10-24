@@ -78,7 +78,7 @@ namespace MarblesECS.Editor
                 Near(0, f.C.Round.RushMeter, "cooking records contribution without immediate board deposit");
                 WokUntil(f, f.C.Round.Time + 1);
                 Near(17, f.C.Manager.GetComponentData<MarbleRush>(f.Ball(ball)).Contribution, "release does not count the same stored effect twice");
-                f.Step(new MarbleContact { Key=ball, Kind=kind, TargetId=701, Multiplier=1, BaseRushChance=1 });
+                f.Step(new MarbleContact { Key=ball, Kind=kind, TargetId=701, Multiplier=1 });
                 Near(kind==MarbleContactKind.Drain ? 17 : 25.5, f.C.Round.RushMeter, "wok contribution deposits at terminal zone");
                 Near(0, f.C.Round.RushRemaining, "old guaranteed probability does not trigger Rush");
             }

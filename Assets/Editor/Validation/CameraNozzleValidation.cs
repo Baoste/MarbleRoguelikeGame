@@ -393,9 +393,17 @@ namespace MarblesECS.Editor
             Report.Add("FIRING START: three production FireOnce requests; blood=" + bloodBefore.ToString("F4") +
                 " tick=" + tickBefore + " | " + RuntimeContext());
             // Use the same public single-shot input as gameplay; do not spawn bodies or edit ECS data.
-            for (int i = 0; i < shotCount; i++) game.FireOnce();
+            int requested = 0;
+            double nextRequestAt = game.Snapshot.TimeSeconds;
             do
             {
+                if (requested < shotCount && game.Snapshot.TimeSeconds >= nextRequestAt)
+                {
+                    game.FireOnce();
+                    requested++;
+                    // Separate physical taps: inputs are no longer queued through the cooldown.
+                    nextRequestAt = game.Snapshot.TimeSeconds + 1 / game.Snapshot.ShotsPerSecond + game.FixedStep * 2;
+                }
                 yield return null;
                 ValidateNozzleAttachment();
                 ValidateBloodDisplay();

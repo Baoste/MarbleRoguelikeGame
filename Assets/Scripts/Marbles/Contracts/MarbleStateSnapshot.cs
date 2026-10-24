@@ -8,7 +8,7 @@ namespace MarblesECS
         public uint DefinitionId;
         public float BloodInvestment;
         public double BaseScore, ScoreBonus, ScoreMultiplier;
-        public double BaseRushChance, RushChanceBonus;
+        public double RushChanceBonus;
         public double RushDurationBonus;
         public double RushContribution, EffectiveValue;
         public bool HasScoreRushContribution;

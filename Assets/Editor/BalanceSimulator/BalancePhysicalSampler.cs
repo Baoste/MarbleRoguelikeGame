@@ -30,7 +30,7 @@ namespace MarblesECS.Editor
         [Serializable]
         internal sealed class Report
         {
-            public int SchemaVersion = 1;
+            public int SchemaVersion = 2;
             public string Scene;
             public string UnityVersion;
             public string GeneratedUtc;
@@ -61,8 +61,8 @@ namespace MarblesECS.Editor
             public string Kind;
             public int TargetId;
             public float Multiplier;
-            public float BaseRushChance;
             public bool RushEnabled;
+            public bool ScoreStackEnabled;
             public int Count;
             public float Probability;
             public float MeanFlightSeconds;
@@ -88,8 +88,8 @@ namespace MarblesECS.Editor
             internal string Kind;
             internal int TargetId;
             internal float Multiplier;
-            internal float BaseRushChance;
             internal bool RushEnabled;
+            internal bool ScoreStackEnabled;
             internal float FlightSeconds;
             internal int PinContacts;
             internal int DeviceContacts;
@@ -170,8 +170,7 @@ namespace MarblesECS.Editor
                         rows.Add(sample);
                         aggregate.Samples.Add(sample);
                         string outcomeKey = sample.Kind + ":" + sample.TargetId.ToString(CultureInfo.InvariantCulture) + ":" +
-                            sample.Multiplier.ToString("R", CultureInfo.InvariantCulture) + ":" +
-                            sample.BaseRushChance.ToString("R", CultureInfo.InvariantCulture) + ":" + sample.RushEnabled;
+                            sample.Multiplier.ToString("R", CultureInfo.InvariantCulture) + ":" + sample.RushEnabled + ":" + sample.ScoreStackEnabled;
                         if (!aggregate.Outcomes.TryGetValue(outcomeKey, out var outcomeRows))
                             aggregate.Outcomes.Add(outcomeKey, outcomeRows = new List<RawSample>());
                         outcomeRows.Add(sample);
@@ -302,7 +301,8 @@ namespace MarblesECS.Editor
                 Index = index, Seed = sampleSeed, Lane = lane, Flow = flow,
                 LaunchX = launch.localPosition.x, Kind = terminal.HasValue ? resolved.Kind.ToString() : "Void",
                 TargetId = resolved.TargetId, Multiplier = (float)resolved.Multiplier,
-                BaseRushChance = (float)resolved.BaseRushChance, RushEnabled = !resolved.RushDisabled,
+                RushEnabled = !resolved.RushDisabled,
+                ScoreStackEnabled = resolved.ScoreStackEnabled,
                 FlightSeconds = elapsed, PinContacts = pinContacts, DeviceContacts = deviceContacts
             };
         }
@@ -349,7 +349,8 @@ namespace MarblesECS.Editor
                     return new Outcome
                     {
                         Kind = first.Kind, TargetId = first.TargetId, Multiplier = first.Multiplier,
-                        BaseRushChance = first.BaseRushChance, RushEnabled = first.RushEnabled,
+                        RushEnabled = first.RushEnabled,
+                        ScoreStackEnabled = first.ScoreStackEnabled,
                         Count = group.Count, Probability = samples == 0 ? 0 : (float)group.Count / samples,
                         MeanFlightSeconds = group.Count == 0 ? 0 : group.Average(x => x.FlightSeconds)
                     };
@@ -385,15 +386,15 @@ namespace MarblesECS.Editor
         private static void WriteCsv(string path, IEnumerable<RawSample> rows)
         {
             var output = new StringBuilder();
-            output.AppendLine("sample_index,sample_seed,lane,flow,launch_x,outcome_kind,target_id,zone_multiplier,base_rush_chance,rush_enabled,flight_seconds,pin_contacts,device_contacts");
+            output.AppendLine("sample_index,sample_seed,lane,flow,launch_x,outcome_kind,target_id,zone_multiplier,rush_enabled,score_stack_enabled,flight_seconds,pin_contacts,device_contacts");
             foreach (RawSample row in rows)
             {
                 output.Append(row.Index).Append(',').Append(row.Seed).Append(',').Append(row.Lane).Append(',')
                     .Append(row.Flow.ToString("R", CultureInfo.InvariantCulture)).Append(',')
                     .Append(row.LaunchX.ToString("R", CultureInfo.InvariantCulture)).Append(',').Append(row.Kind).Append(',')
                     .Append(row.TargetId).Append(',').Append(row.Multiplier.ToString("R", CultureInfo.InvariantCulture)).Append(',')
-                    .Append(row.BaseRushChance.ToString("R", CultureInfo.InvariantCulture)).Append(',')
                     .Append(row.RushEnabled ? "true" : "false").Append(',')
+                    .Append(row.ScoreStackEnabled ? "true" : "false").Append(',')
                     .Append(row.FlightSeconds.ToString("R", CultureInfo.InvariantCulture)).Append(',')
                     .Append(row.PinContacts).Append(',').Append(row.DeviceContacts).AppendLine();
             }

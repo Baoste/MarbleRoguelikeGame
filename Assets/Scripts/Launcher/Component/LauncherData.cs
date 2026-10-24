@@ -7,6 +7,9 @@ namespace MarblesECS
         public float Flow;
         public double NextFireAt;
         public byte FireHeld;
-        public int PendingSingleShots;
+        // At most one request for the next simulation step; never a shot queue.
+        public byte FireRequested;
+        public double HeldSeconds;
+        public double HeldShotProgress;
     }
 }

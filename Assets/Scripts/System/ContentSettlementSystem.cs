@@ -29,6 +29,7 @@ namespace MarblesECS
         {
             BallInteractionSystem.Consume(c, ball, true);
             if (contact.Kind == MarbleContactKind.Drain) { RushSystem.Settle(c, ball, contact); return; }
+            double zoneMultiplier = ScoreStackSystem.RegisterScore(c, contact);
             var round = c.Round;
             var scoreData = c.Manager.GetComponentData<MarbleScore>(ball);
             var modifiers = MarbleModifierSystem.Aggregate(c, ball);
@@ -36,7 +37,7 @@ namespace MarblesECS
             double speed = contact.Speed > 0 ? contact.Speed : c.Manager.GetComponentData<Motion3D>(ball).LinearVelocity.magnitude;
             value *= 1 + AttributeRuntime.Get(c, ball, GameAttribute.SCORE_BY_SPEED) * Math.Min(1, speed / AttributeRuntime.Get(c, ball, GameAttribute.BALL_MAX_SPEED));
             double machine = Math.Min(c.Content.Definition(GameAttribute.MACHINE_MULT).MaxValue,
-                AttributeRuntime.Get(c, ball, GameAttribute.MACHINE_MULT) * c.BoardScores.Multiplier(c, scoreData) * contact.Multiplier);
+                AttributeRuntime.Get(c, ball, GameAttribute.MACHINE_MULT) * c.BoardScores.Multiplier(c, scoreData) * zoneMultiplier);
             double global = AttributeRuntime.Global(c, GameAttribute.GLOBAL_MULT);
             double rush = 1; // Rush now grants a temporary value bonus instead of a global score factor.
             global = Math.Min(c.Content.Definition(GameAttribute.GLOBAL_MULT).MaxValue,
@@ -55,7 +56,8 @@ namespace MarblesECS
             c.Round = round;
             RushSystem.Settle(c, ball, contact);
             c.ScoreEvents.Enqueue(new MarbleScoreEvent { Key = contact.Key, ZoneId = contact.TargetId, Position = contact.Position,
-                BaseValue = value, DeviceMultiplier = machine, PermanentMultiplier = machine, ZoneMultiplier = contact.Multiplier,
+                BaseValue = value, DeviceMultiplier = machine, PermanentMultiplier = machine, ZoneMultiplier = zoneMultiplier,
+                ScoreStackBonus = zoneMultiplier - contact.Multiplier, FlatScore = contact.FlatScore,
                 ModifierMultiplier = modifiers.ScoreMul, RushMultiplier = rush,
                 Score = score, RoundScore = round.Score, IsPending = pending, PendingScore = round.PendingScore });
         }

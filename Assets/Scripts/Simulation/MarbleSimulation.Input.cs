@@ -5,25 +5,27 @@ namespace MarblesECS
 {
     public sealed partial class MarbleSimulation
     {
-        /// <summary>The rising edge retains one shot even if released before the next tick.</summary>
+        /// <summary>Press requests one shot and starts the hold ramp. Release cancels all unconsumed input.</summary>
         public void SetFireHeld(bool held)
         {
             ThrowIfDisposed();
+            if (!held) { context.ClearFireInput(); return; }
             if (!CanAcceptInput) return;
             var launcher = context.Launcher;
-            if (held && launcher.FireHeld == 0 && launcher.PendingSingleShots < 32)
-                launcher.PendingSingleShots++;
-            launcher.FireHeld = (byte)(held ? 1 : 0);
+            if (launcher.FireHeld != 0) return;
+            launcher.FireRequested = 1;
+            launcher.FireHeld = 1;
+            launcher.HeldSeconds = launcher.HeldShotProgress = 0;
             context.Launcher = launcher;
         }
 
-        /// <summary>Use for a separate single-shot button; do not also call for a held-button edge.</summary>
+        /// <summary>One-step request. Repeated calls coalesce; cooldown or failed shots are discarded.</summary>
         public void FireOnce()
         {
             ThrowIfDisposed();
             if (!CanAcceptInput) return;
             var launcher = context.Launcher;
-            if (launcher.PendingSingleShots < 32) launcher.PendingSingleShots++;
+            launcher.FireRequested = 1;
             context.Launcher = launcher;
         }
 

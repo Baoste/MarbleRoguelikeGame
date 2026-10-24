@@ -64,7 +64,8 @@ namespace MarblesECS
         {
             var launcher = Launcher;
             launcher.FireHeld = 0;
-            launcher.PendingSingleShots = 0;
+            launcher.FireRequested = 0;
+            launcher.HeldSeconds = launcher.HeldShotProgress = 0;
             Launcher = launcher;
         }
 
@@ -94,6 +95,8 @@ namespace MarblesECS
             Marbles.Clear();
             var round = Round;
             round.ActiveMarbleCount = 0;
+            round.ScoreStackCount = 0;
+            round.ScoreStackExpiresAt = 0;
             Round = round;
         }
 

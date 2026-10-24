@@ -117,6 +117,7 @@ namespace MarblesECS
                 round.Tick = checked(round.Tick + 1);
                 context.Round = round;
                 RushSystem.Tick(context);
+                ScoreStackSystem.Tick(context);
                 TimedGravitySystem.Tick(context, false);
                 AttributeRuntime.Tick(context);
                 EffectLifecycleSystem.Execute(context);

@@ -92,7 +92,7 @@ namespace MarblesECS.Editor
                 Check(f.Simulation.Snapshot.Phase == RoundPhase.Draining, "out of blood waits for remaining balls");
                 f.Step(GoldMineHit(f, key, device)); Near(25, f.C.Player.Blood, "remaining ball can restore blood after exhaustion");
                 Check(f.Simulation.Snapshot.Phase == RoundPhase.Playing, "restored affordable blood reopens firing");
-                Near(0, f.C.Launcher.PendingSingleShots, "healing does not enqueue a shot");
+                Near(0, f.C.Launcher.FireRequested, "healing does not request a shot");
                 f.Launch(); Near(24, f.C.Player.Blood, "restored blood pays for another real launch");
                 Check(f.C.Marbles.Count == 2, "new launch actually creates a second ball");
             }

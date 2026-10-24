@@ -28,7 +28,19 @@
 
 抽血档位仍在 `MinInvestment/MaxInvestment` 间选择投入量。基础耗血为「投入量 × BLOOD_COST」，随后应用属性 ADD/MUL/SET 和上下限；批量发射按球数收费。低档位用于增加携带 RUSH 贡献的球数，高档位用于 Rush 窗口内快速兑现价值。提现为「剩余血量 × BLOOD_DIVIDEND_RATE × 当前阶段 CashoutRate × COIN_GAIN_RATE」，金币向下取整。
 
-场景 `MarbleZone` 的倍率和 `RushEnabled` 开关仍生效；`BaseRushChance` 仅兼容，新 RUSH 不做概率抽取。流失区按贡献原值入账，普通/赌博得分区按 1.5 倍入账。
+发射频率跟随空格操作：点按一次最多发射一次，按得越快出球越快；超过上限的请求直接丢弃。按下时请求第一发，继续长按则让自动连发频率从 0 线性增加，`Marble.HoldAccelerationSeconds` 默认 **2 秒**达到极速。松开立即取消未消费请求和连发进度，再按重新加速；暂停、回合结束和重开也会清空输入。每个模拟步最多消费一次发射请求，冷却、满球、血量不足或生成失败均不排队补发。
+
+战役极速由 `Resources/GameBalance.json` 的 `Marble.FireIntervalSeconds` 控制：当前 **0.15 秒/次，约 6.67 次/秒**；RUSH 时上限仍额外 **+5 次/秒**。`Config/GameBalance.xlsx` 同步这两个参数。单次发射可被 `BALL_SPAWN_COUNT` 改成多球，频率上限限制发射次数。场景 Inspector 的 `BallsPerSecond` 仅用于独立模式。这里的频率不改变弹珠飞行速度，飞行速度仍由 `BALL_LAUNCH_SPEED` 决定。
+
+场景 `MarbleZone` 的倍率和 `RushEnabled` 开关仍生效；旧 `BaseRushChance` 字段及其传递、校验已移除，新 RUSH 不做概率抽取。流失区按贡献原值入账，普通/赌博得分区在 `RushEnabled` 开启时按 1.5 倍入账。
+
+得分区新增全盘共享的**得分叠加**。`MarbleZone.ScoreStackEnabled` 默认开启；全局加成初始为 **0**，区域 `Multiplier` 默认 **1**，因此初始有效倍率为 **×1**，没有固定的 ×2 起点。每颗进入参与区域的球先使全局加成增加 **0.05**，再用「区域原倍率＋当前全局加成」结算：原倍率为 1 时，首球按 ×1.05、第二球按 ×1.10、第三球按 ×1.15……计算，超时恢复 ×1。不同区域共享加成，各自保留配置的原倍率；要让某区域从 ×1 开始，将其 `Multiplier` 设为 1。关闭开关的区域不增加、不刷新，也不享受这份加成；流失区始终不参与。普通得分区和赌博得分区都可参与，同球重复碰撞只结算一次，同一步的多球按生成顺序逐颗累加。
+
+首次进球开始 **1 秒**倒计时；之后每次参与进球的刷新时长为 `max(0.1, 1 / (1 + 进球前全局加成))` 秒，前三次约为 1、0.952、0.909 秒。超时仅清空加成，保留已得分；暂停时计时暂停，回合结束、下一回合和重新开局均清空。三个可调参数位于 `Marble.ScoreStackIncrement / ScoreStackInitialSeconds / ScoreStackMinimumSeconds`，JSON 和基础 Excel 同步维护。
+
+通常结算式为「球价值 ×（得分区原倍率＋全局加成）× 装置累计倍率」。现有机器、全局属性倍率、赌博倍率和得分上限仍按原顺序处理；`FlatScore` 仍在区域/装置乘法之后相加。有效区域倍率沿用原数值范围上限 1000，内容属性的机器倍率上限仍生效。RUSH 不放大这份加成。黑洞等 Lua 直接指定金额的结算不触发、不刷新得分区叠加，也不会被自动加乘；装置和弹珠本身的倍率数据不因全局叠加而改变。
+
+物理采样报告升级为 `SchemaVersion = 2`，JSON 与 CSV 不再输出基础 RUSH 概率。项目根目录 `Tools/Balance` 的历史概率模型尚未迁移至贡献累加机制，不能用新采样报告推导当前 RUSH 平衡；遇到新格式会明确报错，旧报告仍可用于历史分析。
 
 装置条目的 `Cooldown` 是每种装置的基础秒数，初始化到该装置的 `DEVICE_COOLDOWN`；属性效果在此基础上修改。`DEVICE_TRIGGER_RATE` 和 `MACHINE_MULT` 在球与装置上各有作用域，装置初始乘数为中性值 `1`，避免把属性默认值重复计算。装置 `Radius` 表示装置占地半径，与弹珠 `BALL_RADIUS` 含义不同。
 
@@ -82,7 +94,7 @@
 | `MarbleGameController` | `LaunchPoint / LauncherMoveHalfWidth / LauncherMoveSpeed` | 发射点及移动范围、移动速度 |
 | `MarbleGameController` | `LaunchOffset / ShowLaunchGizmos` | 发射点局部 XYZ 偏移；绿色线框球标记实际发射中心，黄色连线表示偏移，青色箭头表示发射方向 |
 | `MarbleGameController` | `FixedStep / MaxStepsPerFrame` | 模拟步长、每帧最大模拟次数 |
-| `MarbleZone` | `Kind / Multiplier / BaseRushChance / RushEnabled` | 区域行为；范围由 Trigger Collider 决定 |
+| `MarbleZone` | `Kind / Multiplier / FlatScore / RushEnabled / ScoreStackEnabled` | 区域行为；`ScoreStackEnabled` 控制是否参与全局得分叠加，范围由 Trigger Collider 决定 |
 | `MarbleBoardView` | `PinHeight` | 旧程序 HUD 的钉子高度；Prefab 自己的外观由 Transform 决定 |
 
 `TestScene` 的放置障碍物已绑定 `PhysicsRoot/MarblePins`。不要把底板或动态装置的父对象加入障碍物列表。移动、缩放、旋转、禁用或删除固定钉后，放置检查跟随真实 Collider；不再按行列公式预留位置。增幅塔之间保留 `0.01` 间距规则，网格吸附后重新检查放置范围。

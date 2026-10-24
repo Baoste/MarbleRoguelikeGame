@@ -17,9 +17,12 @@ namespace MarblesECS
         [NonSerialized] public float MassPerBlood = 0.1f;
         public uint MarbleDefinitionId = 1;
         [NonSerialized] public double BaseScore = 10d;
-        [NonSerialized] public double BaseRushChance;
         [NonSerialized] public float BloodCostMultiplier = 1f;
         public float FireIntervalSeconds = 0.15f;
+        [OptionalBalanceField] public float HoldAccelerationSeconds = 2f;
+        [OptionalBalanceField] public double ScoreStackIncrement = 0.05;
+        [OptionalBalanceField] public float ScoreStackInitialSeconds = 1f;
+        [OptionalBalanceField] public float ScoreStackMinimumSeconds = 0.1f;
         [NonSerialized] public float LaunchSpeed = 12f;
         [NonSerialized] public float LauncherScoreMultiplier = 1f;
         public int MaxActiveMarbles = 256;
@@ -52,10 +55,14 @@ namespace MarblesECS
                 throw new ArgumentException("最大投入/半径不得小于最小值。");
             Positive(MassPerBlood, nameof(MassPerBlood)); if (MarbleDefinitionId == 0) throw new ArgumentOutOfRangeException(nameof(MarbleDefinitionId));
             if (!MarbleRules.IsFinite(BaseScore) || BaseScore < 0) throw new ArgumentOutOfRangeException(nameof(BaseScore));
-            if (!MarbleRules.IsFinite(BaseRushChance) || BaseRushChance < 0 || BaseRushChance > 1)
-                throw new ArgumentOutOfRangeException(nameof(BaseRushChance));
             Positive(BloodCostMultiplier, nameof(BloodCostMultiplier));
             Positive(FireIntervalSeconds, nameof(FireIntervalSeconds)); Positive(LaunchSpeed, nameof(LaunchSpeed));
+            Positive(HoldAccelerationSeconds, nameof(HoldAccelerationSeconds));
+            Multiplier(ScoreStackIncrement, nameof(ScoreStackIncrement));
+            Positive(ScoreStackInitialSeconds, nameof(ScoreStackInitialSeconds));
+            Positive(ScoreStackMinimumSeconds, nameof(ScoreStackMinimumSeconds));
+            if (ScoreStackMinimumSeconds > ScoreStackInitialSeconds)
+                throw new ArgumentOutOfRangeException(nameof(ScoreStackMinimumSeconds));
             Multiplier(LauncherScoreMultiplier, nameof(LauncherScoreMultiplier));
             Positive(MaxLifeSeconds, nameof(MaxLifeSeconds)); Positive(DrainTimeoutSeconds, nameof(DrainTimeoutSeconds));
             Positive(WorldBoundsExtent, nameof(WorldBoundsExtent)); Positive(RushDurationSeconds, nameof(RushDurationSeconds));
@@ -81,7 +88,7 @@ namespace MarblesECS
             if (!MarbleRules.IsFinite(value) || value <= 0) throw new ArgumentOutOfRangeException(name);
         }
 
-        private static void Multiplier(float value, string name)
+        private static void Multiplier(double value, string name)
         {
             if (!MarbleRules.IsFinite(value) || value <= 0 || value > 1000) throw new ArgumentOutOfRangeException(name);
         }

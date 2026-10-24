@@ -11,13 +11,13 @@ namespace MarblesECS.PhysX
         public int Priority;
         [Range(0f, 50f)] public float Multiplier = 1f;
 
-        [Range(0f, 1f)] public float BaseRushChance = 0.06f;
         public bool RushEnabled = true;
+        [Tooltip("启用得分叠加：进球增加全盘共享倍率并刷新时间；关闭时不增加、不刷新，也不享受叠加。仅得分区有效。")]
+        public bool ScoreStackEnabled = true;
         [Min(0)] public long FlatScore;
 
         public bool IsValid => TargetId > 0 && MarbleRules.IsFinite(Multiplier) &&
             Multiplier >= 0 && Multiplier <= 1000 &&
-            MarbleRules.IsFinite(BaseRushChance) && BaseRushChance >= 0 && BaseRushChance <= 1 &&
             FlatScore >= 0 && (Kind == MarbleContactKind.Score || Kind == MarbleContactKind.Multiplier ||
                 Kind == MarbleContactKind.Drain || Kind == MarbleContactKind.RandomScore);
 
@@ -27,7 +27,7 @@ namespace MarblesECS.PhysX
             {
                 Key = key, Kind = Kind, TargetId = TargetId, Priority = Priority,
                 Multiplier = Multiplier, Position = position,
-                BaseRushChance = BaseRushChance, RushDisabled = !RushEnabled, FlatScore = FlatScore
+                RushDisabled = !RushEnabled, ScoreStackEnabled = ScoreStackEnabled, FlatScore = FlatScore
             };
         }
 

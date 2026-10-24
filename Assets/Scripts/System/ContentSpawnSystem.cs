@@ -11,7 +11,7 @@ namespace MarblesECS
         {
             var round = c.Round;
             var launcher = c.Launcher;
-            if (round.Phase != (byte)RoundPhase.Playing || (launcher.FireHeld == 0 && launcher.PendingSingleShots == 0) || round.Time < launcher.NextFireAt) return;
+            if (round.Phase != (byte)RoundPhase.Playing) return;
             var spawn = AttributeRuntime.Prepare(c, launcher.Flow);
             double cost = RushSystem.ShotCost(c, spawn.Count * spawn.Quote.Cost);
             if (round.ActiveMarbleCount + spawn.Count > c.Tuning.MaxActiveMarbles || c.Player.Blood < cost) return;
@@ -30,7 +30,6 @@ namespace MarblesECS
                 player.Blood -= (float)cost;
                 c.Player = player;
                 launcher.NextFireAt = round.Time + RushSystem.FireInterval(c);
-                if (launcher.PendingSingleShots > 0) launcher.PendingSingleShots--;
                 c.Launcher = launcher;
                 committed = true;
             }

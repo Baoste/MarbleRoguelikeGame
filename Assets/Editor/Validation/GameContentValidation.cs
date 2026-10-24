@@ -46,6 +46,8 @@ namespace MarblesECS.Editor
                 Placement();
                 DevicePlacementValidation.Run();
                 SpawnBatch();
+                LauncherCadenceValidation();
+                ScoreStackValidation();
                 LegacyDrugRemoval();
                 LegacyContent();
                 Devices();
@@ -227,7 +229,7 @@ namespace MarblesECS.Editor
                 var key = f.Launch();
                 f.Step(new MarbleContact { Key = key, TargetId = 1,
                     Kind = pending ? MarbleContactKind.RandomScore : MarbleContactKind.Score,
-                    Multiplier = 50, BaseRushChance = 1 });
+                    Multiplier = 50 });
                 Near(pending ? 1890 : 630, pending ? f.C.Round.PendingScore : f.C.Round.Score,
                     "combined multipliers respect authored caps, pending=" + pending);
                 Near(0, f.C.Round.RushRemaining, "old probability and duration attributes do not bypass the new meter");
@@ -346,6 +348,8 @@ namespace MarblesECS.Editor
                 Near(1000,f.C.Player.Blood,"batch failure blood rollback");
                 Check(f.Physics.Spawns.Count==0 && f.C.Marbles.Count==0,"batch failure body/entity rollback");
                 f.Physics.FailSpawnAt=0; f.Step();
+                Check(f.C.Marbles.Count==0,"failed batch leaves no queued retry");
+                f.Simulation.FireOnce(); f.Step();
                 Check(f.C.Marbles.Count==3,"batch count");
                 Near(997,f.C.Player.Blood,"batch costs each ball");
             }

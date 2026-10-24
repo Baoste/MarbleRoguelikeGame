@@ -9,9 +9,9 @@ namespace MarblesECS
         public int TargetId;
         public int Priority;
         public double Multiplier;
-        public double BaseRushChance;
         public double RushChanceAdd;
         public bool RushDisabled;
+        public bool ScoreStackEnabled;
         public long FlatScore;
         public Vector3 Position;
         public long LinkKey;

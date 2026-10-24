@@ -41,7 +41,9 @@
 
 上述球状态随复制、等分和按价值分球完整继承；临时 +5 由当前全盘状态实时计算，**不被复制或均分进永久价值**。API 只在所属回调有效；非法参数不部分写入。`MarbleStateSnapshot` 提供 `RushContribution`、`HasScoreRushContribution`、`ScoreRushContribution`、`EffectiveValue`；`MarbleSnapshot` 提供条值、上限、剩余秒数和当前每秒发射数。
 
-旧 `AddRushChance`、`RushOnSettlement`、`Board.SetRushChanceBonus`、区域 `BaseRushChance` 保留兼容读取，但不参与新的 RUSH 触发。旧 `RUSH_DURATION/RUSH_MULT/RUSH_DECAY/BALL_RUSH_GAIN` 属性也不再控制条值触发和核心计时；后续装置请使用本节 API，不把概率换算成贡献。
+旧 `AddRushChance`、`RushOnSettlement`、`Board.SetRushChanceBonus` 保留兼容读取，但不参与新的 RUSH 触发。区域 `BaseRushChance` 及对应运行时数据已移除。旧 `RUSH_DURATION/RUSH_MULT/RUSH_DECAY/BALL_RUSH_GAIN` 属性也不再控制条值触发和核心计时；后续装置请使用本节 API，不把概率换算成贡献。
+
+得分区另有全盘共享的限时叠加：开启 `MarbleZone.ScoreStackEnabled` 的区域每进一球，先增加 0.05 区域倍率，再结算并刷新倒计时；首球 1 秒，后续为 `max(0.1, 1 / (1 + 进球前全局加成))` 秒。它直接加在区域原倍率上，不写入 `AddScoreMultiplier` 的装置累计值，不随复制/分裂传递。Lua 的直接金额结算不会自动获得或刷新该区域加成；API 签名及包内脚本无需修改。关闭区域开关时不累加、不刷新，也不享受加成。完整公式与调参见 `Docs/Balance.md`。
 
 ## 超大杯全冰美式（已实现）
 

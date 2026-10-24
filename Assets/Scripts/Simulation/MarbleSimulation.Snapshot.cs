@@ -22,6 +22,8 @@ namespace MarblesECS
                     ActiveMarbles = round.ActiveMarbleCount, TimeSeconds = round.Time,
                     RushSecondsRemaining = round.RushRemaining,
                     RushMeter = round.RushMeter, RushMaximum = RushSystem.Threshold,
+                    ScoreStackBonus = ScoreStackSystem.Bonus(context),
+                    ScoreStackSecondsRemaining = Math.Max(0, round.ScoreStackExpiresAt - round.Time),
                     ShotsPerSecond = 1 / RushSystem.FireInterval(context),
                     Flow = context.Launcher.Flow,
                     NextMarbleRestitution = restitution

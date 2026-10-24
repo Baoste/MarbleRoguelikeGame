@@ -24,6 +24,8 @@ namespace MarblesECS
             else round.Phase = (byte)(round.Score >= round.TargetScore ? RoundPhase.Won : RoundPhase.Lost);
             round.RushEndTick = 0;
             round.RushRemaining = round.RushMeter = 0;
+            round.ScoreStackCount = 0;
+            round.ScoreStackExpiresAt = 0;
             context.Round = round;
             context.Transients.Clear(context);
             context.BoardScores.Clear();

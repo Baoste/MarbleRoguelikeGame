@@ -18,9 +18,9 @@ namespace MarblesECS.Editor
                 Near(17,f.C.Manager.GetComponentData<MarbleRush>(f.Ball(key)).Contribution,"multiple effect APIs in one callback contribute five once");
                 f.Step();api=CashApi(f,key,device);api.MarkTriggered();api.Close();
                 Near(22,f.C.Manager.GetComponentData<MarbleRush>(f.Ball(key)).Contribution,"later valid trigger on same device adds another five");
-                var hit=new MarbleContact{Key=key,Kind=kind,TargetId=800,Multiplier=1,BaseRushChance=1};f.Step(hit,hit);
+                var hit=new MarbleContact{Key=key,Kind=kind,TargetId=800,Multiplier=1};f.Step(hit,hit);
                 Near(kind==MarbleContactKind.Drain?22:33,f.C.Round.RushMeter,"terminal deposit is once-only and score uses one point five");
-                Near(0,f.C.Round.RushRemaining,"probability one cannot bypass meter");
+                Near(0,f.C.Round.RushRemaining,"partial meter cannot activate RUSH");
                 for(int i=0;i<10;i++)f.Step();Near(kind==MarbleContactKind.Drain?22:33,f.C.Round.RushMeter,"meter never decays while idle");
             }
             using(var f=new Fixture())

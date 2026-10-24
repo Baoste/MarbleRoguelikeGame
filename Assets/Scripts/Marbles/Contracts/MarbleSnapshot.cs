@@ -14,6 +14,7 @@ namespace MarblesECS
         public double TimeSeconds;
         public double RushSecondsRemaining;
         public double RushMeter, RushMaximum;
+        public double ScoreStackBonus, ScoreStackSecondsRemaining;
         public double ShotsPerSecond;
         public float Flow;
         public float NextMarbleRestitution;

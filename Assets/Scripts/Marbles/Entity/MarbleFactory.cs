@@ -20,7 +20,7 @@ namespace MarblesECS
                 manager.SetComponentData(entity, new OnBoard { Board = context.BoardEntity });
                 manager.SetComponentData(entity, new DefinitionRef { DefinitionId = context.Tuning.MarbleDefinitionId });
                 manager.SetComponentData(entity, new MarbleScore { BaseScore = quote.BaseValue, ScoreMultiplier = quote.LauncherMultiplier, BaseMultiplier = quote.LauncherMultiplier });
-                manager.SetComponentData(entity, new MarbleRush { BaseRushChance = context.Tuning.BaseRushChance, Contribution = RushSystem.InitialContribution });
+                manager.SetComponentData(entity, new MarbleRush { Contribution = RushSystem.InitialContribution });
                 manager.AddBuffer<RushTriggerVisit>(entity);
                 manager.SetComponentData(entity, new MarblePhysicsProperties
                 { Restitution = context.Tuning.BaseRestitution });
