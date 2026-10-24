@@ -44,7 +44,6 @@ namespace MarblesECS
             round.Score = MarbleRules.AddScore(round.Score, round.GamblingPayout, context.Tuning.MaxRoundScore);
             round.SettlementComplete = true;
             campaign.TotalScore = MarbleRules.AddScore(campaign.TotalScore, round.Score, rules.MaxTotalScore);
-            campaign.RandomState = round.RandomState;
             campaign.LastRewardCoins = 0;
             campaign.LastSkippedStages = 0;
             if (campaign.TotalScore < round.TargetScore)

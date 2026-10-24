@@ -56,7 +56,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
 
     private void Update()
     {
-        if (Controller == null || !Controller.IsReady || BoardRoot == null)
+        if (Controller == null || !Controller.IsReady || Controller.Paused || BoardRoot == null)
             return;
 
         SyncPlacedObjects();
@@ -130,6 +130,9 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         if (plane.Raycast(ray, out float distance))
         {
             Vector3 worldPoint = ray.GetPoint(distance);
+            if (Controller != null && Controller.PlacementSurface != null &&
+                !Controller.PlacementSurface.ContainsWorldPoint(worldPoint, 0))
+            { localPoint = default; return false; }
             Vector3 planePoint = Quaternion.Inverse(planeRotation) * (worldPoint - planePosition);
             if (Mathf.Abs(planePoint.x) > PlacementPlaneSize.x * 0.5f ||
                 Mathf.Abs(planePoint.z) > PlacementPlaneSize.y * 0.5f)
@@ -146,6 +149,8 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
 
     private bool IsInsidePlacementPlane(Vector3 worldPoint)
     {
+        if (Controller != null && Controller.PlacementSurface != null &&
+            !Controller.PlacementSurface.ContainsWorldPoint(worldPoint, 0)) return false;
         GetPlacementPlanePose(out Vector3 position, out Quaternion rotation);
         Vector3 point = Quaternion.Inverse(rotation) * (worldPoint - position);
         return Mathf.Abs(point.x) <= PlacementPlaneSize.x * 0.5f &&

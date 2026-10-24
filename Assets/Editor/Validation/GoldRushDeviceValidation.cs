@@ -208,6 +208,7 @@ namespace MarblesECS.Editor
                 Scene = SceneManager.CreateScene("GoldRushValidation_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
                 var balance = GameBalanceLoader.Load(); foreach (var d in balance.Devices) d.StartingCount = 0;
                 balance.Marble.InitialBlood = balance.Marble.BloodCapacity = 1000;
+                balance.Marble.FireIntervalSeconds = .01f; // Isolate scripted launches from the authored cooldown.
                 balance.Content.Definition(GameAttribute.BALL_LIFETIME).DefaultValue = 60;
                 var definition = balance.Devices.Single(d => d.Id == 9011); definition.Durability = durability; definition.Value = duration;
                 Simulation = new MarbleSimulation(balance); Bridge = new MarblePhysicsBridge(Scene, null, null, Simulation.EnqueueContact);

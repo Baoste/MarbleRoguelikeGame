@@ -6,11 +6,16 @@ namespace MarblesECS
     public sealed partial class MarbleSimulation
     {
         /// <summary>Restart the entire run, including wallet, score, inventory and placements.</summary>
-        public void StartSession(IMarblePhysics physics)
+        public void StartSession(IMarblePhysics physics) => StartSession(physics, 0);
+
+        /// <summary>Initialize the one shared stream, then draw starters. Null uses Marble.RandomSeed.</summary>
+        public void StartSession(IMarblePhysics physics, int randomStarterTypeCount, uint? randomSeed = null)
         {
             ThrowIfDisposed();
             if (context.Balance == null) throw new InvalidOperationException("Construct with GameBalance to start a campaign.");
-            ResetRound(physics);
+            if (randomStarterTypeCount < 0 || randomStarterTypeCount > 200)
+                throw new ArgumentOutOfRangeException(nameof(randomStarterTypeCount));
+            ResetRound(physics, randomSeed: randomSeed);
             context.DeviceScripts.Clear();
             if (AttributeRuntime.Enabled(context))
             {
@@ -21,13 +26,10 @@ namespace MarblesECS
                 context.Manager.DestroyEntity(entities);
             context.Campaign = new CampaignData
             {
-                Coins = context.Balance.Campaign.StartingCoins,
-                RandomState = context.Tuning.RandomSeed
+                Coins = context.Balance.Campaign.StartingCoins
             };
             context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity).Clear();
-            foreach (var device in context.Balance.Devices)
-                for (int i = 0; i < device.StartingCount; i++)
-                    CampaignStateUtility.CreateDevice(context, device, device.Price);
+            CreateStartingDevices(randomStarterTypeCount);
             var round = context.Round;
             round.Phase = (byte)RoundPhase.Build;
             round.TargetScore = context.Balance.Stages[0].TargetScore;
@@ -38,10 +40,9 @@ namespace MarblesECS
         public bool BeginRound()
         {
             if (!CanCampaignAct(RoundPhase.Build)) return false;
-            ResetRound(context.Physics);
+            ResetRound(context.Physics, resetRandom: false);
             var round = context.Round;
             round.TargetScore = context.Balance.Stages[context.Campaign.StageIndex].TargetScore;
-            round.RandomState = context.Campaign.RandomState;
             context.Round = round;
             FillBlood();
             var campaign = context.Campaign;

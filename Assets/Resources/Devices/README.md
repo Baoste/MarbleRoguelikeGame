@@ -56,7 +56,7 @@ Unity 不会将未知扩展名直接作为 `TextAsset` 收录，因此 `DeviceCa
 
 ## 包内通用参数
 
-- `StartingCount`：开局赠送份数；`PurchaseQuantity`：每份产生的装置数量（传送门为 2），自动分配配对 ID。
+- `StartingCount`：开局赠送份数；当前全部为 `0`，场景随机赠送也已关闭，开局空背包。`PurchaseQuantity`：每份产生的装置数量（传送门为 2），自动分配配对 ID。
 - `Radius`：放置半径；`Cooldown`、`MaxTriggersPerBall`：默认触发冷却和每球次数上限。
 - `Value`、`Strength`、`Range`：供脚本读取的数值。
 - `RushCategory`：商店 Rush 分类；`LinkGroup`：相同非空组名的装置可连接；`GroupClearance`：同组放置间距。

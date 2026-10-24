@@ -16,20 +16,19 @@ namespace MarblesECS
             var balance = context.Balance;
             var offers = context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);
             offers.Clear();
-            var campaign = context.Campaign;
-            var all = new List<Candidate>(balance.Devices.Length);
-            var rushDevices = new List<Candidate>();
+            var round = context.Round;
+            var devices = new List<Candidate>(balance.Devices.Length);
             foreach (var definition in balance.Devices)
             {
                 var candidate = new Candidate { Kind = ShopItemKind.Device, Id = definition.Id, Price = definition.Price };
-                all.Add(candidate);
-                if (definition.RushCategory || definition.RushChanceAdd > 0) rushDevices.Add(candidate);
+                devices.Add(candidate);
             }
-
+            // Stable catalog ordering makes an explicitly supplied test seed reproducible.
+            devices.Sort((a, b) => a.Id.CompareTo(b.Id));
             var used = new HashSet<ulong>();
-            if (offers.Length < balance.Campaign.ShopOfferCount) AddRandom(context, offers, rushDevices, used, ref campaign.RandomState);
-            while (offers.Length < balance.Campaign.ShopOfferCount && AddRandom(context, offers, all, used, ref campaign.RandomState)) { }
-            context.Campaign = campaign;
+            for (int i = 0; i < balance.Campaign.ShopOfferCount; i++)
+                if (!AddRandom(context, offers, devices, used, ref round.RandomState)) break;
+            context.Round = round;
         }
 
         private static bool AddRandom(SimulationContext context, Unity.Entities.DynamicBuffer<ShopOfferData> offers,

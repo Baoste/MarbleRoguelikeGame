@@ -187,6 +187,7 @@ namespace MarblesECS.Editor
                 var balance = GameBalanceLoader.Load();
                 foreach (var d in balance.Devices) d.StartingCount = 0;
                 balance.Marble.InitialBlood = balance.Marble.BloodCapacity = 1000;
+                balance.Marble.FireIntervalSeconds = .01f; // Isolate scripted launches from the authored cooldown.
                 balance.Content.Definition(GameAttribute.BALL_LIFETIME).DefaultValue = 60;
                 balance.Content.Definition(GameAttribute.BALL_MAX_SPEED).DefaultValue = 100;
                 Simulation = new MarbleSimulation(balance);

@@ -40,21 +40,21 @@
         },
         {
             "Id": 3,
-            "TargetScore": 815,
+            "TargetScore": 450,
             "RewardCoins": 36,
             "SkipRewardCoins": 20,
             "CashoutRate": 0.8
         },
         {
             "Id": 4,
-            "TargetScore": 1410,
+            "TargetScore": 800,
             "RewardCoins": 46,
             "SkipRewardCoins": 25,
             "CashoutRate": 0.9
         },
         {
             "Id": 5,
-            "TargetScore": 2200,
+            "TargetScore": 1400,
             "RewardCoins": 58,
             "SkipRewardCoins": 32,
             "CashoutRate": 1.0

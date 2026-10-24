@@ -277,6 +277,7 @@ function Verify() assert(completed == 2) end"))
                 Scene = SceneManager.CreateScene("CannonValidation_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
                 var balance = GameBalanceLoader.Load(); foreach (var d in balance.Devices) d.StartingCount = 0;
                 balance.Marble.InitialBlood = balance.Marble.BloodCapacity = 1000;
+                balance.Marble.FireIntervalSeconds = .01f; // Each scripted Launch must create a distinct ball.
                 balance.Content.Definition(GameAttribute.BALL_LIFETIME).DefaultValue = 120;
                 Simulation = new MarbleSimulation(balance); Bridge = new MarblePhysicsBridge(Scene, null, null, Simulation.EnqueueContact);
                 Simulation.StartSession(Bridge); Simulation.BeginRound();

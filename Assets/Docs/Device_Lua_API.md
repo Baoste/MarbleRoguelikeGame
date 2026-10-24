@@ -381,8 +381,8 @@ end
 | `SetDeviceScoreMultiplier(amount)` | 将当前弹珠的完整累计装置倍率替换为 `amount`，内部增量改为 `amount - 1`；接受 0–1000 的有限数，非法数值抛错且不改变状态。保留基础价值、固定加分和独立基础倍率，不立即计分、不隐式扣耐久；实际改变时登记触发历史。设为 0 后，后续 `AddScoreMultiplier(3)` 会得到 2，不锁定最终得分。仅当前弹珠回调有效。 |
 | `AddRushChance(amount)` | 旧概率兼容写入，不参与新的累积触发；新装置使用 `AddRushContribution`。 |
 | `RushDurationBonus` | 当前球使 RUSH 条累满时的额外秒数，默认 0，有限范围 `[0,3600]`；不刷新已经激活的 RUSH，详见重构章节。 |
-| `Roll(probability)` | 使用本局统一随机状态进行概率判定。 |
-| `RandomRange(minimum, maximum)` | 使用本局统一随机状态在指定区间均匀取数；有限数值且下界不大于上界。上下界相等时直接返回该值，不消耗随机状态。 |
+| `Roll(probability)` | 使用整局统一随机序列进行概率判定；与初始装置、商店及开奖共用。 |
+| `RandomRange(minimum, maximum)` | 使用整局统一随机序列在指定区间均匀取数；有限数值且下界不大于上界。上下界相等时直接返回该值，不消耗随机状态。 |
 | `BreakPinsOnCross()` / `RemoveDevice()` | 清除当前装置十字范围内的普通钉子、消耗当前装置。 |
 
 旧 `a.Speed`、`ScaleVelocity`、`Exit`、`ExitPartner` 作为兼容别名保留，内部也走新的通用运动 API。新脚本优先使用 `a.Motion`。
@@ -898,7 +898,7 @@ end
 
 | API | 规则 |
 | --- | --- |
-| `RandomRange(minimum, maximum)` | 与弹珠上下文相同，使用回合随机数，返回 `[minimum, maximum)`；等值不推进随机状态，非法边界抛异常。 |
+| `RandomRange(minimum, maximum)` | 与弹珠上下文相同，使用整局统一随机序列，返回 `[minimum, maximum)`；等值不推进随机状态，非法边界抛异常。 |
 | `TrySpawnVisual(nodePath, position, velocity, seconds, callback)` | 从当前 MRes 根节点下的指定视觉模板复制 Mesh/Material/Transform，以世界坐标匀速移动，返回正整数 ID；失败返回 0。零速度可作定时闪光；时长须大于 0 且不超过 60 秒。 |
 | `Transient` | 仅视觉完成回调非空，含只读 `Id`、`Position`、`Velocity`、`Duration`。Position 是精确寿命终点，完成后此对象也随回调过期。 |
 | `ForEachBallInRadius(center, radius, callback)` | 冻结与世界球形区域相交的在场弹珠列表，按出生顺序，为每颗调用指定 Lua 函数并传入新的 `DeviceContactContext`；返回正常完成的回调数。半径 0–100，包含球自身半径；跳过滞留、已结算、待回收和寿命已到的球。 |
@@ -1025,7 +1025,9 @@ end
 | `SignedAngle(from, to, axis)` | 返回 `[-180, 180]` 的有符号夹角，由旋转轴决定符号。两个方向和轴要求非零；用于平面角度时先投影到该平面。 |
 | `Rotate(vector, axis, degrees)` | 绕任意世界轴旋转向量，轴自动归一化，保留向量长度。轴要求非零，角度有限；只计算向量，不改变位置或速度。 |
 
-`RandomRange` 与 `Roll` 共用当前回合的随机状态。同样的种子和调用次序得到相同结果，不使用 Unity 全局随机数或 Lua `math.random`。非法上下界（NaN、无穷、下界大于上界或跨度溢出）抛出异常且不消耗随机状态。
+`RandomRange`、`Roll` 和装置事件上下文的 `RandomRange`，与初始装置抽取、商店生成/刷新、赌博开奖共用**整局唯一随机序列**。进入下一回合延续状态，不重置；商店刷新或任何装置多抽一次，都会推进后续随机结果。同样的种子和调用次序得到相同结果，不使用 Unity 全局随机数或 Lua `math.random`。
+
+`MarbleGameController` Inspector 的「每次开新局刷新随机种子」默认开启，只在新开局时生成一个共享种子；关闭后使用 `GameBalance.json` 的 `Marble.RandomSeed`。装置 Lua 接口签名和脚本用法不变，现有 MRes 无需重新打包。非法上下界（NaN、无穷、下界大于上界或跨度溢出）抛出异常且不消耗随机状态。
 
 `api.Impact`、`api.Vectors` 和 `RandomRange` 遵守当前回调有效期；保存 Impact 或 Vectors 后跨回调访问会报错。需要延迟使用某个入射量时，保存普通数值/向量副本。`DeviceEventContext` 同样提供全部 `Vectors` 纯运算，用于没有当前弹珠时计算生成布局等。
 

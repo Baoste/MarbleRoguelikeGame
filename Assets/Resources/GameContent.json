@@ -444,7 +444,7 @@
             "ScoreMultiplier": 1.85,
             "RushChanceAdd": 0.0,
             "Radius": 0.18000000715255737,
-            "StartingCount": 1,
+            "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
             "LinkGroup": "",

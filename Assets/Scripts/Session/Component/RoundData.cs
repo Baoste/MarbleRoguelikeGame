@@ -20,6 +20,7 @@ namespace MarblesECS
         public long TargetScore;
         public int ActiveMarbleCount;
         public byte Phase;
+        // The run's only random stream: starters, shop, device effects and settlement share it.
         public uint RandomState;
         public long RushEndTick;
         public double RushRemaining, RushMeter, FractionalScore, FractionalPendingScore;

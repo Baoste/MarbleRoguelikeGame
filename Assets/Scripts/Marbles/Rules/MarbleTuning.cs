@@ -35,6 +35,7 @@ namespace MarblesECS
         public long MaxPerMarbleScore = 1000000000L;
         public long MaxRoundScore = 9000000000000L;
         public long TargetScore = 1000L;
+        // Only seed for the whole run, including starter packs and shop stock.
         public uint RandomSeed = 12345;
 
         public MarbleTuning Copy() { return (MarbleTuning)MemberwiseClone(); }

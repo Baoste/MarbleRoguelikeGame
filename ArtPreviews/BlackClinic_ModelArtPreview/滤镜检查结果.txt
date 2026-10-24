@@ -1,0 +1,17 @@
+PASS: Independent art-scene profile exists
+PASS: Active URP with HDR enabled
+PASS: RetroCult parameters copied and enabled
+PASS: RetroCult shader supported
+PASS: Renderer present: Performant
+PASS: Built-in postprocess data present: Performant
+PASS: Exactly one active RetroCult pass: Performant
+PASS: Renderer present: Balanced
+PASS: Built-in postprocess data present: Balanced
+PASS: Exactly one active RetroCult pass: Balanced
+PASS: Renderer present: HighFidelity
+PASS: Built-in postprocess data present: HighFidelity
+PASS: Exactly one active RetroCult pass: HighFidelity
+PASS: Pixel/posterize processing changes pixels beyond grading: 9.74751543209877
+PASS: Temporal pixel jitter/grain is animated: 4.37169431584362
+PASS: Camera composition unchanged
+ART_FILTER_TRANSFER_OK

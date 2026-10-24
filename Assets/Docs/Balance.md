@@ -44,7 +44,13 @@
 
 给程序/策划交接的工作簿是 `Assets/Docs/血色柏青哥_道具药物装置_规范修订版.xlsx`。优先查看其中的“运行时平衡表”：其中的旧药物行仅作为历史设计参考，不代表当前游戏内容。该页不自动覆盖配置，运行时装置来源是 `Resources/Devices/*.mres`，属性来源是 `Resources/GameContent.json`。
 
-商店当前只出售 MRes 装置，有候选时保底 RUSH 装置，其余货位从当前装置目录无重复抽取。旧药物商品、初始库存、服药和药效代码已删除，后续药物将改用 Lua。
+商店当前只出售 MRes 装置，每回合从当前完整目录等概率、无重复抽取 `Campaign.ShopOfferCount` 个装置（默认 4），不设 RUSH 保底；目录不足时只显示实际可用装置。付费刷新采用同样规则，购买不会重抽其他货位。商店与初始装置、装置 Lua、赌博开奖共用整局唯一随机序列；生成和刷新商品会推进后续玩法的随机状态。目录按 ID 排序，相同种子和调用次序可复现抽取结果。旧药物商品、初始库存、服药和药效代码保持删除，后续药物将改用 Lua。
+
+当前默认开局空背包，不赠送装置：`TestScene` 关闭 `EnableRandomStartingDevices`，全部 MRes 的 `StartingCount` 为 `0`。进入游戏和重新开局都直接开始第一回合，之后通过商店购买装置。
+
+控制器的 `EnableRandomStartingDevices` 保留为测试选项，手动开启后可启用每局随机初始装置，替代固定 `StartingCount`；抽取数量由 `RandomStartingDeviceCount` 控制。进入下一回合不重新抽取，成套装置完整赠送。初始抽取直接消耗统一随机序列，不再提供初始装置或商店的独立种子。
+
+在场景的 `MarbleGameController` Inspector「随机数」分组中，`每次开新局刷新随机种子`（`RefreshRandomSeedOnNewRun`）默认勾选：每次进入游戏或重新开局生成一个新的非零整局种子；取消勾选时使用 `Resources/GameBalance.json` 的 `Marble.RandomSeed`（当前为 `12345`）。进入下一回合、打开商店或道具库均不重新播种；只在需要随机结果时依次取数。`LastRunRandomSeed` 记录本次实际种子，方便复现。固定种子只保证相同随机调用次序的结果，不保证物理在不同平台完全一致。战役和独立模式均遵守此开关。
 
 `GameBalance` 的装置列表直接引用同一份内容目录；会话复制时深拷贝整个目录。基础 JSON 和基础 Excel 不再保存旧装置、药物列表。
 

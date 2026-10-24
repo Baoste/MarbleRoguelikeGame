@@ -87,6 +87,7 @@ namespace MarblesECS.Editor
                 MetadataAndDurability();
                 EconomyAndGambling();
                 ShopGuarantees();
+                SharedRandomSequence();
                 Boundaries();
                 PhysicalBridge();
                 Debug.Log("CONTENT_VALIDATION_PASSED: " + assertions + " assertions.");
@@ -356,29 +357,77 @@ namespace MarblesECS.Editor
             {
                 for (uint seed = 1; seed <= 64; seed++)
                 {
-                    var campaign = f.C.Campaign; campaign.RandomState = seed; f.C.Campaign = campaign;
+                    var round = f.C.Round; round.RandomState = seed; f.C.Round = round;
+                    uint expected = seed;
                     CampaignShopSystem.Generate(f.C);
                     var offers = f.C.Manager.GetBuffer<ShopOfferData>(f.C.RoundEntity);
                     Check(offers.Length == f.C.Balance.Campaign.ShopOfferCount, "shop offer count");
-                    bool rushDevice = false;
-                    var unique = new HashSet<ulong>();
+                    var unique = new HashSet<uint>();
                     for (int i = 0; i < offers.Length; i++)
                     {
                         var offer = offers[i];
                         Check(offer.Kind == ShopItemKind.Device, "only device offers remain");
-                        Check(unique.Add(((ulong)offer.Kind << 32) | offer.DefinitionId), "shop offers are unique");
-                        if (offer.Kind == ShopItemKind.Device)
-                        {
-                            var definition = CampaignStateUtility.Device(f.C, offer.DefinitionId);
-                            rushDevice |= definition.RushCategory || definition.RushChanceAdd > 0;
-                        }
-
+                        Check(unique.Add(offer.DefinitionId), "shop offers are unique");
+                        Check(CampaignStateUtility.Device(f.C, offer.DefinitionId) != null, "shop device is in catalog");
                     }
-                    Check(!f.C.Balance.Devices.Any(d => d.RushCategory || d.RushChanceAdd > 0) || rushDevice,
-                        "shop guarantees a Rush device only when the current catalog contains one");
+                    for (int i = 0; i < offers.Length; i++) MarbleRules.NextRandom(ref expected);
+                    Check(f.C.Round.RandomState == expected, "shop consumes the shared gameplay RNG");
                 }
             }
         }
+        private static void SharedRandomSequence()
+        {
+            int start = assertions;
+            foreach (uint seed in new uint[] { 0, 1, 12345 })
+            using (var f = new Fixture())
+            {
+                var device = f.Add(f.C.Balance.Devices.Single(d => d.Id == 9010));
+                var key = f.Launch();
+                var round = f.C.Round; round.RandomState = seed; f.C.Round = round;
+                uint expected = seed;
+                var api = CashApi(f, key, device);
+                Check(api.Roll(.5) == (MarbleRules.NextRandom(ref expected) < .5), "Lua Roll uses shared run stream");
+                Near(-3 + 8 * MarbleRules.NextRandom(ref expected), api.RandomRange(-3, 5), "ball random range follows Roll");
+                Near(7, api.RandomRange(7, 7), "constant range returns constant");
+                Check(f.C.Round.RandomState == expected, "constant range consumes no random draw");
+                api.Close();
+
+                CampaignShopSystem.Generate(f.C);
+                for (int i = 0; i < f.Simulation.GetShopOffers().Length; i++) MarbleRules.NextRandom(ref expected);
+                Check(f.C.Round.RandomState == expected, "shop continues after Lua random calls");
+                CampaignStateUtility.FindDevice(f.C, device.InstanceId, out var entity);
+                var tickApi = new DeviceEventContext(f.C, entity);
+                Near(360 * MarbleRules.NextRandom(ref expected), tickApi.RandomRange(0, 360), "device-only callback follows shop draws");
+                tickApi.Close();
+                Check(f.C.Round.RandomState == expected, "both Lua contexts and shop share the same state");
+
+                f.C.RemoveAllMarbles();
+                round = f.C.Round; round.Score = round.TargetScore; round.PendingScore = 10;
+                round.Phase = (byte)RoundPhase.Draining; f.C.Round = round;
+                double draw = MarbleRules.NextRandom(ref expected);
+                int outcome = AttributeMath.GamblingOutcome(draw,
+                    AttributeRuntime.Global(f.C, GameAttribute.GAMBLE_LOSS_CHANCE),
+                    AttributeRuntime.Global(f.C, GameAttribute.GAMBLE_RETURN_CHANCE),
+                    AttributeRuntime.Global(f.C, GameAttribute.GAMBLE_WIN_CHANCE),
+                    AttributeRuntime.Global(f.C, GameAttribute.GAMBLE_QUADRUPLE_CHANCE));
+                CampaignSettlementSystem.Execute(f.C);
+                Near(outcome, f.C.Round.GamblingMultiplier, "gambling consumes the next shared draw");
+                Check(f.C.Round.RandomState == expected && !f.C.Round.SettlementComplete, "reveal holds the consumed state without generating stock");
+                Check(f.Simulation.CompleteRandomScoreReveal(), "complete reveal through production entry");
+                for (int i = 0; i < f.Simulation.GetShopOffers().Length; i++) MarbleRules.NextRandom(ref expected);
+                Check(f.C.Round.RandomState == expected, "settlement stock follows the gambling draw");
+                Check(f.Simulation.EnterBuild() && f.Simulation.BeginRound(), "advance to next round");
+                Check(f.C.Round.RandomState == expected, "round reset preserves the entire shared sequence");
+
+                f.Simulation.StartSession(f.Physics, 3, seed);
+                expected = seed;
+                for (int i = 1; i < f.C.Balance.Devices.Length; i++) MarbleRules.NextRandom(ref expected);
+                Check(f.C.Round.RandomState == expected, "new run initializes once and starters advance that same state");
+                Check(f.Simulation.BeginRound() && f.C.Round.RandomState == expected, "first round never rewinds starter draws");
+            }
+            Debug.Log("SHARED_RANDOM_SEQUENCE_VALIDATION_PASSED: " + (assertions - start) + " assertions.");
+        }
+
         private static void LegacyContent()
         {
             using (var f = new Fixture())

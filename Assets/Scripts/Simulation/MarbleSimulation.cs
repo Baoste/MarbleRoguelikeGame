@@ -43,13 +43,13 @@ namespace MarblesECS
             context = new SimulationContext(owned.Marble, owned);
         }
 
-        public void StartRound(IMarblePhysics physics)
+        public void StartRound(IMarblePhysics physics, uint? randomSeed = null)
         {
-            if (context.Balance != null) StartSession(physics);
-            else ResetRound(physics);
+            if (context.Balance != null) StartSession(physics, 0, randomSeed);
+            else ResetRound(physics, randomSeed: randomSeed);
         }
 
-        private void ResetRound(IMarblePhysics physics)
+        private void ResetRound(IMarblePhysics physics, bool resetRandom = true, uint? randomSeed = null)
         {
             ThrowIfDisposed();
             if (physics == null) throw new ArgumentNullException(nameof(physics));
@@ -75,7 +75,8 @@ namespace MarblesECS
             context.Round = new RoundData
             {
                 RoundId = newRoundId, Phase = (byte)RoundPhase.Playing,
-                TargetScore = context.Tuning.TargetScore, RandomState = context.Tuning.RandomSeed
+                TargetScore = context.Tuning.TargetScore,
+                RandomState = resetRandom ? (randomSeed ?? context.Tuning.RandomSeed) : context.Round.RandomState
             };
             context.Player = new PlayerData
             {

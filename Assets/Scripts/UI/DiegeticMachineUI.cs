@@ -176,7 +176,11 @@ public sealed class DiegeticMachineUI : MonoBehaviour
             text=CanCashOut()?"<b>结算开关</b>\n向下拨动 / 点击结算\n关闭供血，按原规则结算本回合。":
                 Controller.Session.Phase==RoundPhase.Playing?"<b>供血已开启</b>\n达到目标分后才能向下拨动并结算。":
                 Controller.Session.Phase==RoundPhase.Build?"<b>供血已关闭</b>\n布置完成后点击或向上拨动，开始回合。\n也可使用物品板上的“开始回合”。":"<b>供血已关闭</b>\n等待结算和购买阶段结束。";
-
+        else if(hoverKind==2 && hoverIndex>=0 && hoverIndex<deviceIds.Length)
+        {
+            var d=unplacedDevices.Find(x=>x.InstanceId==deviceIds[hoverIndex]);
+            if(d.InstanceId!=0)text=$"<b>{d.Name}</b>\n{MarblesECS.Presentation.DeviceDisplayText.Details(d)}\n{d.Description}\n拖到盘面空位放置；F1 可查完整道具库。";
+        }
         if(Placement && Placement.IsDraggingInventory)text=Placement.LastFeedback;
         else if(deviceFeedbackUntil>Time.unscaledTime)text=deviceFeedback;
         else deviceFeedbackUntil=0;
