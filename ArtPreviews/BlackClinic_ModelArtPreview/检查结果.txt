@@ -1,0 +1,7 @@
+Scene: Assets/Scenes/BlackClinic_ModelArtPreview.unity
+Objects: 1130
+Mesh renderers: 1052
+Cameras: 1
+Lights: 41
+Issues: 0
+Camera position=(-12.212880, 17.884100, -0.671964) rotation=(34.192440, 94.583870, -0.000006) FOV=25.36077

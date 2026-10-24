@@ -17,26 +17,27 @@ namespace MarblesECS
             var offers = context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);
             offers.Clear();
             var campaign = context.Campaign;
-            var all = new List<Candidate>(balance.Devices.Length + balance.Drugs.Length);
-            var rushDevices = new List<Candidate>();
-            var rushDrugs = new List<Candidate>();
+            var devices = new List<Candidate>(balance.Devices.Length);
+            var drugs = new List<Candidate>(balance.Drugs.Length);
             foreach (var definition in balance.Devices)
             {
                 var candidate = new Candidate { Kind = ShopItemKind.Device, Id = definition.Id, Price = definition.Price };
-                all.Add(candidate);
-                if (definition.RushCategory || definition.RushChanceAdd > 0) rushDevices.Add(candidate);
+                devices.Add(candidate);
             }
             foreach (var definition in balance.Drugs)
             {
                 var candidate = new Candidate { Kind = ShopItemKind.Drug, Id = definition.Id, Price = definition.Price };
-                all.Add(candidate);
-                if (definition.Kind == DrugKind.Adrenaline || definition.Kind == DrugKind.RushFruit ||
-                    definition.Kind == DrugKind.RushDuration) rushDrugs.Add(candidate);
+                drugs.Add(candidate);
             }
+            // Stable catalog ordering makes an explicitly supplied test seed reproducible.
+            devices.Sort((a, b) => a.Id.CompareTo(b.Id));
+            drugs.Sort((a, b) => a.Id.CompareTo(b.Id));
             var used = new HashSet<ulong>();
-            if (offers.Length < balance.Campaign.ShopOfferCount) AddRandom(context, offers, rushDevices, used, ref campaign.RandomState);
-            if (offers.Length < balance.Campaign.ShopOfferCount) AddRandom(context, offers, rushDrugs, used, ref campaign.RandomState);
-            while (offers.Length < balance.Campaign.ShopOfferCount && AddRandom(context, offers, all, used, ref campaign.RandomState)) { }
+            int deviceCount = balance.Campaign.ShopOfferCount - balance.Campaign.ShopDrugOfferCount;
+            for (int i = 0; i < deviceCount; i++)
+                if (!AddRandom(context, offers, devices, used, ref campaign.ShopRandomState)) break;
+            for (int i = 0; i < balance.Campaign.ShopDrugOfferCount; i++)
+                if (!AddRandom(context, offers, drugs, used, ref campaign.ShopRandomState)) break;
             context.Campaign = campaign;
         }
 

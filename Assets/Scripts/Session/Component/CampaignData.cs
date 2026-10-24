@@ -9,6 +9,7 @@ namespace MarblesECS
         public long TotalScore;
         public long Coins;
         public uint RandomState;
+        public uint ShopRandomState;
         public int NextDeviceId;
         public int LayoutRevision;
         public int LastSkippedStages;

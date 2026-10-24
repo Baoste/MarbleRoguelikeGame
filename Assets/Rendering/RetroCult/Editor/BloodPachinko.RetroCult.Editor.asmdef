@@ -1,0 +1,7 @@
+{
+  "name": "BloodPachinko.RetroCult.Editor",
+  "rootNamespace": "BloodPachinko.Rendering.Editor",
+  "references": ["BloodPachinko.RetroCult", "Unity.RenderPipelines.Core.Runtime", "Unity.RenderPipelines.Core.Editor", "Unity.RenderPipelines.Universal.Runtime", "Unity.TextMeshPro", "MarblesECS.Runtime", "MarblesECS.Rules", "MarblesECS.Diegetic.Editor", "Unity.Entities", "Unity.Collections"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

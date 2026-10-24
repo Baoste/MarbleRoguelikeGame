@@ -96,7 +96,7 @@ namespace MarblesECS.PhysX
         {
             if (simulation == null || bridge == null) return;
             bridge.RestorePins();
-            if (EnableCampaign) simulation.StartSession(bridge);
+            if (EnableCampaign) StartCampaignSession();
             else simulation.StartRound(bridge);
             BeginRoundWhenInventoryIsEmpty();
             PublishBloodIfChanged();

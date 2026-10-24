@@ -77,13 +77,14 @@ namespace MarblesECS.PhysX
         /// <summary>Presentation supplies the actual world pose when its placement plane is offset or tilted.</summary>
         public bool PlaceDevice(int id, float x, float z, Vector3 worldPosition, float radiusScale = 1f)
         {
-            if (!IsReady || Session.Phase != RoundPhase.Build || !SimulationContext.IsFinite(worldPosition) ||
+            if (!IsReady || Paused || Session.Phase != RoundPhase.Build || !SimulationContext.IsFinite(worldPosition) ||
                 !MarbleRules.IsFinite(radiusScale) || radiusScale <= 0 ||
                 !MarbleRules.IsFinite(PlacementClearance) || PlacementClearance < 0) return false;
             foreach (var device in simulation.GetOwnedDevices())
             {
                 if (device.InstanceId != id) continue;
                 float radius = (device.Radius + PlacementClearance) * radiusScale;
+                if (PlacementSurface != null && !PlacementSurface.ContainsWorldPoint(worldPosition, radius)) return false;
                 if (!MarbleRules.IsFinite(radius) ||
                     !placementObstacles.IsClear(localPhysics, PlacementObstacleRoots, worldPosition, radius)) return false;
                 return simulation.PlaceDevice(id, x, z, PlacementClearance);

@@ -42,7 +42,7 @@
 
 给程序/策划交接的工作簿是 `Assets/Docs/血色柏青哥_道具药物装置_规范修订版.xlsx`。优先查看其中的“运行时平衡表”：它汇总全部 27 个装置/药物的价格、当前效果、时长、叠加规则、证据等级、旧值/新值和调整原因。该页用于审阅与配置交接，运行时装置来源是 `Resources/Devices/*.mres`，属性和药物来源是 `Resources/GameContent.json`。
 
-Rush 药物的专用数值也已数据化：`RushChanceAdd` 保留肾上腺素旧概率数据但不触发新 RUSH，`RushScoreMultiplier` 控制烧烧果实在 Rush 结算时的额外倍率。商店在当前目录有候选时保底 Rush 装置/Rush 药物，其余槽位从全目录无重复抽取；没有相应装置时不会恢复已删除的旧装置。
+Rush 药物的专用数值也已数据化：`RushChanceAdd` 保留肾上腺素旧概率数据但不触发新 RUSH，`RushScoreMultiplier` 控制烧烧果实在 Rush 结算时的额外倍率。商店每回合从完整目录等概率抽取 3 个不同装置、1 个药物，取消 Rush 保底；付费刷新采用同样规则，购买不会重抽其他货位。每次新开局生成独立商店种子，不改变计分随机流。`Campaign.ShopOfferCount` 为总数（4），`ShopDrugOfferCount` 为药物数（1，旧 Excel 可省略），其余货位为装置；目录不足不跨品类补位。
 
 `GameBalance` 的装置和药物列表直接引用同一份内容目录；会话复制时深拷贝整个目录。基础 JSON 和基础 Excel 不再保存旧装置、药物列表。
 

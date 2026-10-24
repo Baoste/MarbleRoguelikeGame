@@ -58,7 +58,7 @@ namespace MarblesECS.PhysX
                 simulation = EnableCampaign ? new MarbleSimulation(Balance) : new MarbleSimulation(runtimeTuning, Balance.Content);
                 simulation.ConfigureLauncherMovement(LaunchPoint.localPosition, LauncherMoveHalfWidth, LauncherMoveSpeed);
                 bridge = new MarblePhysicsBridge(localScene, MarblePrefab, material, simulation.EnqueueContact);
-                if (EnableCampaign) simulation.StartSession(bridge);
+                if (EnableCampaign) StartCampaignSession();
                 else simulation.StartRound(bridge);
                 BeginRoundWhenInventoryIsEmpty();
                 if (GetComponent<MarblesECS.Presentation.DeviceActivationUI>() == null)

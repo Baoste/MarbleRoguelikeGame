@@ -6,10 +6,15 @@ namespace MarblesECS
     public sealed partial class MarbleSimulation
     {
         /// <summary>Restart the entire run, including wallet, score, inventory and placements.</summary>
-        public void StartSession(IMarblePhysics physics)
+        public void StartSession(IMarblePhysics physics) => StartSession(physics, 0, 0);
+
+        /// <summary>Draw starters once per run. A zero shop seed creates a fresh shop sequence, independently of gameplay RNG.</summary>
+        public void StartSession(IMarblePhysics physics, int randomStarterTypeCount, uint randomStarterSeed, uint shopSeed = 0)
         {
             ThrowIfDisposed();
             if (context.Balance == null) throw new InvalidOperationException("Construct with GameBalance to start a campaign.");
+            if (randomStarterTypeCount < 0 || randomStarterTypeCount > 200)
+                throw new ArgumentOutOfRangeException(nameof(randomStarterTypeCount));
             ResetRound(physics);
             context.DeviceScripts.Clear();
             if (AttributeRuntime.Enabled(context))
@@ -22,21 +27,27 @@ namespace MarblesECS
             context.Campaign = new CampaignData
             {
                 Coins = context.Balance.Campaign.StartingCoins,
-                RandomState = context.Tuning.RandomSeed
+                RandomState = context.Tuning.RandomSeed,
+                ShopRandomState = shopSeed == 0 ? CreateShopSeed() : shopSeed
             };
             context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity).Clear();
             var inventory = context.Manager.GetBuffer<DrugInventoryData>(context.PlayerEntity);
             inventory.Clear();
             foreach (var drug in context.Balance.Drugs)
                 inventory.Add(new DrugInventoryData { DefinitionId = drug.Id, Count = drug.StartingCount });
-            foreach (var device in context.Balance.Devices)
-                for (int i = 0; i < device.StartingCount; i++)
-                    CampaignStateUtility.CreateDevice(context, device, device.Price);
+            CreateStartingDevices(randomStarterTypeCount, randomStarterSeed);
             var round = context.Round;
             round.Phase = (byte)RoundPhase.Build;
             round.TargetScore = context.Balance.Stages[0].TargetScore;
             context.Round = round;
             FillBlood();
+        }
+
+        private static uint CreateShopSeed()
+        {
+            // Fresh even on quick restarts or when Unity domain reload is disabled.
+            uint seed = BitConverter.ToUInt32(Guid.NewGuid().ToByteArray(), 0);
+            return seed == 0 ? 0x6D2B79F5u : seed;
         }
 
         public bool BeginRound()

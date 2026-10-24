@@ -1,0 +1,49 @@
+黑诊所 · 独立模型美术测试场景
+2026-10-13（2026-10-15 已启用原方案2滤镜）
+
+打开 Assets/Scenes/BlackClinic_ModelArtPreview.unity。
+Game 视图选择 16:9、1920×1080 或 3840×2160。
+这是静态美术测试场景，Play 模式也不会开始游戏或显示 UI。
+
+场景内容
+1. BlackClinic_V3_Environment：从 TestScene 复制的建筑、地面、街巷、医疗器械、灯光和反射探针。
+2. 核心装置_最新Blender美术模型：来自指定 Blender 文件最新保存版本的主机2、药剂架子、信息板子、开始以及结束装置、物品板2。保留源文件位置关系，没有重叠导入旧版主机。
+3. 物品板_可选展示（勾选启用）：模型已经导入；为保持参考图的台面特写，场景中默认隐藏，选中后勾选 Inspector 顶部复选框即可显示。
+4. Main Camera：按参考图设置近景构图，没有相机跟随或玩法控制脚本。
+5. Global Volume：本场景独立的基础画面配置。
+6. 画面效果_粗像素邪典：已复制并启用原方案2，Weight=1。包含像素化、动态边缘抖动、色阶分离、抖色、颗粒、灯光泛光和暗角。Weight 调至 0 可对比无滤镜画面。
+
+滤镜手动调整
+在 Hierarchy 选择“画面效果_粗像素邪典”，在 Inspector 的 Volume 下展开“粗像素邪典 / 方案 2”。
+本场景使用 Lighting/BlackClinic_RetroCult_ArtPreview.asset 独立配置，调节它不会修改原场景的滤镜配置。
+总体强度：Volume 的 Weight 或“复古纹理总强度”。
+像素颗粒大小：“虚拟像素高度”，目前 360；数值越小越粗，越大越细。
+边缘动态：“边缘抖动幅度”目前 0.7，“抖动更新频率 / 秒”目前 6。
+色阶效果：“颜色阶数”12、“明暗阶数”8、“色阶分离强度”0.92。
+“点阵抖色”0.55、“动态颗粒”0.03、“轻微亮度起伏”0.01。
+Bloom、Vignette、Color Adjustments 等也可以在此独立配置里调节。
+三个画质档的 Renderer 已接入现有 RetroCult Shader；没有启用此 Volume 的场景不会自动出现这套滤镜。
+
+镜头手动调整
+选择 Main Camera，在 Transform 调整位置和旋转，在 Camera 的 Field of View 调整远近。
+当前 Position：(-12.212880, 17.884100, -0.671964)
+当前 Rotation：(34.192440, 94.583870, 0)
+当前垂直 Field of View：25.36077
+镜头采用透视投影，16:9 的 1080p 和 4K 构图一致。
+
+美术资源
+核心模型预制体：本目录/CoreMachine_LatestBlender.prefab
+核心模型网格：本目录/Meshes
+核心模型独立材质：本目录/Materials
+从 Blender 内嵌图像提取的贴图：本目录/Textures
+法线、金属度、粗糙度已接入；Unity 使用的 Metallic_Smoothness.png 为金属度 R、1-粗糙度 A。
+Lighting 内是本场景独立的 Volume 配置，可以单独调节。
+环境网格和材质继续引用原项目资源；修改环境材质资源本身会影响引用它的其他场景。
+
+已核对
+原 TestScene.unity 和原 Blender 文件未修改。
+新场景没有 Canvas、EventSystem、游戏控制器、玩法钉子、碰撞体或 Rigidbody。
+保留的是渲染必要的 Camera、Light、Volume 和 URP 渲染组件。
+新场景未加入游戏的 Build Settings 场景列表。
+Play 模式检查无运行错误，已导出 1080p 和 4K 预览。
+预览图位于项目根目录 ArtPreviews/BlackClinic_ModelArtPreview。

@@ -9,6 +9,7 @@ namespace MarblesECS
         [NonSerialized] public double CashoutCoinsPerBlood = 0.5;
         public long ShopRefreshCost = 5;
         public int ShopOfferCount = 4;
+        [OptionalBalanceField] public int ShopDrugOfferCount = 1;
         public double SellRatio = 0.5;
         public int MaxOwnedDevices = 20;
         public int MaxDrugInventory = 30;
@@ -24,6 +25,7 @@ namespace MarblesECS
             BalanceGuard.Range(CashoutCoinsPerBlood, 0, 1000000, nameof(CashoutCoinsPerBlood));
             BalanceGuard.Range(ShopRefreshCost, 1, BalanceGuard.MaxInteger, nameof(ShopRefreshCost));
             BalanceGuard.Range(ShopOfferCount, 1, 12, nameof(ShopOfferCount));
+            BalanceGuard.Range(ShopDrugOfferCount, 0, ShopOfferCount, nameof(ShopDrugOfferCount));
             BalanceGuard.Range(SellRatio, 0, 1, nameof(SellRatio));
             BalanceGuard.Range(MaxOwnedDevices, 1, 200, nameof(MaxOwnedDevices));
             BalanceGuard.Range(MaxDrugInventory, 1, 1000, nameof(MaxDrugInventory));

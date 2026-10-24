@@ -230,6 +230,11 @@ public sealed class DiegeticMachineUI : MonoBehaviour
                 (d.ActiveDoses>0?$"\n生效 {d.ActiveDoses} 层 · 剩余 {d.SecondsRemaining:0.0} 秒":"")+
                 (Controller.Paused?"\n已暂停":Controller.Session.Phase==RoundPhase.Playing?"\n点击药剂使用":"\n回合开始后可使用");
         }
+        else if(hoverKind==2 && hoverIndex>=0 && hoverIndex<deviceIds.Length)
+        {
+            var d=unplacedDevices.Find(x=>x.InstanceId==deviceIds[hoverIndex]);
+            if(d.InstanceId!=0)text=$"<b>{d.Name}</b>\n{MarblesECS.Presentation.DeviceDisplayText.Details(d)}\n{d.Description}\n拖到盘面空位放置；F1 可查完整道具库。";
+        }
         if(Placement && Placement.IsDraggingInventory)text=Placement.LastFeedback;
         else if(deviceFeedbackUntil>Time.unscaledTime)text=deviceFeedback;
         else deviceFeedbackUntil=0;

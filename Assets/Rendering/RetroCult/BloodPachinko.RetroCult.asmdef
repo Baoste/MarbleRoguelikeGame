@@ -1,0 +1,6 @@
+{
+  "name": "BloodPachinko.RetroCult",
+  "rootNamespace": "BloodPachinko.Rendering",
+  "references": ["Unity.RenderPipelines.Core.Runtime", "Unity.RenderPipelines.Universal.Runtime", "Unity.TextMeshPro"],
+  "autoReferenced": true
+}

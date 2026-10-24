@@ -1,0 +1,1 @@
+PASS: art scene ran in Play Mode, no UI/gameplay/physics, no errors.

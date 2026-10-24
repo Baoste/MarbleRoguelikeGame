@@ -382,11 +382,12 @@ namespace MarblesECS.Editor
             {
                 for (uint seed = 1; seed <= 64; seed++)
                 {
-                    var campaign = f.C.Campaign; campaign.RandomState = seed; f.C.Campaign = campaign;
+                    var campaign = f.C.Campaign; campaign.ShopRandomState = seed; f.C.Campaign = campaign;
+                    uint gameplayState = campaign.RandomState;
                     CampaignShopSystem.Generate(f.C);
                     var offers = f.C.Manager.GetBuffer<ShopOfferData>(f.C.RoundEntity);
                     Check(offers.Length == f.C.Balance.Campaign.ShopOfferCount, "shop offer count");
-                    bool rushDevice = false, rushDrug = false;
+                    int devices = 0, drugs = 0;
                     var unique = new HashSet<ulong>();
                     for (int i = 0; i < offers.Length; i++)
                     {
@@ -394,19 +395,18 @@ namespace MarblesECS.Editor
                         Check(unique.Add(((ulong)offer.Kind << 32) | offer.DefinitionId), "shop offers are unique");
                         if (offer.Kind == ShopItemKind.Device)
                         {
-                            var definition = CampaignStateUtility.Device(f.C, offer.DefinitionId);
-                            rushDevice |= definition.RushCategory || definition.RushChanceAdd > 0;
+                            devices++;
+                            Check(CampaignStateUtility.Device(f.C, offer.DefinitionId) != null, "shop device is in catalog");
                         }
                         else
                         {
-                            var definition = CampaignStateUtility.Drug(f.C, offer.DefinitionId);
-                            rushDrug |= definition.Kind == DrugKind.Adrenaline || definition.Kind == DrugKind.RushFruit ||
-                                definition.Kind == DrugKind.RushDuration;
+                            drugs++;
+                            Check(CampaignStateUtility.Drug(f.C, offer.DefinitionId) != null, "shop drug is in catalog");
                         }
                     }
-                    Check(!f.C.Balance.Devices.Any(d => d.RushCategory || d.RushChanceAdd > 0) || rushDevice,
-                        "shop guarantees a Rush device only when the current catalog contains one");
-                    Check(rushDrug, "shop guarantees a Rush drug");
+                    Check(drugs == f.C.Balance.Campaign.ShopDrugOfferCount &&
+                        devices == f.C.Balance.Campaign.ShopOfferCount - drugs, "shop respects configured category counts");
+                    Check(f.C.Campaign.RandomState == gameplayState, "shop does not consume gameplay RNG");
                 }
             }
         }
