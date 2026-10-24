@@ -66,6 +66,7 @@ namespace MarblesECS.Editor
                     Near(42, f.C.Round.Score, "first ball scores value * (zone + .05) * additive device factor");
                     Near(.05, f.Simulation.Snapshot.ScoreStackBonus, "duplicate terminal contacts add only one stack");
                     Near(1, f.Simulation.Snapshot.ScoreStackSecondsRemaining, "first stack starts one second");
+                    Near(1, f.Simulation.Snapshot.ScoreStackWindowSeconds, "HUD starts with the one-second window");
                     var scored = f.C.ScoreEvents.Dequeue();
                     Near(1.05, scored.ZoneMultiplier, "score event includes effective zone multiplier");
                     Near(.05, scored.ScoreStackBonus, "score event identifies shared addition");
@@ -73,6 +74,7 @@ namespace MarblesECS.Editor
                     Near(104, f.C.Round.Score, "different zone shares the accumulated bonus");
                     Near(.1, f.Simulation.Snapshot.ScoreStackBonus, "second ball adds .05 to the same board counter");
                     Near(1 / 1.05, f.Simulation.Snapshot.ScoreStackSecondsRemaining, "refresh shrinks with the pre-entry bonus");
+                    Near(1 / 1.05, f.Simulation.Snapshot.ScoreStackWindowSeconds, "HUD refill uses the shortened window");
                     Near(3.1, f.C.ScoreEvents.Dequeue().ZoneMultiplier, "base zone factor is not multiplied by the stack");
                     double deadline = f.C.Round.ScoreStackExpiresAt;
                     f.Step(StackHit(third, 2, false));
@@ -88,6 +90,7 @@ namespace MarblesECS.Editor
                     f.Advance(1);
                     Near(0, f.Simulation.Snapshot.ScoreStackBonus, "idle expiry clears the shared addition");
                     Near(0, f.Simulation.Snapshot.ScoreStackSecondsRemaining, "expired timer is cleared");
+                    Near(0, f.Simulation.Snapshot.ScoreStackWindowSeconds, "expiry clears HUD window");
                     Near(144, f.C.Round.Score, "expiry never removes previously earned score");
                     f.Step(StackHit(f.Launch()));
                     Near(.05, f.Simulation.Snapshot.ScoreStackBonus, "new sequence starts from .05");
@@ -95,6 +98,7 @@ namespace MarblesECS.Editor
                     f.Simulation.StartRound(f.Physics);
                     Near(0, f.Simulation.Snapshot.ScoreStackBonus, "restart clears bonus");
                     Near(0, f.Simulation.Snapshot.ScoreStackSecondsRemaining, "restart clears deadline");
+                    Near(0, f.Simulation.Snapshot.ScoreStackWindowSeconds, "restart clears HUD window");
                 }
                 using (var f = new ScoreStackFixture(content))
                 {
@@ -123,11 +127,13 @@ namespace MarblesECS.Editor
                     Near(1, f.Simulation.Snapshot.ScoreStackSecondsRemaining, "expiry boundary restores one second");
                     for (int i = 0; i < 190; i++) f.Step(StackHit(f.Launch()));
                     Near(.1, f.Simulation.Snapshot.ScoreStackSecondsRemaining, "long sequence respects minimum window");
+                    Near(.1, f.Simulation.Snapshot.ScoreStackWindowSeconds, "HUD denominator respects minimum duration");
                     Check(f.Simulation.Snapshot.ScoreStackBonus > 9, "minimum duration does not prevent further increments");
                     round = f.C.Round; round.Phase = (byte)RoundPhase.Draining; f.C.Round = round;
                     RoundFlowSystem.Execute(f.C);
                     Near(0, f.Simulation.Snapshot.ScoreStackBonus, "round completion clears bonus");
                     Near(0, f.Simulation.Snapshot.ScoreStackSecondsRemaining, "round completion clears timer");
+                    Near(0, f.Simulation.Snapshot.ScoreStackWindowSeconds, "round completion clears HUD window");
                 }
             }
             using (var f = new ScoreStackFixture(true))

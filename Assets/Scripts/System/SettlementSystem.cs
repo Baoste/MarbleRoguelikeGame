@@ -22,8 +22,8 @@ namespace MarblesECS
             long score = MarbleRules.Settle(RushSystem.BallValue(context, entity), marble.ScoreBonus, modifiers.ScoreAdd,
                 marble.ScoreMultiplier, modifiers.ScoreMul,
                 zoneMultiplier, contact.FlatScore, rush, context.Tuning.MaxPerMarbleScore);
-            bool isPending = contact.Kind == MarbleContactKind.RandomScore && context.Balance != null;
-            if (isPending) round.PendingScore = MarbleRules.AddScore(round.PendingScore, score, context.Tuning.MaxRoundScore);
+            bool isPending = contact.Kind == MarbleContactKind.RandomScore;
+            if (isPending) { GamblingWheelSystem.Deposit(context, score); round = context.Round; }
             else round.Score = MarbleRules.AddScore(round.Score, score, context.Tuning.MaxRoundScore);
 
             context.Round = round;

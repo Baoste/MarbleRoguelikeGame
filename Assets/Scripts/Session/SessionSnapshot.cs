@@ -10,21 +10,15 @@ namespace MarblesECS
         public int StageCount;
         public long TotalScore;
         public long ConfirmedScore;
-        public long PendingScore;
         public long RoundScore;
         public long TargetScore;
         public long Coins;
-        public long GamblingStake;
-        public long GamblingPayout;
         public long LastRewardCoins;
         public long LastCashoutCoins;
         public int StagesCleared;
         public int LastSkippedStages;
         public int ShopRefreshCount;
         public int LayoutRevision;
-        public bool GamblingResolved;
-        public bool GamblingWon;
         public bool CanCashOut;
-        public int GamblingMultiplier;
     }
 }

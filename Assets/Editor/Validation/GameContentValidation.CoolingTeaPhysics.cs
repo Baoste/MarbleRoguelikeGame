@@ -58,7 +58,7 @@ namespace MarblesECS.Editor
                 Near(0, c.Round.RushRemaining, "physical collision itself does not activate Rush");
                 var round = c.Round; round.RushMeter = 99; c.Round = round;
                 simulation.EnqueueContact(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 720, Multiplier = 1 }); Step();
-                Near(15, c.Round.RushRemaining, "physical treated ball fills meter and adds five seconds");
+                Near(7, c.Round.RushRemaining, "physical treated ball fills meter and adds five seconds");
                 Check(!c.Marbles.ContainsKey(key), "settlement consumes ball once");
             }
             finally { view?.Dispose(); simulation.Dispose(); bridge.Dispose(); UnityEngine.Object.DestroyImmediate(board); SceneManager.UnloadSceneAsync(scene); }

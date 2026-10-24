@@ -30,8 +30,6 @@ namespace MarblesECS.PhysX
             accumulator = 0;
             externalFireHeld = submittedFireHeld = false;
             Paused = false;
-            publishedGamblingRoundId = int.MinValue;
-            gamblingRevealDeadline = -1f;
             PublishBloodIfChanged();
             return true;
         }

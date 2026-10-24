@@ -8,7 +8,6 @@ namespace MarblesECS.PhysX
         private void Update()
         {
             if (!IsReady) return;
-            CompleteRandomScoreRevealIfDue();
             UpdateFireInput();
             if (Paused) return;
             if (!IsSimulationRunning) return;
@@ -28,7 +27,6 @@ namespace MarblesECS.PhysX
                     bridge.Simulate(step);
                     simulation.AfterPhysics(bridge);
                     PublishBloodIfChanged();
-                    PublishRandomScoreResultIfReady();
                 }
                 catch (Exception error)
                 {

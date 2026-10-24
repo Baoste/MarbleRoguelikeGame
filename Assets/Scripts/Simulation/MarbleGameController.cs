@@ -11,7 +11,7 @@ namespace MarblesECS.PhysX
         [HideInInspector] public MarbleTuning Tuning = new MarbleTuning();
         [Header("Gameplay")]
         [Min(0f)] public float StartingBlood = 100f;
-        [Tooltip("独立模式的最高发射频率；战役使用 GameBalance.Marble.FireIntervalSeconds 的倒数。")]
+        [Tooltip("独立模式长按的最高发射频率；战役使用 GameBalance.Marble.FireIntervalSeconds 的倒数。点按由 MaxFireIntervalSeconds 单独限速。")]
         [Min(0.01f)] public float BallsPerSecond = 6.666667f;
         public Transform LaunchPoint;
         [Tooltip("发射位置相对于 LaunchPoint 的局部 XYZ 偏移，跟随发射点的移动、旋转和缩放。")]
@@ -29,7 +29,6 @@ namespace MarblesECS.PhysX
         public bool AutoMoveLauncher = true;
         [Min(0f)] public float LauncherMoveHalfWidth = 5.2f;
         [Min(0f)] public float LauncherMoveSpeed = 2.5f;
-        [Min(0.1f)] public float RandomScoreRevealDelay = 3f;
 
         [Header("Device Placement")]
         [Min(0f)] public float GridSize = 0.5f;
@@ -40,10 +39,10 @@ namespace MarblesECS.PhysX
         public bool Paused { get; private set; }
         public bool RequiresRestart { get; private set; }
         public bool IsReady => simulation != null && simulation.IsAlive;
+        public GamblingWheelSnapshot GamblingWheel => !IsReady ? default : simulation.GamblingWheel;
         public MarbleSnapshot Snapshot => !IsReady ? default : simulation.Snapshot;
         public event Action<MarbleScoreEvent> Scored;
         public event Action<float> BloodChanged;
-        public event Action<RandomScoreResult> RandomScoreSettled;
 
         private MarbleSimulation simulation;
         internal MRes.MResLuaScript DeviceScript(OwnedDeviceSnapshot device) => simulation.Context.DeviceScripts.Get(device.InstanceId, device.DefinitionId);
@@ -59,8 +58,6 @@ namespace MarblesECS.PhysX
         private int maxSteps;
         private bool quitting;
         private float publishedBlood = float.NaN;
-        private int publishedGamblingRoundId = int.MinValue;
-        private float gamblingRevealDeadline = -1f;
         private readonly DevicePlacementObstacles placementObstacles = new DevicePlacementObstacles();
 
 
@@ -97,8 +94,6 @@ namespace MarblesECS.PhysX
             StartSimulationSession();
             BeginRoundWhenInventoryIsEmpty();
             PublishBloodIfChanged();
-            publishedGamblingRoundId = int.MinValue;
-            gamblingRevealDeadline = -1f;
             externalFireHeld = submittedFireHeld = false;
             SyncLauncherTransform();
             accumulator = 0;
@@ -143,31 +138,6 @@ namespace MarblesECS.PhysX
             try { BloodChanged?.Invoke(blood); }
             catch (Exception error) { Debug.LogException(error, this); }
         }
-
-        private void PublishRandomScoreResultIfReady()
-        {
-            if (!IsReady || !EnableCampaign) return;
-
-            MarbleSnapshot marble = simulation.Snapshot;
-            SessionSnapshot session = simulation.Session;
-            if (!session.GamblingResolved || session.GamblingStake <= 0 ||
-                publishedGamblingRoundId == marble.RoundId) return;
-
-            publishedGamblingRoundId = marble.RoundId;
-            var result = new RandomScoreResult(session.GamblingStake, session.GamblingWon,
-                session.GamblingPayout, session.GamblingMultiplier);
-            gamblingRevealDeadline = Time.unscaledTime + RandomScoreRevealDelay;
-            try { RandomScoreSettled?.Invoke(result); }
-            catch (Exception error) { Debug.LogException(error, this); }
-        }
-
-        private void CompleteRandomScoreRevealIfDue()
-        {
-            if (gamblingRevealDeadline < 0f || Time.unscaledTime < gamblingRevealDeadline) return;
-            gamblingRevealDeadline = -1f;
-            simulation?.CompleteRandomScoreReveal();
-        }
-
 
         private void OnDisable()
         {

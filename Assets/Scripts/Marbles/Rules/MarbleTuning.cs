@@ -18,7 +18,10 @@ namespace MarblesECS
         public uint MarbleDefinitionId = 1;
         [NonSerialized] public double BaseScore = 10d;
         [NonSerialized] public float BloodCostMultiplier = 1f;
+        // Interval between held repeats once the acceleration ramp reaches full speed.
         public float FireIntervalSeconds = 0.15f;
+        // Minimum separation for a tap (including the initial press of a hold).
+        [OptionalBalanceField] public float MaxFireIntervalSeconds = 0.15f;
         [OptionalBalanceField] public float HoldAccelerationSeconds = 2f;
         [OptionalBalanceField] public double ScoreStackIncrement = 0.05;
         [OptionalBalanceField] public float ScoreStackInitialSeconds = 1f;
@@ -57,6 +60,7 @@ namespace MarblesECS
             if (!MarbleRules.IsFinite(BaseScore) || BaseScore < 0) throw new ArgumentOutOfRangeException(nameof(BaseScore));
             Positive(BloodCostMultiplier, nameof(BloodCostMultiplier));
             Positive(FireIntervalSeconds, nameof(FireIntervalSeconds)); Positive(LaunchSpeed, nameof(LaunchSpeed));
+            Positive(MaxFireIntervalSeconds, nameof(MaxFireIntervalSeconds));
             Positive(HoldAccelerationSeconds, nameof(HoldAccelerationSeconds));
             Multiplier(ScoreStackIncrement, nameof(ScoreStackIncrement));
             Positive(ScoreStackInitialSeconds, nameof(ScoreStackInitialSeconds));

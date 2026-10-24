@@ -11,12 +11,7 @@ namespace MarblesECS
         public double DrainStartedAt;
         public long Score;
         public long PendingScore;
-        public long GamblingStake;
-        public long GamblingPayout;
         public bool SettlementComplete;
-        public bool GamblingResolved;
-        public bool GamblingWon;
-        public bool GamblingRevealComplete;
         public long TargetScore;
         public int ActiveMarbleCount;
         public byte Phase;
@@ -24,9 +19,13 @@ namespace MarblesECS
         public uint RandomState;
         public long RushEndTick;
         public double RushRemaining, RushMeter, FractionalScore, FractionalPendingScore;
+        public double RushDuration;
         public long ScoreStackCount;
         public double ScoreStackExpiresAt;
-        public int GamblingMultiplier;
+        public double ScoreStackWindowSeconds;
+        public int WheelBallCount, WheelLastMultiplier;
+        public long WheelDrawCount, WheelLastScoreChange;
+        public double WheelExpiresAt, WheelWindowSeconds, WheelLastPool;
         public bool CashoutRequested;
     }
 }

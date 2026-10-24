@@ -10,7 +10,7 @@ namespace MResPacker
     public static class MResCoolingTeaCreator
     {
         public const string ProfilePath = MResExampleCreator.Root + "/Profiles/CoolingTea.asset";
-        public const string Description = "弹珠碰撞凉茶壶后，当前摩擦力×1.2、弹性×0.9，并获得触发RUSH时额外5秒的加时。同一颗球只生效一次，碰其他凉茶壶也不重复，成功作用扣1耐久。只有该球的贡献使RUSH条累满时，才使本次RUSH由10秒延长至15秒。";
+        public const string Description = "弹珠碰撞凉茶壶后，当前摩擦力×1.2、弹性×0.9，并获得触发RUSH时额外5秒的加时。同一颗球只生效一次，碰其他凉茶壶也不重复，成功作用扣1耐久。只有该球的贡献使RUSH条累满时，才为本次RUSH额外增加5秒。";
         [MenuItem("Tools/MRes/Create or Locate Cooling Tea Device")]
         public static void Locate()
         { Selection.activeObject = Create(); EditorGUIUtility.PingObject(Selection.activeObject); }

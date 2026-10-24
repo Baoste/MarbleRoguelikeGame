@@ -16,6 +16,8 @@ namespace MarblesECS
                 round = context.Round;
             }
             if (round.Phase != (byte)RoundPhase.Draining || round.ActiveMarbleCount != 0) return;
+            GamblingWheelSystem.Draw(context);
+            round = context.Round;
             if (context.Balance != null)
             {
                 CampaignSettlementSystem.Execute(context);
@@ -23,9 +25,10 @@ namespace MarblesECS
             }
             else round.Phase = (byte)(round.Score >= round.TargetScore ? RoundPhase.Won : RoundPhase.Lost);
             round.RushEndTick = 0;
-            round.RushRemaining = round.RushMeter = 0;
+            round.RushRemaining = round.RushMeter = round.RushDuration = 0;
             round.ScoreStackCount = 0;
             round.ScoreStackExpiresAt = 0;
+            round.ScoreStackWindowSeconds = 0;
             context.Round = round;
             context.Transients.Clear(context);
             context.BoardScores.Clear();

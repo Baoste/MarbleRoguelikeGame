@@ -82,13 +82,5 @@ namespace MarblesECS
             return definition.Clamp(value);
         }
 
-        public static int GamblingOutcome(double draw, double loss, double refund, double win, double quadruple)
-        {
-            double total = loss + refund + win + quadruple;
-            if (!MarbleRules.IsFinite(total) || total <= 0 || loss < 0 || refund < 0 || win < 0 || quadruple < 0)
-                throw new ArgumentException("Gambling probabilities must have a positive sum.");
-            double pick = draw * total;
-            return pick < loss ? 0 : pick < loss + refund ? 1 : pick < loss + refund + win ? 2 : 4;
-        }
     }
 }

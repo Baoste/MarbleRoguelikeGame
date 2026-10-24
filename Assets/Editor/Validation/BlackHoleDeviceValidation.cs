@@ -252,7 +252,7 @@ namespace MarblesECS.Editor
                 Scene = SceneManager.CreateScene("BlackHoleValidation_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
                 var balance = GameBalanceLoader.Load(); foreach (var d in balance.Devices) d.StartingCount = 0;
                 balance.Devices.Single(d => d.Id == 9005).Durability = durability;
-                balance.Marble.InitialBlood = balance.Marble.BloodCapacity = 1000; balance.Marble.FireIntervalSeconds = .01f;
+                balance.Marble.InitialBlood = balance.Marble.BloodCapacity = 1000; balance.Marble.FireIntervalSeconds = balance.Marble.MaxFireIntervalSeconds = .01f;
                 balance.Content.Definition(GameAttribute.BALL_LIFETIME).DefaultValue = 60;
                 Simulation = new MarbleSimulation(balance); Bridge = new MarblePhysicsBridge(Scene, null, null, Simulation.EnqueueContact);
                 Simulation.StartSession(Bridge); Simulation.BeginRound();

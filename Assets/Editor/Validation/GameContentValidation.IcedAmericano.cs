@@ -93,7 +93,7 @@ namespace MarblesECS.Editor
                 Near(5, RushSystem.BallValue(f.C, f.Ball(key)), "temporary value disappears without reversing coffee effect");
                 round = f.C.Round; round.RushMeter = 60; f.C.Round = round;
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 808, Multiplier = 1 });
-                Near(10, f.C.Round.RushRemaining, "coffee-enhanced contribution can fill the shared bar");
+                Near(2, f.C.Round.RushRemaining, "coffee-enhanced contribution can fill the shared bar");
                 Near(0, f.C.Round.RushMeter, "activation consumes filled meter");
             }
             foreach (float dt in new[] { .01f, .02f }) IcedAmericanoPhysics(dt);

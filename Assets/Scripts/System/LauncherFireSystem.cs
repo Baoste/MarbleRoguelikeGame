@@ -24,17 +24,27 @@ namespace MarblesECS
                 double after = before + c.StepSeconds;
                 // Integrate a linear 0..1 ramp, then the constant maximum rate.
                 double progress = (RampArea(after, duration) - RampArea(before, duration)) /
-                    RushSystem.FireInterval(c);
+                    RushSystem.FireInterval(c, c.Tuning.FireIntervalSeconds);
                 launcher.HeldSeconds = Math.Min(duration, after);
                 // A stall can make at most one held shot due, never a catch-up burst.
                 launcher.HeldShotProgress = Math.Min(1, launcher.HeldShotProgress + progress);
             }
 
             bool due = pressed || (launcher.FireHeld != 0 && launcher.HeldShotProgress >= 1 - 1e-7);
-            bool accepted = due && c.Round.Time + 1e-7 >= launcher.NextFireAt;
+            double interval = RushSystem.FireInterval(c, pressed
+                ? c.Tuning.MaxFireIntervalSeconds : c.Tuning.FireIntervalSeconds);
+            bool accepted = due && (launcher.HasFired == 0 || c.Round.Time + 1e-7 >= launcher.LastFireAt + interval);
             if (accepted) launcher.HeldShotProgress = 0;
             c.Launcher = launcher;
             return accepted;
+        }
+
+        internal static void RecordShot(SimulationContext c)
+        {
+            var launcher = c.Launcher;
+            launcher.LastFireAt = c.Round.Time;
+            launcher.HasFired = 1;
+            c.Launcher = launcher;
         }
 
         private static double RampArea(double seconds, double duration) => seconds < duration

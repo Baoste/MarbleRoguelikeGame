@@ -13,8 +13,11 @@ namespace MarblesECS
         public int ActiveMarbles;
         public double TimeSeconds;
         public double RushSecondsRemaining;
+        public double RushDurationSeconds;
         public double RushMeter, RushMaximum;
         public double ScoreStackBonus, ScoreStackSecondsRemaining;
+        public double ScoreStackWindowSeconds;
+        // Fully accelerated held-fire rate, including RUSH. Taps use MaxFireIntervalSeconds.
         public double ShotsPerSecond;
         public float Flow;
         public float NextMarbleRestitution;

@@ -471,7 +471,7 @@ namespace MarblesECS.Editor
             var simulation = (MarbleSimulation)typeof(MarbleGameController).GetField("simulation",
                 BindingFlags.NonPublic | BindingFlags.Instance).GetValue(game);
             context = simulation.Context;
-            var result = UnityEngine.Object.FindObjectsOfType<RandomScoreResultUI>().Single(r => r.Controller == game);
+            var result = UnityEngine.Object.FindObjectsOfType<GamblingWheelDisplay>().Single(r => r.Controller == game);
             var shop = UnityEngine.Object.FindObjectsOfType<ShopUI>().Single(s => s.Controller == game);
             for (int stage = 1; stage <= 2; stage++)
             {
@@ -485,13 +485,10 @@ namespace MarblesECS.Editor
                     "Settlement has a following shop stage for cycle " + stage);
                 var round = context.Round;
                 round.Score = Math.Max(0, round.TargetScore - context.Campaign.TotalScore);
-                // A one-point pending stake still exercises the real reveal. Large score padding
-                // legitimately skips the early 12/38-point stages, invalidating a one-stage assertion.
-                round.PendingScore = 1;
-                double maximumRevealPayout = Math.Max(4.0, game.Balance.Campaign.GamblingWinMultiplier);
-                Check(context.Campaign.TotalScore + round.Score + maximumRevealPayout <
-                    game.Balance.Stages[previousStage + 1].TargetScore,
-                    "Injected settlement cannot skip the next target");
+                // Zero-value entry forces a real draw without changing the target/stage.
+                context.Round = round;
+                GamblingWheelSystem.Deposit(context, 0);
+                round = context.Round;
                 context.Round = round;
                 Report.Add("SETTLEMENT_INPUT stage=" + previousStage + " total=" + context.Campaign.TotalScore +
                     " confirmed=" + round.Score + " pending=" + round.PendingScore + " target=" + round.TargetScore);
@@ -570,7 +567,7 @@ namespace MarblesECS.Editor
                 wait = WaitFor(() => rig.IsBoardOpen && rig.ItemGroup.interactable &&
                     !shop.ShopCanvasGroup.blocksRaycasts, "Shop closes and physical item board is interactive");
                 while (wait.MoveNext()) yield return null;
-                Check(!result.ResultText.enabled, "Previous result clears before new-round placement");
+                Check(result.DisplayGroup.alpha == 0, "Wheel is hidden during new-round placement");
                 var placement = PlaceFromCard(purchased.InstanceId);
                 while (placement.MoveNext()) yield return null;
                 ClickVisible(rig.Continue.gameObject);

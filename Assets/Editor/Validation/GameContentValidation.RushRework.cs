@@ -27,7 +27,8 @@ namespace MarblesECS.Editor
             {
                 var old=f.Launch();var trigger=f.Launch();var round=f.C.Round;round.RushMeter=99;f.C.Round=round;
                 f.Step(new MarbleContact{Key=trigger,Kind=MarbleContactKind.Score,TargetId=801,Multiplier=1});
-                Near(10,f.C.Round.RushRemaining,"full meter activates ten seconds");Near(0,f.C.Round.RushMeter,"activation consumes the bar including overflow");
+                Near(2,f.C.Round.RushRemaining,"full meter activates two seconds");Near(0,f.C.Round.RushMeter,"activation consumes the bar including overflow");
+                Near(2,f.Simulation.Snapshot.RushDurationSeconds,"HUD denominator records the full activated duration");
                 Near(15,RushSystem.BallValue(f.C,f.Ball(old)),"existing ball gets temporary five value");
                 Near(10,f.Simulation.GetMarbleAttribute(old,GameAttribute.BALL_BASE_VALUE),"temporary value never changes stored base");
                 var player=f.C.Player;player.Blood=0;f.C.Player=player;var fresh=f.Launch();
@@ -42,6 +43,7 @@ namespace MarblesECS.Editor
                 double end=f.C.Round.Time+f.C.Round.RushRemaining;WokUntil(f,end);
                 Near(0,f.C.Round.RushRemaining,"duration expires by simulation time");Near(10,RushSystem.BallValue(f.C,f.Ball(fresh)),"expiry removes temporary value from surviving balls");
                 Near(0,f.C.Round.RushMeter,"next meter starts empty");
+                Near(0,f.Simulation.Snapshot.RushDurationSeconds,"expiry clears HUD duration");
             }
             using(var f=new Fixture())
             {
@@ -59,7 +61,7 @@ namespace MarblesECS.Editor
                 var player=f.C.Player;player.Blood=0;f.C.Player=player;f.Step();
                 Check(f.C.Round.Phase==(byte)RoundPhase.Draining,"empty blood enters draining outside Rush");
                 f.Step(new MarbleContact{Key=key,Kind=MarbleContactKind.Drain,TargetId=803,Multiplier=1});
-                Check(f.C.Round.Phase==(byte)RoundPhase.Playing,"last draining ball can fill Rush and reopen free firing");Near(10,f.C.Round.RushRemaining,"drain can start Rush");
+                Check(f.C.Round.Phase==(byte)RoundPhase.Playing,"last draining ball can fill Rush and reopen free firing");Near(2,f.C.Round.RushRemaining,"drain can start Rush");
             }
             using(var f=new Fixture())
             {

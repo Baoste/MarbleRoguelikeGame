@@ -44,8 +44,7 @@ def generate():
                           DefaultValue=float(row['F']), MinValue=float(row['G']), MaxValue=float(row['H']),
                           Operators=row['I'], StackRule=row['J'], AppliesTo=row['K'], StackOrder=int(row['L'])))
     if not any(a['Id'] == 'GAMBLE_QUADRUPLE_CHANCE' for a in attrs):
-        for attr in attrs:
-            if attr['Id'] in ('GAMBLE_LOSS_CHANCE', 'GAMBLE_RETURN_CHANCE', 'GAMBLE_WIN_CHANCE'): attr['DefaultValue'] = .25
+        # Retired ID kept for serialized content compatibility; wheel odds are fixed.
         attrs.append(dict(Id='GAMBLE_QUADRUPLE_CHANCE', Name='四倍概率', Unit='%', DefaultValue=.25,
                           MinValue=0, MaxValue=1, Operators='ADD,MUL,SET', StackRule='ADD→MUL→CLAMP',
                           AppliesTo='Drug,Item,Global', StackOrder=20))

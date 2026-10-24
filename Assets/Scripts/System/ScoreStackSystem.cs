@@ -13,6 +13,7 @@ namespace MarblesECS
             if (round.ScoreStackCount == 0 || round.Time + 1e-7 < round.ScoreStackExpiresAt) return;
             round.ScoreStackCount = 0;
             round.ScoreStackExpiresAt = 0;
+            round.ScoreStackWindowSeconds = 0;
             c.Round = round;
         }
 
@@ -28,6 +29,7 @@ namespace MarblesECS
                 c.Tuning.ScoreStackInitialSeconds / (1 + previousBonus));
             if (round.ScoreStackCount < long.MaxValue) round.ScoreStackCount++;
             round.ScoreStackExpiresAt = round.Time + seconds;
+            round.ScoreStackWindowSeconds = seconds;
             c.Round = round;
             // Keep the existing maximum accepted by zone/settlement numeric validation.
             return Math.Min(1000, contact.Multiplier + Bonus(c));

@@ -15,11 +15,9 @@ namespace MarblesECS
                 var result = new SessionSnapshot
                 {
                     IsCampaign = context.Balance != null, Phase = (RoundPhase)round.Phase,
-                    StageIndex = campaign.StageIndex, TotalScore = campaign.TotalScore, PendingScore = round.PendingScore,
+                    StageIndex = campaign.StageIndex, TotalScore = campaign.TotalScore,
                     RoundScore = round.Score, TargetScore = round.TargetScore, Coins = campaign.Coins,
-                    GamblingStake = round.GamblingStake, GamblingPayout = round.GamblingPayout,
-                    GamblingResolved = round.GamblingResolved,
-                    GamblingWon = round.GamblingWon, GamblingMultiplier = round.GamblingMultiplier, LastRewardCoins = campaign.LastRewardCoins,
+                    LastRewardCoins = campaign.LastRewardCoins,
                     LastCashoutCoins = campaign.LastCashoutCoins, StagesCleared = campaign.StagesCleared,
                     LastSkippedStages = campaign.LastSkippedStages, ShopRefreshCount = campaign.ShopRefreshCount,
                     LayoutRevision = campaign.LayoutRevision, CanCashOut = CampaignStateUtility.CanCashOut(context)

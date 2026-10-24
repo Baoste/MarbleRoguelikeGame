@@ -2,18 +2,20 @@ using MarblesECS;
 using MarblesECS.PhysX;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class ScoreListener : MonoBehaviour
 {
     public MarbleGameController Controller;
     public TMP_Text RoundScoreText;
     public TMP_Text TotalScoreText;
-    public TMP_Text PendingScoreText;
     public TMP_Text TargetScoreText;
-    public Slider BloodSlider;
+    public UnityEngine.UI.Slider BloodSlider;
+    [Header("右上角状态进度条")]
+    public CanvasGroup StatusHud;
     public TMP_Text RushText;
-    public Slider RushSlider;
+    public UnityEngine.UI.Slider RushSlider;
+    public TMP_Text ScoreStackText;
+    public UnityEngine.UI.Slider ScoreStackSlider;
 
     private void OnEnable()
     {
@@ -25,11 +27,12 @@ public class ScoreListener : MonoBehaviour
 
         RefreshScoreText();
         RefreshBloodSlider();
-        RefreshRushText();
+        RefreshStatusBars();
     }
 
     private void OnDisable()
     {
+        if (StatusHud != null) StatusHud.alpha = 0;
         if (Controller != null)
         {
             Controller.Scored -= OnScored;
@@ -64,7 +67,7 @@ public class ScoreListener : MonoBehaviour
     private void Update()
     {
         RefreshScoreText();
-        RefreshRushText();
+        RefreshStatusBars();
     }
 
     private void RefreshScoreText()
@@ -77,8 +80,6 @@ public class ScoreListener : MonoBehaviour
             RoundScoreText.text = session.RoundScore.ToString();
         if (TotalScoreText != null)
             TotalScoreText.text = session.TotalScore.ToString();
-        if (PendingScoreText != null)
-            PendingScoreText.text = session.PendingScore.ToString();
         if (TargetScoreText != null)
             TargetScoreText.text = session.TargetScore.ToString();
     }
@@ -91,33 +92,56 @@ public class ScoreListener : MonoBehaviour
         OnBloodChanged(Controller.Snapshot.Blood);
     }
 
-    private void RefreshRushText()
+    private void RefreshStatusBars()
     {
         bool ready = Controller != null && Controller.IsReady;
         var snapshot = ready ? Controller.Snapshot : default;
-        bool rushActive = ready && snapshot.RushSecondsRemaining > 0;
+        bool playing = ready && (snapshot.Phase == RoundPhase.Playing || snapshot.Phase == RoundPhase.Draining);
+        bool rushActive = playing && snapshot.RushSecondsRemaining > 0;
+        bool stackActive = playing && snapshot.ScoreStackSecondsRemaining > 0;
+
+        if (StatusHud != null)
+        {
+            StatusHud.alpha = playing ? 1 : 0;
+            StatusHud.interactable = StatusHud.blocksRaycasts = false;
+        }
 
         if (RushText != null)
         {
-            RushText.enabled = ready;
-            if (ready) RushText.text = rushActive ? $"RUSH {snapshot.RushSecondsRemaining:0.0}s · 锁血"
-                : $"RUSH {snapshot.RushMeter:0.#} / {snapshot.RushMaximum:0}";
+            RushText.enabled = playing;
+            RushText.text = rushActive ? $"RUSH  {snapshot.RushSecondsRemaining:0.0}s · 锁血"
+                : $"RUSH  {(playing ? snapshot.RushMeter : 0):0.#} / {snapshot.RushMaximum:0}";
         }
 
-        if (RushSlider != null)
+        SetProgress(RushSlider, playing, rushActive
+            ? Fraction(snapshot.RushSecondsRemaining, snapshot.RushDurationSeconds)
+            : Fraction(snapshot.RushMeter, snapshot.RushMaximum));
+        if (ScoreStackText != null)
         {
-            if (RushSlider.gameObject.activeSelf != ready)
-                RushSlider.gameObject.SetActive(ready);
-            if (ready)
-            {
-                RushSlider.minValue = 0f;
-                RushSlider.maxValue = (float)snapshot.RushMaximum;
-                RushSlider.value = rushActive ? RushSlider.maxValue : (float)snapshot.RushMeter;
-            }
-            else
-            {
-                RushSlider.value = 0f;
-            }
+            ScoreStackText.enabled = playing;
+            ScoreStackText.text = stackActive ? $"得分叠加 +{snapshot.ScoreStackBonus:0.00}  ·  {snapshot.ScoreStackSecondsRemaining:0.00}s"
+                : "得分叠加 +0.00  ·  等待进球";
+        }
+        SetProgress(ScoreStackSlider, playing, stackActive
+            ? Fraction(snapshot.ScoreStackSecondsRemaining, snapshot.ScoreStackWindowSeconds) : 0);
+    }
+
+    private static float Fraction(double value, double total) => total > 0 ? Mathf.Clamp01((float)(value / total)) : 0;
+
+    private static void SetProgress(UnityEngine.UI.Slider slider, bool visible, float progress)
+    {
+        if (slider == null) return;
+        if (slider.gameObject.activeSelf != visible) slider.gameObject.SetActive(visible);
+        slider.minValue = 0;
+        slider.maxValue = 1;
+        slider.wholeNumbers = false;
+        slider.interactable = false;
+        slider.SetValueWithoutNotify(visible ? progress : 0);
+        if (slider.navigation.mode != UnityEngine.UI.Navigation.Mode.None)
+        {
+            var navigation = slider.navigation;
+            navigation.mode = UnityEngine.UI.Navigation.Mode.None;
+            slider.navigation = navigation;
         }
     }
 }

@@ -5,7 +5,9 @@ namespace MarblesECS
     internal struct LauncherData : IComponentData
     {
         public float Flow;
-        public double NextFireAt;
+        // Both input modes measure their own interval from the last successful shot.
+        public double LastFireAt;
+        public byte HasFired;
         public byte FireHeld;
         // At most one request for the next simulation step; never a shot queue.
         public byte FireRequested;

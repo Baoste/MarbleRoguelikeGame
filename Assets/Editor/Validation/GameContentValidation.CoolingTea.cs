@@ -50,7 +50,8 @@ namespace MarblesECS.Editor
                 var d=AddCoolingTea(f); var key=f.Launch(); f.Step(PiggyHit(f,key,d));
                 var round=f.C.Round;round.RushMeter=full?99:0;f.C.Round=round;
                 f.Step(new MarbleContact{Key=key,Kind=kind,TargetId=710,Multiplier=1});
-                Near(full?15:0,f.C.Round.RushRemaining,"tea extends only the Rush filled by this ball");
+                Near(full?7:0,f.C.Round.RushRemaining,"tea extends only the Rush filled by this ball");
+                Near(full?7:0,f.Simulation.Snapshot.RushDurationSeconds,"HUD uses the extended seven-second duration");
                 Near(full?0:kind==MarbleContactKind.Drain?7:10.5,f.C.Round.RushMeter,"tea keeps normal terminal contribution");
             }
             foreach (bool disabled in new[]{false,true})

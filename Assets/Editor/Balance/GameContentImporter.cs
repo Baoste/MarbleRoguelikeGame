@@ -37,20 +37,12 @@ namespace MarblesECS.Editor
                     DefaultValue = Number(row, 5), MinValue = Number(row, 6), MaxValue = Number(row, 7),
                     Operators = Cell(row, 8), StackRule = Cell(row, 9), AppliesTo = Cell(row, 10), StackOrder = (int)Number(row, 11) });
             }
-            // Migration authorized with this implementation: the older open workbook still
-            // has three probabilities totalling .95. Preserve the confirmed four-way rule.
+            // Retired probability attributes keep their stable IDs for existing content files.
+            // They no longer configure gameplay; the wheel has eight fixed, equally likely sectors.
             if (!attributes.Any(x => x.Id == nameof(GameAttribute.GAMBLE_QUADRUPLE_CHANCE)))
-            {
-                foreach (var attribute in attributes)
-                    if (attribute.Id == nameof(GameAttribute.GAMBLE_LOSS_CHANCE) || attribute.Id == nameof(GameAttribute.GAMBLE_RETURN_CHANCE) || attribute.Id == nameof(GameAttribute.GAMBLE_WIN_CHANCE)) attribute.DefaultValue = .25;
                 attributes.Add(recipes.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).Copy());
-                Debug.LogWarning("Workbook has the previous three-outcome schema. Applying the confirmed four outcomes at 25%; add GAMBLE_QUADRUPLE_CHANCE to the workbook to author probabilities directly.");
-            }
             result.Attributes = attributes.ToArray();
             result.Validate();
-            double probabilities = result.Definition(GameAttribute.GAMBLE_LOSS_CHANCE).DefaultValue + result.Definition(GameAttribute.GAMBLE_RETURN_CHANCE).DefaultValue +
-                result.Definition(GameAttribute.GAMBLE_WIN_CHANCE).DefaultValue + result.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue;
-            if (Math.Abs(probabilities - 1) > .000001) throw new InvalidDataException("Base gambling probabilities must sum to 1.");
             return result;
         }
         private static string Cell(string[] row, int index) => index < row.Length ? row[index] ?? "" : "";

@@ -39,10 +39,9 @@ namespace MarblesECS
                 // Publish the mapping before committing resources. A failed bridge never consumes blood or cooldown.
                 context.Marbles.Add(key, entity);
                 player.Blood -= (float)cost;
-                launcher.NextFireAt = round.Time + RushSystem.FireInterval(context);
                 round.ActiveMarbleCount++;
                 context.Player = player;
-                context.Launcher = launcher;
+                LauncherFireSystem.RecordShot(context);
                 context.Round = round;
                 context.NextSpawnSequence = key.Sequence;
                 committed = true;

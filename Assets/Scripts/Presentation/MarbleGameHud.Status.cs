@@ -14,8 +14,8 @@ namespace MarblesECS.Presentation
             GUILayout.Label("血量 Blood  " + marble.Blood.ToString("0.0") + " / " + Controller.Balance.Marble.BloodCapacity.ToString("0") +
                 "　场内 " + marble.ActiveMarbles);
             GUILayout.Label("累计已结算 " + session.TotalScore + "　目标 " + session.TargetScore);
-            GUILayout.Label("本回合得分 " + session.RoundScore + "　待定 " + session.PendingScore);
-            GUILayout.Label("当前确认分 " + session.ConfirmedScore + " / " + session.TargetScore + "（待定分不计入提现门槛）");
+            GUILayout.Label("本回合得分 " + session.RoundScore);
+            GUILayout.Label("当前确认分 " + session.ConfirmedScore + " / " + session.TargetScore + "（奖池未开奖不计入提现门槛）");
             GUILayout.Label("Rush " + marble.RushSecondsRemaining.ToString("0.0") + "s");
             GUILayout.Label("下一颗碰撞系数 e = " + marble.NextMarbleRestitution.ToString("0.00"));
             GUILayout.Space(6);
@@ -32,8 +32,6 @@ namespace MarblesECS.Presentation
         {
             var session = Controller.Session;
             GUILayout.Label("本轮结算 " + session.RoundScore + "　累计 " + session.TotalScore);
-            if (session.GamblingResolved)
-                GUILayout.Label("待定分开奖 ×" + session.GamblingMultiplier + "：+" + session.GamblingPayout);
             GUILayout.Label("通关奖励 +" + session.LastRewardCoins + " 金币　提现 +" + session.LastCashoutCoins);
             if (session.LastSkippedStages > 0) GUILayout.Label("越级跳过 " + session.LastSkippedStages + " 个阶段，已计入奖励。");
         }

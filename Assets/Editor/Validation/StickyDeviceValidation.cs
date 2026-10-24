@@ -356,7 +356,7 @@ function Verify() assert(count == 2) end"))
                 foreach (var d in balance.Devices) d.StartingCount = 0;
                 balance.Marble.InitialBlood = balance.Marble.BloodCapacity = 1000;
                 // Each scripted Launch advances 0.1 s; isolate device checks from the authored firing cooldown.
-                balance.Marble.FireIntervalSeconds = .01f;
+                balance.Marble.FireIntervalSeconds = balance.Marble.MaxFireIntervalSeconds = .01f;
                 balance.Content.Definition(GameAttribute.BALL_LIFETIME).DefaultValue = 60;
                 Simulation = new MarbleSimulation(balance);
                 Bridge = new MarblePhysicsBridge(Scene, null, null, Simulation.EnqueueContact);

@@ -84,14 +84,6 @@ namespace MarblesECS
             return true;
         }
 
-        public bool CompleteRandomScoreReveal()
-        {
-            ThrowIfDisposed();
-            if (context.Balance == null || insidePhysicsStep ||
-                context.Round.Phase != (byte)RoundPhase.Draining) return false;
-            return CampaignSettlementSystem.CompleteReveal(context);
-        }
-
         private bool CanCampaignAct(RoundPhase phase)
         {
             ThrowIfDisposed();

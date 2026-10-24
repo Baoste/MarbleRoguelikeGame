@@ -147,7 +147,7 @@ namespace MarblesECS.Editor
             {
                 Scene = SceneManager.CreateScene("PortalValidation_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
                 var balance = GameBalanceLoader.Load(); foreach (var d in balance.Devices) d.StartingCount = 0;
-                balance.Marble.InitialBlood = balance.Marble.BloodCapacity = 1000; balance.Marble.FireIntervalSeconds = .01f;
+                balance.Marble.InitialBlood = balance.Marble.BloodCapacity = 1000; balance.Marble.FireIntervalSeconds = balance.Marble.MaxFireIntervalSeconds = .01f;
                 Simulation = new MarbleSimulation(balance); Bridge = new MarblePhysicsBridge(Scene, null, null, Simulation.EnqueueContact);
                 Simulation.StartSession(Bridge);
                 var campaign = C.Campaign; campaign.Coins = 1000; C.Campaign = campaign;

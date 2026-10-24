@@ -97,6 +97,7 @@ namespace MarblesECS
             round.ActiveMarbleCount = 0;
             round.ScoreStackCount = 0;
             round.ScoreStackExpiresAt = 0;
+            round.ScoreStackWindowSeconds = 0;
             Round = round;
         }
 

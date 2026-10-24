@@ -11,37 +11,8 @@ namespace MarblesECS
             var campaign = context.Campaign;
             var rules = context.Balance.Campaign;
 
-            if (!round.GamblingResolved)
-            {
-                // Every RandomScoreZone contributes to this one pool and this one draw.
-                round.GamblingStake = round.PendingScore;
-                if (AttributeRuntime.Enabled(context))
-                {
-                    double draw = round.GamblingStake > 0 ? MarbleRules.NextRandom(ref round.RandomState) : 0;
-                    round.GamblingMultiplier = AttributeMath.GamblingOutcome(draw,
-                        AttributeRuntime.Global(context, GameAttribute.GAMBLE_LOSS_CHANCE),
-                        AttributeRuntime.Global(context, GameAttribute.GAMBLE_RETURN_CHANCE),
-                        AttributeRuntime.Global(context, GameAttribute.GAMBLE_WIN_CHANCE),
-                        AttributeRuntime.Global(context, GameAttribute.GAMBLE_QUADRUPLE_CHANCE));
-                    round.GamblingWon = round.GamblingMultiplier >= 2;
-                    round.GamblingPayout = MarbleRules.RoundScore(round.GamblingStake * (double)round.GamblingMultiplier, context.Tuning.MaxRoundScore);
-                }
-                else
-                {
-                    round.GamblingWon = round.GamblingStake > 0 && MarbleRules.Roll(ref round.RandomState, rules.GamblingWinChance);
-                    round.GamblingPayout = round.GamblingWon
-                        ? MarbleRules.RoundScore(round.GamblingStake * rules.GamblingWinMultiplier, context.Tuning.MaxRoundScore) : 0;
-                }
-                round.PendingScore = 0;
-                round.GamblingResolved = true;
-                round.GamblingRevealComplete = round.GamblingStake == 0;
-                context.Round = round;
-            }
-
-            // A non-empty draw waits for the presentation reveal before committing scores.
-            if (!round.GamblingRevealComplete) return;
-
-            round.Score = MarbleRules.AddScore(round.Score, round.GamblingPayout, context.Tuning.MaxRoundScore);
+            GamblingWheelSystem.Draw(context);
+            round = context.Round;
             round.SettlementComplete = true;
             campaign.TotalScore = MarbleRules.AddScore(campaign.TotalScore, round.Score, rules.MaxTotalScore);
             campaign.LastRewardCoins = 0;
@@ -53,17 +24,6 @@ namespace MarblesECS
             context.Campaign = campaign;
             context.Round = round;
             if (round.Phase == (byte)RoundPhase.Shop) CampaignShopSystem.Generate(context);
-        }
-
-        internal static bool CompleteReveal(SimulationContext context)
-        {
-            var round = context.Round;
-            if (!round.GamblingResolved || round.GamblingRevealComplete || round.SettlementComplete)
-                return false;
-            round.GamblingRevealComplete = true;
-            context.Round = round;
-            Execute(context);
-            return true;
         }
 
         private static void AdvanceStages(SimulationContext context, ref CampaignData campaign, ref RoundData round)

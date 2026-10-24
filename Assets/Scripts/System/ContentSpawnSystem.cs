@@ -29,8 +29,7 @@ namespace MarblesECS
                 var player = c.Player;
                 player.Blood -= (float)cost;
                 c.Player = player;
-                launcher.NextFireAt = round.Time + RushSystem.FireInterval(c);
-                c.Launcher = launcher;
+                LauncherFireSystem.RecordShot(c);
                 committed = true;
             }
             finally { if (!committed) foreach (var entity in created) Rollback(c, entity); }

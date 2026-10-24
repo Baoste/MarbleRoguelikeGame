@@ -88,6 +88,7 @@ namespace MarblesECS.Editor
                 IcedAmericanoLuaApi();
                 MetadataAndDurability();
                 EconomyAndGambling();
+                GamblingWheelValidation();
                 ShopGuarantees();
                 SharedRandomSequence();
                 Boundaries();
@@ -112,7 +113,7 @@ namespace MarblesECS.Editor
             b.Marble.InitialBlood = b.Marble.BloodCapacity = 1000;
             b.Marble.MinInvestment = b.Marble.MaxInvestment = 1;
             b.Content.Definition(GameAttribute.BALL_BASE_VALUE).DefaultValue = 10;
-            b.Marble.FireIntervalSeconds = .01f;
+            b.Marble.FireIntervalSeconds = b.Marble.MaxFireIntervalSeconds = .01f;
             foreach (var d in b.Devices) d.StartingCount = 0;
             b.Validate(); return b;
         }
@@ -126,10 +127,6 @@ namespace MarblesECS.Editor
             Near(7, AttributeMath.Evaluate(content.Definition(GameAttribute.BLOOD_COST), 3, effects), "cost MUL before ADD");
             for (int i = 0; i < effects.Length; i++) effects[i].Attribute = GameAttribute.BALL_BASE_VALUE;
             Near(8, AttributeMath.Evaluate(content.Definition(GameAttribute.BALL_BASE_VALUE), 3, effects), "value ADD before MUL");
-            Check(AttributeMath.GamblingOutcome(.1,.25,.25,.25,.25)==0, "loss");
-            Check(AttributeMath.GamblingOutcome(.3,.25,.25,.25,.25)==1, "refund");
-            Check(AttributeMath.GamblingOutcome(.6,.25,.25,.25,.25)==2, "double");
-            Check(AttributeMath.GamblingOutcome(.9,.25,.25,.25,.25)==4, "quadruple");
             Near(2, content.Definition(GameAttribute.BALL_BOUNCE).Clamp(3.6), "bounce cap");
             Near(3, content.Definition(GameAttribute.BALL_SPAWN_COUNT).Clamp(3.9), "count floor");
             bool rejected = false;
@@ -230,7 +227,7 @@ namespace MarblesECS.Editor
                 f.Step(new MarbleContact { Key = key, TargetId = 1,
                     Kind = pending ? MarbleContactKind.RandomScore : MarbleContactKind.Score,
                     Multiplier = 50 });
-                Near(pending ? 1890 : 630, pending ? f.C.Round.PendingScore : f.C.Round.Score,
+                Near(630, pending ? f.C.Round.PendingScore : f.C.Round.Score,
                     "combined multipliers respect authored caps, pending=" + pending);
                 Near(0, f.C.Round.RushRemaining, "old probability and duration attributes do not bypass the new meter");
             }
@@ -406,18 +403,16 @@ namespace MarblesECS.Editor
                 Check(f.C.Round.RandomState == expected, "both Lua contexts and shop share the same state");
 
                 f.C.RemoveAllMarbles();
-                round = f.C.Round; round.Score = round.TargetScore; round.PendingScore = 10;
-                round.Phase = (byte)RoundPhase.Draining; f.C.Round = round;
+                round = f.C.Round; round.Score = round.TargetScore + 20; f.C.Round = round;
+                GamblingWheelSystem.Deposit(f.C, 10);
                 double draw = MarbleRules.NextRandom(ref expected);
-                int outcome = AttributeMath.GamblingOutcome(draw,
-                    AttributeRuntime.Global(f.C, GameAttribute.GAMBLE_LOSS_CHANCE),
-                    AttributeRuntime.Global(f.C, GameAttribute.GAMBLE_RETURN_CHANCE),
-                    AttributeRuntime.Global(f.C, GameAttribute.GAMBLE_WIN_CHANCE),
-                    AttributeRuntime.Global(f.C, GameAttribute.GAMBLE_QUADRUPLE_CHANCE));
+                int outcome = GamblingWheelRules.Outcome(draw);
+                GamblingWheelSystem.Draw(f.C);
+                Near(outcome, f.C.Round.WheelLastMultiplier, "wheel consumes the next shared draw");
+                Check(f.C.Round.RandomState == expected, "draw consumes exactly one shared random value");
+                round = f.C.Round; round.Score = round.TargetScore; round.Phase = (byte)RoundPhase.Draining; f.C.Round = round;
                 CampaignSettlementSystem.Execute(f.C);
-                Near(outcome, f.C.Round.GamblingMultiplier, "gambling consumes the next shared draw");
-                Check(f.C.Round.RandomState == expected && !f.C.Round.SettlementComplete, "reveal holds the consumed state without generating stock");
-                Check(f.Simulation.CompleteRandomScoreReveal(), "complete reveal through production entry");
+                Check(f.C.Round.SettlementComplete, "campaign settles without waiting for presentation");
                 for (int i = 0; i < f.Simulation.GetShopOffers().Length; i++) MarbleRules.NextRandom(ref expected);
                 Check(f.C.Round.RandomState == expected, "settlement stock follows the gambling draw");
                 Check(f.Simulation.EnterBuild() && f.Simulation.BeginRound(), "advance to next round");
@@ -485,17 +480,6 @@ namespace MarblesECS.Editor
         }
         private static void EconomyAndGambling()
         {
-            foreach(int outcome in new[]{0,1,2,4})
-            using(var f=new Fixture())
-            {
-                foreach(var attribute in new[]{GameAttribute.GAMBLE_LOSS_CHANCE,GameAttribute.GAMBLE_RETURN_CHANCE,GameAttribute.GAMBLE_WIN_CHANCE,GameAttribute.GAMBLE_QUADRUPLE_CHANCE})
-                    f.Simulation.ApplyGlobalAttribute((uint)attribute+1,attribute,AttributeOperation.Set,
-                        attribute==(outcome==0?GameAttribute.GAMBLE_LOSS_CHANCE:outcome==1?GameAttribute.GAMBLE_RETURN_CHANCE:outcome==2?GameAttribute.GAMBLE_WIN_CHANCE:GameAttribute.GAMBLE_QUADRUPLE_CHANCE)?1:0);
-                var round=f.C.Round; round.PendingScore=10; round.Phase=(byte)RoundPhase.Draining; f.C.Round=round;
-                CampaignSettlementSystem.Execute(f.C);
-                Check(f.C.Round.GamblingMultiplier==outcome,"runtime gambling "+outcome);
-                Near(outcome*10,f.C.Round.GamblingPayout,"gambling payout");
-            }
             using(var f=new Fixture())
             {
                 f.Simulation.ApplyGlobalAttribute(77,GameAttribute.SHOP_PRICE_MOD,AttributeOperation.Set,.5);
@@ -563,7 +547,7 @@ namespace MarblesECS.Editor
                 Check(JsonUtility.ToJson(definition) == JsonUtility.ToJson(imported.Devices.Single(x => x.Id == definition.Id)), "Excel import preserves MRes device authority " + definition.Id);
             Near(recipes.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue,
                 imported.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue,
-                "import preserves authored fourth outcome");
+                "import preserves retired attribute schema without influencing wheel odds");
             Check(imported.Devices.Select(d => d.Id).Distinct().Count() == imported.Devices.Length, "import contains unique current package IDs");
             using (var f = new Fixture())
             {

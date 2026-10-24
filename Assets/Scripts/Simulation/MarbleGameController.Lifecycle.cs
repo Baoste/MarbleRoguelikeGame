@@ -62,8 +62,6 @@ namespace MarblesECS.PhysX
                 BeginRoundWhenInventoryIsEmpty();
                 if (GetComponent<MarblesECS.Presentation.DeviceActivationUI>() == null)
                     gameObject.AddComponent<MarblesECS.Presentation.DeviceActivationUI>().Controller = this;
-                publishedGamblingRoundId = int.MinValue;
-                gamblingRevealDeadline = -1f;
                 PublishBloodIfChanged();
                 Paused = !AutoStart;
                 Physics.SyncTransforms();
@@ -113,7 +111,6 @@ namespace MarblesECS.PhysX
             bridge = null;
             simulation = null;
             publishedBlood = float.NaN;
-            gamblingRevealDeadline = -1f;
             try { releasedBridge?.Dispose(); }
             finally
             {

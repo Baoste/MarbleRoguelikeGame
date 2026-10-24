@@ -35,7 +35,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     [HideInInspector] public TMP_Text[] ScoreValues;
     [HideInInspector] public Slider BloodBar;
     [HideInInspector] public Button Continue;
-    [HideInInspector] public TMP_Text PendingValue, LeverState, DevicePageLabel;
+    [HideInInspector] public TMP_Text LeverState, DevicePageLabel;
     [HideInInspector] public Button[] DeviceButtons;
     [HideInInspector] public TMP_Text[] DeviceNames, DeviceDescriptions;
     [HideInInspector] public RectTransform Tooltip;
@@ -71,7 +71,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         var listener=FindObjectOfType<ScoreListener>();
         if(!listener || ScoreValues==null || ScoreValues.Length!=3)return;
         listener.RoundScoreText=ScoreValues[0];listener.TargetScoreText=ScoreValues[1];listener.TotalScoreText=ScoreValues[2];
-        listener.PendingScoreText=PendingValue;listener.BloodSlider=BloodBar;
+        listener.BloodSlider=BloodBar;
     }
     void Update()
     {
@@ -239,10 +239,6 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         TooltipText.rectTransform.offsetMin=new Vector2(18,16);TooltipText.rectTransform.offsetMax=new Vector2(-18,-16);
         TooltipText.enableAutoSizing=true;TooltipText.fontSizeMin=17;TooltipText.fontSizeMax=23;
         Tooltip.gameObject.SetActive(false);
-        // Keep pending score available without a fourth large readout obscuring the board.
-        var pending=WorldCanvas("待结算提示",ScoreAnchors[2],new Vector2(2.5f,.2f),new Vector2(520,42));pending.localPosition+=new Vector3(0,-.32f,-.03f);
-        Label(pending,"标签","PENDING / 待结算",20,new Vector2(-245,0),new Vector2(360,40),TextAlignmentOptions.MidlineLeft,new Color(.7f,.65f,.55f));
-        PendingValue=Label(pending,"数值","0",22,new Vector2(245,0),new Vector2(130,40),TextAlignmentOptions.MidlineRight,new Color(.8f,.75f,.63f));
     }
     RectTransform WorldCanvas(string name,Transform anchor,Vector2 worldSize,Vector2 size)
     {

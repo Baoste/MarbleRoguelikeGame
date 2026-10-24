@@ -13,28 +13,21 @@ namespace MarblesECS
     internal static class RushSystem
     {
         internal const double InitialContribution = 2, DeviceContribution = 5;
-        internal const double Threshold = 100, Duration = 10, ValueBonus = 5, ExtraShotsPerSecond = 5;
+        internal const double Threshold = 100, Duration = 2, ValueBonus = 5, ExtraShotsPerSecond = 5;
         internal static bool Active(SimulationContext c) => c.IsRunning && c.Round.RushRemaining > 1e-7;
         internal static double BallValue(SimulationContext c, Entity ball) =>
             (AttributeRuntime.Enabled(c) ? AttributeRuntime.Get(c, ball, GameAttribute.BALL_BASE_VALUE)
                 : c.Manager.GetComponentData<MarbleScore>(ball).BaseScore) + (Active(c) ? ValueBonus : 0);
-        internal static double FireInterval(SimulationContext c) => Active(c)
-            ? 1 / (1 / c.Tuning.FireIntervalSeconds + ExtraShotsPerSecond) : c.Tuning.FireIntervalSeconds;
+        internal static double FireInterval(SimulationContext c, double baseInterval) => Active(c)
+            ? 1 / (1 / baseInterval + ExtraShotsPerSecond) : baseInterval;
         internal static double ShotCost(SimulationContext c, double cost) => Active(c) ? 0 : cost;
         internal static void Tick(SimulationContext c)
         {
             var round = c.Round;
-            bool wasActive = round.RushRemaining > 1e-7;
             round.RushRemaining = Math.Max(0, round.RushRemaining - c.StepSeconds);
             if (round.RushRemaining < 1e-7) round.RushRemaining = 0;
+            if (round.RushRemaining == 0) round.RushDuration = 0;
             c.Round = round;
-            if (wasActive && round.RushRemaining == 0)
-            {
-                var launcher = c.Launcher;
-                double faster = 1 / (1 / c.Tuning.FireIntervalSeconds + ExtraShotsPerSecond);
-                launcher.NextFireAt = Math.Max(round.Time, launcher.NextFireAt + c.Tuning.FireIntervalSeconds - faster);
-                c.Launcher = launcher;
-            }
         }
         internal static void AddContribution(SimulationContext c, Entity ball, double amount)
         {
@@ -81,13 +74,9 @@ namespace MarblesECS
             {
                 round.RushMeter = 0;
                 round.RushRemaining = Duration + rush.DurationBonus;
+                round.RushDuration = round.RushRemaining;
                 if (round.Phase == (byte)RoundPhase.Draining && !round.CashoutRequested)
                 { round.Phase = (byte)RoundPhase.Playing; round.DrainStartedAt = 0; }
-                // Apply the faster cadence to an existing launcher cooldown as well.
-                var launcher = c.Launcher;
-                double interval = 1 / (1 / c.Tuning.FireIntervalSeconds + ExtraShotsPerSecond);
-                launcher.NextFireAt = Math.Min(launcher.NextFireAt, round.Time + interval);
-                c.Launcher = launcher;
             }
             c.Round = round;
         }

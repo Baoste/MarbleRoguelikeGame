@@ -44,15 +44,20 @@ namespace MarblesECS
                 Math.Max(global, rush) * modifiers.ScoreMul);
             double raw = Math.Min(c.Tuning.MaxPerMarbleScore, (value * machine + contact.FlatScore) * global);
             bool pending = contact.Kind == MarbleContactKind.RandomScore;
-            if (pending) raw *= Math.Min(c.Content.Definition(GameAttribute.GAMBLE_POT_VALUE).MaxValue,
-                AttributeRuntime.Get(c, ball, GameAttribute.BALL_GAMBLE_VALUE_MOD) * AttributeRuntime.Get(c, ball, GameAttribute.GAMBLE_POT_VALUE));
-            raw = Math.Min(c.Tuning.MaxPerMarbleScore, raw);
-            double total = raw + (pending ? round.FractionalPendingScore : round.FractionalScore);
-            long score = MarbleRules.RoundScore(total, c.Tuning.MaxPerMarbleScore);
+            long score;
             if (pending)
-            { round.FractionalPendingScore = total - Math.Floor(total); round.PendingScore = MarbleRules.AddScore(round.PendingScore, score, c.Tuning.MaxRoundScore); }
+            {
+                GamblingWheelSystem.Deposit(c, raw);
+                round = c.Round;
+                score = MarbleRules.RoundScore(raw, c.Tuning.MaxPerMarbleScore);
+            }
             else
-            { round.FractionalScore = total - Math.Floor(total); round.Score = MarbleRules.AddScore(round.Score, score, c.Tuning.MaxRoundScore); }
+            {
+                double total = raw + round.FractionalScore;
+                score = MarbleRules.RoundScore(total, c.Tuning.MaxPerMarbleScore);
+                round.FractionalScore = total - Math.Floor(total);
+                round.Score = MarbleRules.AddScore(round.Score, score, c.Tuning.MaxRoundScore);
+            }
             c.Round = round;
             RushSystem.Settle(c, ball, contact);
             c.ScoreEvents.Enqueue(new MarbleScoreEvent { Key = contact.Key, ZoneId = contact.TargetId, Position = contact.Position,

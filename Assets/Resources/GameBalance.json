@@ -5,7 +5,8 @@
         "MinInvestment": 1.0,
         "MaxInvestment": 5.0,
         "MarbleDefinitionId": 1,
-        "FireIntervalSeconds": 0.15000000596046449,
+        "FireIntervalSeconds": 0.25,
+        "MaxFireIntervalSeconds": 0.15000000596046449,
         "HoldAccelerationSeconds": 2.0,
         "ScoreStackIncrement": 0.05,
         "ScoreStackInitialSeconds": 1.0,
@@ -30,42 +31,42 @@
     "Stages": [
         {
             "Id": 1,
-            "TargetScore": 12,
+            "TargetScore": 500,
             "RewardCoins": 22,
             "SkipRewardCoins": 12,
             "CashoutRate": 0.7
         },
         {
             "Id": 2,
-            "TargetScore": 38,
+            "TargetScore": 2000,
             "RewardCoins": 28,
             "SkipRewardCoins": 15,
             "CashoutRate": 0.75
         },
         {
             "Id": 3,
-            "TargetScore": 450,
+            "TargetScore": 4000,
             "RewardCoins": 36,
             "SkipRewardCoins": 20,
             "CashoutRate": 0.8
         },
         {
             "Id": 4,
-            "TargetScore": 800,
+            "TargetScore": 8000,
             "RewardCoins": 46,
             "SkipRewardCoins": 25,
             "CashoutRate": 0.9
         },
         {
             "Id": 5,
-            "TargetScore": 1400,
+            "TargetScore": 16000,
             "RewardCoins": 58,
             "SkipRewardCoins": 32,
             "CashoutRate": 1.0
         },
         {
             "Id": 6,
-            "TargetScore": 3145,
+            "TargetScore": 32000,
             "RewardCoins": 75,
             "SkipRewardCoins": 40,
             "CashoutRate": 1.1

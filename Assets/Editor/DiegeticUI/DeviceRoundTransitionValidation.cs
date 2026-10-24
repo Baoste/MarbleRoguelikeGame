@@ -84,20 +84,20 @@ namespace MarblesECS.Editor.Diegetic
             while(!rig.Controller.IsReady)yield return null;
             var simulation=(MarbleSimulation)typeof(MarbleGameController).GetField("simulation",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(rig.Controller);
             context=simulation.Context;
-            var result=UnityEngine.Object.FindObjectOfType<RandomScoreResultUI>();
+            var result=UnityEngine.Object.FindObjectOfType<GamblingWheelDisplay>();
             Check(result && result.ResultText,"Actual settlement UI is present");
             if(rig.Controller.Session.Phase==RoundPhase.Build)Check(rig.Controller.BeginRound(),"Start first round");
             for(int stage=1;stage<=2;stage++)
             {
             // Seed an achievable score and non-empty gamble pool, then use the real settlement/shop transitions.
-            var round=context.Round;round.Score=Math.Max(0,round.TargetScore-context.Campaign.TotalScore);round.PendingScore=22;context.Round=round;
+            var round=context.Round;round.Score=Math.Max(0,round.TargetScore-context.Campaign.TotalScore);context.Round=round;GamblingWheelSystem.Deposit(context,0);
             Check(rig.Controller.CashOut(),"Cash out round "+stage+" through controller");
             while(rig.Controller.Session.Phase!=RoundPhase.Shop)yield return null;
             var wait=Wait(.4f);while(wait.MoveNext())yield return null;
             Check(rig.Controller.Session.StageIndex==stage,"Real settlement advances to stage "+(stage+1));
             report.Add("Settlement text enabled="+result.ResultText.enabled+" raycastTarget="+result.ResultText.raycastTarget+" rect="+result.ResultText.rectTransform.rect);
-            Check(result.ResultText.enabled && !result.ResultText.raycastTarget,"Result is visible after reveal, without intercepting mouse input");
-            var magnet=context.Balance.Devices.First(d=>d.Kind==DeviceKind.Magnet);
+            Check(!result.ResultText.raycastTarget,"Result is visible after reveal, without intercepting mouse input");
+            var magnet=context.Balance.Devices.Single(d=>d.SourceId=="Reflector");
             // Deterministic shop stock; purchase still uses the production wallet/inventory path.
             var offers=context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);offers.Clear();
             offers.Add(new ShopOfferData{Kind=ShopItemKind.Device,DefinitionId=magnet.Id,Price=1});
@@ -106,7 +106,7 @@ namespace MarblesECS.Editor.Diegetic
             Check(rig.Controller.EnterBuild(),"Continue from shop to Build "+(stage+1));
             wait=Wait(.85f);while(wait.MoveNext())yield return null;
             Check(rig.IsBoardOpen && rig.ItemGroup.interactable,"Sliding board is open and interactive");
-            Check(!result.ResultText.enabled,"Old result clears before the next Build");
+            Check(result.DisplayGroup.alpha==0,"Old result clears before the next Build");
             report.Add("Paused="+rig.Controller.Paused+" selected="+rig.Placement.SelectedInstanceId);
             var card=rig.DeviceButtons.First(b=>b.gameObject.activeSelf && rig.DeviceNames[Array.IndexOf(rig.DeviceButtons,b)].text==magnet.Name);
             ClickVisible(card.gameObject);
@@ -125,17 +125,17 @@ namespace MarblesECS.Editor.Diegetic
                     foreach(var c in overlays){c.renderMode=RenderMode.ScreenSpaceCamera;c.worldCamera=cam;c.planeDistance=1;}
                     rig.Placement.CancelPlacement();
                     // Even if an old animation leaves the result visible, it cannot block the card.
-                    result.ResultText.enabled=true;
+                    result.DisplayGroup.alpha=1;
                     ClickVisible(card.gameObject);
                     Check(rig.Placement.SelectedInstanceId==id,$"{width}x{height} card selects purchased device with result overlay visible");
                     Check(Hits(cam.WorldToScreenPoint(rig.Placement.PlacementPlane.position)).Count==0,$"{width}x{height} placement area receives mouse input");
-                    result.ResultText.enabled=false;
+                    result.DisplayGroup.alpha=0;
                     Canvas.ForceUpdateCanvases();
                     DiegeticUIProbe.Capture(cam,Work+$"/Build_{stage+1}_{width}.png",width,height);
                 }
                 finally
                 {
-                    result.ResultText.enabled=false;
+                    result.DisplayGroup.alpha=0;
                     foreach(var c in overlays)c.renderMode=RenderMode.ScreenSpaceOverlay;
                     cam.targetTexture=oldTarget;cam.ResetAspect();texture.Release();UnityEngine.Object.DestroyImmediate(texture);
                 }
@@ -159,7 +159,7 @@ namespace MarblesECS.Editor.Diegetic
             ClickVisible(rig.Continue.gameObject);
             Check(rig.Controller.Session.Phase==RoundPhase.Playing && !rig.Controller.Paused,"Physical Continue starts the next playable round");
             wait=Wait(.8f);while(wait.MoveNext())yield return null;
-            Check(!result.ResultText.enabled && !rig.ItemGroup.blocksRaycasts && rig.ItemGroup.alpha==0,"Result and board UI release input in Playing");
+            Check(!result.DisplayGroup.blocksRaycasts && !rig.ItemGroup.blocksRaycasts && rig.ItemGroup.alpha==0,"Result and board UI release input in Playing");
             Check(rig.Controller.GetOwnedDevices().Single(d=>d.InstanceId==id).Placed,"Placed device survives the next round start");
             }
         }

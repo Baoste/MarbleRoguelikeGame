@@ -67,7 +67,7 @@
             "Operators": "ADD,MUL,SET",
             "StackRule": "ADD→MUL→CLAMP",
             "AppliesTo": "Ball,Drug,Item",
-            "DefaultValue": 2,
+            "DefaultValue": 2.0,
             "MinValue": 0.0,
             "MaxValue": 100.0,
             "StackOrder": 20
@@ -271,9 +271,9 @@
             "Operators": "ADD,MUL,SET",
             "StackRule": "ADD→MUL→CLAMP",
             "AppliesTo": "Drug,Item,Global",
-            "DefaultValue": 10,
+            "DefaultValue": 10.0,
             "MinValue": 1.0,
-            "MaxValue": 3610,
+            "MaxValue": 3610.0,
             "StackOrder": 30
         },
         {
@@ -417,7 +417,7 @@
             "SellPrice": 15,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.11999999731779099,
             "StartingCount": 0,
@@ -430,9 +430,9 @@
             "Description": "购买一对门，双向传送；保持世界运动方向、速度和自身重力等属性，区域力按出口环境计算。",
             "Cooldown": 0.5,
             "MaxTriggersPerBall": 2,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 2.0,
-            "Value": 1
+            "Value": 1.0
         },
         {
             "Id": 113,
@@ -443,7 +443,7 @@
             "Durability": 20,
             "ScoreMultiplier": 1.85,
             "RushChanceAdd": 0.0,
-            "Radius": 0.18000000715255737,
+            "Radius": 0.18000000715255738,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -454,7 +454,7 @@
             "Description": "每颗弹珠对本装置生效一次，提供1.85倍率，只累加0.85增量；最终倍率为1+累计增量，到得分区统一计算。",
             "Cooldown": 0.10000000149011612,
             "MaxTriggersPerBall": 1,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 2.0,
             "Value": 1.0
         },
@@ -465,9 +465,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.23999999463558197,
+            "Radius": 0.23999999463558198,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -478,9 +478,9 @@
             "Description": "保持或提高速度，并沿装置出口朝向弹出。",
             "Cooldown": 0.10000000149011612,
             "MaxTriggersPerBall": 0,
-            "Range": 0.30000001192092896,
+            "Range": 0.30000001192092898,
             "Strength": 6.0,
-            "Value": 1
+            "Value": 1.0
         },
         {
             "Id": 9001,
@@ -489,9 +489,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.20000000298023224,
+            "Radius": 0.20000000298023225,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -502,9 +502,9 @@
             "Description": "弹珠滞留 1 秒，然后保留速度大小沿棋盘向下释放。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 1,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 0.0,
-            "Value": 1
+            "Value": 1.0
         },
         {
             "Id": 9002,
@@ -513,9 +513,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.20000000298023224,
+            "Radius": 0.20000000298023225,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -526,9 +526,9 @@
             "Description": "保留入射速度大小，在镜面反射方向的 ±30° 范围内随机弹出。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 0.0,
-            "Value": 30
+            "Value": 30.0
         },
         {
             "Id": 9003,
@@ -537,9 +537,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.20000000298023224,
+            "Radius": 0.20000000298023225,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -550,9 +550,9 @@
             "Description": "吸引附近弹珠聚成一团，2 秒后保留各自进入时的速度大小，沿棋盘向下释放。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 1,
-            "Range": 1.2000000476837158,
+            "Range": 1.2000000476837159,
             "Strength": 3.0,
-            "Value": 2
+            "Value": 2.0
         },
         {
             "Id": 9004,
@@ -561,7 +561,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.6330000162124634,
             "StartingCount": 0,
@@ -576,7 +576,7 @@
             "MaxTriggersPerBall": 0,
             "Range": 0.6330000162124634,
             "Strength": 3.0,
-            "Value": 0
+            "Value": 0.0
         },
         {
             "Id": 9005,
@@ -585,9 +585,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 10,
+            "ScoreMultiplier": 10.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.20000000298023224,
+            "Radius": 0.20000000298023225,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -600,7 +600,7 @@
             "MaxTriggersPerBall": 0,
             "Range": 1.0,
             "Strength": 8.0,
-            "Value": 10
+            "Value": 10.0
         },
         {
             "Id": 9006,
@@ -609,9 +609,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.20000000298023224,
+            "Radius": 0.20000000298023225,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -622,9 +622,9 @@
             "Description": "弹珠从装置上方朝上射出，保留速度大小，反转重力 2 秒；撞击其他装置时提前恢复。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 1,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 0.0,
-            "Value": 2
+            "Value": 2.0
         },
         {
             "Id": 9007,
@@ -633,7 +633,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.25,
             "StartingCount": 0,
@@ -648,7 +648,7 @@
             "MaxTriggersPerBall": 1,
             "Range": 0.5,
             "Strength": 6.0,
-            "Value": 5
+            "Value": 5.0
         },
         {
             "Id": 9008,
@@ -657,9 +657,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.20000000298023224,
+            "Radius": 0.20000000298023225,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -671,8 +671,8 @@
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
             "Range": 3.0,
-            "Strength": 0.30000001192092896,
-            "Value": 1
+            "Strength": 0.30000001192092898,
+            "Value": 1.0
         },
         {
             "Id": 9009,
@@ -681,7 +681,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.25,
             "StartingCount": 0,
@@ -696,7 +696,7 @@
             "MaxTriggersPerBall": 0,
             "Range": 5.0,
             "Strength": 6.0,
-            "Value": 8
+            "Value": 8.0
         },
         {
             "Id": 9010,
@@ -705,7 +705,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.25,
             "StartingCount": 0,
@@ -720,7 +720,7 @@
             "MaxTriggersPerBall": 0,
             "Range": 20.0,
             "Strength": 4.0,
-            "Value": 2
+            "Value": 2.0
         },
         {
             "Id": 9011,
@@ -729,7 +729,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.6000000238418579,
             "StartingCount": 0,
@@ -744,7 +744,7 @@
             "MaxTriggersPerBall": 0,
             "Range": 5.0,
             "Strength": 2.0,
-            "Value": 10
+            "Value": 10.0
         },
         {
             "Id": 9012,
@@ -753,9 +753,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.36000001430511475,
+            "Radius": 0.36000001430511477,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -766,9 +766,9 @@
             "Description": "每次撞击按当前金币提供1+0.1×满10金币档数的倍率；每次只累加倍率-1，最终倍率为1+累计增量，到得分区统一计算。不消耗金币，金币不足10时不生效、不扣耐久。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 0.10000000149011612,
-            "Value": 10
+            "Value": 10.0
         },
         {
             "Id": 9013,
@@ -777,7 +777,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.3199999928474426,
             "StartingCount": 0,
@@ -790,9 +790,9 @@
             "Description": "弹珠进入时，若此前成功触发过其他装置实例，则销毁并返还四舍五入后的当前价值×累计装置倍率金币；否则保持速度大小从棋盘下方射出。每次成功处理扣1耐久，不计回合分数。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 0.0,
-            "Value": 1
+            "Value": 1.0
         },
         {
             "Id": 9014,
@@ -801,7 +801,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.5,
             "StartingCount": 0,
@@ -814,9 +814,9 @@
             "Description": "无实体碰撞，弹珠每次进入区域计1次，离开后重入可重复计数；每累计10次发放5金币并扣1耐久。弹珠正常穿过，不消耗、不改价值或速度，计数每回合清零。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 5.0,
-            "Value": 10
+            "Value": 10.0
         },
         {
             "Id": 9015,
@@ -825,7 +825,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.6000000238418579,
             "StartingCount": 0,
@@ -840,7 +840,7 @@
             "MaxTriggersPerBall": 0,
             "Range": 30.0,
             "Strength": 0.0,
-            "Value": 1
+            "Value": 1.0
         },
         {
             "Id": 9016,
@@ -849,7 +849,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.699999988079071,
             "StartingCount": 0,
@@ -864,7 +864,7 @@
             "MaxTriggersPerBall": 0,
             "Range": 60.0,
             "Strength": 0.0,
-            "Value": 1
+            "Value": 1.0
         },
         {
             "Id": 9017,
@@ -873,9 +873,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.30000001192092896,
+            "Radius": 0.30000001192092898,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -888,7 +888,7 @@
             "MaxTriggersPerBall": 0,
             "Range": 0.800000011920929,
             "Strength": 3.0,
-            "Value": 5
+            "Value": 5.0
         },
         {
             "Id": 9018,
@@ -897,9 +897,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.20000000298023224,
+            "Radius": 0.20000000298023225,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -910,9 +910,9 @@
             "Description": "碰撞后生成一颗初始价值为0的复制球，尺寸和质量不变，沿入射速度的镜面反射方向等速射出；原球正常反弹。复制球可触发其他装置。每颗原球仅复制一次，自己的复制后代不再触发，成功复制扣1耐久。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 0.0,
-            "Value": 0
+            "Value": 0.0
         },
         {
             "Id": 9019,
@@ -921,7 +921,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.25,
             "StartingCount": 0,
@@ -945,9 +945,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.44999998807907104,
+            "Radius": 0.44999998807907107,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -982,7 +982,7 @@
             "Description": "首次碰撞后5秒内有另一颗弹珠碰撞，生成价值与累计装置倍率分别为两球平均值的新球，向下以速度6射出。原球正常反弹，成功生成后重置并扣1耐久；同球及自身后代不参与配对。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 6.0,
             "Value": 5.0
         },
@@ -993,7 +993,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.2800000011920929,
             "StartingCount": 0,
@@ -1006,9 +1006,9 @@
             "Description": "碰撞后等概率抽取0、1、2、3、5、7、11、13倍率。0将当前累计装置倍率归零；其他结果累加倍率减1，归零后仍可继续增加，到得分区统一计算。每次有效碰撞扣1耐久，原球正常反弹。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 1.0,
-            "Value": 1
+            "Value": 1.0
         },
         {
             "Id": 9023,
@@ -1017,7 +1017,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.2800000011920929,
             "StartingCount": 0,
@@ -1030,9 +1030,9 @@
             "Description": "撞击时每个其他已放置装置提供+2附加倍率，单次最多+20；不计自身，已耗尽但仍在场的装置也计数。倍率累加后到得分区统一计算。有增量时扣1耐久，无其他装置不生效，原球正常反弹。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 2.0,
-            "Value": 20
+            "Value": 20.0
         },
         {
             "Id": 9024,
@@ -1041,7 +1041,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.2800000011920929,
             "StartingCount": 0,
@@ -1054,9 +1054,9 @@
             "Description": "撞击时提供附加倍率，初始+20，每个其他已放置装置减少2，最低为0；不计自身，已耗尽但仍在场的装置也计数。倍率累加后到得分区统一计算。有增量时扣1耐久，其他装置达到10个时不生效，原球正常反弹。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 2.0,
-            "Value": 20
+            "Value": 20.0
         },
         {
             "Id": 9025,
@@ -1065,7 +1065,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.2800000011920929,
             "StartingCount": 0,
@@ -1078,9 +1078,9 @@
             "Description": "每台每回合首次撞击提供×10倍率，之后每次有效触发递减1，依次×10、×9至×2，最低×1。每次累加倍率减1，到得分区统一计算；有增量时扣1耐久，降至×1后不生效、不扣耐久，新回合重置。原球正常反弹。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 1.0,
-            "Value": 10
+            "Value": 10.0
         },
         {
             "Id": 9026,
@@ -1089,7 +1089,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.2800000011920929,
             "StartingCount": 0,
@@ -1102,9 +1102,9 @@
             "Description": "布置时将背包装置拖入，消耗该装置，按普通/稀有/史诗/传奇增加2/4/6/8点本回合附加倍率。弹珠碰撞时累加这些倍率增量，到得分区结算；初始无效果。喂食不扣耐久，有效碰撞扣1。成长仅用于即将开始的回合，下一轮布置清空，原球正常反弹。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 2.0,
-            "Value": 0
+            "Value": 0.0
         },
         {
             "Id": 9027,
@@ -1113,7 +1113,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.3799999952316284,
             "StartingCount": 0,
@@ -1126,9 +1126,9 @@
             "Description": "无实体碰撞，弹珠进入切换开关；场上至少2盏且全部点亮后，所有弹珠获得灯总数点临时附加倍率，持续5秒，期间保持亮灯且不重复叠加。时间结束移除加成、全部熄灭，参与的每盏灯扣1耐久。每回合初始关闭。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 1.0,
-            "Value": 5
+            "Value": 5.0
         },
         {
             "Id": 9028,
@@ -1137,9 +1137,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.30000001192092896,
+            "Radius": 0.30000001192092898,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": false,
@@ -1150,9 +1150,9 @@
             "Description": "首次放置为无效果的洞；向其拖入一件背包中的种植牙可逐级升级。不锈钢牙每次撞击增加2点累计倍率、耐久5；陶瓷牙增加5点、耐久8；金刚钻牙增加20点、耐久20。每次有效撞击扣1，耗尽立即退回洞。升级补满耐久，最高阶段不再接受；阶段跨回合保留，新回合补满当前阶段耐久。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 0,
-            "Range": 0.20000000298023224,
+            "Range": 0.20000000298023225,
             "Strength": 1.0,
-            "Value": 0
+            "Value": 0.0
         },
         {
             "Id": 9029,
@@ -1161,9 +1161,9 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
-            "Radius": 0.46000000834465027,
+            "Radius": 0.46000000834465029,
             "StartingCount": 0,
             "PurchaseQuantity": 1,
             "RushCategory": true,
@@ -1176,7 +1176,7 @@
             "MaxTriggersPerBall": 0,
             "Range": 60.0,
             "Strength": 10.0,
-            "Value": 1
+            "Value": 1.0
         },
         {
             "Id": 9030,
@@ -1185,7 +1185,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.4699999988079071,
             "StartingCount": 0,
@@ -1195,12 +1195,12 @@
             "GroupClearance": 0.009999999776482582,
             "Kind": 0,
             "SourceId": "CoolingTea",
-            "Description": "弹珠碰撞凉茶壶后，当前摩擦力×1.2、弹性×0.9，并获得触发RUSH时额外5秒的加时。同一颗球只生效一次，碰其他凉茶壶也不重复，成功作用扣1耐久。只有该球的贡献使RUSH条累满时，才使本次RUSH由10秒延长至15秒。",
+            "Description": "弹珠碰撞凉茶壶后，当前摩擦力×1.2、弹性×0.9，并获得触发RUSH时额外5秒的加时。同一颗球只生效一次，碰其他凉茶壶也不重复，成功作用扣1耐久。只有该球的贡献使RUSH条累满时，才为本次RUSH额外增加5秒。",
             "Cooldown": 0.0,
             "MaxTriggersPerBall": 1,
             "Range": 0.10000000149011612,
-            "Strength": 0.20000000298023224,
-            "Value": 5
+            "Strength": 0.20000000298023225,
+            "Value": 5.0
         },
         {
             "Id": 9031,
@@ -1233,7 +1233,7 @@
             "SellPrice": 120,
             "Rarity": 0,
             "Durability": 20,
-            "ScoreMultiplier": 1,
+            "ScoreMultiplier": 1.0,
             "RushChanceAdd": 0.0,
             "Radius": 0.3499999940395355,
             "StartingCount": 0,
@@ -1251,7 +1251,7 @@
             "Value": 0.5
         }
     ],
-    "RushThreshold": 100,
+    "RushThreshold": 100.0,
     "OverkillCoinsPerScore": 0.01,
     "FlowValueExponent": 1.15,
     "CentimetersToUnits": 0.009999999776482582,
