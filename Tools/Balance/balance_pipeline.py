@@ -202,6 +202,14 @@ def load_physics(path: Path) -> tuple[dict[tuple[str, float], RouteProfile], dic
             f"Missing empirical physical profile: {path}. Run Tools > Pachinko > Balance > Run Physical Sampling first."
         )
     raw = read_json(path)
+    if raw.get("SchemaVersion", 1) != 1 or any(
+        "BaseRushChance" not in item
+        for row in raw.get("Profiles", []) for item in row.get("Outcomes", [])
+    ):
+        raise SystemExit(
+            "This historical probability model requires a schema-1 physical profile. "
+            "Migrate the simulator to cumulative RUSH before using current physical samples."
+        )
     profiles: dict[tuple[str, float], RouteProfile] = {}
     for row in raw.get("Profiles", []):
         outcomes: list[Outcome] = []

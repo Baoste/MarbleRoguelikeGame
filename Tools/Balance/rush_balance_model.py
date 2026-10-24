@@ -74,10 +74,15 @@ def percentile(sorted_values: list[float], quantile: float) -> float:
 def load_balance() -> tuple[dict, dict]:
     balance = json.loads((ROOT / "Assets/Resources/GameBalance.json").read_text(encoding="utf-8-sig"))
     content = json.loads((ROOT / "Assets/Resources/GameContent.json").read_text(encoding="utf-8-sig"))
+    scene = (ROOT / "Assets/Scenes/TestScene.unity").read_text(encoding="utf-8")
+    if not re.search(r"BaseRushChance: ", scene):
+        raise SystemExit(
+            "This historical probability model does not support cumulative RUSH. "
+            "Use a historical checkout or migrate the simulator before analyzing the current game."
+        )
     attributes = {row["Id"]: row for row in content["Attributes"]}
     devices = {row["Id"]: row for row in content["Devices"]}
     drugs = {row["Kind"]: row for row in content["Drugs"]}
-    scene = (ROOT / "Assets/Scenes/TestScene.unity").read_text(encoding="utf-8")
     nonzero_rush = [float(value) for value in re.findall(r"BaseRushChance: ([0-9.]+)", scene) if float(value) > 0]
     return balance, {
         "raw": content,
