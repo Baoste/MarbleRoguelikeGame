@@ -23,6 +23,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
     public bool SnapToGrid;
     [Tooltip("仅当 Canvas 没有全屏透明 Raycast 遮罩时开启。")]
     public bool BlockClicksOverUI;
+    public DeviceSellAreaUI SellArea;
 
     public int SelectedInstanceId { get; private set; }
     public string LastFeedback { get; private set; }
@@ -35,20 +36,14 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
 
     public void BeginPlacement(int instanceId)
     {
-        if (!TryGetDevice(instanceId, out OwnedDeviceSnapshot device) || device.Placed)
-        {
-            LastFeedback = "Device can only be selected during Build.";
-            return;
-        }
-        CancelPlacement();
-        preview = MResDeviceView.Create(device, BoardRoot, null, true);
-        SelectedInstanceId = instanceId;
-        LastFeedback = "Move the pointer over the placement plane and left-click to place.";
+        BeginSelection(instanceId);
     }
 
     public void CancelPlacement()
     {
+        RestoreSelectedView();
         IsDraggingInventory = false;
+        IsMovingPlacedDevice = false;
         SelectedInstanceId = 0;
         preview?.Dispose();
         preview = null;
@@ -56,65 +51,25 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
 
     private void Update()
     {
-        if (Controller == null || !Controller.IsReady || Controller.Paused || BoardRoot == null)
-            return;
-
-        SyncPlacedObjects();
-        if (Controller.Session.Phase != RoundPhase.Build)
+        if (!CanEdit)
         {
             CancelPlacement();
+            if (Controller != null && Controller.IsReady && BoardRoot != null) SyncPlacedObjects();
             return;
         }
-        if (SelectedInstanceId == 0 || previewObject == null)
-            return;
-
+        SyncPlacedObjects();
+        ValidateSelection();
 #if ENABLE_LEGACY_INPUT_MANAGER
         if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
         {
             CancelPlacement();
+            LastFeedback = "已取消，装置保留原状。";
             return;
         }
-#endif
-
-        if (ViewCamera == null)
-            ViewCamera = Camera.main;
-        if (ViewCamera == null || !TryGetBoardPoint(out Vector3 localPoint))
-        {
-            previewObject.SetActive(false);
-            return;
-        }
-
-        previewObject.SetActive(true);
-
-        if (SnapToGrid && Controller.GridSize > 0f)
-        {
-            float grid = Controller.GridSize;
-            localPoint.x = Mathf.Round(localPoint.x / grid) * grid;
-            localPoint.z = Mathf.Round(localPoint.z / grid) * grid;
-        }
-        SetDeviceTransform(previewObject.transform, localPoint.x, localPoint.z);
-        if (TryGetDevice(SelectedInstanceId, out var selected)) previewObject.transform.rotation *= Quaternion.Euler(0, selected.Angle, 0);
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-        if (Input.GetKeyDown(KeyCode.R)) Controller.RotateDevice(SelectedInstanceId, 45);
-        bool pointerBlocked = BlockClicksOverUI && EventSystem.current != null &&
-            EventSystem.current.IsPointerOverGameObject();
-        if (Input.GetMouseButtonDown(0) && !pointerBlocked && !IsDraggingInventory)
-        {
-            Vector3 scale = previewObject.transform.lossyScale;
-            if (IsInsidePlacementPlane(previewObject.transform.position) &&
-                Controller.PlaceDevice(SelectedInstanceId, localPoint.x, localPoint.z,
-                    previewObject.transform.position, Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z))))
-            {
-                LastFeedback = "Device placed.";
-                CancelPlacement();
-            }
-            else
-            {
-                LastFeedback = "Placement rejected: outside the placement area or overlaps an obstacle/device.";
-                Debug.LogWarning(LastFeedback, this);
-            }
-        }
+        if (Input.GetKeyDown(KeyCode.R)) RotateSelected(45);
+        Vector2 pointer = IsDraggingInventory ? dragPointer : (Vector2)Input.mousePosition;
+        UpdatePlacementPointer(pointer);
+        if (Input.GetMouseButtonDown(0) && !IsDraggingInventory) HandleBoardClick(pointer);
 #endif
     }
 
@@ -167,6 +122,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         displayedRoundId = roundId;
 
         foreach (var item in placedObjects.Values) item.Dispose();
+        hiddenPlacedObject = null;
         placedObjects.Clear();
         foreach (OwnedDeviceSnapshot device in Controller.GetOwnedDevices())
         {
@@ -178,6 +134,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
             placedObjects.Add(device.InstanceId, handle);
             item.SetActive(true);
         }
+        HideSelectedView();
         Physics.SyncTransforms();
     }
 

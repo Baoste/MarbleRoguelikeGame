@@ -29,18 +29,18 @@ public sealed partial class DevicePlacementUI
     {
         if (!IsDraggingInventory) return false;
         IsDraggingInventory = false;
-        if (Controller == null || !Controller.IsReady || Controller.Paused || Controller.Session.Phase != RoundPhase.Build || IsControl(pointerTarget) || PointerOnControl(pointer))
+        if (!CanEdit || !TryGetSelectedDevice(out _))
+        { LastFeedback = "已取消拖放，装置保留在背包。"; CancelPlacement(); return false; }
+        // Dropping over the sale area only selects the sale; a separate left click must confirm it.
+        if (SellArea && SellArea.ContainsPointer(pointer))
+        { if (previewObject) previewObject.SetActive(false); LastFeedback = "左键点击红色区域确认出售，右键取消。"; return false; }
+        if (IsControl(pointerTarget) || PointerOnControl(pointer))
         { LastFeedback = "已取消拖放，装置保留在背包。"; CancelPlacement(); return false; }
         if (TryOfferSelected(pointer, out bool accepted)) return accepted;
         bool placed = false;
         if (previewObject != null && TryGetBoardPoint(pointer, out var point))
         {
-            if (SnapToGrid && Controller.GridSize > 0)
-            { point.x = Mathf.Round(point.x / Controller.GridSize) * Controller.GridSize; point.z = Mathf.Round(point.z / Controller.GridSize) * Controller.GridSize; }
-            SetDeviceTransform(previewObject.transform, point.x, point.z);
-            var scale = previewObject.transform.lossyScale;
-            placed = IsInsidePlacementPlane(previewObject.transform.position) && Controller.PlaceDevice(SelectedInstanceId,
-                point.x, point.z, previewObject.transform.position, Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z)));
+            placed = CommitSelected(point);
         }
         LastFeedback = placed ? "装置已放置。" : "此处不能放置，装置保留在背包。";
         CancelPlacement(); return placed;

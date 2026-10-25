@@ -45,6 +45,7 @@ namespace MarblesECS.Editor
                 BounceAuthority();
                 Placement();
                 DevicePlacementValidation.Run();
+                DeviceEditingValidation();
                 SpawnBatch();
                 LauncherCadenceValidation();
                 ScoreStackValidation();

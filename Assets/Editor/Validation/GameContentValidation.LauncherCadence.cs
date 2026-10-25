@@ -193,11 +193,13 @@ namespace MarblesECS.Editor
                 try { tuning.Validate(); } catch (ArgumentOutOfRangeException) { rejected = true; }
                 Check(rejected, "invalid tap interval is rejected: " + invalid);
             }
-            var json = GameBalanceLoader.Load().Marble;
-            var excel = GameBalanceExcel.Read(GameBalanceImporter.WorkbookPath).Marble;
-            Near(json.FireIntervalSeconds, excel.FireIntervalSeconds, "Excel and JSON hold intervals agree");
-            Near(json.MaxFireIntervalSeconds, excel.MaxFireIntervalSeconds, "Excel and JSON tap intervals agree");
             var rows = XlsxWorkbookReader.Read(GameBalanceImporter.WorkbookPath)["Marble"];
+            // JSON can be tuned directly between Excel imports; test import semantics without imposing equality.
+            rows.Find(row => row[0] == nameof(MarbleTuning.FireIntervalSeconds))[1] = "0.4";
+            rows.Find(row => row[0] == nameof(MarbleTuning.MaxFireIntervalSeconds))[1] = "0.1";
+            var imported = BalanceTableParser.Singleton<MarbleTuning>(rows, "Marble");
+            Near(.4, imported.FireIntervalSeconds, "Excel imports the authored held interval");
+            Near(.1, imported.MaxFireIntervalSeconds, "Excel imports the independent tap interval");
             rows.RemoveAll(row => row[0] == nameof(MarbleTuning.MaxFireIntervalSeconds));
             Near(.15, BalanceTableParser.Singleton<MarbleTuning>(rows, "Marble").MaxFireIntervalSeconds,
                 "older workbooks default the optional tap interval to 0.15 seconds");

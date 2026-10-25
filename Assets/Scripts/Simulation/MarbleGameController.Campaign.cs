@@ -37,7 +37,8 @@ namespace MarblesECS.PhysX
         public bool EnterBuild()
         {
             if (simulation == null || !simulation.EnterBuild()) return false;
-            return HasUnplacedDevices() || BeginRound();
+            // Existing board devices still need a Build phase for moving and selling.
+            return simulation.GetOwnedDevices().Length > 0 || BeginRound();
         }
 
         private bool HasUnplacedDevices()
@@ -73,7 +74,7 @@ namespace MarblesECS.PhysX
         }
 
         /// <summary>Presentation supplies the actual world pose when its placement plane is offset or tilted.</summary>
-        public bool PlaceDevice(int id, float x, float z, Vector3 worldPosition, float radiusScale = 1f)
+        public bool PlaceDevice(int id, float x, float z, Vector3 worldPosition, float radiusScale = 1f, float? angle = null)
         {
             if (!IsReady || Paused || Session.Phase != RoundPhase.Build || !SimulationContext.IsFinite(worldPosition) ||
                 !MarbleRules.IsFinite(radiusScale) || radiusScale <= 0 ||
@@ -85,7 +86,7 @@ namespace MarblesECS.PhysX
                 if (PlacementSurface != null && !PlacementSurface.ContainsWorldPoint(worldPosition, radius)) return false;
                 if (!MarbleRules.IsFinite(radius) ||
                     !placementObstacles.IsClear(localPhysics, PlacementObstacleRoots, worldPosition, radius)) return false;
-                return simulation.PlaceDevice(id, x, z, PlacementClearance);
+                return simulation.PlaceDevice(id, x, z, PlacementClearance, angle);
             }
             return false;
         }

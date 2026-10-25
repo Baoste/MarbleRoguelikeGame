@@ -4,10 +4,11 @@ namespace MarblesECS
 {
     internal static class DevicePlacementSystem
     {
-        internal static bool Place(SimulationContext context, int instanceId, float x, float z, float clearance)
+        internal static bool Place(SimulationContext context, int instanceId, float x, float z, float clearance, float? angle = null)
         {
             if (!MarbleRules.IsFinite(x) || !MarbleRules.IsFinite(z) ||
                 !MarbleRules.IsFinite(clearance) || clearance < 0 ||
+                (angle.HasValue && !MarbleRules.IsFinite(angle.Value)) ||
                 !CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
             var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
             var definition = CampaignStateUtility.Device(context, device.DefinitionId);
@@ -26,6 +27,7 @@ namespace MarblesECS
             device.X = x;
             device.Z = z;
             device.Placed = true;
+            if (angle.HasValue) device.Angle = angle.Value % 360;
             context.Manager.SetComponentData(entity, device);
             var campaign = context.Campaign;
             campaign.LayoutRevision++;
