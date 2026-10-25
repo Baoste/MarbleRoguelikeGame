@@ -66,7 +66,7 @@ public static class StatusHudInstaller
         listener.RushText.name = "RushStatus";
         StyleText(listener.RushText, font, new Color32(244, 199, 120, 255));
         TopRect(listener.RushText.rectTransform, 18, -14, 384, 30);
-        listener.RushText.text = "RUSH  0 / 100";
+        listener.RushText.text = $"RUSH  0 / {MarblesECS.RushSystem.Threshold:0}";
         listener.RushSlider.transform.SetParent(panel, false);
         listener.RushSlider.name = "RushProgress";
         TopRect((RectTransform)listener.RushSlider.transform, 18, -52, 384, 12);

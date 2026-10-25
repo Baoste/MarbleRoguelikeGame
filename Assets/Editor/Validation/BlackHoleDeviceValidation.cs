@@ -28,7 +28,7 @@ namespace MarblesECS.Editor
         {
             using (var r = new Rig())
             {
-                Check(r.View.Root.GetComponentsInChildren<Collider>().Single().isTrigger, "core is a non-solid cylindrical sensor");
+                Check(r.View.Root.GetComponentsInChildren<Collider>().Where(c => c.name != "PlacementVolume").ToArray().Single().isTrigger, "core is a non-solid cylindrical sensor");
                 r.Step(); Check(r.Status.Contains("0/10"), "uncharged status is visible even with no balls");
                 Check(r.Simulation.TryActivateDevice(r.Id), "generic activation dispatch is available without a ball");
                 Check(r.Status.Contains("0/10"), "early click cannot activate");
@@ -206,7 +206,7 @@ namespace MarblesECS.Editor
                 Near(durability - 1, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "all scored swallows belong to one activation");
                 var state = r.C.Round; state.Time = end - .12; r.C.Round = state;
                 key = r.Launch(new Vector3(2, .08f, 0)); r.Step();
-                Check(r.Body(key).velocity.magnitude > 0 && r.View.Root.GetComponentsInChildren<Collider>().All(c => c.enabled), "effect and sensor still work near the full ten-second deadline");
+                Check(r.Body(key).velocity.magnitude > 0 && r.View.Root.GetComponentsInChildren<Collider>().Where(c => c.name != "PlacementVolume").ToArray().All(c => c.enabled), "effect and sensor still work near the full ten-second deadline");
                 r.Consume(key);
                 state = r.C.Round; state.Time = end + .02; r.C.Round = state; r.Step();
                 key = r.Launch(new Vector3(2, .08f, 0)); r.Step();
@@ -214,7 +214,7 @@ namespace MarblesECS.Editor
                 if (durability == 1)
                 {
                     Check(!r.Simulation.TryActivateDevice(r.Id), "exhausted hole rejects activation after completing the effect");
-                    Check(r.View.Root.GetComponentsInChildren<Collider>().All(c => !c.enabled), "completed exhausted hole disables its sensor");
+                    Check(r.View.Root.GetComponentsInChildren<Collider>().Where(c => c.name != "PlacementVolume").ToArray().All(c => !c.enabled), "completed exhausted hole disables its sensor");
                     r.Move(key, new Vector3(0, .08f, 0)); r.Step();
                     Check(r.C.TryGetFlying(key, out _), "exhaustion prevents new charging");
                 }
@@ -222,7 +222,7 @@ namespace MarblesECS.Editor
                 var round = r.C.Round; round.Phase = (byte)RoundPhase.Build; r.C.Round = round;
                 r.Simulation.BeginRound(); r.Step();
                 Near(durability, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "new round restores the full metadata durability");
-                Check(r.Status.Contains("0/10") && r.View.Root.GetComponentsInChildren<Collider>().All(c => c.enabled), "new round restores charging and collisions");
+                Check(r.Status.Contains("0/10") && r.View.Root.GetComponentsInChildren<Collider>().Where(c => c.name != "PlacementVolume").ToArray().All(c => c.enabled), "new round restores charging and collisions");
             }
         }
 

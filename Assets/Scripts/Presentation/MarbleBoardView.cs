@@ -92,7 +92,7 @@ namespace MarblesECS.Presentation
         private void HandleClick(Vector3 point)
         {
             foreach (var item in controller.GetOwnedDevices())
-                if (item.Placed && Vector2.Distance(new Vector2(point.x, point.z), new Vector2(item.X, item.Z)) < item.Radius + .25f)
+                if (item.Placed && Vector2.Distance(new Vector2(point.x, point.z), new Vector2(item.PlacementX, item.PlacementZ)) < item.Radius + .25f)
                 { Select(item.InstanceId); return; }
             if (SelectedDeviceId == 0) { Feedback = "先在左侧库存选择一枚钉子。"; return; }
             float grid = controller.GridSize;

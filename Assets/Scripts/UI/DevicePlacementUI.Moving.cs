@@ -104,9 +104,10 @@ public sealed partial class DevicePlacementUI
         SnapPoint(ref point);
         SetDeviceTransform(previewObject.transform, point.x, point.z);
         previewObject.transform.rotation *= Quaternion.Euler(0, previewAngle, 0);
-        var scale = previewObject.transform.lossyScale;
+        // Package geometry already includes the authored root scale; only the board scale remains.
+        var scale = BoardRoot.lossyScale;
         return IsInsidePlacementPlane(previewObject.transform.position) && Controller.PlaceDevice(SelectedInstanceId,
-            point.x, point.z, previewObject.transform.position, Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z)), previewAngle);
+            point.x, point.z, previewObject.transform.position, Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z)), previewAngle, previewObject.transform.rotation);
     }
 
     public bool TrySellSelected()
@@ -137,7 +138,7 @@ public sealed partial class DevicePlacementUI
         foreach (var device in Controller.GetOwnedDevices())
         {
             if (!device.Placed) continue;
-            float distance = new Vector2(point.x - device.X, point.z - device.Z).sqrMagnitude;
+            float distance = new Vector2(point.x - device.PlacementX, point.z - device.PlacementZ).sqrMagnitude;
             if (distance <= device.Radius * device.Radius && distance < nearest)
             { id = device.InstanceId; nearest = distance; }
         }

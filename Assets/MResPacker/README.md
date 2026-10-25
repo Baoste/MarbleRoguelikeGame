@@ -26,6 +26,8 @@ MResPacker/
 
 制作场景用于观察外观和编辑布局，打包器读取的是配置中的 **Prefab 资产**。在场景实例上修改后，需要 Apply 到源 Prefab，或者直接进入 Prefab Mode 编辑。制作场景不会执行 Lua，也不是游戏关卡；相机不属于待打包的弹射台 Prefab。
 
+装置 Prefab 根节点下的 `PlacementVolume` 专门保存占地用的 **SphereCollider**。首次构建时若缺少该节点，工具会按当前显示的模型顶点自动拟合并保存；也可以选中 Profile，执行 `Tools > MRes > Add Placement Sphere to Selected Profile`。之后直接调整球体的 `Center`、`Radius` 或子对象缩放，后续构建会保留手工设置。球体没有 Renderer，保持禁用，仅供放置检查使用，不参与弹珠碰撞或 Lua 接触。`game/device.json` 不再需要 `Radius` 字段。
+
 ## 使用
 
 1. 打开 `Tools > MRes > Packer`，选择 `Authoring/Profiles/BouncePad.asset`。
@@ -61,7 +63,7 @@ end
 2. 将 `Output/BouncePad.mres` 复制到 `Resources/Devices`，等待目录自动刷新。示例 ID 为 **9000**，购买价为 5、出售价格为 120，开局赠送为 0，会加入商店候选。
 3. 游戏需要包内 `game/device.json`。示例配置通过“附加业务文件”将 `Authoring/Data/BouncePad.device.json` 打包为该路径；其类型为 `Other = 255`，与七字段 Metadata 分离。
 
-工具不会自动修改游戏场景、商店、资源目录或运行时 Shader Registry。`Output` 是制作端成品目录；当前已将示例安装为 `Resources/Devices/9000_BouncePad.mres` 并注册所需 Shader。运行目录包含本工具的 14 个制作成品和 `113_MultiDing.mres`，合计 15 种装置。
+工具不会自动修改游戏场景、商店、资源目录或运行时 Shader Registry。`Output` 是制作端成品目录；当前已将示例安装为 `Resources/Devices/9000_BouncePad.mres` 并注册所需 Shader。运行目录现有 35 种装置，均有带占地球体的制作 Prefab；`113_MultiDing.mres` 的可编辑源资源也已补齐至 `Authoring`。
 
 ## 支持与检查
 
@@ -87,6 +89,7 @@ Writer 使用 28 字节 MRES Header、little-endian TOC、类型 1～8 / 255、C
 - 贴图设置放在 Manifest 的 `textureSettings[path]` 中，mipmap 字段名为 `mipChain`。
 - 原网格名称保存在 Manifest 的 `meshNames[path]` 中，以兼容既有 MMSH v1 字节布局。现有 Loader 仍使用网格虚拟路径作为运行时 Mesh 名称；该附加信息不影响几何恢复。
 - Collider 始终包含 contactOffset、Physics Material 引用、include/excludeLayers、layerOverridePriority、providesContacts、hasModifiableContacts 等公共字段。旧 Unity 不支持的 API 由版本宏填默认值。
+- `PlacementVolume` 的 SphereCollider 额外写入 `placementOnly: true`。游戏目录要求每包恰好一个占地球体；Loader 读取其中心与缩放后的半径，并始终禁用该碰撞体，包括装置重新启用时。其他 Collider 参数和用途保持原样。
 - 包最大 256 MiB，最多 65536 条目、10000 节点；单 Mesh 最多 100 万顶点 / 600 万索引 / 1024 SubMesh。PNG 最大 8192×8192，且像素数不超过 16777216。
 
 运行时对象、源 GUID、AssetDatabase 路径、源文件绝对路径不会作为资源引用写入成品。制作端的 `.prefab` / `.asset` / `.unity` 则正常使用 Unity GUID 管理本目录内的源资产。

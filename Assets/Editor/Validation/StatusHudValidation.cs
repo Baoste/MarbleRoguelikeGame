@@ -101,18 +101,19 @@ namespace MarblesECS.Editor
             Check(context.Round.Tick > tick, "Real scene simulation advances");
             Check(hud.StatusHud && hud.RushSlider && hud.ScoreStackSlider && hud.RushText && hud.ScoreStackText, "Both HUD rows are wired");
             Check(hud.StatusHud.GetComponentInParent<Canvas>().renderMode == RenderMode.ScreenSpaceOverlay, "HUD is a screen overlay");
-            var round = context.Round; round.RushMeter = 50; context.Round = round;
+            var round = context.Round; round.RushMeter = 333; context.Round = round;
             yield return null; yield return null;
             Check(Math.Abs(hud.RushSlider.normalizedValue - .5f) < .001, "Inactive RUSH displays charging progress");
+            Check(hud.RushText.text.Contains("333 / 666"), "HUD shows the 666-point threshold");
             Check(hud.ScoreStackSlider.value == 0, "Idle stack timer is empty");
             game.FireOnce(); while (context.Marbles.Count == 0) yield return null;
             var key = context.Marbles.Keys.Single(); var ball = context.Marbles[key];
             var rush = context.Manager.GetComponentData<MarbleRush>(ball); rush.DurationBonus = 5; context.Manager.SetComponentData(ball, rush);
-            round = context.Round; round.RushMeter = 99; context.Round = round;
+            round = context.Round; round.RushMeter = 665; context.Round = round;
             simulation.EnqueueContact(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 990, Multiplier = 1, ScoreStackEnabled = true });
             while (game.Snapshot.RushSecondsRemaining == 0) yield return null;
             game.SetPaused(true); yield return null; yield return null;
-            Check(game.Snapshot.RushDurationSeconds == 7, "Extended RUSH records seven seconds");
+            Check(game.Snapshot.RushDurationSeconds == 11, "Extended RUSH records eleven seconds");
             Check(hud.RushText.text.Contains("锁血") && hud.RushSlider.value > .95f, "RUSH switches from charging to a full countdown");
             Check(hud.ScoreStackText.text.Contains("+0.05") && hud.ScoreStackSlider.value > .9f, "First stack shows bonus and a full timer");
             float rushStart = hud.RushSlider.value, stackStart = hud.ScoreStackSlider.value;
@@ -133,7 +134,7 @@ namespace MarblesECS.Editor
             game.SetPaused(true); yield return null; yield return null;
             Check(Math.Abs(game.Snapshot.ScoreStackWindowSeconds - 1 / 1.05) < .0001 && hud.ScoreStackSlider.value > .9f,
                 "New score refills the bar using its shorter window");
-            Check(Math.Abs(hud.RushSlider.value - game.Snapshot.RushSecondsRemaining / 7) < .001, "RUSH progress divides by actual activation length");
+            Check(Math.Abs(hud.RushSlider.value - game.Snapshot.RushSecondsRemaining / 11) < .001, "RUSH progress divides by actual activation length");
             Check(Math.Abs(hud.ScoreStackSlider.value - game.Snapshot.ScoreStackSecondsRemaining / game.Snapshot.ScoreStackWindowSeconds) < .001,
                 "Score progress divides by the current refreshed window");
             foreach (var size in new[] { new Vector2Int(1280,720), new Vector2Int(1920,1080), new Vector2Int(3840,2160), new Vector2Int(1280,960), new Vector2Int(2560,1080) })
@@ -149,9 +150,34 @@ namespace MarblesECS.Editor
             Check(hud.RushSlider.value > 0 && hud.RushText.text.Contains("锁血"), "RUSH continues independently after score expiry");
             round = context.Round; round.RushRemaining = .02; context.Round = round;
             wait = WaitSimulation(.1); while (wait.MoveNext()) yield return null;
-            Check(hud.RushSlider.value == 0 && hud.RushText.text.Contains("/ 100"), "RUSH expiry returns to the accumulation meter");
+            game.SetPaused(true); yield return null; yield return null;
+            Check(hud.RushSlider.value == 0 && hud.RushText.text.Contains("冷却"), "Cooldown uses text only and leaves the progress bar empty");
+            Check(game.Snapshot.RushCooldownSecondsRemaining > 2.5 && game.Snapshot.RushCooldownSecondsRemaining <= 3,
+                "RUSH expiry starts the three-second cooldown");
+            double cooldown = game.Snapshot.RushCooldownSecondsRemaining;
+            string cooldownLabel = hud.RushText.text;
+            wall = EditorApplication.timeSinceStartup + .2;
+            while (EditorApplication.timeSinceStartup < wall) yield return null;
+            Check(game.Snapshot.RushCooldownSecondsRemaining == cooldown && hud.RushText.text == cooldownLabel,
+                "Pause freezes the cooldown label and simulation");
+            using (var view = new ResolutionView(Camera.main, 1920, 1080))
+            {
+                yield return null; view.CheckLayout(hud);
+                view.Capture(Path.Combine(Output, "rush-cooldown-1920x1080.png"));
+            }
+            game.SetPaused(false);
+            game.FireOnce(); while (context.Marbles.Count == 0) yield return null;
+            key = context.Marbles.Keys.Single(); long scoreBeforeCooldownBall = game.Snapshot.Score;
+            simulation.EnqueueContact(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 992, Multiplier = 1 });
+            while (context.Marbles.ContainsKey(key)) yield return null;
+            Check(game.Snapshot.Score > scoreBeforeCooldownBall && game.Snapshot.RushMeter == 0,
+                "Real score settlement still awards points but adds no RUSH during cooldown");
+            wait = WaitSimulation(game.Snapshot.RushCooldownSecondsRemaining + .1); while (wait.MoveNext()) yield return null;
+            Check(hud.RushSlider.value == 0 && hud.RushText.text.Contains("/ 666"), "Completed cooldown returns to the empty accumulation meter");
+            round = context.Round; round.RushCooldownRemaining = 2; context.Round = round;
             game.RestartRound(); yield return null; yield return null;
             Check(hud.RushSlider.value == 0 && hud.ScoreStackSlider.value == 0, "Restart clears both bars");
+            Check(game.Snapshot.RushCooldownSecondsRemaining == 0 && !hud.RushText.text.Contains("冷却"), "Restart clears cooldown text and state");
             round = context.Round; round.Phase = (byte)RoundPhase.Build; context.Round = round;
             yield return null; yield return null;
             Check(hud.StatusHud.alpha == 0, "Non-playing phases hide the status panel");
@@ -186,8 +212,8 @@ namespace MarblesECS.Editor
                 string size = target.width + "x" + target.height;
                 var panel = (RectTransform)listener.StatusHud.transform;
                 var rect = Bounds(panel);
-                Check(rect.xMin > target.width / 2 && rect.yMin > target.height / 2 && rect.xMax <= target.width + 1 && rect.yMax <= target.height + 1,
-                    size + " panel is inside the top-right corner");
+                Check(rect.xMin > target.width / 2 && rect.yMin >= -1 && rect.xMax <= target.width + 1 && rect.yMax <= target.height + 1,
+                    size + " panel stays within the authored right-side screen position");
                 var button = UnityEngine.Object.FindObjectsOfType<UnityEngine.UI.Button>(true).First(b => b.name == "打开道具库");
                 Check(!rect.Overlaps(Bounds((RectTransform)button.transform)), size + " panel avoids the item-library button");
                 Check(listener.RushSlider.transform.position.y > listener.ScoreStackSlider.transform.position.y, size + " RUSH row sits above score row");

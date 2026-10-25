@@ -25,10 +25,10 @@ namespace MarblesECS.Editor
             }
             using(var f=new Fixture())
             {
-                var old=f.Launch();var trigger=f.Launch();var round=f.C.Round;round.RushMeter=99;f.C.Round=round;
+                var old=f.Launch();var trigger=f.Launch();var round=f.C.Round;round.RushMeter=665;f.C.Round=round;
                 f.Step(new MarbleContact{Key=trigger,Kind=MarbleContactKind.Score,TargetId=801,Multiplier=1});
-                Near(2,f.C.Round.RushRemaining,"full meter activates two seconds");Near(0,f.C.Round.RushMeter,"activation consumes the bar including overflow");
-                Near(2,f.Simulation.Snapshot.RushDurationSeconds,"HUD denominator records the full activated duration");
+                Near(6,f.C.Round.RushRemaining,"full meter activates six seconds");Near(0,f.C.Round.RushMeter,"activation consumes the bar including overflow");
+                Near(6,f.Simulation.Snapshot.RushDurationSeconds,"HUD denominator records the full activated duration");
                 Near(15,RushSystem.BallValue(f.C,f.Ball(old)),"existing ball gets temporary five value");
                 Near(10,f.Simulation.GetMarbleAttribute(old,GameAttribute.BALL_BASE_VALUE),"temporary value never changes stored base");
                 var player=f.C.Player;player.Blood=0;f.C.Player=player;var fresh=f.Launch();
@@ -52,16 +52,16 @@ namespace MarblesECS.Editor
                 ExpectArgument(()=>api.SetScoreRushContribution(double.PositiveInfinity));
                 api.SetScoreRushContribution(-100);api.ClearScoreRushContribution();
                 Check(!f.C.Manager.GetComponentData<MarbleRush>(f.Ball(key)).HasScoreContribution,"override can be cleared without changing ordinary contribution");
-                var board=api.Board;Near(100,board.RushMaximum,"Lua sees board threshold");api.Close();
+                var board=api.Board;Near(666,board.RushMaximum,"Lua sees board threshold");api.Close();
                 ExpectExpired(()=>api.AddRushContribution(1));ExpectExpired(()=>api.SetScoreRushContribution(1));ExpectExpired(()=>{var x=board.RushMeter;});
             }
             using(var f=new Fixture())
             {
-                var key=f.Launch();var round=f.C.Round;round.RushMeter=98;f.C.Round=round;
+                var key=f.Launch();var round=f.C.Round;round.RushMeter=664;f.C.Round=round;
                 var player=f.C.Player;player.Blood=0;f.C.Player=player;f.Step();
                 Check(f.C.Round.Phase==(byte)RoundPhase.Draining,"empty blood enters draining outside Rush");
                 f.Step(new MarbleContact{Key=key,Kind=MarbleContactKind.Drain,TargetId=803,Multiplier=1});
-                Check(f.C.Round.Phase==(byte)RoundPhase.Playing,"last draining ball can fill Rush and reopen free firing");Near(2,f.C.Round.RushRemaining,"drain can start Rush");
+                Check(f.C.Round.Phase==(byte)RoundPhase.Playing,"last draining ball can fill Rush and reopen free firing");Near(6,f.C.Round.RushRemaining,"drain can start Rush");
             }
             using(var f=new Fixture())
             {
@@ -83,7 +83,73 @@ namespace MarblesECS.Editor
                 foreach(var k in f.C.Marbles.Keys.Where(x=>!x.Equals(child)))
                 {Near(17,f.C.Manager.GetComponentData<MarbleRush>(f.Ball(k)).Contribution,"split descendants carry completed trigger contribution");Near(30,f.C.Manager.GetComponentData<MarbleRush>(f.Ball(k)).ScoreContribution,"split retains numbered override");}
             }
+            RushCooldownValidation();
             Debug.Log("RUSH_REWORK_VALIDATION_PASSED: "+(assertions-start)+" assertions.");
+        }
+        private static void RushCooldownValidation()
+        {
+            using (var f = new Fixture())
+            {
+                var first = f.Launch(); var last = f.Launch();
+                var round = f.C.Round; round.RushMeter = 662; f.C.Round = round;
+                f.Step(new MarbleContact { Key = first, Kind = MarbleContactKind.Score, TargetId = 806, Multiplier = 1 });
+                Near(665, f.C.Round.RushMeter, "665 points still cannot trigger Rush");
+                Near(0, f.C.Round.RushRemaining, "old 100-point threshold is inactive");
+                f.Step(new MarbleContact { Key = last, Kind = MarbleContactKind.Drain, TargetId = 807 });
+                Near(6, f.C.Round.RushRemaining, "crossing 666 activates once");
+            }
+            foreach (var kind in new[] { MarbleContactKind.Drain, MarbleContactKind.Score, MarbleContactKind.RandomScore })
+            using (var f = new Fixture())
+            {
+                var key = f.Launch(); var survivor = f.Launch();
+                var rush = f.C.Manager.GetComponentData<MarbleRush>(f.Ball(key));
+                rush.Contribution = 1000; rush.DurationBonus = 5;
+                f.C.Manager.SetComponentData(f.Ball(key), rush);
+                var round = f.C.Round; round.RushRemaining = .03; round.RushDuration = 6; f.C.Round = round;
+                long score = round.Score;
+                f.Step(new MarbleContact { Key = key, Kind = kind, TargetId = 808, Multiplier = 1 });
+                Near(0, f.C.Round.RushRemaining, "expiry cannot immediately retrigger from terminal contact");
+                Near(2.93, f.C.Round.RushCooldownRemaining, "partial step after expiry counts toward cooldown");
+                Near(2.93, f.Simulation.Snapshot.RushCooldownSecondsRemaining, "snapshot exposes simulation cooldown");
+                Near(0, f.C.Round.RushMeter, "cooldown rejects even a full meter and tea duration bonus");
+                Near(10, RushSystem.BallValue(f.C, f.Ball(survivor)), "cooldown has no temporary value bonus");
+                Check(f.Simulation.QuoteShot(0).Cost > 0, "cooldown no longer locks blood");
+                Near(1 / f.C.Tuning.FireIntervalSeconds, f.Simulation.Snapshot.ShotsPerSecond, "cooldown removes extra fire rate");
+                if (kind == MarbleContactKind.Score) Check(f.C.Round.Score > score, "cooldown still settles normal score");
+                // Ball contributions remain on surviving balls; rejected terminal deposits are never queued.
+                for (int i = 0; i < 29; i++) f.Step();
+                Near(.03, f.C.Round.RushCooldownRemaining, "cooldown remains until all three seconds elapse");
+                f.Step(new MarbleContact { Key = survivor, Kind = kind, TargetId = 808, Multiplier = 1 });
+                Near(0, f.C.Round.RushCooldownRemaining, "elapsed cooldown unlocks settlement in the same step");
+                Near(kind == MarbleContactKind.Drain ? 2 : 3, f.C.Round.RushMeter, "only new post-cooldown deposits are counted");
+                Near(0, f.C.Round.RushRemaining, "ignored contributions do not replay or activate later");
+            }
+            foreach (double amount in new[] { -100d, 70d })
+            using (var f = new Fixture())
+            {
+                var key = f.Launch(); var rush = f.C.Manager.GetComponentData<MarbleRush>(f.Ball(key));
+                rush.HasScoreContribution = true; rush.ScoreContribution = amount;
+                f.C.Manager.SetComponentData(f.Ball(key), rush);
+                var round = f.C.Round; round.RushCooldownRemaining = 3; round.RushMeter = 25; f.C.Round = round;
+                f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 806, Multiplier = 1 });
+                Near(25, f.C.Round.RushMeter, "numbered positive and negative overrides are ignored during cooldown");
+                Near(2.9, f.C.Round.RushCooldownRemaining, "ignored deposits do not refresh cooldown");
+            }
+            using (var f = new Fixture())
+            {
+                var round = f.C.Round; round.RushRemaining = .1; f.C.Round = round;
+                f.Step(); Near(3, f.C.Round.RushCooldownRemaining, "exact expiry starts a full three seconds");
+                round = f.C.Round; round.Phase = (byte)RoundPhase.Build; f.C.Round = round;
+                f.Step(); Near(3, f.C.Round.RushCooldownRemaining, "non-playing simulation does not advance cooldown");
+                Check(f.Simulation.BeginRound(), "new round starts after cooldown");
+                Near(0, f.C.Round.RushCooldownRemaining, "new round clears cooldown");
+                round = f.C.Round; round.RushCooldownRemaining = 3; f.C.Round = round;
+                var player = f.C.Player; player.Blood = 0; f.C.Player = player;
+                f.Step(); Near(0, f.C.Round.RushCooldownRemaining, "round settlement clears cooldown immediately");
+                round = f.C.Round; round.RushCooldownRemaining = 3; f.C.Round = round;
+                f.Simulation.StartSession(f.Physics);
+                Near(0, f.C.Round.RushCooldownRemaining, "new run clears cooldown");
+            }
         }
         private static void BilliardsValidation()
         {

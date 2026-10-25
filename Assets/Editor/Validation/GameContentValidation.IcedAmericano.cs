@@ -91,9 +91,10 @@ namespace MarblesECS.Editor
                 Near(27, f.C.Manager.GetComponentData<MarbleRush>(f.Ball(key)).Contribution, "device gain is not doubled during Rush");
                 for (int i = 0; i < 12; i++) f.Step();
                 Near(5, RushSystem.BallValue(f.C, f.Ball(key)), "temporary value disappears without reversing coffee effect");
-                round = f.C.Round; round.RushMeter = 60; f.C.Round = round;
+                WokUntil(f, f.C.Round.Time + f.C.Round.RushCooldownRemaining);
+                round = f.C.Round; round.RushMeter = 630; f.C.Round = round;
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 808, Multiplier = 1 });
-                Near(2, f.C.Round.RushRemaining, "coffee-enhanced contribution can fill the shared bar");
+                Near(6, f.C.Round.RushRemaining, "coffee-enhanced contribution can fill the shared bar after cooldown");
                 Near(0, f.C.Round.RushMeter, "activation consumes filled meter");
             }
             foreach (float dt in new[] { .01f, .02f }) IcedAmericanoPhysics(dt);
@@ -116,7 +117,7 @@ namespace MarblesECS.Editor
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
                 view = MResDeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));
                 view.Root.SetActive(true); Physics.SyncTransforms();
-                var colliders = view.Root.GetComponentsInChildren<Collider>(true);
+                var colliders = view.Root.GetComponentsInChildren<Collider>(true).Where(c => c.name != "PlacementVolume").ToArray();
                 Check(colliders.Length == 1 && !colliders[0].isTrigger, "coffee cup has one solid collider");
                 Check(view.Root.transform.Find("Cup") != null && view.Root.transform.Find("Ice6") != null && view.Root.transform.Find("Straw") != null, "package includes cup, six ice cubes and straw");
                 var spawn = board.transform.TransformPoint(new Vector3(0, .285f, .9f));

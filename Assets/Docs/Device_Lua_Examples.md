@@ -237,7 +237,7 @@ end
 
 制作源 `MResPacker/Authoring/Lua/CoolingTea.lua`，业务 ID `9030`，游戏包 `Resources/Devices/9030_CoolingTea.mres`。保留青瓷凉茶壶、壶嘴、弧形把手和壶盖的模型、独立材质、Prefab 与制作场景。
 
-首次有效实体碰撞将当前 `BALL_FRICTION ×1.2`、`BALL_BOUNCE ×0.9`，记录 `RushDurationBonus=5`，扣 1 耐久。只有该球在底部/得分区累满 RUSH 条时，才使本次 RUSH 由 2 秒变为 7 秒；未累满或已在 RUSH 中均不加时。物理参数换算、同球一次、跨实例去重保持原规则。
+首次有效实体碰撞将当前 `BALL_FRICTION ×1.2`、`BALL_BOUNCE ×0.9`，记录 `RushDurationBonus=5`，扣 1 耐久。只有该球在底部/得分区累满 RUSH 条时，才使本次 RUSH 由 6 秒变为 11 秒；未累满、已在 RUSH 中或处于结束后的 3 秒冷却均不加时。物理参数换算、同球一次、跨实例去重保持原规则。
 
 Lua 用共享定义键 `-(4294967296 + DefinitionId)` 和 `Visit(key, 1, true)`；复制/等分/按价值分球继承效果和防重复记录。`SetCurrent` 以实际当前物理属性换算，清除对应旧修正，其他属性不变；下个物理步同步 PhysX 静/动摩擦与弹性，不改已经求解的反弹速度。新球默认额外时长 0，球消失时清理。`Strength=.2`、`Range=.1`、`Value=5` 的数值不变。
 

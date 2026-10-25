@@ -19,7 +19,7 @@ namespace MarblesECS
         public uint RandomState;
         public long RushEndTick;
         public double RushRemaining, RushMeter, FractionalScore, FractionalPendingScore;
-        public double RushDuration;
+        public double RushDuration, RushCooldownRemaining;
         public long ScoreStackCount;
         public double ScoreStackExpiresAt;
         public double ScoreStackWindowSeconds;

@@ -9,6 +9,8 @@ namespace MarblesECS
         public float X;
         public float Z;
         public float Radius;
+        public float PlacementX, PlacementZ;
+        public float PlacementOffsetX, PlacementOffsetY, PlacementOffsetZ;
         public long PurchasePrice;
         public long SellPrice;
         public DeviceRarity Rarity;

@@ -75,7 +75,7 @@ namespace MRes
                 default:
                     var mesh = go.AddComponent<MeshCollider>(); mesh.convex = c.Convex; mesh.sharedMesh = meshes[c.Mesh]; collider = mesh; break;
             }
-            collider.enabled = c.Enabled; collider.isTrigger = c.Trigger; collider.contactOffset = c.ContactOffset;
+            collider.enabled = c.Enabled && !c.PlacementOnly; collider.isTrigger = c.Trigger; collider.contactOffset = c.ContactOffset;
             collider.sharedMaterial = c.PhysicsMaterial == null ? null : physics[c.PhysicsMaterial];
 #if UNITY_2022_2_OR_NEWER
             collider.includeLayers = c.IncludeLayers; collider.excludeLayers = c.ExcludeLayers;

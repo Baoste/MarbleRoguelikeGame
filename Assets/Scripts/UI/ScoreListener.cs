@@ -98,6 +98,7 @@ public class ScoreListener : MonoBehaviour
         var snapshot = ready ? Controller.Snapshot : default;
         bool playing = ready && (snapshot.Phase == RoundPhase.Playing || snapshot.Phase == RoundPhase.Draining);
         bool rushActive = playing && snapshot.RushSecondsRemaining > 0;
+        bool rushCooling = playing && snapshot.RushCooldownSecondsRemaining > 0;
         bool stackActive = playing && snapshot.ScoreStackSecondsRemaining > 0;
 
         if (StatusHud != null)
@@ -110,12 +111,13 @@ public class ScoreListener : MonoBehaviour
         {
             RushText.enabled = playing;
             RushText.text = rushActive ? $"RUSH  {snapshot.RushSecondsRemaining:0.0}s · 锁血"
+                : rushCooling ? $"RUSH 冷却  {snapshot.RushCooldownSecondsRemaining:0.0}s"
                 : $"RUSH  {(playing ? snapshot.RushMeter : 0):0.#} / {snapshot.RushMaximum:0}";
         }
 
         SetProgress(RushSlider, playing, rushActive
             ? Fraction(snapshot.RushSecondsRemaining, snapshot.RushDurationSeconds)
-            : Fraction(snapshot.RushMeter, snapshot.RushMaximum));
+            : rushCooling ? 0 : Fraction(snapshot.RushMeter, snapshot.RushMaximum));
         if (ScoreStackText != null)
         {
             ScoreStackText.enabled = playing;

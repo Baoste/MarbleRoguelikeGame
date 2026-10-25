@@ -27,7 +27,7 @@ namespace MarblesECS.Editor
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
                 view = MResDeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));
                 view.Root.SetActive(true); Physics.SyncTransforms();
-                var colliders = view.Root.GetComponentsInChildren<Collider>(true);
+                var colliders = view.Root.GetComponentsInChildren<Collider>(true).Where(c => c.name != "PlacementVolume").ToArray();
                 Check(colliders.Length == 1 && !colliders[0].isTrigger, "teapot has solid collision");
                 Check(view.Root.transform.Find("Spout") != null && view.Root.transform.Find("Handle") != null && view.Root.transform.Find("Lid") != null, "packed teapot includes spout, handle and lid");
                 var spawn = board.transform.TransformPoint(new Vector3(0, .18f, .85f));
@@ -56,9 +56,9 @@ namespace MarblesECS.Editor
                     Near(.72, material.bounciness, "next physical step receives new elasticity");
                 }
                 Near(0, c.Round.RushRemaining, "physical collision itself does not activate Rush");
-                var round = c.Round; round.RushMeter = 99; c.Round = round;
+                var round = c.Round; round.RushMeter = 665; c.Round = round;
                 simulation.EnqueueContact(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 720, Multiplier = 1 }); Step();
-                Near(7, c.Round.RushRemaining, "physical treated ball fills meter and adds five seconds");
+                Near(11, c.Round.RushRemaining, "physical treated ball fills meter and adds five seconds");
                 Check(!c.Marbles.ContainsKey(key), "settlement consumes ball once");
             }
             finally { view?.Dispose(); simulation.Dispose(); bridge.Dispose(); UnityEngine.Object.DestroyImmediate(board); SceneManager.UnloadSceneAsync(scene); }

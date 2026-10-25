@@ -45,6 +45,9 @@ namespace MResPacker
                 profile.Metadata.Validate(); report.Metadata = JsonUtility.ToJson(profile.Metadata);
                 MResPrefabValidator.Validate(profile.SourcePrefab, report);
                 if (!report.CanBuild) return report;
+                // Build creates a missing volume; Analyze remains a read-only inspection of the source.
+                if (profile.Metadata.type == "device" && profile.SourcePrefab.transform.Find(MResPlacementAuthoring.NodeName))
+                    MResPlacementAuthoring.Validate(profile.SourcePrefab);
                 if (profile.ShaderRegistry == null) throw new ArgumentException("Select a shader registry.");
                 var context = new MResBuildContext(profile.ShaderRegistry.ValidateAndMap(), report);
                 var prefab = MResPrefabSerializer.Serialize(profile.SourcePrefab, context);
@@ -86,6 +89,7 @@ namespace MResPacker
         }
         public static MResAnalysisReport Build(MResBuildProfile profile)
         {
+            MResPlacementAuthoring.Ensure(profile);
             var report = Analyze(profile);
             if (!report.CanBuild) throw new InvalidOperationException(report.ToString());
             MResWriter.Write(profile.OutputPath, report.Entries);

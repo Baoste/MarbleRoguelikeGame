@@ -71,10 +71,13 @@ namespace MarblesECS.Editor
         }
         internal static bool SyncContentSnapshot(string path, DeviceDefinition[] definitions)
         {
-            var content = JsonUtility.FromJson<GameContent>(File.ReadAllText(path));
+            string source = File.ReadAllText(path);
+            var content = JsonUtility.FromJson<GameContent>(source);
             if (content == null) throw new InvalidDataException("GameContent.json is empty.");
             if (JsonUtility.ToJson(new DefinitionList { Devices = content.Devices }) ==
-                JsonUtility.ToJson(new DefinitionList { Devices = definitions })) return false;
+                JsonUtility.ToJson(new DefinitionList { Devices = definitions }) &&
+                // JsonUtility ignores the removed device field; still rewrite old snapshots once to remove it.
+                !source.Contains("\"Radius\"")) return false;
             content.Devices = definitions;
             BalanceAssetWriter.Write(path, JsonUtility.ToJson(content, true) + "\n");
             return true;

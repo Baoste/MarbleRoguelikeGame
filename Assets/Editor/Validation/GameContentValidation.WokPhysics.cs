@@ -25,7 +25,7 @@ namespace MarblesECS.Editor
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
                 view = MResDeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));
                 view.Root.SetActive(true); Physics.SyncTransforms();
-                var colliders = view.Root.GetComponentsInChildren<Collider>(true);
+                var colliders = view.Root.GetComponentsInChildren<Collider>(true).Where(c => c.name != "PlacementVolume").ToArray();
                 Check(colliders.Length == 1 && colliders[0].isTrigger, "wok uses only a non-solid admission sensor");
                 var bowl = view.Root.transform.Find("Bowl").GetComponent<MeshFilter>().sharedMesh;
                 Check(bowl.vertexCount > 100 && view.Root.transform.Find("Grip-1") != null && view.Root.transform.Find("Grip1") != null, "packed model is an open bowl with two handles");

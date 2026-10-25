@@ -10,9 +10,13 @@
 
 ## 属性的唯一入口
 
+装置占地由制作 Prefab 根节点下的 `PlacementVolume/SphereCollider` 确定，不再配置 `game/device.json.Radius` 或半径系数。默认球体按当前显示的模型顶点拟合；可在 Prefab 中编辑 SphereCollider 的 `Center`、`Radius` 或子对象缩放，再打包并更新 `Resources/Devices` 对应 MRes。球心偏移随装置朝向旋转，缩放按 SphereCollider 的最大轴规则计算。装置间距使用球体在盘面上的圆形占地，最小球心距离为两半径之和加 `PlacementClearance`（当前 0.15；同 LinkGroup 仍使用 GroupClearance）；固定障碍检测使用球体的实际世界中心，盘面边界也使用占地圆。这个 Collider 不渲染、运行时保持禁用，不参与弹珠物理或 Lua 接触，也不因耐久耗尽而丢失占地。
+
 在 `GameContent.json` 的 `Attributes` 中按 `Id` 查找，修改 `DefaultValue`。`MinValue/MaxValue` 是装置等效果结算后的属性上下限。
 
-机器倍率、全局倍率的合并上限读取对应属性 `MaxValue`。RUSH 改为全盘固定 100 点累积条、基础持续 2 秒；旧持续时间及概率属性不再控制核心机制，详见 `Device_Lua_API.md`。
+机器倍率、全局倍率的合并上限读取对应属性 `MaxValue`。RUSH 改为全盘固定 666 点累积条、基础持续 6 秒，结束后冷却 3 秒；冷却期间不入账，也不缓存结束后补加；旧持续时间及概率属性不再控制核心机制，详见 `Device_Lua_API.md`。
+
+RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 666`、`Duration = 6`、`Cooldown = 3`。旧 `GameContent.RushThreshold` 仅保留配置兼容，不控制这条累积条。冷却按模拟时间计算，暂停时冻结，回合结束或重开时清空；存活弹珠自身的贡献记录保留，但冷却期间落入终点的球不会延后补入条值。
 
 | 调整内容 | GameContent 属性 | 已移除的 JSON / Excel 重复字段 |
 |---|---|---|
@@ -24,7 +28,7 @@
 | 弹性 | `BALL_BOUNCE` | `Marble.BaseRestitution` |
 | 球的生命周期 | `BALL_LIFETIME` | `Marble.MaxLifeSeconds` |
 | 机器倍率 | `MACHINE_MULT` | `Marble.LauncherScoreMultiplier` |
-| RUSH 条值及持续时间 | `RushSystem`：上限 100，2 秒 + 触发球额外时长，条值不衰减 | 旧概率、时长和衰减字段仅兼容 |
+| RUSH 条值及持续时间 | `RushSystem`：上限 666，6 秒 + 触发球额外时长，结束后冷却 3 秒；条值不衰减 | 旧概率、时长和衰减字段仅兼容 |
 | 赌博转盘 | `GamblingWheelRules`：八档等概率，2 秒起步、最短 0.2 秒 | 旧输/返还/双倍/四倍规则、概率和赌池修正均停用 |
 | 剩余血量兑换率 | `BLOOD_DIVIDEND_RATE` | `Campaign.CashoutCoinsPerBlood` |
 
@@ -52,9 +56,9 @@
 
 通常结算式为「球价值 ×（得分区原倍率＋全局加成）× 装置累计倍率」。机器、全局属性倍率和得分上限仍按原顺序处理；赌博区把该分值存入转盘奖池；`FlatScore` 仍在区域/装置乘法之后相加。有效区域倍率沿用原数值范围上限 1000，内容属性的机器倍率上限仍生效。RUSH 不放大这份加成。黑洞等 Lua 直接指定金额的结算不触发、不刷新得分区叠加，也不会被自动加乘；装置和弹珠本身的倍率数据不因全局叠加而改变。
 
-界面右上角、道具库按钮下方显示两条状态进度条：上方 RUSH 在未触发时显示 0～100 的充能进度，触发后按「剩余时间 / 本次总时长」缩短，普通为 2 秒、降降火延长后为 7 秒；下方显示全局得分叠加的实际加成（例如 `+0.10`）和剩余时间，每次有效进球刷新后回满，再按本次缩短后的窗口倒计时。暂停时两条均冻结；叠加过期后下条清空，RUSH 结束后上条回到充能模式，非游玩阶段隐藏面板。显示读取模拟状态，不用 UI 自己的计时器。
+界面现有状态面板显示两条进度条：上方 RUSH 在未触发时显示 0～666 的充能进度，触发后按「剩余时间 / 本次总时长」缩短，普通为 6 秒、降降火延长后为 11 秒；下方显示全局得分叠加的实际加成（例如 `+0.10`）和剩余时间，每次有效进球刷新后回满，再按本次缩短后的窗口倒计时。暂停时两条均冻结；叠加过期后下条清空，RUSH 结束后上条清空，仅文字显示 3 秒冷却倒计时，冷却结束再回到充能模式，非游玩阶段隐藏面板。显示读取模拟状态，不用 UI 自己的计时器。
 
-场景节点为 `StatusHudCanvas/StatusBars`，使用屏幕空间 Canvas、右上角锚点和 1920×1080 比例缩放；面板不拦截点击。文字与条的引用在 `ScoreListener`，菜单 `Marbles ECS/UI/配置右上角状态进度条` 可对当前场景重新配置，完成后手动保存场景。
+场景节点为 `StatusHudCanvas/StatusBars`，使用屏幕空间 Canvas 和 1920×1080 比例缩放，位置沿用场景当前设置；面板不拦截点击。文字与条的引用在 `ScoreListener`，菜单 `Marbles ECS/UI/配置右上角状态进度条` 可对当前场景重新配置，完成后手动保存场景。
 
 物理采样报告升级为 `SchemaVersion = 2`，JSON 与 CSV 不再输出基础 RUSH 概率。项目根目录 `Tools/Balance` 的历史概率模型尚未迁移至贡献累加机制，不能用新采样报告推导当前 RUSH 平衡；遇到新格式会明确报错，旧报告仍可用于历史分析。
 

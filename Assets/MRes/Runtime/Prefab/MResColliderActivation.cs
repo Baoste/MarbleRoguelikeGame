@@ -23,6 +23,7 @@ namespace MRes
             foreach (var state in states)
             {
                 if (state.Collider == null) continue;
+                if (state.Data.PlacementOnly) { state.Collider.enabled = false; continue; }
                 state.WasEnabled = state.Collider.enabled && state.Collider.gameObject.activeInHierarchy;
                 if (state.WasEnabled) Restore(state);
             }
@@ -44,6 +45,7 @@ namespace MRes
             foreach (var state in states)
             {
                 if (state.Collider == null) continue;
+                if (state.Data.PlacementOnly) { state.Collider.enabled = false; continue; }
                 bool active = state.Collider.enabled;
                 if (active && !state.WasEnabled) Restore(state);
                 state.WasEnabled = active;

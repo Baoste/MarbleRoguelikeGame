@@ -1,0 +1,1 @@
+{"Id":113,"Name":"Multi Ding","Price":27,"ScoreMultiplier":1.85,"RushChanceAdd":0,"StartingCount":0,"PurchaseQuantity":1,"RushCategory":false,"LinkGroup":"","GroupClearance":0.0099999997764825821,"Kind":0,"SourceId":"LEGACY_DEVICE_1","Description":"同一颗球对同一装置只触发一次；得分倍率 ×1.85。","Cooldown":0.10000000149011612,"MaxTriggersPerBall":1,"Range":0.20000000298023224,"Strength":2,"Value":1}

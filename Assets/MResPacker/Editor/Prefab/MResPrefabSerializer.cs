@@ -66,6 +66,7 @@ namespace MResPacker
                 "contactOffset", c.contactOffset, "physicsMaterial", context.PhysicsMaterial(c.sharedMaterial),
                 "includeLayers", include, "excludeLayers", exclude, "layerOverridePriority", priority,
                 "providesContacts", provides, "hasModifiableContacts", modifiable);
+            if (MResPlacementAuthoring.IsPlacement(c)) result.Add("placementOnly", true);
             if (c is BoxCollider box)
             {
                 if (box.size.x <= 0 || box.size.y <= 0 || box.size.z <= 0) throw new ArgumentException("Box size must be positive.");

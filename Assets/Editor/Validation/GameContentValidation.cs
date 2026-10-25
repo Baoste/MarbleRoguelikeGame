@@ -45,6 +45,7 @@ namespace MarblesECS.Editor
                 BounceAuthority();
                 Placement();
                 DevicePlacementValidation.Run();
+                PlacementSphereValidation();
                 DeviceEditingValidation();
                 SpawnBatch();
                 LauncherCadenceValidation();
@@ -326,7 +327,7 @@ namespace MarblesECS.Editor
                     var d = C.Manager.GetComponentData<OwnedDeviceData>(e); d.Placed = true;
                     C.Manager.SetComponentData(e,d);
                     Physics.Poses[d.InstanceId] = new DevicePose { Position = new Vector3(d.InstanceId,2,0),
-                        Forward = Vector3.forward, Up = Vector3.up, Radius = definition.Radius };
+                        Forward = Vector3.forward, Up = Vector3.up, Radius = definition.PlacementRadius };
                 }
                 CampaignStateUtility.FindDevice(C,snapshots[0].InstanceId,out var entity);
                 return C.Manager.GetComponentData<OwnedDeviceData>(entity);
@@ -572,7 +573,7 @@ namespace MarblesECS.Editor
             using (var f = new Fixture())
             {
                 var key = f.Launch();
-                RushSystem.AddContribution(f.C, f.Ball(key), 100);
+                RushSystem.AddContribution(f.C, f.Ball(key), 666);
                 f.Step(new MarbleContact { Key = key, TargetId = 1, Kind = MarbleContactKind.Score, Multiplier = 1 });
                 Check(f.C.Round.RushRemaining > 0, "rush contribution activates meter");
                 double remaining = f.C.Round.RushRemaining;

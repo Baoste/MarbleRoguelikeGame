@@ -124,7 +124,7 @@ namespace MarblesECS.Editor
                     var data = c.Manager.GetComponentData<OwnedDeviceData>(e); data.Placed = true; c.Manager.SetComponentData(e, data);
                     board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(-63, 121, 0));
                     view = MResDeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
-                    var colliders = view.Root.GetComponentsInChildren<Collider>(); Check(colliders.Length == 1 && colliders[0].isTrigger, "mushroom has a single nonsolid entry sensor");
+                    var colliders = view.Root.GetComponentsInChildren<Collider>().Where(c => c.name != "PlacementVolume").ToArray(); Check(colliders.Length == 1 && colliders[0].isTrigger, "mushroom has a single nonsolid entry sensor");
                     Check(view.Root.transform.Find("Stem") != null && view.Root.transform.Find("Cap") != null, "package contains mushroom model");
                     for (int i = 0; i < 8; i++) Check(view.Root.transform.Find("Opening" + i) != null, "model contains eight open mouths");
                     Check(bridge.TryGetDevicePose(owned.InstanceId, out var pose), "loaded mushroom has physics pose");

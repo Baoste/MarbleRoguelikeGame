@@ -12,17 +12,21 @@ namespace MarblesECS
                 !CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
             var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
             var definition = CampaignStateUtility.Device(context, device.DefinitionId);
-            float radius = definition.Radius;
+            float radius = definition.PlacementRadius;
+            if (radius <= 0) return false;
+            definition.PlacementCenter(x, z, angle ?? device.Angle, out float centerX, out float centerZ);
             using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
                 for (int i = 0; i < entities.Length; i++)
                 {
                     var other = context.Manager.GetComponentData<OwnedDeviceData>(entities[i]);
                     if (!other.Placed || other.InstanceId == instanceId) continue;
-                    float distance = radius + CampaignStateUtility.Device(context, other.DefinitionId).Radius +
-                        clearance;
-                    if (!string.IsNullOrEmpty(definition.LinkGroup) && CampaignStateUtility.Device(context, other.DefinitionId).LinkGroup == definition.LinkGroup)
-                        distance = radius + CampaignStateUtility.Device(context, other.DefinitionId).Radius + definition.GroupClearance;
-                    if (Overlaps(x, z, other.X, other.Z, distance)) return false;
+                    var otherDefinition = CampaignStateUtility.Device(context, other.DefinitionId);
+                    if (otherDefinition.PlacementRadius <= 0) return false;
+                    float distance = radius + otherDefinition.PlacementRadius + clearance;
+                    if (!string.IsNullOrEmpty(definition.LinkGroup) && otherDefinition.LinkGroup == definition.LinkGroup)
+                        distance = radius + otherDefinition.PlacementRadius + definition.GroupClearance;
+                    otherDefinition.PlacementCenter(other.X, other.Z, other.Angle, out float otherX, out float otherZ);
+                    if (Overlaps(centerX, centerZ, otherX, otherZ, distance)) return false;
                 }
             device.X = x;
             device.Z = z;

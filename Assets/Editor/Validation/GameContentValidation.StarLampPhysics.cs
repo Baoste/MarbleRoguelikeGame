@@ -36,7 +36,7 @@ namespace MarblesECS.Editor
                 }
                 Physics.SyncTransforms();
                 var root = views[2].Root;
-                var colliders = root.GetComponentsInChildren<Collider>(true);
+                var colliders = root.GetComponentsInChildren<Collider>(true).Where(c => c.name != "PlacementVolume").ToArray();
                 Check(colliders.Length == 1 && colliders.All(x => x.isTrigger), "lamp contains only a pass-through sensor");
                 var mesh = root.transform.Find("Frame").GetComponent<MeshFilter>().sharedMesh;
                 Near(5, mesh.vertices.Where(v => Mathf.Abs(v.y - 1) < .001f && Mathf.Abs(v.x * v.x + v.z * v.z - 1) < .001f).Distinct().Count(), "packed mesh has five outer tips");

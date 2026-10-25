@@ -14,7 +14,11 @@ namespace MarblesECS
         [OptionalBalanceField] public int Durability = 20;
         public double ScoreMultiplier = 1;
         public double RushChanceAdd;
-        public float Radius = 0.18f;
+        // Runtime-only geometry from the package's placement SphereCollider; never serialized as business data.
+        public float PlacementRadius { get; private set; }
+        public float PlacementOffsetX { get; private set; }
+        public float PlacementOffsetY { get; private set; }
+        public float PlacementOffsetZ { get; private set; }
         public int StartingCount;
         [OptionalBalanceField] public int PurchaseQuantity = 1;
         [OptionalBalanceField] public bool RushCategory;
@@ -32,6 +36,21 @@ namespace MarblesECS
 
         public DeviceDefinition Copy() { return (DeviceDefinition)MemberwiseClone(); }
 
+        public void SetPlacementSphere(float x, float y, float z, float radius)
+        {
+            if (!MarbleRules.IsFinite(x) || !MarbleRules.IsFinite(y) || !MarbleRules.IsFinite(z) ||
+                !MarbleRules.IsFinite(radius) || radius <= 0 || radius > 100)
+                throw new ArgumentException("Invalid placement SphereCollider geometry.");
+            PlacementOffsetX = x; PlacementOffsetY = y; PlacementOffsetZ = z; PlacementRadius = radius;
+        }
+
+        public void PlacementCenter(float x, float z, float angle, out float centerX, out float centerZ)
+        {
+            double radians = angle * Math.PI / 180, cos = Math.Cos(radians), sin = Math.Sin(radians);
+            centerX = x + (float)(cos * PlacementOffsetX + sin * PlacementOffsetZ);
+            centerZ = z + (float)(-sin * PlacementOffsetX + cos * PlacementOffsetZ);
+        }
+
         public void Validate()
         {
             BalanceGuard.Range(Id, 1, uint.MaxValue, nameof(Id));
@@ -40,8 +59,6 @@ namespace MarblesECS
             BalanceGuard.Range(SellPrice, 0, BalanceGuard.MaxInteger, nameof(SellPrice));
             if (Durability != -1) BalanceGuard.Range(Durability, 1, 10000, nameof(Durability));
             if (!Enum.IsDefined(typeof(DeviceRarity), Rarity)) throw new ArgumentException("Invalid device rarity.");
-            // Authoring can produce long fields as well as small pins; retain their full placement footprint.
-            BalanceGuard.Range(Radius, 0.01, 10, nameof(Radius));
             BalanceGuard.Range(StartingCount, 0, 200, nameof(StartingCount));
             BalanceGuard.Range(PurchaseQuantity, 1, 20, nameof(PurchaseQuantity));
             BalanceGuard.Range(GroupClearance, 0, 1, nameof(GroupClearance));

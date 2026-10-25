@@ -46,10 +46,14 @@ namespace MarblesECS
                 {
                     var item = context.Manager.GetComponentData<OwnedDeviceData>(entities[i]);
                     var definition = CampaignStateUtility.Device(context, item.DefinitionId);
+                    definition.PlacementCenter(item.X, item.Z, item.Angle, out float centerX, out float centerZ);
                     result[i] = new OwnedDeviceSnapshot
                     {
                         InstanceId = item.InstanceId, DefinitionId = item.DefinitionId, Name = definition.Name,
-                        Placed = item.Placed, X = item.X, Z = item.Z, Radius = definition.Radius,
+                        Placed = item.Placed, X = item.X, Z = item.Z, Radius = definition.PlacementRadius,
+                        PlacementX = centerX, PlacementZ = centerZ,
+                        PlacementOffsetX = definition.PlacementOffsetX, PlacementOffsetY = definition.PlacementOffsetY,
+                        PlacementOffsetZ = definition.PlacementOffsetZ,
                         PurchasePrice = item.PurchasePrice,
                         SellPrice = definition.SellPrice, Rarity = definition.Rarity, Durability = DeviceDurabilitySystem.Limit(context, item),
                         RemainingDurability = DeviceDurabilitySystem.Remaining(context, item),

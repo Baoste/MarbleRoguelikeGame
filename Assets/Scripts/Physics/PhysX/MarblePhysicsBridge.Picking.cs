@@ -33,7 +33,7 @@ namespace MarblesECS.PhysX
             {
                 if (device == null || device.gameObject.scene != scene || !device.isActiveAndEnabled || device.GameplayEnabled ||
                     device.Script == null || !device.Script.HasFunction("OnActivate") || !(canCompleteDevice?.Invoke(device.InstanceId) ?? false)) continue;
-                var center = device.transform.position + device.Up * (device.Radius * .5f);
+                var center = device.PlacementCenter;
                 float radius = device.Radius * 1.12f;
                 var offset = ray.origin - center;
                 float along = Vector3.Dot(offset, ray.direction.normalized);

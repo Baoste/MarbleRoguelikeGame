@@ -64,7 +64,7 @@ public sealed partial class DevicePlacementUI
         foreach (var device in Controller.GetOwnedDevices())
         {
             if (!device.Placed || device.InstanceId == SelectedInstanceId) continue;
-            float distance = new Vector2(point.x - device.X, point.z - device.Z).sqrMagnitude;
+            float distance = new Vector2(point.x - device.PlacementX, point.z - device.PlacementZ).sqrMagnitude;
             if (distance > device.Radius * device.Radius || distance >= nearest || !Controller.CanOfferDevice(SelectedInstanceId, device.InstanceId)) continue;
             nearest = distance; target = device;
         }

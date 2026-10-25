@@ -594,7 +594,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 | 属性 | 类型 | 访问 | 说明 |
 | --- | --- | --- | --- |
 | `Position` | `Vector3` | 只读 | 当前物理视图的装置中心。 |
-| `Radius` | `number` | 只读 | 装置占位半径。 |
+| `Radius` | `number` | 只读 | 从独立占地 SphereCollider 计算出的装置世界半径，含缩放；不再读取 `game/device.json.Radius`。此只读接口继续供出射等效果组合使用。 |
 | `Forward` | `Vector3` | 只读 | 本地 -Z 对应的世界单位方向。 |
 | `Up` | `Vector3` | 只读 | 本地 +Y 对应的棋盘法向。 |
 | `Down` | `Vector3` | 只读 | 世界向下方向在棋盘平面上的投影；退化时使用 Forward。 |
@@ -896,7 +896,7 @@ destination.Position
 | --- | --- | --- | --- |
 | `InstanceId` | `integer` | 只读 | 装置库存实例。 |
 | `Position` | `Vector3` | 只读 | 装置世界中心。 |
-| `Radius` | `number` | 只读 | 装置占位半径。 |
+| `Radius` | `number` | 只读 | 从独立占地 SphereCollider 计算出的装置世界半径，含缩放；不再读取 `game/device.json.Radius`。此只读接口继续供出射等效果组合使用。 |
 | `Forward` | `Vector3` | 只读 | 旋转后的本地 -Z 单位方向。 |
 | `Up` | `Vector3` | 只读 | 旋转后的本地 +Y 单位方向。 |
 | `Down` | `Vector3` | 只读 | 世界向下方向在 Up 所定义平面的投影；退化时为 Forward。 |
@@ -968,7 +968,7 @@ destination.Position
 | --- | --- | --- | --- |
 | `RushActive` | `boolean` | 只读 | 是否处于 RUSH。 |
 | `RushMeter` | `number` | 只读 | 当前累积条值。 |
-| `RushMaximum` | `number` | 只读 | 条值上限，当前为 100。 |
+| `RushMaximum` | `number` | 只读 | 条值上限，当前为 666。 |
 | `RushChanceBonus` | `number` | 只读 | 旧概率兼容值，新 RUSH 不读取，见兼容接口。 |
 
 <a id="deviceboardapi-addscoremultiplier"></a>
@@ -1325,7 +1325,7 @@ HasTriggeredOtherDevice 按实例查询成功效果，不是访问尝试。成�
 
 底部流失按普通贡献入账；普通/赌博得分区按贡献 ×1.5 或 SetScoreRushContribution 的覆盖值入账。TryConsume、寿命结束、清理及显式 TrySettleAmount 不冒充入区/落底。
 
-RUSH 达到 100 后清零并启动，期间不入账、不刷新；当前基础时长 2 秒，触发球可附加 RushDurationBonus。RUSH 临时价值 +5 通过 EffectiveValue 读取，不写入永久基础价值，也不均分/复制进基础价值。其他 RUSH 与开奖规则见 [Balance.md](Balance.md)。
+RUSH 达到 666 后清零并启动，期间不入账、不刷新；当前基础时长 6 秒，触发球可附加 RushDurationBonus。结束后进入 3 秒冷却，冷却期间底部、普通得分区、赌博得分区均不向 RUSH 条入账，台球的正负覆盖贡献同样忽略，不缓存补加；普通得分照常。冷却时 RushActive 为 false，免扣血、射速和临时价值加成均已结束。暂停冻结计时，新回合清空冷却。RUSH 临时价值 +5 通过 EffectiveValue 读取，不写入永久基础价值，也不均分/复制进基础价值。其他 RUSH 与开奖规则见 [Balance.md](Balance.md)。
 
 撞击装置倍率遵循 `1 + Σ(amount - 1)`，基础 1 只算一次。球持有增量、全盘临时增量与其他独立倍率分别维护，到得分区统一合成；直接金额结算只使用 Lua 提供的金额。
 

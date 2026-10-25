@@ -13,7 +13,7 @@ namespace MarblesECS
     internal static class RushSystem
     {
         internal const double InitialContribution = 2, DeviceContribution = 5;
-        internal const double Threshold = 100, Duration = 2, ValueBonus = 5, ExtraShotsPerSecond = 5;
+        internal const double Threshold = 666, Duration = 6, Cooldown = 3, ValueBonus = 5, ExtraShotsPerSecond = 5;
         internal static bool Active(SimulationContext c) => c.IsRunning && c.Round.RushRemaining > 1e-7;
         internal static double BallValue(SimulationContext c, Entity ball) =>
             (AttributeRuntime.Enabled(c) ? AttributeRuntime.Get(c, ball, GameAttribute.BALL_BASE_VALUE)
@@ -24,8 +24,17 @@ namespace MarblesECS
         internal static void Tick(SimulationContext c)
         {
             var round = c.Round;
-            round.RushRemaining = Math.Max(0, round.RushRemaining - c.StepSeconds);
+            if (round.RushRemaining > 0)
+            {
+                double afterRush = c.StepSeconds - round.RushRemaining;
+                round.RushRemaining = Math.Max(0, -afterRush);
+                // Consume only the part of this step after expiry from the cooldown.
+                if (round.RushRemaining < 1e-7)
+                    round.RushCooldownRemaining = Math.Max(0, Cooldown - Math.Max(0, afterRush));
+            }
+            else round.RushCooldownRemaining = Math.Max(0, round.RushCooldownRemaining - c.StepSeconds);
             if (round.RushRemaining < 1e-7) round.RushRemaining = 0;
+            if (round.RushCooldownRemaining < 1e-7) round.RushCooldownRemaining = 0;
             if (round.RushRemaining == 0) round.RushDuration = 0;
             c.Round = round;
         }
@@ -64,7 +73,8 @@ namespace MarblesECS
         }
         internal static void Settle(SimulationContext c, Entity ball, MarbleContact contact)
         {
-            if (Active(c) || (contact.Kind != MarbleContactKind.Drain && contact.RushDisabled)) return;
+            if (Active(c) || c.Round.RushCooldownRemaining > 0 ||
+                (contact.Kind != MarbleContactKind.Drain && contact.RushDisabled)) return;
             var rush = c.Manager.GetComponentData<MarbleRush>(ball);
             double amount = contact.Kind == MarbleContactKind.Drain ? rush.Contribution
                 : rush.HasScoreContribution ? rush.ScoreContribution : rush.Contribution * 1.5;

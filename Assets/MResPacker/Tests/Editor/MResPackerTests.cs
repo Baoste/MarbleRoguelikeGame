@@ -73,6 +73,40 @@ namespace MResPacker.Tests
             Assert.IsTrue(entries.ContainsKey("game/device.json"));
             Assert.AreEqual("TwoMaterialCube", ((Dictionary<string, object>)manifest["meshNames"])["meshes/0.meshbin"]);
         }
+        [Test] public void PlacementSphereFitsModelAndPreservesAuthoredEdits()
+        {
+            var existing = root.transform.Find(MResPlacementAuthoring.NodeName);
+            if (existing) UnityEngine.Object.DestroyImmediate(existing.gameObject);
+            // Hidden effect templates must not enlarge the device's initial footprint.
+            var hidden = UnityEngine.Object.Instantiate(root.transform.Find("Visual/Base").gameObject, root.transform);
+            hidden.transform.localPosition = Vector3.right * 100; hidden.SetActive(false);
+            var entries = Build();
+            var volume = profile.SourcePrefab.transform.Find(MResPlacementAuthoring.NodeName);
+            var sphere = volume.GetComponent<SphereCollider>();
+            Assert.IsFalse(sphere.enabled); Assert.IsTrue(sphere.isTrigger);
+            Assert.IsNull(volume.GetComponent<Renderer>());
+            foreach (var filter in profile.SourcePrefab.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (filter.name == hidden.name) continue;
+                var matrix = volume.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+                foreach (var vertex in filter.sharedMesh.vertices)
+                    Assert.LessOrEqual(Vector3.Distance(matrix.MultiplyPoint3x4(vertex), sphere.center), sphere.radius + .0001f);
+            }
+            var serialized = Component(Nodes(entries).Single(n => (string)n["name"] == MResPlacementAuthoring.NodeName), "SphereCollider");
+            Assert.AreEqual(true, serialized["placementOnly"]);
+            Assert.Less(sphere.radius, 2);
+            UnityEngine.Object.DestroyImmediate(hidden);
+            MResPlacementAuthoring.AddToRoot(root);
+            sphere = root.transform.Find(MResPlacementAuthoring.NodeName).GetComponent<SphereCollider>();
+            sphere.center = new Vector3(.3f, .4f, -.2f); sphere.radius = .6f;
+            sphere.transform.localScale = new Vector3(2, 1, 3);
+            entries = Build();
+            serialized = Component(Nodes(entries).Single(n => (string)n["name"] == MResPlacementAuthoring.NodeName), "SphereCollider");
+            Assert.AreEqual(.6, (double)serialized["radius"], .00001);
+            Assert.AreEqual(.3, (double)((Dictionary<string, object>)serialized["center"])["x"], .00001);
+            Assert.AreEqual(new Vector3(2, 1, 3), profile.SourcePrefab.transform.Find(MResPlacementAuthoring.NodeName).localScale);
+            Assert.AreEqual(1, Nodes(entries).Count(n => (string)n["name"] == MResPlacementAuthoring.NodeName));
+        }
         [Test] public void UnassignedTextureArraysAreSkippedButAssignedArraysAreRejected()
         {
             string shaderPath = scratch + "/Array.shader";
@@ -102,7 +136,7 @@ namespace MResPacker.Tests
             var renderer = visual.Find("Base").GetComponent<MeshRenderer>();
             var original = renderer.sharedMaterials; renderer.sharedMaterials = new[] { original[1], null, original[0] };
             var entries = Build(); var nodes = Nodes(entries);
-            Assert.AreEqual(4, nodes.Count); Assert.AreEqual(-1d, nodes[0]["parentId"]);
+            Assert.AreEqual(5, nodes.Count); Assert.AreEqual(-1d, nodes[0]["parentId"]);
             Assert.AreEqual(0d, nodes[1]["parentId"]); Assert.AreEqual(1d, nodes[2]["parentId"]); Assert.AreEqual(false, nodes[3]["active"]);
             var transform = (Dictionary<string, object>)nodes[1]["transform"];
             Assert.AreEqual(.2d, (double)((Dictionary<string, object>)transform["localPosition"])["y"], .00001);

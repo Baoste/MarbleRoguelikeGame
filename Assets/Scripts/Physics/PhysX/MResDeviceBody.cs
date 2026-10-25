@@ -9,7 +9,12 @@ namespace MarblesECS.PhysX
     {
         internal static readonly HashSet<MResDeviceBody> Active = new HashSet<MResDeviceBody>();
         public int InstanceId { get; private set; }
-        public float Radius { get; private set; }
+        private float placementRadius;
+        private Vector3 placementOffset;
+        public Vector3 PlacementCenter => transform.position + (transform.parent
+            ? transform.parent.TransformVector(transform.localRotation * placementOffset) : transform.rotation * placementOffset);
+        public float Radius => placementRadius * (transform.parent ? Mathf.Max(Mathf.Abs(transform.parent.lossyScale.x),
+            Mathf.Abs(transform.parent.lossyScale.y), Mathf.Abs(transform.parent.lossyScale.z)) : 1);
         public float Range { get; private set; }
         public float Strength { get; private set; }
         public string LinkGroup { get; private set; }
@@ -55,7 +60,8 @@ namespace MarblesECS.PhysX
         }
         public void Initialize(int instanceId, DeviceDefinition definition, MResLuaScript script)
         {
-            InstanceId = instanceId; Radius = definition.Radius; Range = definition.Range;
+            InstanceId = instanceId; placementRadius = definition.PlacementRadius; Range = definition.Range;
+            placementOffset = new Vector3(definition.PlacementOffsetX, definition.PlacementOffsetY, definition.PlacementOffsetZ);
             Strength = definition.Strength; LinkGroup = definition.LinkGroup; Script = script;
         }
         private void OnEnable() => Active.Add(this);

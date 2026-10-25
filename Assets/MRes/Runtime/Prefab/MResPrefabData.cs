@@ -89,7 +89,7 @@ namespace MRes
     {
         internal string Type, Mesh, PhysicsMaterial;
         internal string[] Materials;
-        internal bool Enabled = true, Trigger, Convex, ProvidesContacts, ModifiableContacts;
+        internal bool Enabled = true, Trigger, Convex, ProvidesContacts, ModifiableContacts, PlacementOnly;
         internal int IncludeLayers, ExcludeLayers, LayerPriority, Direction;
         internal float ContactOffset = 0.01f, Radius = 0.5f, Height = 2;
         internal Vector3 Center, Size = Vector3.one;
@@ -132,6 +132,8 @@ namespace MRes
                 default: throw new MResFormatException("Unsupported prefab component (Lua belongs to manifest): " + c.Type);
             }
             c.Enabled = f.Bool("enabled", true); c.Trigger = f.Bool("isTrigger");
+            c.PlacementOnly = f.Bool("placementOnly");
+            if (c.PlacementOnly && c.Type != "SphereCollider") throw f.Error("placementOnly requires SphereCollider");
             c.ContactOffset = MResValues.Nonnegative(f, "contactOffset", 0.01f); if (c.ContactOffset == 0) throw f.Error("contactOffset");
             c.PhysicsMaterial = f.String("physicsMaterial", optional: true);
             MResPackage.Reference(package.PhysicsMaterials, c.PhysicsMaterial, f.Context, true);

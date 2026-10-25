@@ -74,7 +74,7 @@ namespace MarblesECS.PhysX
         }
 
         /// <summary>Presentation supplies the actual world pose when its placement plane is offset or tilted.</summary>
-        public bool PlaceDevice(int id, float x, float z, Vector3 worldPosition, float radiusScale = 1f, float? angle = null)
+        public bool PlaceDevice(int id, float x, float z, Vector3 worldPosition, float radiusScale = 1f, float? angle = null, Quaternion? worldRotation = null)
         {
             if (!IsReady || Paused || Session.Phase != RoundPhase.Build || !SimulationContext.IsFinite(worldPosition) ||
                 !MarbleRules.IsFinite(radiusScale) || radiusScale <= 0 ||
@@ -83,9 +83,13 @@ namespace MarblesECS.PhysX
             {
                 if (device.InstanceId != id) continue;
                 float radius = (device.Radius + PlacementClearance) * radiusScale;
-                if (PlacementSurface != null && !PlacementSurface.ContainsWorldPoint(worldPosition, radius)) return false;
+                var rotation = worldRotation ?? ((PhysicsRoot ? PhysicsRoot.rotation : Quaternion.identity) * Quaternion.Euler(0, angle ?? device.Angle, 0));
+                if (!SimulationContext.IsFinite(rotation)) return false;
+                Vector3 center = worldPosition + rotation * (new Vector3(device.PlacementOffsetX, device.PlacementOffsetY, device.PlacementOffsetZ) * radiusScale);
+                if (!SimulationContext.IsFinite(center) || device.Radius <= 0) return false;
+                if (PlacementSurface != null && !PlacementSurface.ContainsWorldPoint(center, radius)) return false;
                 if (!MarbleRules.IsFinite(radius) ||
-                    !placementObstacles.IsClear(localPhysics, PlacementObstacleRoots, worldPosition, radius)) return false;
+                    !placementObstacles.IsClear(localPhysics, PlacementObstacleRoots, center, radius)) return false;
                 return simulation.PlaceDevice(id, x, z, PlacementClearance, angle);
             }
             return false;

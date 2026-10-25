@@ -45,6 +45,9 @@ namespace MarblesECS
                     definition.Durability = package.Metadata.durability;
                     definition.Rarity = (DeviceRarity)Enum.Parse(typeof(DeviceRarity), package.Metadata.rarity, true);
                     definition.Validate();
+                    if (!MResPlacementSphere.TryRead(package, out var center, out float radius))
+                        throw new ArgumentException("Device needs a placement SphereCollider. Add PlacementVolume in MResPacker and rebuild.");
+                    definition.SetPlacementSphere(center.x, center.y, center.z, radius);
                     if (result.ContainsKey(definition.Id)) throw new ArgumentException("Duplicate device ID " + definition.Id);
                     result.Add(definition.Id, new DeviceResource(package, definition));
                 }

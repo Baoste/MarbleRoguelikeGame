@@ -60,6 +60,10 @@ namespace MarblesECS.Editor
                 Check(OtherContent(content) == others, "attributes/content rules are preserved");
                 string text = File.ReadAllText(path);
                 Check(!DeviceCatalogBuilder.SyncContentSnapshot(path, expected) && text == File.ReadAllText(path), "unchanged sync does not rewrite");
+                File.WriteAllText(path, text.Replace("\"StartingCount\":", "\"Radius\": 99, \"StartingCount\":"));
+                Check(DeviceCatalogBuilder.SyncContentSnapshot(path, expected), "ignored legacy Radius still triggers snapshot cleanup");
+                Check(!File.ReadAllText(path).Contains("\"Radius\""), "snapshot no longer stores placement radius");
+                Check(OtherContent(JsonUtility.FromJson<GameContent>(File.ReadAllText(path))) == others, "radius cleanup preserves other content rules");
                 var changed = expected.Skip(1).Select(d => d.Copy()).ToArray();
                 changed[0].Price = 7; changed[0].SellPrice = 3; changed[0].Rarity = DeviceRarity.Epic;
                 changed[0].Durability = -1; changed[0].StartingCount = 0;

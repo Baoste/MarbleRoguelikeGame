@@ -48,14 +48,14 @@ namespace MarblesECS.Editor
                 r.C.Balance.Devices.Single(d => d.Id == 9001).Durability = 1;
                 var key = r.Launch(); r.Contact(key, 5);
                 Check(r.Held(key) && r.Simulation.GetOwnedDevices().Single().RemainingDurability == 1, "holding does not spend durability");
-                Check(r.View.Root.GetComponentsInChildren<Collider>().All(c => c.enabled), "pending release keeps the sensor enabled");
+                Check(r.View.Root.GetComponentsInChildren<Collider>().Where(c => c.name != "PlacementVolume").ToArray().All(c => c.enabled), "pending release keeps the sensor enabled");
                 var extra = r.Launch(); r.Contact(extra, 2);
                 Check(!r.Held(extra), "one remaining use reserves only one pending release");
                 for (int i = 0; i < 8; i++) r.Step();
                 Check(!r.Held(key) && !r.Body(key).isKinematic, "held completion restores a ball after source durability is depleted");
                 VectorNear(r.Down * 5, r.Body(key).velocity, "final held effect still completes its Lua launch");
                 Check(r.Simulation.GetOwnedDevices().Single().RemainingDurability == 0, "successful release spends the final use");
-                Check(r.View.Root.GetComponentsInChildren<Collider>().All(c => !c.enabled), "exhaustion disables the sensor after release");
+                Check(r.View.Root.GetComponentsInChildren<Collider>().Where(c => c.name != "PlacementVolume").ToArray().All(c => !c.enabled), "exhaustion disables the sensor after release");
             }
             foreach (float speed in new[] { 0f, .03f, 5f })
                 using (var r = new Rig())
