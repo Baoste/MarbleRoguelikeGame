@@ -31,7 +31,7 @@ namespace MRes
         public string GetName() => metadata?.name;
         public string GetDescription() => metadata?.description;
         public float GetValue() => metadata?.value ?? 0;
-        public float GetPurchasePrice() => metadata?.purchasePrice ?? 5;
+        public float GetPurchasePrice() => metadata?.purchasePrice ?? 9;
         public string GetRarity() => metadata?.rarity ?? "common";
         public int GetDurability() => metadata?.durability ?? 20;
         public string GetItemType() => metadata?.type.ToString();

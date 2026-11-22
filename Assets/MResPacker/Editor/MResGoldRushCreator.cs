@@ -67,7 +67,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/GoldRush.lua");
-            profile.Metadata = new MResMetadataData { name = "淘金热", description = "矿车运走一颗弹珠，10秒后等概率：返还弹珠并获得2金币、消耗弹珠获得5金币、或一无所获。运输期间不接收新弹珠，出结果扣1耐久。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "淘金热", description = "矿车运走一颗弹珠，10秒后等概率：返还弹珠并获得2金币、消耗弹珠获得5金币、或一无所获。运输期间不接收新弹珠，出结果扣1耐久。", value = 120, purchasePrice = 14, rarity = "uncommon", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/GoldRush.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",
                 Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/GoldRush.device.json") } };

@@ -12,13 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edcc8d922cbaa444bbd823733e49714d, type: 3}
   m_Name: BouncePad
   m_EditorClassIdentifier: 
-  SourcePrefab: {fileID: 6192186376052046272, guid: 31abbabb81416dd459b1ff657b09434f, type: 3}
+  SourcePrefab: {fileID: 6192186376052046272, guid: 31abbabb81416dd459b1ff657b09434f,
+    type: 3}
   LuaScript: {fileID: 102900000, guid: 747fbf39c58dc284ca02cb1074a60717, type: 3}
   Metadata:
     name: "\u793A\u4F8B\u5F39\u5C04\u53F0"
     description: "\u4FDD\u6301\u6216\u63D0\u9AD8\u901F\u5EA6\uFF0C\u5E76\u6CBF\u88C5\u7F6E\u51FA\u53E3\u671D\u5411\u5F39\u51FA\u3002"
     value: 120
-    purchasePrice: 5
+    purchasePrice: 9
     rarity: common
     durability: 20
     type: device

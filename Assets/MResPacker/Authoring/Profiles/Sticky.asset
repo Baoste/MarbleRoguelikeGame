@@ -19,7 +19,7 @@ MonoBehaviour:
     name: "\u9ECF\u9ECF"
     description: "\u5F39\u73E0\u6EDE\u7559 1 \u79D2\uFF0C\u7136\u540E\u4FDD\u7559\u901F\u5EA6\u5927\u5C0F\u6CBF\u68CB\u76D8\u5411\u4E0B\u91CA\u653E\u3002"
     value: 120
-    purchasePrice: 5
+    purchasePrice: 9
     rarity: common
     durability: 20
     type: device

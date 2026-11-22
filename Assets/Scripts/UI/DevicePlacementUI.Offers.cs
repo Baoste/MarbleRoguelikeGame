@@ -21,6 +21,8 @@ public sealed partial class DevicePlacementUI
     {
         if (!IsDraggingInventory) return;
         dragPointer = pointer;
+        UpdatePlacementPointer(pointer);
+        if (!IsDraggingInventory) return;
         LastFeedback = TryFindOfferTarget(pointer, out var target)
             ? "松开投入「" + target.Name + "」，消耗这一件库存装置。"
             : "拖到空白棋盘放置，或拖到可接收装置上投入；右键或 Esc 取消。";

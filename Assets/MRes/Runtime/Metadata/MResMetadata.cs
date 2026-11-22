@@ -11,7 +11,7 @@ namespace MRes
         public string name;
         public string description;
         public float value;
-        public float purchasePrice = 5;
+        public float purchasePrice = 9;
         public string rarity = "common";
         public int durability = 20;
         public MResItemType type;

@@ -86,7 +86,7 @@ namespace MRes.Tests
         }
         [TestCase("common")]
         [TestCase("rare")]
-        [TestCase("epic")]
+        [TestCase("uncommon")]
         [TestCase("legendary")]
         public void ExtendedMetadataAndUnlimitedDurability(string rarity)
         {
@@ -95,13 +95,14 @@ namespace MRes.Tests
             Assert.AreEqual(24, metadata.value); Assert.AreEqual(5, metadata.purchasePrice);
             Assert.AreEqual(-1, metadata.durability); Assert.AreEqual(rarity, metadata.rarity);
             var legacy = MResLoader.Read(MResFixture.Create()).Metadata;
-            Assert.AreEqual("common", legacy.rarity); Assert.AreEqual(20, legacy.durability); Assert.AreEqual(5, legacy.purchasePrice);
+            Assert.AreEqual("common", legacy.rarity); Assert.AreEqual(20, legacy.durability); Assert.AreEqual(9, legacy.purchasePrice);
         }
         [TestCase("durability", "-2")]
         [TestCase("durability", "0")]
         [TestCase("durability", "1.5")]
         [TestCase("purchasePrice", "-1")]
         [TestCase("rarity", "\"mythic\"")]
+        [TestCase("rarity", "\"epic\"")]
         public void InvalidExtendedMetadataIsRejected(string field, string value)
         {
             string json = "{\"name\":\"test\",\"description\":\"test\",\"type\":\"device\",\"value\":24,\"" + field + "\":" + value + "}";

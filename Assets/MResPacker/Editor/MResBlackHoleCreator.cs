@@ -51,7 +51,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/BlackHole.lua");
-            profile.Metadata = new MResMetadataData { name = "黑洞", description = "吞噬10颗弹珠充能，点击释放10秒全局衰减引力；期间吞入的弹珠按当前价值×10直接结算。", value = 120, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "黑洞", description = "吞噬10颗弹珠充能，点击释放10秒全局衰减引力；期间吞入的弹珠按当前价值×10直接结算。", value = 120, purchasePrice = 23, rarity = "rare", type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/BlackHole.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",
                 Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/BlackHole.device.json") } };

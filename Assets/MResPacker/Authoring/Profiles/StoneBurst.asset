@@ -19,8 +19,8 @@ MonoBehaviour:
     name: "\u5927\u77F3\u788E\u80F8\u53E3"
     description: "\u53D7\u52308\u6B21\u649E\u51FB\u540E\uFF0C\u5411\u56DB\u5468\u5747\u5300\u53D1\u5C0416\u9897\u4EF7\u503C1\u3001\u901F\u5EA66\u7684\u5F39\u73E0\uFF1B\u51B7\u53745\u79D2\u540E\u91CD\u65B0\u84C4\u529B\u3002\u6BCF\u8F6E\u53D1\u5C04\u62631\u8010\u4E45\uFF0C\u81EA\u8EAB\u53D1\u51FA\u7684\u7403\u4E0D\u4E3A\u81EA\u8EAB\u84C4\u529B\u3002"
     value: 120
-    purchasePrice: 5
-    rarity: common
+    purchasePrice: 14
+    rarity: uncommon
     durability: 20
     type: device
   ShaderRegistry: {fileID: 11400000, guid: 11bb83dca991eb94b9695a254b9b0207, type: 2}

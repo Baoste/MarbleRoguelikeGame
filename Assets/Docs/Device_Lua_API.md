@@ -715,7 +715,7 @@ Build 阶段的一次库存提交上下文。源码：[DeviceOfferContext.cs](..
 | `OfferedInstanceId` | `integer` | 本次提交的单件库存实例。 |
 | `OfferedDefinitionId` | `integer` | 来源装置定义 ID。 |
 | `OfferedName` | `string` | 来源装置名称。 |
-| `OfferedRarity` | `string` | `common` / `rare` / `epic` / `legendary`。 |
+| `OfferedRarity` | `string` | `common` / `uncommon` / `rare` / `legendary`。 |
 
 <a id="deviceoffercontext-accept"></a>
 
@@ -1191,7 +1191,7 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 | `GetName()` | `string?` | Metadata 名称。 |
 | `GetDescription()` | `string?` | Metadata 描述。 |
 | `GetValue()` | `number` | 单件出售价格，无 metadata 时为 0。 |
-| `GetPurchasePrice()` | `number` | 基础购买价格，无 metadata 时为 5。 |
+| `GetPurchasePrice()` | `number` | 基础购买价格，无 metadata 时为 9。 |
 | `GetRarity()` | `string` | 稀有度，无 metadata 时为 common。 |
 | `GetDurability()` | `integer` | 包内默认耐久，无 metadata 时为 20；不是剩余耐久。 |
 | `GetItemType()` | `string?` | 枚举名称 "Device" / "Medicine"，不是 JSON 小写类型值。 |
@@ -1220,8 +1220,8 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 | `name` | `string` | 非空 | 展示名称。 |
 | `description` | `string` | 非空 | 展示描述。 |
 | `value` | `number` | 装置为非负整数 | 出售单个库存实例的基础金币。 |
-| `purchasePrice` | `number` | 默认 5，装置为正整数 | 一次购买的基础价格，商店修正另行计算。 |
-| `rarity` | `string` | 默认 common | common / rare / epic / legendary。 |
+| `purchasePrice` | `number` | 默认 9，装置为正整数 | 一次购买的基础价格；普通/罕见/稀有/传奇标准值为 9/14/23/38，商店修正另行计算。 |
+| `rarity` | `string` | 默认 common | common / uncommon / rare / legendary。 |
 | `durability` | `integer` | 默认 20；-1 或 1–10000 | 每回合默认次数，-1 无限。包内不接受 0。 |
 | `type` | `string` | device / medicine | 包类型；当前装置目录只接受 device。 |
 

@@ -116,8 +116,8 @@ public sealed class ShopOfferItemUI : MonoBehaviour
     {
         switch (rarity)
         {
-            case DeviceRarity.Rare: return new Color32(119, 190, 221, 255);
-            case DeviceRarity.Epic: return new Color32(199, 157, 229, 255);
+            case DeviceRarity.Uncommon: return new Color32(119, 190, 221, 255);
+            case DeviceRarity.Rare: return new Color32(199, 157, 229, 255);
             case DeviceRarity.Legendary: return new Color32(239, 193, 99, 255);
             default: return new Color32(181, 185, 166, 255);
         }

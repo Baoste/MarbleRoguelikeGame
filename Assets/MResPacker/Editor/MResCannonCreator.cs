@@ -44,7 +44,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/Cannon.lua");
-            profile.Metadata = new MResMetadataData { name = "大炮", description = "每0.5秒旋转45°，最多存入5颗弹珠；点击后沿当前方向以速度6全数发射。", value = 120, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "大炮", description = "每0.5秒旋转45°，最多存入5颗弹珠；点击后沿当前方向以速度6全数发射。", value = 120, purchasePrice = 14, rarity = "uncommon", type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/Cannon.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",
                 Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/Cannon.device.json") } };

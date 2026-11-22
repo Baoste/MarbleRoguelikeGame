@@ -29,7 +29,7 @@ namespace MarblesECS.Editor
         private static void GluttonBagLuaApi()
         {
             int start = assertions;
-            foreach (var rarity in new[] { DeviceRarity.Common, DeviceRarity.Rare, DeviceRarity.Epic, DeviceRarity.Legendary })
+            foreach (var rarity in new[] { DeviceRarity.Common, DeviceRarity.Uncommon, DeviceRarity.Rare, DeviceRarity.Legendary })
             using (var f = new Fixture())
             {
                 var d = AddGluttonBag(f); var source = BagFood(f.C, rarity);

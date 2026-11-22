@@ -57,6 +57,15 @@ namespace MarblesECS.Editor
             }
             GameObject View(int id) => ((System.Collections.Generic.Dictionary<int, MRes.MResLoadHandle>)
                 typeof(DevicePlacementUI).GetField("placedObjects", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(placement))[id].Root;
+            Material Highlight() => board.GetComponentsInChildren<MeshRenderer>()
+                .SelectMany(renderer => renderer.sharedMaterials)
+                .FirstOrDefault(material => material && material.shader.name == "Marbles/QuickOutline/Fill");
+            void CheckHighlight(bool placeable, string message)
+            {
+                var material = Highlight();
+                var color = material ? material.GetColor("_OutlineColor") : Color.clear;
+                Check(material && (placeable ? color.g > color.r : color.r > color.g), message);
+            }
             void ClickSale(PointerEventData.InputButton button) => sale.OnPointerClick(new PointerEventData(EventSystem.current) { button = button, position = salePoint });
             try
             {
@@ -87,7 +96,10 @@ namespace MarblesECS.Editor
                 Check(!placement.HandleBoardClick(Point(20, 20)), "outside-board move is rejected");
                 Near(revision, f.C.Campaign.LayoutRevision, "failed moves do not change layout revision");
                 Check(placement.SelectedInstanceId == id && Data(id).Placed, "failed move keeps the selection and original placement");
+                placement.UpdatePlacementPointer(Point(-1, 1));
+                CheckHighlight(true, "moving a placed device shows a green outline at a clear destination");
                 Check(placement.HandleBoardClick(Point(-1, 1)), "left click commits a clear destination");
+                Check(!Highlight(), "confirming a move clears the preview outline");
                 Near(-1, Data(id).X, "committed X"); Near(1, Data(id).Z, "committed Z"); Near(90, Data(id).Angle, "position and rotation commit together");
                 Near(revision + 1, f.C.Campaign.LayoutRevision, "move publishes one layout revision");
                 Near(4, Data(id).UsesThisRound, "move preserves durability consumption"); Near(7, Data(id).StoredValue, "move preserves stored gameplay state");
@@ -117,8 +129,24 @@ namespace MarblesECS.Editor
 
                 int stock = Create(9008, -1, 0, false);
                 coins = f.C.Campaign.Coins;
-                Check(placement.BeginInventoryDrag(stock, Point(-1, 0)), "inventory drag still starts");
+                int dragRevision = f.C.Campaign.LayoutRevision;
+                Check(placement.BeginInventoryDrag(stock, Point(-1, 1)), "inventory drag still starts");
+                CheckHighlight(true, "dragging to clear space shows a green outline");
+                placement.UpdateInventoryDrag(Point(2, 0));
+                CheckHighlight(false, "an overlapping device turns the outline red");
+                placement.UpdateInventoryDrag(Point(-2, 0));
+                CheckHighlight(false, "a fixed obstacle turns the outline red");
+                placement.UpdateInventoryDrag(Point(3.3f, 0));
+                CheckHighlight(false, "a footprint crossing the board edge turns the outline red");
+                placement.UpdateInventoryDrag(Point(3.8f, 0));
+                CheckHighlight(false, "dragging beyond the placement area keeps a visible red outline");
+                placement.UpdateInventoryDrag(Point(-1, 1));
+                CheckHighlight(true, "returning to clear space turns the outline green again");
+                Check(f.C.Campaign.LayoutRevision == dragRevision && !Data(stock).Placed, "highlight checks leave the layout and inventory untouched");
+                Check(!placement.EndInventoryDrag(Point(2, 0)) && !Highlight(), "an invalid drop clears the outline and cancels the drag");
+                Check(placement.BeginInventoryDrag(stock, Point(-1, 1)), "inventory drag can restart after an invalid drop");
                 Check(!placement.EndInventoryDrag(salePoint, panel) && placement.SelectedInstanceId == stock, "dropping over sale area waits for a separate confirmation click");
+                Check(!Highlight(), "the sale confirmation hides the outline");
                 Near(coins, f.C.Campaign.Coins, "drag release does not sell");
                 placement.CancelPlacement(); Check(!Data(stock).Placed, "cancel after a sale drop preserves inventory");
                 placement.BeginPlacement(stock); price = f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == stock).SellPrice;

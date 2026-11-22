@@ -10,7 +10,7 @@ namespace MResPacker
         [TextArea] public string description = "Device description";
         [Tooltip("出售一个装置实例获得的金币，不使用购买价折算。")]
         public float value = 120;
-        public float purchasePrice = 5;
+        public float purchasePrice = 9;
         public string rarity = "common";
         [Tooltip("每回合触发次数；-1 表示无限耐久。")]
         public int durability = 20;
@@ -26,8 +26,8 @@ namespace MResPacker
                 throw new ArgumentException("Purchase price must be finite and at least 1.");
             if (type == "device" && (value != Math.Truncate(value) || purchasePrice != Math.Truncate(purchasePrice)))
                 throw new ArgumentException("Device purchase/sale prices must be whole coins.");
-            if (rarity != "common" && rarity != "rare" && rarity != "epic" && rarity != "legendary")
-                throw new ArgumentException("Rarity must be common, rare, epic or legendary.");
+            if (rarity != "common" && rarity != "uncommon" && rarity != "rare" && rarity != "legendary")
+                throw new ArgumentException("Rarity must be common, uncommon, rare or legendary.");
             if (durability != -1 && (durability < 1 || durability > 10000)) throw new ArgumentException("Durability must be -1 (unlimited) or an integer in [1, 10000].");
         }
     }

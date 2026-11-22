@@ -51,7 +51,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/Portal.lua");
-            profile.Metadata = new MResMetadataData { name = "传送门", description = "购买一对门，双向传送；保持世界运动方向、速度和自身重力等属性，区域力按出口环境计算。", value = 15, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "传送门", description = "购买一对门，双向传送；保持世界运动方向、速度和自身重力等属性，区域力按出口环境计算。", value = 15, purchasePrice = 14, rarity = "uncommon", type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/Portal.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",
                 Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/Portal.device.json") } };

@@ -60,7 +60,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/PuffMushroom.lua");
-            profile.Metadata = new MResMetadataData { name = "大喷菇", description = "弹珠进入后均分为8颗小球，每颗价值和体积各为原球1/8，继承累计装置倍率，保持入口速度大小，从棋盘上方120°扇形八口均匀射出。成功喷发扣1耐久，后代再次经过同一台时直接穿过。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "大喷菇", description = "弹珠进入后均分为8颗小球，每颗价值和体积各为原球1/8，继承累计装置倍率，保持入口速度大小，从棋盘上方120°扇形八口均匀射出。成功喷发扣1耐久，后代再次经过同一台时直接穿过。", value = 120, purchasePrice = 14, rarity = "uncommon", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/PuffMushroom.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/PuffMushroom.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "PuffMushroomAuthoring"); AssetDatabase.SaveAssets(); return profile;

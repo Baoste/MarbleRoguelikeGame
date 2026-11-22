@@ -43,7 +43,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile=ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab=prefab; profile.LuaScript=AssetDatabase.LoadMainAssetAtPath(folder+"/Lua/Billiards.lua");
-            profile.Metadata=new MResMetadataData {name="台球",description="吞入一球后吐出一颗编号台球，保留原球价值。黑八概率20%，1至7号均分80%。进入得分区时黑八使RUSH条减100，其他编号增加编号×10，替代普通贡献结算。吐球后冷却15秒，成功吐出扣1耐久。RUSH期间不积累条值，黑八不终止已激活的RUSH。",value=120,purchasePrice=5,rarity="common",durability=20,type="device"};
+            profile.Metadata=new MResMetadataData {name="台球",description="吞入一球后吐出一颗编号台球，保留原球价值。黑八概率20%，1至7号均分80%。进入得分区时黑八使RUSH条减100，其他编号增加编号×10，替代普通贡献结算。吐球后冷却15秒，成功吐出扣1耐久。RUSH期间不积累条值，黑八不终止已激活的RUSH。",value=120,purchasePrice=23,rarity="rare",durability=20,type="device"};
             profile.ShaderRegistry=registry;profile.OutputPath="Assets/MResPacker/Output/Billiards.mres";
             profile.ExtraFiles=new[]{new MResExtraFile{VirtualPath="game/device.json",Source=AssetDatabase.LoadAssetAtPath<TextAsset>(folder+"/Data/Billiards.device.json")}};
             AssetDatabase.CreateAsset(profile,ProfilePath);MResExampleCreator.EnsureScene(prefab,"BilliardsAuthoring");AssetDatabase.SaveAssets();return profile;

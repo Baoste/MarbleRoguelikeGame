@@ -45,7 +45,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/GoldMine.lua");
-            profile.Metadata = new MResMetadataData { name = "矿老板", description = "弹珠每次撞击基础价值-2（最低为0），金币+4；每座矿每回合最多产出20金币，每次产出扣1耐久。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "矿老板", description = "弹珠每次撞击基础价值-2（最低为0），金币+4；每座矿每回合最多产出20金币，每次产出扣1耐久。", value = 120, purchasePrice = 9, rarity = "common", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/GoldMine.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",
                 Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/GoldMine.device.json") } };

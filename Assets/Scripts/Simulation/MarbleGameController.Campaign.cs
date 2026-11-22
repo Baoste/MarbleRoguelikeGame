@@ -75,24 +75,31 @@ namespace MarblesECS.PhysX
 
         /// <summary>Presentation supplies the actual world pose when its placement plane is offset or tilted.</summary>
         public bool PlaceDevice(int id, float x, float z, Vector3 worldPosition, float radiusScale = 1f, float? angle = null, Quaternion? worldRotation = null)
+            => IsDevicePlacementClear(id, worldPosition, radiusScale, angle, worldRotation) &&
+                simulation.PlaceDevice(id, x, z, PlacementClearance, angle);
+
+        internal bool CanPlaceDevice(int id, float x, float z, Vector3 worldPosition, float radiusScale, float angle, Quaternion worldRotation)
+            => IsDevicePlacementClear(id, worldPosition, radiusScale, angle, worldRotation) &&
+                simulation.CanPlaceDevice(id, x, z, PlacementClearance, angle);
+
+        private bool IsDevicePlacementClear(int id, Vector3 worldPosition, float radiusScale, float? angle, Quaternion? worldRotation)
         {
             if (!IsReady || Paused || Session.Phase != RoundPhase.Build || !SimulationContext.IsFinite(worldPosition) ||
                 !MarbleRules.IsFinite(radiusScale) || radiusScale <= 0 ||
                 !MarbleRules.IsFinite(PlacementClearance) || PlacementClearance < 0) return false;
-            foreach (var device in simulation.GetOwnedDevices())
-            {
-                if (device.InstanceId != id) continue;
-                float radius = (device.Radius + PlacementClearance) * radiusScale;
-                var rotation = worldRotation ?? ((PhysicsRoot ? PhysicsRoot.rotation : Quaternion.identity) * Quaternion.Euler(0, angle ?? device.Angle, 0));
-                if (!SimulationContext.IsFinite(rotation)) return false;
-                Vector3 center = worldPosition + rotation * (new Vector3(device.PlacementOffsetX, device.PlacementOffsetY, device.PlacementOffsetZ) * radiusScale);
-                if (!SimulationContext.IsFinite(center) || device.Radius <= 0) return false;
-                if (PlacementSurface != null && !PlacementSurface.ContainsWorldPoint(center, radius)) return false;
-                if (!MarbleRules.IsFinite(radius) ||
-                    !placementObstacles.IsClear(localPhysics, PlacementObstacleRoots, center, radius)) return false;
-                return simulation.PlaceDevice(id, x, z, PlacementClearance, angle);
-            }
-            return false;
+            var context = simulation.Context;
+            if (!CampaignStateUtility.FindDevice(context, id, out var entity)) return false;
+            var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+            var definition = CampaignStateUtility.Device(context, device.DefinitionId);
+            if (definition.PlacementRadius <= 0) return false;
+            float radius = (definition.PlacementRadius + PlacementClearance) * radiusScale;
+            var rotation = worldRotation ?? ((PhysicsRoot ? PhysicsRoot.rotation : Quaternion.identity) * Quaternion.Euler(0, angle ?? device.Angle, 0));
+            if (!MarbleRules.IsFinite(radius) || !SimulationContext.IsFinite(rotation)) return false;
+            var offset = new Vector3(definition.PlacementOffsetX, definition.PlacementOffsetY, definition.PlacementOffsetZ);
+            Vector3 center = worldPosition + rotation * (offset * radiusScale);
+            return SimulationContext.IsFinite(center) &&
+                (PlacementSurface == null || PlacementSurface.ContainsWorldPoint(center, radius)) &&
+                placementObstacles.IsClear(localPhysics, PlacementObstacleRoots, center, radius);
         }
         public bool RemoveDevicePlacement(int id) => simulation != null && simulation.RemoveDevicePlacement(id);
         public bool RotateDevice(int id, float degrees) => simulation != null && simulation.RotateDevice(id, degrees);

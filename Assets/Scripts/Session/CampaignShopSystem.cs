@@ -7,6 +7,7 @@ namespace MarblesECS
         private struct Candidate
         {
             internal ShopItemKind Kind;
+            internal DeviceRarity Rarity;
             internal uint Id;
             internal long Price;
         }
@@ -20,7 +21,7 @@ namespace MarblesECS
             var devices = new List<Candidate>(balance.Devices.Length);
             foreach (var definition in balance.Devices)
             {
-                var candidate = new Candidate { Kind = ShopItemKind.Device, Id = definition.Id, Price = definition.Price };
+                var candidate = new Candidate { Kind = ShopItemKind.Device, Id = definition.Id, Price = definition.Price, Rarity = definition.Rarity };
                 devices.Add(candidate);
             }
             // Stable catalog ordering makes an explicitly supplied test seed reproducible.
@@ -35,12 +36,29 @@ namespace MarblesECS
             List<Candidate> source, HashSet<ulong> used, ref uint randomState)
         {
             var available = new List<Candidate>(source.Count);
+            var counts = new int[4];
             foreach (var candidate in source)
-                if (!used.Contains(Key(candidate))) available.Add(candidate);
+                if (!used.Contains(Key(candidate)))
+                { available.Add(candidate); counts[(int)candidate.Rarity]++; }
             if (available.Count == 0) return false;
+            int totalWeight = 0;
+            for (int tier = 0; tier < counts.Length; tier++)
+                if (counts[tier] > 0) totalWeight += DeviceRarityRules.ShopWeight((DeviceRarity)tier);
+            // One draw selects a tier and an equally likely item within it. Missing/exhausted
+            // tiers have no weight; there are no retries, blank slots or extra RNG streams.
             MarbleRules.Roll(ref randomState, 0);
-            int selection = (int)((ulong)randomState * (uint)available.Count >> 32);
-            var chosen = available[selection];
+            double selection = randomState / 4294967296d * totalWeight;
+            var chosen = default(Candidate);
+            for (int tier = 0; tier < counts.Length; tier++)
+            {
+                if (counts[tier] == 0) continue;
+                int weight = DeviceRarityRules.ShopWeight((DeviceRarity)tier);
+                if (selection >= weight) { selection -= weight; continue; }
+                int index = (int)(selection / weight * counts[tier]);
+                foreach (var candidate in available)
+                    if ((int)candidate.Rarity == tier && index-- == 0) { chosen = candidate; break; }
+                break;
+            }
             used.Add(Key(chosen));
             offers.Add(new ShopOfferData { Kind = chosen.Kind, DefinitionId = chosen.Id,
                 Price = Price(context, chosen.Price) });

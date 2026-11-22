@@ -31,7 +31,7 @@
     "Stages": [
         {
             "Id": 1,
-            "TargetScore": 500,
+            "TargetScore": 50,
             "RewardCoins": 22,
             "SkipRewardCoins": 12,
             "CashoutRate": 0.7

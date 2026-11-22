@@ -60,7 +60,7 @@ end
 在本游戏中使用示例成品：
 
 1. 先在目标 `Resources/Devices/ShaderRegistry.asset` 注册 `MRes/ExampleSurface`，指向本目录的 `Authoring/Shaders/ExampleSurface.shader`。目标也可以使用另一个遵守相同属性契约的 Shader。
-2. 将 `Output/BouncePad.mres` 复制到 `Resources/Devices`，等待目录自动刷新。示例 ID 为 **9000**，购买价为 5、出售价格为 120，开局赠送为 0，会加入商店候选。
+2. 将 `Output/BouncePad.mres` 复制到 `Resources/Devices`，等待目录自动刷新。示例 ID 为 **9000**，购买价为 9、出售价格为 120，开局赠送为 0，会加入商店候选。
 3. 游戏需要包内 `game/device.json`。示例配置通过“附加业务文件”将 `Authoring/Data/BouncePad.device.json` 打包为该路径；其类型为 `Other = 255`，与七字段 Metadata 分离。
 
 工具不会自动修改游戏场景、商店、资源目录或运行时 Shader Registry。`Output` 是制作端成品目录；当前已将示例安装为 `Resources/Devices/9000_BouncePad.mres` 并注册所需 Shader。运行目录现有 35 种装置，均有带占地球体的制作 Prefab；`113_MultiDing.mres` 的可编辑源资源也已补齐至 `Authoring`。
@@ -74,7 +74,7 @@ end
 - Shader 必须显式注册，无自动替换。支持 Float / Range / Int / Color / Vector / Texture2D 属性、关键词和材质设置；非 Texture2D 属性会报错。
 - 贴图转换为 RGBA32 PNG，保存色彩空间、wrap U/V、filter、aniso、mipmap 设置。不会修改源贴图的 Read/Write 开关。
 - Metadata 输出 `name`、`description`、`value`、`purchasePrice`、`rarity`、`durability`、`type` 七字段；名称和描述非空，出售价格 `value` 有限且 ≥ 0，购买价格 `purchasePrice` 有限且 ≥ 1，装置价格为整数。类型只能为 `medicine` / `device`。
-- 稀有度为 `common`（普通）、`rare`（稀有）、`epic`（史诗）、`legendary`（传奇），现有包与新配置默认普通；购买价默认 5。耐久默认 20，**`-1` 代表无限耐久**，其余合法值为整数 1～10000。新配置和包显式保存，兼容读取缺少新字段的旧包时补默认值。
+- 稀有度为 `common`（普通）、`uncommon`（罕见）、`rare`（稀有）、`legendary`（传奇）；新配置默认普通/9，切换档位自动填写购买价 9/14/23/38。当前分档见 [装置稀有度](../Docs/Device_Rarity.md)。耐久默认 20，**`-1` 代表无限耐久**，其余合法值为整数 1～10000。新配置和包显式保存，兼容读取缺少新字段的旧包时补默认值。
 - 非凸 MeshCollider 不能是 Trigger，不能附着到动态 Rigidbody；运动学 Rigidbody 检测模式必须为 Discrete / ContinuousSpeculative。
 
 ## 与现有 v1 格式对齐
@@ -116,7 +116,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 
 ## 游戏价格与耐久
 
-当前全部装置基础购买价为 5，`value` 保留原有数值并用于出售单个实例，旧购买价乘出售比例的计算已移除。传送门购买 5 获得配对的两扇门，每扇单独出售获得 15；两扇门耐久分别计算。商店原有价格修正继续生效。
+当前按普通/罕见/稀有/传奇设置基础购买价 9/14/23/38，`value` 保留原有数值并用于出售单个实例，旧购买价乘出售比例的计算已移除。传送门购买 14 获得配对的两扇门，每扇单独出售获得 15；两扇门耐久分别计算。商店原有价格修正继续生效，分档与概率见 [装置稀有度](../Docs/Device_Rarity.md)。
 
 有限耐久按本回合有效作用扣除：普通即时效果每次触发扣 1，持续力场每球每次进入扣 1。储存类在释放效果时计数：黑洞点击启动一次引力扣 1，吸吸一批释放扣 1，大炮一批成功发射扣 1，黏黏每颗释放扣 1；储存、充能、取消和空点击不扣。最后一次仍完成整批或完整持续时间，然后本回合停用；新回合恢复，`-1` 无限。详细字段、显式登记与按批去重规则见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 
@@ -131,7 +131,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 - 模型：`Authoring/Models/StickyCylinder.asset`，直径 0.4、高 0.1 的薄圆柱；Prefab 使用凸 MeshCollider 触发器，不会先把弹珠反弹走。
 - Prefab / 场景：`Authoring/Prefabs/Sticky.prefab`、`Authoring/Scenes/StickyAuthoring.unity`。
 - Lua：`Authoring/Lua/Sticky.lua`。`OnContact` 用 `TryPrepareTrigger` 检查触发，调用独立的 `Motion:TryHold`，不扣耐久；`OnHoldEnd` 读取 `Hold.EntrySpeed` 再调用 `TryLaunch` 沿棋盘下坡释放，成功后 `TryUseOnce` 扣 1。出射受阻时改用 `TrySetVelocity` 原地向下释放。有限耐久时限制待释放数量，取消或球消失不扣。
-- 参数：`Authoring/Data/Sticky.device.json` 的 `Value = 1` 是滞留秒数；`MaxTriggersPerBall = 1` 限制同球对同装置一次。ID 9001，初始数量 0，购买价 5、出售价格 120。
+- 参数：`Authoring/Data/Sticky.device.json` 的 `Value = 1` 是滞留秒数；`MaxTriggersPerBall = 1` 限制同球对同装置一次。ID 9001，初始数量 0，购买价 9、出售价格 120。
 - 材质采用 URP/Lit，制作项目需要安装 URP。独立映射 `Authoring/Profiles/StickyShaderRegistry.asset` 将它映射为游戏已有的 `device-lit`，包内不携带 shader 源码。
 - URP 材质中未赋值的全局 Lightmap 贴图数组不导出；实际赋值的非 Texture2D 贴图仍会报错，避免丢失源资源。
 
@@ -149,7 +149,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 - 参数：`Authoring/Data/Reflector.device.json` 中 `Value = 30` 表示镜面反射方向附近 ±30°；改为 0 则严格镜面反射。保留入射速度大小，擦边时裁剪为朝向表面外侧的有效角度。
 - 模型/材质：`Authoring/Models/ReflectorCylinder.asset`、`Authoring/Materials/ReflectorCoral.mat`；直径 0.4、高 0.2 的珊瑚色圆柱，URP/Lit 映射为游戏已有的 `device-lit`。
 - Prefab/场景：`Authoring/Prefabs/Reflector.prefab`、`Authoring/Scenes/ReflectorAuthoring.unity`。使用实体凸 MeshCollider，以获取真实碰撞法线。
-- 游戏副本：`Assets/Resources/Devices/9002_Reflector.mres`，ID 9002，购买价 5、出售价格 120、初始库存 0、每球触发次数不限。重新打包后同步此副本，Unity 自动重建资源目录。
+- 游戏副本：`Assets/Resources/Devices/9002_Reflector.mres`，ID 9002，购买价 9、出售价格 120、初始库存 0、每球触发次数不限。重新打包后同步此副本，Unity 自动重建资源目录。
 
 完整接口与边界规则见 `Assets/Docs/Device_Lua_API.md` 的“弹弹”章节。
 
@@ -163,7 +163,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 - 参数：`Authoring/Data/Collector.device.json` 的 `Value = 2` 是磁力秒数，`Range = 1.2` 是吸引半径，`Strength = 3` 是收拢速度。后来者不延长时限；各自保留进入时速度，释放后同一个装置不再抓回该弹珠。
 - 模型/材质：`Authoring/Models/CollectorCylinder.asset`、`Authoring/Materials/CollectorViolet.mat`；直径 0.4、高 0.1 的紫色圆柱，URP/Lit 使用 `device-lit` 映射。
 - Prefab/场景：`Authoring/Prefabs/Collector.prefab`、`Authoring/Scenes/CollectorAuthoring.unity`。圆柱使用凸 MeshCollider 触发器，作用范围由 Lua 读取配置判断。
-- 游戏副本：`Assets/Resources/Devices/9003_Collector.mres`，ID 9003，购买价 5、出售价格 120、初始库存 0，自动加入商店候选。重新打包后同步此文件，Unity 自动重建资源目录。
+- 游戏副本：`Assets/Resources/Devices/9003_Collector.mres`，ID 9003，购买价 14、出售价格 120、初始库存 0，自动加入商店候选。重新打包后同步此文件，Unity 自动重建资源目录。
 
 聚集位置会按弹珠半径留出间隔；已聚集的弹珠原地向下释放，避免统一出口造成重叠。目标受阻或来不及抵达的弹珠到时也会结束吸引。聚集不扣耐久，释放时按同一批次 key 调用 `TryUseOnce`，整批仅扣 1；最后一点耐久也完成尚未聚拢的成员。完整契约见 `Assets/Docs/Device_Lua_API.md` 的 `OnBallUpdate` 与“吸吸”章节。
 
@@ -178,7 +178,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 - 区域：`Authoring/Prefabs/AccelerationField.prefab` 的 `Field` 子节点，默认缩放 `(0.4, 0.24, 1.2)`，BoxCollider 是 Trigger。尺寸和几何来源于这个节点，不在 Lua 中重复写死；编辑它的缩放/Collider 后重新打包，边框与箭头可同步调整。
 - 模型/材质：`Authoring/Models/AccelerationFieldBox.asset`、`Authoring/Materials/AccelerationFieldGlass.mat` 和 `AccelerationFieldCyan.mat`。透明蓝色长方形体积、细边框及三组 -Z 方向箭头，URP/Lit 通过独立 Registry 映射为 `device-lit`。
 - 场景：`Authoring/Scenes/AccelerationFieldAuthoring.unity`。源模型、材质、Prefab、Lua、制作配置均位于本制作目录。
-- 游戏副本：`Assets/Resources/Devices/9004_AccelerationField.mres`，ID 9004，购买价 5、出售价格 120、初始库存 0，会加入商店候选。`Radius = 0.633` 是矩形外接圆的放置半径；调整长宽时同步更新，实际力场始终按 BoxCollider 判断。重新打包后同步游戏副本。
+- 游戏副本：`Assets/Resources/Devices/9004_AccelerationField.mres`，ID 9004，购买价 9、出售价格 120、初始库存 0，会加入商店候选。`Radius = 0.633` 是矩形外接圆的放置半径；调整长宽时同步更新，实际力场始终按 BoxCollider 判断。重新打包后同步游戏副本。
 
 完整 API 契约、质量/时间积分、重叠/边缘规则和通用限力说明见 `Assets/Docs/Device_Lua_API.md` 的“持续力事件”和“加速力场”章节。
 
@@ -189,7 +189,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 选择 `Authoring/Profiles/Portal.asset` 构建到 `Output/Portal.mres`。菜单 `Tools > MRes > Create or Locate Portal Device` 定位配置；批处理入口为 `MResPacker.MResPortalCreator.CreateAndBuild`。
 
 - Lua：`Authoring/Lua/Portal.lua`。独立组合 `FindPartner`、向量投影和 `TrySetPosition`，只改变位置，保留传送前完整世界速度向量、旋转和角速度。出口朝向只在零速/平面投影近零时帮助选择放置位置，不重定向速度。
-- 配对：`Authoring/Data/Portal.device.json` 的 `PurchaseQuantity = 2`，购买一次得到两个同 `PairId` 的装置，每批购买单独配对，可以分别放置、双向传送。沿用 ID 103、购买价 5（整对）、出售价格 15（单扇）、初始库存 0，不新增重复的传送门商品。
+- 配对：`Authoring/Data/Portal.device.json` 的 `PurchaseQuantity = 2`，购买一次得到两个同 `PairId` 的装置，每批购买单独配对，可以分别放置、双向传送。沿用 ID 103、购买价 14（整对）、出售价格 15（单扇）、初始库存 0，不新增重复的传送门商品。
 - 模型/材质：`Authoring/Models/PortalCylinder.asset`、`PortalRim.asset`；`Authoring/Materials/PortalIndigo.mat`、`PortalRim.mat`。直径 0.24、高 0.08 的靛蓝圆柱及发光圆环，URP/Lit 映射为 `device-lit`。
 - Prefab/场景：`Authoring/Prefabs/Portal.prefab`、`Authoring/Scenes/PortalAuthoring.unity`。单个制作 Prefab 表示一扇门，成对创建和匹配由游戏通用商店/库存负责；使用凸 MeshCollider 触发器。
 - 游戏成品覆盖 `Assets/Resources/Devices/103_Portal.mres`。成功传送锁 0.5 秒；沿用 `Cooldown = 0.5`、`MaxTriggersPerBall = 2` 的配对访问规则。
@@ -206,7 +206,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 - 参数：`Authoring/Data/BlackHole.device.json` 的 `Value = 10` 是持续秒数，`ScoreMultiplier = 10` 是结算倍率，`Strength = 8` 是最大引力 N，`Range = 1` 是半强度距离。衰减公式 `Strength / (1 + (Distance / Range)^2)` 写在 Lua 中，不设最远距离；充能颗数为 Lua 顶部 `chargeRequired`。
 - 模型/材质：`Authoring/Models/BlackHoleCylinder.asset`、`BlackHoleRim.asset`；`Authoring/Materials/BlackHoleCore.mat`、`BlackHoleRim.mat`。直径 0.4、高 0.08 的黑色圆柱和紫色发光圆环，URP/Lit 映射为 `device-lit`。
 - Prefab/场景：`Authoring/Prefabs/BlackHole.prefab`、`Authoring/Scenes/BlackHoleAuthoring.unity`。圆柱使用凸 MeshCollider Trigger；表现资源和制作代码均在 MResPacker 内。
-- 游戏成品：`Assets/Resources/Devices/9005_BlackHole.mres`，ID 9005，购买价 5、出售价格 120、一次购买一个、初始库存 0，自动加入商店候选。重新打包后将 Output 成品同步到该路径。
+- 游戏成品：`Assets/Resources/Devices/9005_BlackHole.mres`，ID 9005，购买价 23、出售价格 120、一次购买一个、初始库存 0，自动加入商店候选。重新打包后将 Output 成品同步到该路径。
 
 引擎提供独立接口：`OnTick` / `OnActivate`、`SetStatus`、`TryConsume(false)`、`TrySettleAmount(score)`、`TryUse()`、`TryKeepActive(seconds)` 与 `AddRadialForce`。黑洞 Lua 组合充能、激活、计时、结算；吞下充能球不扣，点击启动引力扣 1，期间吞球不再扣。最后一次激活仍完整持续 10 秒。计时使用模拟时钟，没有球也会到期，暂停不倒计时，重复点击不刷新或重复扣除。每实例独立，新回合重新充能。直接结算不叠加机器/全局/药物/Rush 倍率，计分事件、小数累计、分数上限与回收由引擎处理。
 
@@ -222,7 +222,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 - 参数：`Authoring/Data/AntiGravity.device.json` 的 `Value = 2` 控制模拟秒数；每球每个实例最多触发一次。普通固定钉和来源装置自身不提前取消。
 - 模型/材质：`Authoring/Models/AntiGravityCylinder.asset`、`Authoring/Materials/AntiGravityGold.mat`，金色圆柱，直径 0.4、高 0.1，凸 MeshCollider Trigger，URP/Lit 使用 `device-lit`。
 - Prefab/场景：`Authoring/Prefabs/AntiGravity.prefab`、`Authoring/Scenes/AntiGravityAuthoring.unity`。
-- 游戏成品：`Resources/Devices/9006_AntiGravity.mres`；普通、耐久 20、购买价 5、出售价 120、初始库存 0。重新打包后将 Output 成品复制到此路径，目录索引和 GameContent 随 Unity 导入自动同步。
+- 游戏成品：`Resources/Devices/9006_AntiGravity.mres`；稀有、耐久 20、购买价 23、出售价 120、初始库存 0。重新打包后将 Output 成品复制到此路径，目录索引和 GameContent 随 Unity 导入自动同步。
 
 通用重力 API 不移动弹珠、不改变基础属性，不包含装置名称或出射方向。引擎只维护临时倍率、计时、接触取消和清理；具体组合在 Lua 中。到期恢复当前重力属性，不覆盖期间获得的修正；来源移除、弹珠消失、对象池复用、回合重置均有清理。接口契约见 `Docs/Device_Lua_API.md`。
 
@@ -236,7 +236,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 - 参数：`Authoring/Data/Cannon.device.json` 的 `Value = 5` 为容量，`Range = 0.5` 为旋转间隔秒数，`Strength = 6` 为发射速度。
 - 模型/材质：`Authoring/Models/CannonCylinder.asset`；`Authoring/Materials/CannonBronze.mat` 与 `CannonBore.mat`。圆柱底座直径 0.5、高 0.2，带朝本地 -Z 的炮管和深色炮口，整体在放置半径 0.25 内；底座为凸 MeshCollider Trigger。
 - Prefab/场景：`Authoring/Prefabs/Cannon.prefab`、`Authoring/Scenes/CannonAuthoring.unity`。
-- 游戏成品：`Resources/Devices/9007_Cannon.mres`。普通、耐久 20、购买价 5、出售价 120、初始库存 0；打包后复制到游戏目录，索引和 GameContent 由 Unity 自动同步。
+- 游戏成品：`Resources/Devices/9007_Cannon.mres`。罕见、耐久 20、购买价 14、出售价 120、初始库存 0；打包后复制到游戏目录，索引和 GameContent 由 Unity 自动同步。
 
 基础 API 分别负责手动滞留 `TryHoldUntilReleased()`、实时数量 `HeldCount`、解除滞留 `ReleaseHeld()`、绝对旋转偏移 `TrySetYaw(degrees)`；Lua 组合 `TryMove` 计算存放与发射位置。容量、角度和批量间距均在 Lua。存入不扣耐久，每批首次成功发射用 `TryUseOnce` 扣 1，整批其余成员及受阻重试不再扣。全部受阻或空点击不扣；等待重试不接收新球。最后一点耐久仍能完成五球，受阻留存等待再次点击。满仓球穿过；正常寿命与回合清理继续生效。
 
@@ -250,7 +250,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 - 参数：`Authoring/Data/Sandbag.device.json` 中 `Value = 1` 为基础加值，`Range = 3` 为初始窗口秒数，`Strength = 0.3` 为最短窗口秒数。`Cooldown = 0`、`MaxTriggersPerBall = 0`；同球可再次撞击，不用公共冷却阻挡同一步的其他球。
 - 模型/材质：`Authoring/Models/SandbagCylinder.asset`，棕黄色 `SandbagCanvas.mat` 配红褐色 `SandbagBand.mat`，圆柱直径 0.4、高 0.2；URP/Lit 映射到 `device-lit`。
 - Prefab/场景：`Authoring/Prefabs/Sandbag.prefab`、`Authoring/Scenes/SandbagAuthoring.unity`，使用实体凸 MeshCollider，不改写弹珠的物理反弹。
-- 运行时包：`Resources/Devices/9008_Sandbag.mres`。普通、耐久 20、购买价 5、出售价 120、初始库存 0；每次有效撞击扣 1，第 20 次仍生效，`-1` 无限。
+- 运行时包：`Resources/Devices/9008_Sandbag.mres`。罕见、耐久 20、购买价 14、出售价 120、初始库存 0；每次有效撞击扣 1，第 20 次仍生效，`-1` 无限。
 
 连击、缩短窗口与状态文字由 Lua 的 `OnContact` / `OnTick` 实现。新通用接口 `AddBase(attribute, amount)` 只负责增减基础属性，保留现有倍率且避免重复放大；碰撞、`TryUse`、时钟和 `SetStatus` 复用既有 API。修改参数后重新打包并同步运行时包，Unity 将完整刷新装置目录与 `GameContent.json.Devices`。统一文档见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 
@@ -264,7 +264,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 - 参数：`Authoring/Data/StoneBurst.device.json` 的 `Value = 8` 为蓄力次数，`Strength = 6` 为速度，`Range = 5` 为冷却秒数。数量和价值为 Lua 顶部的 `projectileCount = 16`、`projectileValue = 1`，均可编辑后重新打包。
 - 模型/材质：`Authoring/Models/StoneBurstCylinder.asset`，直径 0.5、高 0.2 的灰色石柱，配 `StoneBurstSlate.mat` 与橙色 `StoneBurstEmber.mat`；URP/Lit 使用 `device-lit` 映射。
 - Prefab/场景：`Authoring/Prefabs/StoneBurst.prefab`、`Authoring/Scenes/StoneBurstAuthoring.unity`，实体凸 MeshCollider 接受真实撞击。
-- 运行时包：`Resources/Devices/9009_StoneBurst.mres`。普通、耐久 20、购买价 5、出售价 120、初始库存 0；第 20 轮也完整发射，`-1` 无限。
+- 运行时包：`Resources/Devices/9009_StoneBurst.mres`。罕见、耐久 20、购买价 14、出售价 120、初始库存 0；第 20 轮也完整发射，`-1` 无限。
 
 Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据球半径计算均匀出生位置，避免相邻球重叠。生成中途受阻或达到总数上限时整批撤销，保留满蓄力，每 0.1 模拟秒重试，不扣耐久、不提前冷却。成功生成的球独立运行并参与正常结算；来源 ID 由引擎记录，Lua 排除自身生成球及其复制/分裂后代为自身蓄力。所有基础 API 与生命周期规则见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 
@@ -278,7 +278,7 @@ Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据
 - 参数：`Authoring/Data/GoldMine.device.json` 的 `Value = 2` 为扣除的基础价值，`Strength = 4` 为单次金币数，`Range = 20` 为每回合金币上限。金币参数取整，自定义上限无法整除时最后一次只发剩余额度。Metadata 的 `value` 是出售价。
 - 模型/材质：`Authoring/Models/GoldMineCylinder.asset`，直径 0.5、高 0.2 的石质圆柱配金色矿脉和顶部金块；`GoldMineStone.mat`、`GoldMineGold.mat` 使用 URP/Lit 和 `device-lit` 映射。
 - Prefab/场景：`Authoring/Prefabs/GoldMine.prefab`、`Authoring/Scenes/GoldMineAuthoring.unity`，实体凸 MeshCollider，弹珠保持正常碰撞。
-- 运行时包：`Resources/Devices/9010_GoldMine.mres`。普通、耐久 20、购买价 5、出售价 120、初始库存 0。每次实际产出扣 1 耐久，最后一点也完整生效，`-1` 无限耐久仍受每回合产量限制。
+- 运行时包：`Resources/Devices/9010_GoldMine.mres`。普通、耐久 20、购买价 9、出售价 120、初始库存 0。每次实际产出扣 1 耐久，最后一点也完整生效，`-1` 无限耐久仍受每回合产量限制。
 
 不新增专用引擎接口，Lua 组合 `Visit`、`TryUse`、`AddBase`、`AddCoins`、`RoundId` 和 `SetStatus`。同一步多球各算一次并共享剩余额度，持续贴住不重复触发。负增量使用未修正的基础价值，再正常应用已有修正，与沙包的加值规则一致；金币直接加到账户，不转为回合分数。完整契约见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 
@@ -292,7 +292,7 @@ Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据
 - 参数：`Authoring/Data/GoldRush.device.json` 的 `Value = 10` 为运输时长，`Strength = 2` 为返还球结果的金币数，`Range = 5` 为仅金币结果的金币数。概率在 Lua 顶部三个权重中配置，默认 `1, 1, 1`；权重非负且总和大于 0。
 - 模型/材质：`Authoring/Models/GoldRushCube.asset`、`GoldRushWheel.asset`；四份 `GoldRush*.mat` 分别用于岩石、木支架、金属轨道/车轮和矿洞暗部。模型包含木架矿洞、轨道与洞口停放的矿车；放置半径 0.6，URP/Lit 映射为 `device-lit`。
 - Prefab/场景：`Authoring/Prefabs/GoldRush.prefab`、`Authoring/Scenes/GoldRushAuthoring.unity`；一个入口 BoxCollider 触发器，运输时其他球正常经过。
-- 运行时包：`Resources/Devices/9011_GoldRush.mres`。普通、耐久 20、购买价 5、出售价 120、初始库存 0。三种结果完成时均扣 1 耐久，入库/取消不扣；最后一点正常完成，`-1` 无限。
+- 运行时包：`Resources/Devices/9011_GoldRush.mres`。罕见、耐久 20、购买价 14、出售价 120、初始库存 0。三种结果完成时均扣 1 耐久，入库/取消不扣；最后一点正常完成，`-1` 无限。
 
 新增通用 `Motion.TrySetHeldVisible(visible)`，仅设置已有滞留的显示，释放/取消/回收时由引擎恢复。Lua 组合它与 `TryHold`、`RandomRange`、`TryLaunch`、`TrySetVelocity`、`TryConsume`、`AddCoins` 和 `TryUseOnce` 实现效果；原有 API 保持兼容。容量、计时和结果均按库存实例独立，跨回合清理；寿命及排空规则照常推进。完整接口和行为见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 
@@ -306,7 +306,7 @@ Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据
 - 参数：`Authoring/Data/PiggyBank.device.json` 的 `Value = 10` 为每档金币数，`Strength = 0.1` 为每档倍率增量；`Range = 0.2` 保留通用合法值，本效果未使用。
 - 模型/材质：`Authoring/Models/PiggyBankSphere.asset`、`PiggyBankCube.asset` 与三份 `PiggyBank*.mat`。粉色陶瓷小猪，包含猪鼻、鼻孔、眼睛、耳朵、四脚、尾巴及投币口。URP/Lit 映射为 `device-lit`。
 - Prefab/场景：`Authoring/Prefabs/PiggyBank.prefab`、`Authoring/Scenes/PiggyBankAuthoring.unity`；实体 CapsuleCollider 接收撞击，普通物理负责反弹，放置半径 0.36。
-- 运行时包：`Resources/Devices/9012_PiggyBank.mres`。普通、耐久 20、购买价 5、出售价 120、初始库存 0；有效撞击扣 1，最后一次仍生效，`-1` 无限。持续贴住、同球同一步重复事件和非实体撞击不计数。
+- 运行时包：`Resources/Devices/9012_PiggyBank.mres`。罕见、耐久 20、购买价 14、出售价 120、初始库存 0；有效撞击扣 1，最后一次仍生效，`-1` 无限。持续贴住、同球同一步重复事件和非实体撞击不计数。
 
 所有装置只累加“倍率 - 1”：最终为 `1 + Σ(每次倍率 - 1)`，两次 1.5 得到 2；两次 1.2 得到 1.4，再加 Multi Ding 提供的 0.85 得到 2.25。基础 1 只算一次。撞击时只记录，得分区再计算。`AddScoreMultiplier(amount)` 仍接收完整倍率，由引擎减 1；旧 `MultiplyScore` 兼容名语义相同。装置通用倍率修正、旧倍率钉和复制球继承使用同一累计规则；`Authoring/Lua/MultiDing.lua` 与运行时包已同步。`Coins` 为只读钱包查询。原有全局、药物、得分区和黑洞显式结算继续按各自规则处理。完整契约见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 
@@ -320,7 +320,7 @@ Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据
 
 - Lua：`Authoring/Lua/CashOut.lua`。有其他装置实例成功作用记录时，吞噬弹珠并返还 `floor(当前价值 × 累计装置倍率 + 0.5)` 金币，没有额外 ×2；无其他记录则保留速度大小从棋盘下方射出。
 - 模型和制作资源：`Authoring/Models/CashOutCube.asset`、`CashOutCylinder.asset`，三份 `CashOut*.mat`，`Authoring/Prefabs/CashOut.prefab` 和 `Authoring/Scenes/CashOutAuthoring.unity`。金色兑换口与金币标志，入口为 BoxCollider Trigger，放置半径 0.32。
-- 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。两种成功处理各扣 1，受阻出口不扣；`-1` 无限。`Authoring/Data/CashOut.device.json` 的 `Value`、`Strength`、`Range` 不用于本效果。
+- 当前普通、耐久 20、购买价 9、出售价 120、初始库存 0。两种成功处理各扣 1，受阻出口不扣；`-1` 无限。`Authoring/Data/CashOut.device.json` 的 `Value`、`Strength`、`Range` 不用于本效果。
 - 新通用 API 为 `HasTriggeredOtherDevice`、`MarkTriggered()` 和 `DeviceScoreMultiplier`。历史独立于访问与耐久；大石碎胸口的纯 Lua 蓄力已接入记录并重新打包。详细契约和算例见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 
 当前赚赚兑换读取 `EffectiveDeviceScoreMultiplier`，包含仍在生效的全盘临时装置倍率；`DeviceScoreMultiplier` 继续表示球持有的累计值，供复制/分裂等继承使用。星星灯的 5 秒加成到期后，兑换也不再包含这份加成。
@@ -334,7 +334,7 @@ Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据
 - Lua：`Authoring/Lua/MoneyTree.lua`，只组合现有 API。每次进入计 1，离开重入可以再次计数，停留不重复；每 10 次发放 5 金币并扣 1 耐久。每实例独立计数，新回合清零。
 - 参数：`Authoring/Data/MoneyTree.device.json` 的 `Value = 10` 为次数阈值，`Strength = 5` 为金币奖励，`Range` 未使用。成功累积通过 `MarkTriggered()` 记录，供“赚赚”等装置查询历史。
 - 制作资源：`Authoring/Models/MoneyTreeSphere.asset`、`MoneyTreeCylinder.asset`，三份 `MoneyTree*.mat`，`Authoring/Prefabs/MoneyTree.prefab` 和 `Authoring/Scenes/MoneyTreeAuthoring.unity`。树干、绿色树冠、金币果实均为纯视觉；仅根 BoxCollider Trigger 检测经过，无实体碰撞，不改弹珠运动。
-- 普通、耐久 20（每批产出扣 1）、购买价 5、出售价 120、初始库存 0。触发区域默认 0.7 × 0.3 × 0.7，放置半径 0.5；`-1` 无限耐久。
+- 罕见、耐久 20（每批产出扣 1）、购买价 14、出售价 120、初始库存 0。触发区域默认 0.7 × 0.3 × 0.7，放置半径 0.5；`-1` 无限耐久。
 
 2026-10-13 验证：摇钱树专项 **421** 条断言、玩法回归 **2986** 条断言、全部 **17** 个 MRes 加载通过。覆盖十次一批、同球重入、同一步多球、进度余量、跨回合清零、实例独立、钱包上限、有限/无限耐久、触发历史，以及两种固定步长下的真实静止停留、慢速/高速穿过与无实体碰撞。
 
@@ -345,7 +345,7 @@ Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据
 - Lua：`Authoring/Lua/Splitter.lua`。原球进入后均分为三球，各有原球 1/3 价值、体积和质量，继承累计装置倍率，沿棋盘向下和左右各 30°，保留速度大小。整批成功扣 1 耐久；失败保留原球。
 - 参数：`Authoring/Data/Splitter.device.json` 的 `Range = 30` 为侧口角度（1–80°），`Value`、`Strength` 未使用。修改角度时同步调整 Prefab 管口。
 - 制作资源：`Authoring/Models/SplitterCylinder.asset`、三份 `Splitter*.mat`、`Authoring/Prefabs/Splitter.prefab` 与 `Authoring/Scenes/SplitterAuthoring.unity`。圆柱集流仓与三管口均为纯视觉，根 BoxCollider Trigger 检测进入，无实体碰撞。
-- 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。分出的球及复制/再次分流的后代回到同一台时直接穿过，不再分裂或扣耐久；其他实例仍可分流，受通用代数、属性和数量上限约束。
+- 当前普通、耐久 20、购买价 9、出售价 120、初始库存 0。分出的球及复制/再次分流的后代回到同一台时直接穿过，不再分裂或扣耐久；其他实例仍可分流，受通用代数、属性和数量上限约束。
 
 新增通用 `CreateSplitBatch(count)` 与 `HasSplitFrom(instanceId)`，由 Lua 选择出口，C# 负责等分、继承和原子回滚；完整接口与限制见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 
@@ -358,7 +358,7 @@ Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据
 - Lua：`Authoring/Lua/PuffMushroom.lua`。进入后均分八球，各有原球 1/8 的价值、体积和质量，继承累计装置倍率，沿棋盘上方 120° 扇形均匀射出，保留速度大小。全部成功扣 1 耐久；失败保留原球。
 - 参数：`Authoring/Data/PuffMushroom.device.json` 的 `Range = 60` 为半扇形角（1–90°），默认总角度 120°；数量为 Lua 中 `outlets = 8`，`Value` / `Strength` 未使用。角度或数量变化时同步修改 Prefab 喷口。
 - 制作资源：`Authoring/Models/PuffMushroomSphere.asset`、`PuffMushroomCylinder.asset`，三份 `PuffMushroom*.mat`、`Authoring/Prefabs/PuffMushroom.prefab` 与 `Authoring/Scenes/PuffMushroomAuthoring.unity`。紫色菌盖、浅色菌柄和八个喷口均为纯视觉，根 BoxCollider Trigger 检测进入。
-- 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。后代回到同一台直接穿过；等分仍遵守属性下限、代数和容量限制，默认八等分至少需要原球质量 0.8。
+- 当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。后代回到同一台直接穿过；等分仍遵守属性下限、代数和容量限制，默认八等分至少需要原球质量 0.8。
 
 完全复用 `CreateSplitBatch`、`HasSplitFrom`、`Motion.Source`、向量旋转与 `TryUse`，没有增加装置专用引擎接口。完整规则见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 
@@ -374,7 +374,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 
 输出 `Output/IcedAmericano.mres`，运行时 `Resources/Devices/9032_IcedAmericano.mres`。每次有效碰撞额外贡献 +20，当前基础价值 ×0.5，保留小数，扣 1 耐久；通用 +5 照常计入，RUSH 期间数值不翻倍。重复撞击可再次生效，价值 0 仍可增加贡献。只组合现有 `Visit`、`TryUse`、`SetCurrent`、`AddRushContribution`。
 
-业务参数 `Value=0.5` 为保留比例、`Strength=20` 为额外贡献；默认普通、耐久 20、购买 5、出售 120、初始库存 0。重新打包后更新游戏副本，装置目录与 `GameContent.json.Devices` 随 MRes 完整同步。
+业务参数 `Value=0.5` 为保留比例、`Strength=20` 为额外贡献；当前罕见、耐久 20、购买 14、出售 120、初始库存 0。重新打包后更新游戏副本，装置目录与 `GameContent.json.Devices` 随 MRes 完整同步。
 
 2026-10-14 验证：冰美式专项 **357** 条断言、完整玩法回归 **10341** 条通过，元数据/耐久 **291** 条，全部 **35** 个包加载通过。制作输出与运行时包一致，原有 34 个包和非装置配置保持一致。
 
@@ -392,7 +392,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 
 原 `CoolingTea` 源目录、模型和物理数值保留。摩擦 ×1.2、弹性 ×0.9，每球跨实例一次。额外 5 秒只在该球使条值累满时生效，本次 RUSH 为 15 秒；概率抽取与旧 8 秒上限已移除。
 
-以上装置均普通、购买 5、出售 120、耐久 20、初始库存 0。黑洞和赚赚使用通用 `EffectiveValue` 读取 RUSH 临时价值，原倍率与金币换算公式不变。成品与游戏副本、目录、`GameContent.json.Devices` 一起同步。
+以上装置均罕见、购买 14、出售 120、耐久 20、初始库存 0。黑洞和赚赚使用通用 `EffectiveValue` 读取 RUSH 临时价值，原倍率与金币换算公式不变。成品与游戏副本、目录、`GameContent.json.Devices` 一起同步。
 
 ## 种植牙制作资源
 
@@ -402,7 +402,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 - Lua 顶部阶段表定义实际倍率增量 `0 / 2 / 5 / 20`、阶段耐久 `0 / 5 / 8 / 20`。有效撞击扣 1；最后一次仍加倍率，随后退回无碰撞的洞。阶段跨回合保留，新回合恢复当前阶段耐久，洞需要重新种植。
 - 组合通用 `GetInstanceValue` / `SetInstanceValue`、`SetDurabilityLimit`、`RestoreDurability` 与 `OnOffer`。接受前暂存阶段和耐久，失败不消耗库存；`OnOfferAccepted` 更新表现缓存。接口契约见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 - 制作资源：`Authoring/Models/DentalImplant*.asset`、五份 `DentalImplant*.mat`、`Authoring/Prefabs/DentalImplant.prefab`、`Authoring/Scenes/DentalImplantAuthoring.unity`。棕色底座配深色洞面，三种牙冠分别为金属灰、陶瓷白、钻石蓝；Lua 控制 Renderer 显隐，运行时零耐久上限关闭玩法碰撞。
-- Metadata 默认普通、购买 5、出售 120、耐久 20，初始库存 0；当前阶段的耐久上限由实例覆盖并在背包和场上显示。`Authoring/Data/DentalImplant.device.json` 定义 ID `9028`，阶段公式不在 C# 中。
+- Metadata 当前罕见、购买 14、出售 120、耐久 20，初始库存 0；当前阶段的耐久上限由实例覆盖并在背包和场上显示。`Authoring/Data/DentalImplant.device.json` 定义 ID `9028`，阶段公式不在 C# 中。
 
 2026-10-14 验证：种植牙专项 **275** 条断言、玩法回归 **7414** 条断言通过，元数据/耐久 **271** 条，全部 **31** 个包加载通过。覆盖全部阶段、最后一次生效后退回洞、重复碰撞、跨回合补满、同类库存升级与拒绝、暂存数据的失败回滚、真实背包拖放，以及两种步长下倾斜棋盘的正常反弹、洞中穿过和模型重建。成品与运行时副本一致，目录和 JSON 完整同步；原有 30 个包及非装置内容保持不变。
 
@@ -413,7 +413,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 - Lua：`Authoring/Lua/StarLamp.lua`。未激活时弹珠进入切换开关；至少 2 盏且所有已放置星星灯全亮时启动一份全盘临时倍率，所有当前和随后产生的弹珠增加灯总数点倍率。
 - 持续 5 秒，期间灯保持开启，经过不叠加、不刷新时间。到期移除全盘加成、全部熄灭，每盏参与灯各扣 1 耐久；普通切换免费，最后一点耐久完成整轮，回合结束或来源移除取消未完成效果。
 - 组合 `Board:AddScoreMultiplier`、`ForEachPlacedDevice`、`GetRoundValue` / `SetRoundValue` 与 `TryUseOnce`；公式、全亮条件及完成扣耐久均在 Lua。全盘效果不会永久写进球的倍率，复制和分裂也不重复继承。接口见 [装置 Lua API](../Docs/Device_Lua_API.md)。
-- 参数：`Authoring/Data/StarLamp.device.json` 的 `Value = 5` 为持续秒数，`Strength = 1` 为每灯附加增量，`Range` 未使用；ID 9027。普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 参数：`Authoring/Data/StarLamp.device.json` 的 `Value = 5` 为持续秒数，`Strength = 1` 为每灯附加增量，`Range` 未使用；ID 9027。稀有、20 耐久、购买价 23、出售价 120、初始库存 0。
 - 制作资源：`StarLampStar.asset`、三份 `StarLamp*.mat`、`StarLamp.prefab`、`StarLampAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。横铺五角星、暗金关闭面和黄色发光开启面，共 4 节点、1 网格、3 材质、1 Trigger 和 1 运动学刚体。
 
 2026-10-14 验证：星星灯专项 **807** 条断言、玩法回归 **7127** 条断言通过，元数据/耐久 **266** 条，全部 **30** 个包加载通过。覆盖全亮启动、未经过灯和新发射的球、5 秒统一结束、每参与灯扣 1、重复碰撞不叠加或续时、复制/分裂不永久继承、普通/赌博结算、赚赚兑换、来源移除和回合清理，以及两种步长下真实穿过与同步熄灯。星星灯和赚赚已重新打包，制作成品与游戏副本一致，目录及 JSON 已同步，另外 28 个包和非装置内容未改变。
@@ -422,10 +422,10 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 
 选择 `Authoring/Profiles/GluttonBag.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Glutton Bag Device` 定位配置，批处理入口 `MResPacker.MResGluttonBagCreator.CreateAndBuild`。输出 `Output/GluttonBag.mres`，游戏副本 `Resources/Devices/9026_GluttonBag.mres`。
 
-- Lua：`Authoring/Lua/GluttonBag.lua`。布置阶段接收拖入的库存装置，普通/稀有/史诗/传奇增加 2/4/6/8 点附加增量；来源只消耗一件，喂食不扣耐久、不奖励出售金币。
+- Lua：`Authoring/Lua/GluttonBag.lua`。布置阶段接收拖入的库存装置，普通/罕见/稀有/传奇增加 2/4/6/8 点附加增量；来源只消耗一件，喂食不扣耐久、不奖励出售金币。
 - 弹珠每次真实碰撞调用 `AddScoreMultiplier(1 + 成长)`，有增量时扣 1 耐久，到得分区统一计算。初始无效果，原球正常反弹；每台独立成长。
 - 通用 `OnOffer` / `DeviceOfferContext` 把库存接受和回合数值同时提交。布置时通过 `SetRoundValue` 准备下一回合，开局保留，下一轮布置查询为 0。回调拒绝或报错不消耗物品、不增加成长。接口契约见 `Docs/Device_Lua_API.md`。
-- 参数：`Authoring/Data/GluttonBag.device.json` 的 `Value = 0` 为初始附加增量，`Strength = 2` 为每档稀有度增量，`Range` 未使用；ID 9026。普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 参数：`Authoring/Data/GluttonBag.device.json` 的 `Value = 0` 为初始附加增量，`Strength = 2` 为每档稀有度增量，`Range` 未使用；ID 9026。普通、20 耐久、购买价 9、出售价 120、初始库存 0。
 - 制作资源：`GluttonBagCylinder.asset`、三份 `GluttonBag*.mat`、`GluttonBag.prefab` 与 `GluttonBagAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。橄榄绿圆柱袋身、浅褐袋口和牙齿、深色口部，袋身使用实体凸碰撞。
 
 2026-10-14 验证：大胃袋专项 **226** 条断言、玩法回归 **6314** 条断言通过，元数据/耐久 **261** 条，全部 **29** 个包加载通过。覆盖四档稀有度、库存消耗与异常回滚、回合准备/清空、数值有效期和实例隔离、配对物品、耐久、两种背包控件的拖放/取消/暂停/库存重排，以及两种步长下真实碰撞与最终结算。无窗口测试中，UI 遮挡使用拖拽事件的明确控件命中验证，未依赖尚未绘制的测试画布。制作成品与运行时副本一致，目录和 JSON 已完整同步，原有 28 个包和非装置内容保持不变。
@@ -436,7 +436,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 
 - Lua：`Authoring/Lua/IceCreamMachine.lua`。每台每回合独立记录有效触发次数，完整倍率从 ×10 开始，每次递减 1，依次到 ×2，之后最低 ×1、不再生效。不同弹珠共享同台次数，新回合重置，同回合收回再放置不重置。
 - 使用 `AddScoreMultiplier(完整倍率)`，每次只增加“倍率 − 1”；同球前两次累计为 18，九次为 46，到得分区统一结算。九次有效作用各扣 1 耐久，之后不扣；原球正常反弹。
-- 参数：`Authoring/Data/IceCreamMachine.device.json` 的 `Value = 10` 为初始完整倍率，`Strength = 1` 为每次递减量，`Range` 未使用；ID 9025。普通、20 耐久、购买价 5、出售价 120、初始库存 0。支持小数和零减量，递减最低钳制到 1。
+- 参数：`Authoring/Data/IceCreamMachine.device.json` 的 `Value = 10` 为初始完整倍率，`Strength = 1` 为每次递减量，`Range` 未使用；ID 9025。普通、20 耐久、购买价 9、出售价 120、初始库存 0。支持小数和零减量，递减最低钳制到 1。
 - 制作资源：`IceCreamMachineCylinder.asset`、三份 `IceCreamMachine*.mat`、`IceCreamMachine.prefab` 与 `IceCreamMachineAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。粉色圆柱底座搭配三层奶油色雪糕和薄荷色顶饰，底座有实体凸碰撞。
 - 复用现有 `RoundId`、`Visit`、`TryUse`、`AddScoreMultiplier` 和 `SetStatus`；递减规则与实例计数全部在 Lua 中，不新增装置专用引擎接口。
 
@@ -448,7 +448,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 
 - Lua：`Authoring/Lua/LessIsMore.lua`。单次附加倍率 `max(0, 20 - 其他已放置装置数 × 2)`；不计自身，耗尽但仍在场的装置计入，库存不计。
 - 附加倍率是实际增加量，调用 `AddScoreMultiplier(1 + 附加倍率)`。0 个其他装置增加 20，3 个增加 14，10 个及以上不增加；每次正增量扣 1 耐久，零增量不扣。重复撞击继续累加，原球正常反弹，到得分区统一结算。
-- 参数：`Authoring/Data/LessIsMore.device.json` 的 `Value = 20` 为初始附加倍率和单次上限，`Strength = 2` 为每个装置的减量；ID 9024。普通、20 耐久、购买价 5、出售价 120、初始库存 0。支持小数，`Strength = 0` 时不随数量衰减，`Value <= 0` 无效果。
+- 参数：`Authoring/Data/LessIsMore.device.json` 的 `Value = 20` 为初始附加倍率和单次上限，`Strength = 2` 为每个装置的减量；ID 9024。普通、20 耐久、购买价 9、出售价 120、初始库存 0。支持小数，`Strength = 0` 时不随数量衰减，`Value <= 0` 无效果。
 - 复用 `CountPlacedDevices`，公式全部在 Lua 中；盘面变化只影响未来的碰撞，不追溯修改球之前已获得的倍率。
 - 制作资源：`LessIsMoreCylinder.asset`、三份 `LessIsMore*.mat`、`LessIsMore.prefab` 与 `LessIsMoreAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。紫色圆柱底座带三根递减高度的橙银色立柱，底座使用实体凸碰撞。
 
@@ -460,7 +460,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 
 - Lua：`Authoring/Lua/MoreIsMore.lua`。每个其他已放置装置提供 +2，单次最多 +20；不计自身，耗尽但仍在场也计入，未放置库存不计。每个已放置传送门独立计 1。
 - 附加倍率作为实际增加量：3 个其他装置调用 `AddScoreMultiplier(7)`，增加 6。重复撞击继续累加，+20 为单次上限；数量为 0 时不生效、不扣耐久。正增量每次扣 1，原球正常反弹。
-- 参数：`Authoring/Data/MoreIsMore.device.json` 的 `Value = 20` 为单次增量上限，`Strength = 2` 为每个装置的增量；ID 9023。普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 参数：`Authoring/Data/MoreIsMore.device.json` 的 `Value = 20` 为单次增量上限，`Strength = 2` 为每个装置的增量；ID 9023。普通、20 耐久、购买价 9、出售价 120、初始库存 0。
 - 新通用 API `CountPlacedDevices(excludedInstanceId = 0)` 支持弹珠回调和装置事件，查询当前已放置实例，可排除指定实例。Lua 决定排除自身及倍率公式；布局变化只影响之后碰撞，不修改以前的贡献。
 - 制作资源：`MoreIsMoreCylinder.asset`、三份 `MoreIsMore*.mat`、`MoreIsMore.prefab` 与 `MoreIsMoreAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。蓝色圆柱底座带三根递增高度的青金色立柱，底座使用实体凸碰撞。
 
@@ -473,7 +473,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 - Lua：`Authoring/Lua/Malfunction.lua`。每次撞击等概率抽取 0、1、2、3、5、7、11、13，八项各 1/8。候选列表在 Lua 顶部调整；组合本局 `RandomRange` 与通用倍率 API。
 - 0 将当前累计装置倍率置零；后续仍按“倍率 − 1”增加。1 不增加，其他值正常累加；例如 13 → 0 → 1 → 3 后累计倍率为 2。保持基础价值与正常反弹，得分区统一计算。
 - 每次有效撞击扣 1 耐久，包括 0 和 1。重复碰撞可重抽，同球同一步去重，不同球无共享冷却；持续接触、Trigger、连线及耐久耗尽不抽取。状态显示最近一次结果，每回合清空。
-- 数据：`Authoring/Data/Malfunction.device.json`，ID 9022；`Value` / `Strength` / `Range` 未使用。普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 数据：`Authoring/Data/Malfunction.device.json`，ID 9022；`Value` / `Strength` / `Range` 未使用。罕见、20 耐久、购买价 14、出售价 120、初始库存 0。
 - 制作资源：`MalfunctionCylinder.asset`、三份 `Malfunction*.mat`、`Malfunction.prefab` 与 `MalfunctionAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。灰色金属圆柱带警戒环、红灯和断杆，柱体使用实体凸碰撞。
 - 新通用 API `SetDeviceScoreMultiplier(amount)` 替换当前累计装置倍率，保留独立基础倍率和其他属性；零值可被后续贡献增加，不添加独立结算开关。契约和行为验证见 `Docs/Device_Lua_API.md`。
 
@@ -486,7 +486,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 - Lua：`Authoring/Lua/Turf.lua`。记录首次碰撞的球 ID、价值和累计装置倍率，5 秒内另一颗球碰撞则生成一颗新球，两项分别取平均，保留小数。原球均正常反弹，同球不刷新窗口。
 - 成功生成后重置并扣 1 耐久；超时清空，下次碰撞重新计时。失败保留首次快照，等待原窗口内下一次有效碰撞。自身后代不参与配对，仍正常物理反弹；各实例和回合独立。
 - 新球向棋盘下方以速度 6 射出；其他属性、尺寸、质量和剩余寿命沿用第二颗球，不抽血，不复制旧固定加分。通用 `CreateCopy` 增加 `TrySetDeviceScoreMultiplier`，只负责替换待生成球的累计装置倍率，公式由 Lua 组合。
-- 参数：`Authoring/Data/Turf.device.json` 的 `Value = 5` 为配对窗口，`Strength = 6` 为速度。ID 9021，默认普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 参数：`Authoring/Data/Turf.device.json` 的 `Value = 5` 为配对窗口，`Strength = 6` 为速度。ID 9021，当前罕见、20 耐久、购买价 14、出售价 120、初始库存 0。
 - 制作资源：`TurfCylinder.asset`、三份 `Turf*.mat`、`Turf.prefab` 与 `TurfAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。圆柱土层带绿色草冠和草叶，土层使用实体凸碰撞。
 
 2026-10-14 验证：草皮专项 **225** 条断言、玩法回归 **4840** 条断言通过，元数据/耐久 **236** 条，全部 **24** 个包加载通过。覆盖两球快照与平均、精确超时边界、同球/同帧去重、重置、失败重试、祖先过滤、有限/无限耐久、跨回合和接口有效期，以及两种步长下真实倾斜棋盘的碰撞、反弹、出口阻挡和向下出射。制作成品与游戏副本一致，目录和 JSON 已完整同步，原有 23 个包保持不变。
@@ -501,7 +501,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 - 组合通用 `CreatePortion`、`TrySetSize`、`TrySpawn` 与定时滞留；生成成功才扣原球对应价值，受阻或球数满时按射速重试。整批完成扣 1 耐久，存入、中途出射、失败和取消不扣。生命周期沿用原球剩余寿命。
 - 自己发出的球及其后代回到本装置直接穿过，其他经过的球在装填期间也直接穿过；入口只有 Trigger。原球取消后恢复可见和进入速度，并仅保留未发射价值。
 - 制作资源：`MarbleMachineGunCylinder.asset`、三份 `MarbleMachineGun*.mat`、`MarbleMachineGun.prefab` 与 `MarbleMachineGunAuthoring.unity`，分别放在 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。钢色弹仓、浅金进球口与扫射枪管。
-- 默认普通、20 耐久、购买价 5、出售价 120、初始库存 0。API 详细契约和行为验证入口见 `Docs/Device_Lua_API.md`。
+- 当前普通、20 耐久、购买价 9、出售价 120、初始库存 0。API 详细契约和行为验证入口见 `Docs/Device_Lua_API.md`。
 
 2026-10-14 验证：弹珠机关枪专项 **488** 条断言、玩法回归 **4609** 条断言通过，元数据/耐久 **231** 条，全部 **23** 个包加载通过。覆盖舍弃余数、定时扫射、倍率继承、逐颗扣值、出口阻挡与容量重试、整批耐久、取消恢复、剩余寿命，以及两种步长下真实倾斜棋盘的枪口朝向和后代穿过。制作成品与游戏副本一致，目录和 JSON 已完整同步，原有 22 个包保持不变。
 
@@ -510,7 +510,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 选择 `Authoring/Profiles/BloodFactory.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Blood Factory Device` 定位配置。批处理入口 `MResPacker.MResBloodFactoryCreator.CreateAndBuild`。输出 `Output/BloodFactory.mres`，游戏副本 `Resources/Devices/9019_BloodFactory.mres`。
 
 - Lua：`Authoring/Lua/BloodFactory.lua`。真实撞击时，当前价值减半向下取整，再按减半后的价值 ×5 回复血量；如价值 5 → 2、回复 10 血。不计累计得分倍率，原球正常反弹。
-- 参数：`Authoring/Data/BloodFactory.device.json` 的 `Value = 0.5` 为保留比例，`Strength = 5` 为回血系数；ID 9019。默认普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 参数：`Authoring/Data/BloodFactory.device.json` 的 `Value = 0.5` 为保留比例，`Strength = 5` 为回血系数；ID 9019。当前罕见、20 耐久、购买价 14、出售价 120、初始库存 0。
 - 制作资源：`BloodFactoryCylinder.asset`、`BloodFactoryRed.mat` / `BloodFactoryIvory.mat`、`BloodFactory.prefab` 和 `BloodFactoryAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。红色圆柱罐体带浅色箍带、烟囱和阀门，罐体有实体碰撞。
 - 每次正价值处理扣 1 耐久；价值 1 会变为 0、回复 0，已为 0 不触发。满血仍减半，回复量按血量上限截断。同球可以离开后再次撞击；持续贴住不连续触发。
 - 组合通用 `SetCurrent` 与 `RestoreBlood`：前者替换指定属性并清除其旧修正，后者只回复玩家血量。血量耗尽后在场球仍可回血，足够支付最低档发射后恢复发射资格；主动提现不会被取消。接口契约见 `Docs/Device_Lua_API.md`。
@@ -524,7 +524,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 - `Authoring/Lua/Duplicator.lua`：入射速度对碰撞法线做镜面反射，复制球保留速度大小、尺寸、质量，初始价值为 0；原球正常反弹。副本可触发其他装置并被增值。
 - 使用独立的 `Impact` / `Vectors:Reflect` / `CreateCopy` / `TrySetValue` / `TrySpawn` / `TryUse` API。每颗原球在同一实例成功复制一次，复制祖先过滤防止后代反复复制；成功扣 1，失败不扣且可以重试。
 - 制作资源：`Authoring/Models/DuplicatorCylinder.asset`、`Authoring/Materials/DuplicatorSilver.mat`、`Authoring/Prefabs/Duplicator.prefab`、`Authoring/Scenes/DuplicatorAuthoring.unity`，浅蓝金属圆柱，实体碰撞。自己的复制后代仍会正常碰撞，但不再复制。
-- 数据 `Authoring/Data/Duplicator.device.json`，ID 9018；默认普通、20 耐久、购买价 5、出售价 120、初始库存 0。
+- 数据 `Authoring/Data/Duplicator.device.json`，ID 9018；当前稀有、20 耐久、购买价 23、出售价 120、初始库存 0。
 - 副本保留剩余寿命、家族和倍率，清除旧固定加分；不消耗玩家血量，不增加家族返还次数。受全局在场数量和复制代数限制。完整契约见 `Docs/Device_Lua_API.md`。
 
 2026-10-13 验证：复制体专项 **139** 条断言、玩法回归 **3869** 条断言通过，元数据/耐久 **221** 条，全部 **21** 个包加载通过。覆盖零价值和旧加分清理、其他装置增值、原球保留、来源祖先、失败重试、有限/无限耐久、容量和回调有效期，以及两种固定步长下真实倾斜棋盘的正撞、斜撞和后代再次碰撞。成品与运行时副本一致，目录和 JSON 已完整同步，原有 20 个包未改变。
@@ -537,7 +537,7 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 - 每次爆炸扣 1 耐久，**空爆也扣**；投出、取消不扣。最后一次仍处理完整目标列表，同一台产生的后代不再次分裂。容量或出口阻挡时按每颗原球独立回滚，不丢失原球；爆炸仍扣耐久。
 - 参数：`Authoring/Data/Bomb.device.json` 的 `Value = 5` 为间隔、`Strength = 3` 为投掷速度、`Range = 0.8` 为爆炸半径。Lua 顶部 `flightSeconds = 1`、`scatterSpeed = 6`、`pieces = 8` 为引信、散射速度及份数。修改半径时同步调整闪光模板尺寸。
 - 制作资源：`Authoring/Models/BombSphere.asset`、`BombCylinder.asset`，三份 `Bomb*.mat`、`Authoring/Prefabs/Bomb.prefab` 与 `Authoring/Scenes/BombAuthoring.unity`。底座有实体碰撞；隐藏的 `BombTemplate` / `BlastTemplate` 供通用视觉 API 复制，飞行炸弹和闪光无碰撞、不占弹珠数、不计分。
-- 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。沿用通用分裂代数、质量/半径和容量限制；默认八等分至少需要原球质量 0.8。
+- 当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。沿用通用分裂代数、质量/半径和容量限制；默认八等分至少需要原球质量 0.8。
 
 新增可复用的 `TrySpawnVisual`、`Transient`、`ForEachBallInRadius` 与装置事件 `RandomRange`，Lua 组合计时视觉、范围回调和已有等分 API。完整接口见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 

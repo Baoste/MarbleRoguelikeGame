@@ -20,8 +20,8 @@ MonoBehaviour:
     description: "\u5438\u5F15\u9644\u8FD1\u5F39\u73E0\u805A\u6210\u4E00\u56E2\uFF0C2
       \u79D2\u540E\u4FDD\u7559\u5404\u81EA\u8FDB\u5165\u65F6\u7684\u901F\u5EA6\u5927\u5C0F\uFF0C\u6CBF\u68CB\u76D8\u5411\u4E0B\u91CA\u653E\u3002"
     value: 120
-    purchasePrice: 5
-    rarity: common
+    purchasePrice: 14
+    rarity: uncommon
     durability: 20
     type: device
   ShaderRegistry: {fileID: 11400000, guid: f7ed0ecd6c0895e49a9eebaf9506aa35, type: 2}

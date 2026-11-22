@@ -195,7 +195,7 @@ namespace MResPacker.Tests
             var script = File.ReadAllText(AssetDatabase.GetAssetPath(profile.LuaScript));
             Assert.AreEqual(script, MResJson.Utf8.GetString(entries["scripts/main.lua"]));
             var metadata = Json(entries, "metadata/metadata.json"); Assert.AreEqual(7, metadata.Count);
-            Assert.AreEqual("common", metadata["rarity"]); Assert.AreEqual(20d, metadata["durability"]); Assert.AreEqual(5d, metadata["purchasePrice"]);
+            Assert.AreEqual("common", metadata["rarity"]); Assert.AreEqual(20d, metadata["durability"]); Assert.AreEqual(9d, metadata["purchasePrice"]);
             Assert.AreEqual(profile.Metadata.description, metadata["description"]); Assert.AreEqual("device", metadata["type"]); Assert.AreEqual(120d, metadata["value"]);
             foreach (var item in entries.Where(e => e.Key.EndsWith(".json")))
             {
@@ -300,7 +300,7 @@ namespace MResPacker.Tests
         }
         [Test] public void RarityPricesAndUnlimitedDurabilityRoundTrip()
         {
-            foreach (string rarity in new[] { "common", "rare", "epic", "legendary" })
+            foreach (string rarity in new[] { "common", "uncommon", "rare", "legendary" })
             {
                 profile.Metadata.rarity = rarity; profile.Metadata.durability = -1;
                 profile.Metadata.value = 24; profile.Metadata.purchasePrice = 5;

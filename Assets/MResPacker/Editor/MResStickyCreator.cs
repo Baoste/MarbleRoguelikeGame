@@ -59,7 +59,7 @@ namespace MResPacker
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab;
             profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(rootPath + "/Lua/Sticky.lua");
-            profile.Metadata = new MResMetadataData { name = "黏黏", description = "弹珠滞留 1 秒，然后保留速度大小沿棋盘向下释放。", value = 120, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "黏黏", description = "弹珠滞留 1 秒，然后保留速度大小沿棋盘向下释放。", value = 120, purchasePrice = 9, rarity = "common", type = "device" };
             profile.ShaderRegistry = registry;
             profile.OutputPath = "Assets/MResPacker/Output/Sticky.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",

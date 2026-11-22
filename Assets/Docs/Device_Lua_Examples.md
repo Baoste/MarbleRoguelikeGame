@@ -51,7 +51,7 @@
 
 Lua 组合已有 `Visit(0, 0)`、`TryUse()`、`SetCurrent("BALL_BASE_VALUE", api.Value * api.Parameter)` 和 `AddRushContribution(api.Strength)`，无需新增引擎接口。`SetCurrent` 转换包含属性修正后的基础价值，不重复应用旧价值修正；累计得分倍率、物理运动、其他属性保持原状。RUSH 期间临时 +5 独立计算，例如基础价值 10 在碰杯后变为 5，当时有效价值为 10，RUSH 结束后为 5。
 
-`game/device.json` 的 `Value=0.5` 为保留价值比例，`Strength=20` 为额外贡献。每次成功处理扣 1 耐久，最后一次完整生效，耗尽后本回合停用。默认普通、耐久 20（支持 -1）、购买价 5、出售价 120、初始库存 0。
+`game/device.json` 的 `Value=0.5` 为保留价值比例，`Strength=20` 为额外贡献。每次成功处理扣 1 耐久，最后一次完整生效，耗尽后本回合停用。当前罕见、耐久 20（支持 -1）、购买价 14、出售价 120、初始库存 0。
 
 2026-10-14 验证：冰美式专项 **357** 条断言、完整玩法回归 **10341** 条通过，元数据/耐久 **291** 条，全部 **35** 个 MRes 加载通过。覆盖小数与零价值、重复/同时碰撞、最终和无限耐久、回合恢复、已有属性修正、RUSH 临时价值、底部/得分区入账，以及两种固定步下的真实倾斜棋盘碰撞。
 
@@ -63,7 +63,7 @@ Lua 组合已有 `Visit(0, 0)`、`TryUse()`、`SetCurrent("BALL_BASE_VALUE", api
 
 一次吞入一球，无碰撞隐藏 0.2 秒，然后向棋盘下方吐出一颗编号球，速度至少 6（保留更高的入口速度），基础价值、尺寸、质量和原有效果保留。8 号概率 20%，1～7 号均分剩余 80%，编号和颜色在球上显示。进入得分区时，黑八使全盘条值减 100、最低到 0，其他编号使条值增加 `编号×10`；这替代普通贡献入账，不另外乘 1.5。黑八不结束已激活的 RUSH。
 
-吐出成功才扣 1 耐久并开始 15 秒冷却；吞入中和冷却时其他球直接经过，受阻则继续短暂滞留并重试，重试不重复抽号或扣耐久。每回合重置冷却。`game/device.json`：`Value=0.2` 为滞留秒数，`Strength=6` 为最低吐球速度，`Range=15` 为冷却。普通、购买 5、出售 120、耐久 20（支持 -1）、初始库存 0。
+吐出成功才扣 1 耐久并开始 15 秒冷却；吞入中和冷却时其他球直接经过，受阻则继续短暂滞留并重试，重试不重复抽号或扣耐久。每回合重置冷却。`game/device.json`：`Value=0.2` 为滞留秒数，`Strength=6` 为最低吐球速度，`Range=15` 为冷却。稀有、购买 23、出售 120、耐久 20（支持 -1）、初始库存 0。
 
 2026-10-14 重构验证：完整玩法回归 **9978** 条断言通过，RUSH 专项 **63** 条、台球专项 **1649** 条、有锅气 **497** 条、降降火 **337** 条；元数据/耐久 **286** 条，全部 **34** 个 MRes 加载通过。覆盖真实台球吞吐、文字/颜色与物体池清理、出口受阻重试、无限/最后耐久，以及两种固定步下的物理行为。
 
@@ -93,7 +93,7 @@ function OnContact(api)
 end
 ```
 
-**购买一次获得两个已配对的独立装置**，配置 `PurchaseQuantity = 2`，基础购买价 5 为整对价格，只扣一次；`metadata.value = 15` 为出售单扇门的价格。通用库存赋予两扇门相同的非零 `PairId`；另一次购买生成新的配对 ID。两扇门可以分别放置，双方均可作为入口或出口，各自拥有独立耐久，作为入口触发时扣 1。容量只剩一个位置时整次购买失败，不扣钱、不产生半对；卖掉、收回或耗尽其中一扇后，另一扇找不到有效配对出口就不传送。
+**购买一次获得两个已配对的独立装置**，配置 `PurchaseQuantity = 2`，基础购买价 14 为整对价格，只扣一次；`metadata.value = 15` 为出售单扇门的价格。通用库存赋予两扇门相同的非零 `PairId`；另一次购买生成新的配对 ID。两扇门可以分别放置，双方均可作为入口或出口，各自拥有独立耐久，作为入口触发时扣 1。容量只剩一个位置时整次购买失败，不扣钱、不产生半对；卖掉、收回或耗尽其中一扇后，另一扇找不到有效配对出口就不传送。
 
 为选取出口位置，Lua 将当前速度投影到出口棋盘平面，沿投影方向放到门外，并留出弹珠半径和棋盘表面间隙。这只用于位置计算，不改变速度；投影长度小于 `1e-6` 时，使用出口朝向选择位置。出口被实体阻挡时 `TrySetPosition` 返回 `false`，位置、速度保持原状，也不设置传送锁。未放置、耐久耗尽或没有物理视图的配对门不会成为出口。`Trigger` 已成功登记的访问次数、公共冷却和通用修正不会回滚。
 
@@ -126,7 +126,7 @@ end
 
 手动滞留的生命周期与定时滞留一致：来源收回、删除或视图消失时恢复进入速度，不调用完成玩法；弹珠消失、寿命到期、排空超时及新回合会清理存球。正常弹珠寿命继续计时，容量读取引擎现状，不依赖 Lua 保存的过期 ID。缺少结束回调或回调异常时，已经恢复的弹珠不会卡住，后续球继续处理。API 及 `Hold` 信息不能跨回调复用，只保存普通值。
 
-每批第一次成功发射时 `TryUseOnce("volley:" .. batchNumber)` 扣 1，其余成员及受阻重试沿用这个 key，不再扣。空点击或全部被挡住不扣；等待重试时不接纳新球。最后一点耐久能发射完整五球；部分受阻时虽然碰撞体关闭，仍保留已有手动滞留的完成事件、状态及点击范围，直到完成或清理。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。
+每批第一次成功发射时 `TryUseOnce("volley:" .. batchNumber)` 扣 1，其余成员及受阻重试沿用这个 key，不再扣。空点击或全部被挡住不扣；等待重试时不接纳新球。最后一点耐久能发射完整五球；部分受阻时虽然碰撞体关闭，仍保留已有手动滞留的完成事件、状态及点击范围，直到完成或清理。当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。
 
 <a id="antigravity"></a>
 
@@ -155,7 +155,7 @@ end
 - 来源装置收回、移除或视图消失时，下个模拟步恢复；仅耐久耗尽不取消已接受的效果，第 20 次仍完整生效。弹珠消失、回合/会话重置随 ECS 实体销毁清理，对象池复用不继承状态。
 - API 不扣耐久、不出射、不保存 Lua 上下文；Lua 用 `Trigger` 登记新作用。无效参数不会覆盖旧效果；回调结束后继续使用 API 会抛出上下文失效异常。
 
-默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。验证入口包含在 `Marbles ECS/Validate Attribute and Content Runtime`。
+当前稀有、耐久 20、购买价 23、出售价 120、初始库存 0。验证入口包含在 `Marbles ECS/Validate Attribute and Content Runtime`。
 
 <a id="sticky"></a>
 
@@ -252,7 +252,7 @@ Lua 用共享定义键 `-(4294967296 + DefinitionId)` 和 `Visit(key, 1, true)`�
 3. 完整 1 秒后使用新的 `OnHoldEnd`，向棋盘上方 ±60° 随机抛出，保留入口速度。出射受阻时原位恢复该方向速度。滞留结束不会再次计入同一装置作用。
 4. 每颗成功释放扣 1 耐久，入锅、取消不扣。最后一颗离锅后保持原有 **5 秒冷却**，冷却时穿过；结束后可再次入锅并再次增加贡献。同锅容量按剩余耐久预留，最后一点完成释放，-1 无限。
 
-`game/device.json` 的 `Strength=10` 为额外贡献，`Range=60` 为抛射角，`Value=1` 为翻炒时长。每回合清理滞留与冷却；球上已获得的贡献随球存活，不随离锅撤销。普通、购买 5、出售 120、耐久 20。
+`game/device.json` 的 `Strength=10` 为额外贡献，`Range=60` 为抛射角，`Value=1` 为翻炒时长。每回合清理滞留与冷却；球上已获得的贡献随球存活，不随离锅撤销。罕见、购买 14、出售 120、耐久 20。
 
 <a id="dentalimplant"></a>
 
@@ -273,7 +273,7 @@ Lua 用共享定义键 `-(4294967296 + DefinitionId)` 和 `Visit(key, 1, true)`�
 
 Lua 以 `GetInstanceValue/SetInstanceValue("stage", ...)` 保存阶段，`OnOffer` 组合同种检查、上限设置、补满和 `Accept`。`OnOfferAccepted` / `OnRoundStart` 刷新外观与状态。阶段表中的倍率和耐久可在 Lua 顶部调整并重新打包；C# 不含种植牙名称、ID、档位或倍率公式。
 
-Metadata 默认普通、购买 5、出售 120、耐久 20，初始库存 0。Metadata 是商店基础配置，当前阶段的有效耐久由实例 API 覆盖并显示在背包和场上。
+Metadata 当前罕见、购买 14、出售 120、耐久 20，初始库存 0。Metadata 是商店基础配置，当前阶段的有效耐久由实例 API 覆盖并显示在背包和场上。
 
 <a id="starlamp"></a>
 
@@ -288,7 +288,7 @@ Metadata 默认普通、购买 5、出售 120、耐久 20，初始库存 0。Met
 5. 通过通用装置事件把效果 ID 和截止时间分发给参与灯，各自保存普通回合数值，不保存旧上下文。模型重建通过 `Start()` 恢复外观。倒计时遵循游戏模拟时间，暂停不会推进；来源装置被移除/收回会取消全盘效果，其余灯检测到取消后熄灭、不扣完成耐久。
 6. 临时加成不会永久写入球的累计倍率；5 秒结束后，即使球还没结算也会失去这份加成，保留其他已获得的装置增量。正常计分、赌博计分、弹珠信息和赚赚兑换都读取当前有效倍率；只有一次全盘效果，不会因为有多盏灯而再乘或叠加多份。
 
-`Authoring/Data/StarLamp.device.json`：ID 9027，`Value = 5` 为持续秒数（Lua 限制最多 60 秒），`Strength = 1` 为每盏灯的附加增量，`Range` 未使用。这里业务 `Value` 是时长，metadata `value` 仍是售价。默认普通、20 耐久、购买价 5、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Star Lamp Device` 定位配置。
+`Authoring/Data/StarLamp.device.json`：ID 9027，`Value = 5` 为持续秒数（Lua 限制最多 60 秒），`Strength = 1` 为每盏灯的附加增量，`Range` 未使用。这里业务 `Value` 是时长，metadata `value` 仍是售价。当前稀有、20 耐久、购买价 23、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Star Lamp Device` 定位配置。
 
 验证源 `Editor/Validation/GameContentValidation.StarLamp.cs`、`GameContentValidation.StarLampApi.cs`、`GameContentValidation.StarLampPhysics.cs` 覆盖全亮条件、同步窗口、未经过灯和新产生的球、永久/临时倍率合成、复制分裂不永久继承、正常/赌博结算与兑换、有限/无限耐久、回合与来源清理、接口有效期，以及两种步长下真实穿过、停留、高速穿越、展示重建和统一熄灯。
 
@@ -298,12 +298,12 @@ Metadata 默认普通、购买 5、出售 120、耐久 20，初始库存 0。Met
 
 制作源 `MResPacker/Authoring/Lua/GluttonBag.lua`，配置 `Authoring/Profiles/GluttonBag.asset`，成品 `Output/GluttonBag.mres`，运行时 `Resources/Devices/9026_GluttonBag.mres`。模型为橄榄绿圆柱袋身、浅褐色袋口与牙齿、深色口部，袋身有实体凸碰撞。
 
-1. 先放置大胃袋，布置阶段从背包拖入其他装置；普通、稀有、史诗、传奇分别增加 **2、4、6、8 点附加增量**，消耗提交的单件。不同大胃袋独立成长，喂入另一台大胃袋也只按其稀有度计算，不转移它的成长。
+1. 先放置大胃袋，布置阶段从背包拖入其他装置；普通、罕见、稀有、传奇分别增加 **2、4、6、8 点附加增量**，消耗提交的单件。不同大胃袋独立成长，喂入另一台大胃袋也只按其稀有度计算，不转移它的成长。
 2. 初始增量为 0，不产生效果。喂入普通装置后增量为 2，弹珠碰撞调用 `AddScoreMultiplier(3)`，实际增加 2；同球两次为 `1 + 2 + 2 = 5`。四档各喂一件共增加 20，碰撞提供完整 ×21。重复碰撞继续累加，到得分区统一结算，基础价值不直接修改；仍遵守通用倍率上限 1000。
 3. 喂食不扣耐久；有正增量的真实碰撞每次扣 1，同球同一步重复报告去重，不同球各自生效。无成长、Trigger 和连线不生效；最后一点耐久完整作用，`-1` 无限。弹珠正常反弹。
 4. 成长用于即将开始的这一回合，进入该回合保留，下一轮布置清空。界面在拖放前提示会消耗库存，接受后显示成长；失败、取消、越界、松开在控件上或离开布置阶段时保留物品。实体物品板与旧 uGUI 背包均支持拖放，拖到合法空白区域仍可正常放置。
 
-`Authoring/Data/GluttonBag.device.json`：ID 9026，`Value = 0` 为初始附加增量，`Strength = 2` 为每档稀有度增量，Lua 使用档位 1/2/3/4；`Range` 未使用。`Strength <= 0` 时拒绝喂食。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Glutton Bag Device` 定位配置。
+`Authoring/Data/GluttonBag.device.json`：ID 9026，`Value = 0` 为初始附加增量，`Strength = 2` 为每档稀有度增量，Lua 使用档位 1/2/3/4；`Range` 未使用。`Strength <= 0` 时拒绝喂食。当前普通、耐久 20、购买价 9、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Glutton Bag Device` 定位配置。
 
 验证源 `Editor/Validation/GameContentValidation.GluttonBag.cs`、`GameContentValidation.GluttonBagUI.cs` 覆盖四档稀有度、原子提交和回调异常、库存实例校验、配对物品、回合准备与清空、独立实例、耐久、真实拖放控件和两种步长下的实际物理碰撞与得分结算。
 
@@ -319,7 +319,7 @@ Metadata 默认普通、购买 5、出售 120、耐久 20，初始库存 0。Met
 4. 同球同一步重复碰撞报告去重，不同球同一步按处理顺序取得连续档位；持续贴住、Trigger 和连线不生效。原球正常反弹，基础价值、钱包、血量和运动均不修改。此前归零的累计倍率也可获得新的增量。
 5. Lua 只跨回调保存 `roundId` 和 `uses` 普通数值，`RoundId` 变化时重置次数为 0；同回合收回再放置不补充次数。状态显示本回合已触发次数、下次完整倍率和用尽提示。默认耐久 20，因此正常九次后剩余 11 耐久，但倍率已降至 ×1；新回合次数和耐久均重置。
 
-`Authoring/Data/IceCreamMachine.device.json`：ID 9025，`Value = 10` 为初始完整倍率，`Strength = 1` 为每次有效触发后的减量，`Range` 未使用。支持小数；初始倍率不大于 1 时无效果，减量为 0 时一直提供初始倍率，减量跨过 1 时钳制到 1。这里的业务 `Value` 与 metadata 的出售价 `value` 不同。默认普通、20 耐久、购买价 5、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Ice Cream Machine Device` 定位配置。
+`Authoring/Data/IceCreamMachine.device.json`：ID 9025，`Value = 10` 为初始完整倍率，`Strength = 1` 为每次有效触发后的减量，`Range` 未使用。支持小数；初始倍率不大于 1 时无效果，减量为 0 时一直提供初始倍率，减量跨过 1 时钳制到 1。这里的业务 `Value` 与 metadata 的出售价 `value` 不同。当前普通、20 耐久、购买价 9、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Ice Cream Machine Device` 定位配置。
 
 无需新增引擎 API，计数和递减公式由 Lua 组合已有能力。`Editor/Validation/GameContentValidation.IceCreamMachine.cs` 验证全部倍率档位、重复与同时碰撞、实例和回合隔离、收回再放置、无效事件、有限/无限耐久、参数、归零后恢复和最终结算，以及两种步长下真实倾斜棋盘的 11 次重新碰撞与反弹。
 
@@ -334,7 +334,7 @@ Metadata 默认普通、购买 5、出售 120、耐久 20，初始库存 0。Met
 3. 正增量的有效碰撞扣 1 耐久，零增量不登记触发、不扣耐久，也不减少弹珠之前已有的倍率。同球同一步重复报告去重，不同球独立生效；持续贴住、Trigger 和连线不生效。最后一点耐久完整作用，`-1` 无限。原球正常反弹，基础价值、钱包、血量和运动不修改。
 4. 状态实时显示其他装置数和本次增量；放置、收回或移除只影响之后的碰撞，不追溯修改已获得的倍率。每个实例只排除自己，新回合恢复耐久并按当前布局查询；此前被归零的累计倍率也能重新增加。
 
-`Authoring/Data/LessIsMore.device.json`：ID 9024，`Value = 20` 为没有其他装置时的附加倍率和单次增量上限，`Strength = 2` 为每个其他装置的减量，`Range` 未使用。支持小数；`Value <= 0` 无效果，`Strength = 0` 表示不随数量衰减。这里的业务 `Value` 与 metadata 的出售价 `value` 不同。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Less Is More Device` 定位制作配置。
+`Authoring/Data/LessIsMore.device.json`：ID 9024，`Value = 20` 为没有其他装置时的附加倍率和单次增量上限，`Strength = 2` 为每个其他装置的减量，`Range` 未使用。支持小数；`Value <= 0` 无效果，`Strength = 0` 表示不随数量衰减。这里的业务 `Value` 与 metadata 的出售价 `value` 不同。当前普通、耐久 20、购买价 9、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Less Is More Device` 定位制作配置。
 
 无需新增引擎 API；数量查询、去重、耐久登记和倍率累加使用已有通用能力，衰减公式由 Lua 组合。`Editor/Validation/GameContentValidation.LessIsMore.cs` 覆盖数量边界、动态布局、库存与耗尽、重复及跨实例累加、回合与有限/无限耐久、归零后恢复、参数，以及两种步长下真实倾斜棋盘的反弹、零增量边界和结算。
 
@@ -350,7 +350,7 @@ Metadata 默认普通、购买 5、出售 120、耐久 20，初始库存 0。Met
 4. 有正增量的有效碰撞扣 1 耐久；同球同一步重复报告去重，不同球同一步各自生效，持续贴住、Trigger、连线不生效。最后一点耐久仍完整作用，`-1` 无限。原球正常反弹，基础价值、钱包、血量和运动均不修改。
 5. 状态显示实时数量和本次增量。盘面增减只影响之后碰撞，不追溯修改球已经获得的倍率；各实例只排除自己，每回合按当前盘面重新查询。归零后的弹珠也可获得正常增量。
 
-`Authoring/Data/MoreIsMore.device.json`：ID 9023，`Value = 20` 为单次附加倍率上限，`Strength = 2` 为每个其他装置的增量；`Range` 未使用。上限或增量非正时无效果；支持小数参数。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate More Is More Device` 定位制作配置。
+`Authoring/Data/MoreIsMore.device.json`：ID 9023，`Value = 20` 为单次附加倍率上限，`Strength = 2` 为每个其他装置的增量；`Range` 未使用。上限或增量非正时无效果；支持小数参数。当前普通、耐久 20、购买价 9、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate More Is More Device` 定位制作配置。
 
 `Editor/Validation/GameContentValidation.MoreIsMore.cs` 覆盖 0/1/9/10/11/20 个装置、上限与重复累加、库存/耗尽/移除/传送门计数、独立实例、动态布局、回合与耐久、归零后恢复、查询有效期和副作用，以及两种步长下真实倾斜棋盘的碰撞、反弹和结算。
 
@@ -366,7 +366,7 @@ Metadata 默认普通、购买 5、出售 120、耐久 20，初始库存 0。Met
 - 组合 `Impact`、`Visit(0, 0)`、`TryUse()`、随机接口与倍率接口。八种结果均扣 1 耐久，最后一次仍完成抽取；`-1` 无限。重复碰撞可再次抽取，同球同一步重复报告只算一次；不同球同一步各抽一次。持续接触、Trigger、连线及耗尽耐久不抽签、不推进随机状态。
 - 每次有效处理均调用 `MarkTriggered()`，抽到 1 或再次归零也登记效果历史。原球正常反弹，不消耗、不传送、不改价值、不直接计分。装置显示最近一次结果，每回合清空显示；球的累计倍率随复制/分裂按通用规则继承。
 
-`Authoring/Data/Malfunction.device.json`：ID 9022，默认普通、耐久 20、购买价 5、出售价 120、初始库存 0；本装置不使用 `Value` / `Strength` / `Range`。候选倍率在 Lua 顶部 `factors` 修改，等概率随列表长度计算。菜单 `Tools > MRes > Create or Locate Malfunction Device` 定位制作配置。
+`Authoring/Data/Malfunction.device.json`：ID 9022，当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0；本装置不使用 `Value` / `Strength` / `Range`。候选倍率在 Lua 顶部 `factors` 修改，等概率随列表长度计算。菜单 `Tools > MRes > Create or Locate Malfunction Device` 定位制作配置。
 
 `Editor/Validation/GameContentValidation.Malfunction.cs` 验证全部八种结果、固定种子序列、归零与恢复、跨装置累加、得分区/赌博区结算、复制分裂继承、有效历史、同帧去重、有限/无限耐久、回合重置、接口范围与有效期，以及两种步长的真实倾斜棋盘碰撞和正常反弹。
 
@@ -381,7 +381,7 @@ Metadata 默认普通、购买 5、出售 120、耐久 20，初始库存 0。Met
 - 不消费弹珠，不修改位置、速度、价值或装置倍率，不计回合分数、不返还血量。金币直接进钱包并遵守钱包上限。每次有效累积调用 `MarkTriggered()` 记录纯 Lua 效果，因此经过摇钱树的弹珠可被后续“赚赚”兑换。
 - 每个装置实例独立保存普通 Lua 数字（回合 ID、当前计数、产出批数），新回合清零，未满 10 次的进度不结转。`OnTick` 显示进度和本回合累计产出。
 
-`Authoring/Data/MoneyTree.device.json`：`Value = 10` 为每批经过次数，`Strength = 5` 为每批金币，均向下取整；次数须在 1–10000，金币至少 1，否则不计数、不扣耐久。`Range` 未使用；触发区域尺寸在制作 Prefab 的 BoxCollider 配置。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。
+`Authoring/Data/MoneyTree.device.json`：`Value = 10` 为每批经过次数，`Strength = 5` 为每批金币，均向下取整；次数须在 1–10000，金币至少 1，否则不计数、不扣耐久。`Range` 未使用；触发区域尺寸在制作 Prefab 的 BoxCollider 配置。当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。
 
 此效果复用现有 API，没有增加专用引擎能力。`GameContentValidation.MoneyTree.cs` 验证 9/10/20 次边界、重入、同一步多球、实例独立、回合清零、有限/无限耐久、参数和钱包上限，以及倾斜棋盘的真实穿过、长时间停留、高速扫掠和无物理阻挡。
 
@@ -396,7 +396,7 @@ Metadata 默认普通、购买 5、出售 120、耐久 20，初始库存 0。Met
 - 无其他装置有效作用时，组合 `Motion.Source.Down` 与 `TryLaunch`，从棋盘下方出口射出，保留进入速度大小（包括零速，仍受弹珠速度上限约束）。受阻则留在原处、不给金币、不扣耐久，后续重新进入可重试。不把当前实例以前的放行算作其他装置。
 - 两种成功处理均通过 `TryUse()` 扣 1；第 20 次完整执行，之后本回合失效，`-1` 无限。`Visit(0, 0)` 排除同一步重复进入，连线事件不参与。不同球可在同一步分别处理。
 
-Metadata 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。`game/device.json` 的 `Value`、`Strength`、`Range` 对此效果不使用。`GameContentValidation.CashOut.cs` 覆盖四舍五入、累计倍率、自己与其他实例、失败访问、纯 Lua 蓄力、复制与新球、钱包上限、耐久/跨回合、真实入口与旋转棋盘出射、真实力场历史及对象池清理。
+Metadata 当前普通、耐久 20、购买价 9、出售价 120、初始库存 0。`game/device.json` 的 `Value`、`Strength`、`Range` 对此效果不使用。`GameContentValidation.CashOut.cs` 覆盖四舍五入、累计倍率、自己与其他实例、失败访问、纯 Lua 蓄力、复制与新球、钱包上限、耐久/跨回合、真实入口与旋转棋盘出射、真实力场历史及对象池清理。
 
 <a id="piggybank"></a>
 
@@ -408,7 +408,7 @@ Metadata 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0
 - 组合 `Impact`、`Visit(0, 0)`、`TryUse()` 和 `AddScoreMultiplier`。金币不足 10 时不生效、不扣耐久；有效撞击扣 1，最后一次仍完整提供倍率，`-1` 无限。持续贴住、同球同一步重复事件、Trigger/连线不算新撞击，不设公共冷却，同一步不同球各算一次。
 - 不消耗弹珠、不改基础价值或速度，得分区使用累计总和。实例分别计算耐久，球分别保存倍率；新回合清理球状态并恢复耐久。`OnTick` 显示当前钱包对应的本次撞击倍率。
 
-`Authoring/Data/PiggyBank.device.json`：`Value = 10` 为每档金币数（正数），`Strength = 0.1` 为每档提供的倍率增量（正数），`Range` 未使用。Metadata 普通、耐久 20、购买价 5、出售价 120、初始库存 0。效果遵守已有总倍率和得分上限；大额钱包不会使倍率调用溢出或抛错。
+`Authoring/Data/PiggyBank.device.json`：`Value = 10` 为每档金币数（正数），`Strength = 0.1` 为每档提供的倍率增量（正数），`Range` 未使用。Metadata 罕见、耐久 20、购买价 14、出售价 120、初始库存 0。效果遵守已有总倍率和得分上限；大额钱包不会使倍率调用溢出或抛错。
 
 `GameContentValidation.PiggyBank.cs` 验证金币边界、动态钱包、倍率减 1 后累加与混合装置、普通得分区、通用触发修正、旧倍率钉、复制继承、上下文有效期、耐久和真实物理碰撞。
 
@@ -434,7 +434,7 @@ endsAt = api.Time + math.max(api.Strength, api.Range / math.sqrt(combo))
 api:AddBase("BALL_BASE_VALUE", combo * api.Parameter)
 ```
 
-`Authoring/Data/Sandbag.device.json`：`Value = 1` 是每连击增加的基础价值，`Range = 3` 是初始窗口秒数，`Strength = 0.3` 是最短窗口秒数；此装置对这两个通用参数采用时间含义，不代表空间范围或物理力度，三者必须为正才触发。元数据默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。
+`Authoring/Data/Sandbag.device.json`：`Value = 1` 是每连击增加的基础价值，`Range = 3` 是初始窗口秒数，`Strength = 0.3` 是最短窗口秒数；此装置对这两个通用参数采用时间含义，不代表空间范围或物理力度，三者必须为正才触发。元数据当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。
 
 `Editor/Validation/GameContentValidation.Sandbag.cs` 随统一运行时验证执行，覆盖首击/多球/重复命中、同一步多球、精确超时及最短窗口、实例/回合隔离、耐久 20/21 与无限、基础加值与倍率/正常结算、真实圆柱碰撞和持续贴住不重复触发。
 
@@ -452,7 +452,7 @@ api:AddBase("BALL_BASE_VALUE", combo * api.Parameter)
 
 `Authoring/Data/GoldMine.device.json`：`Value = 2` 为每次基础价值扣除量，`Strength = 4` 为单次金币产量，`Range = 20` 为每回合产出上限；后两项按整数取整，非正产量/额度不生效，负扣除量不生效。自定义上限不是产量整数倍时，最后一次只发剩余额度，仍扣一次价值和耐久。这里的 `Range` 是金币额度，不是空间距离。Metadata 的 `value` 仍为单件出售价，与上述 `Value` 无关。
 
-默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。没有新增专用引擎 API。`Editor/Validation/GameContentValidation.GoldMine.cs` 随统一验证执行，覆盖低值/零值、实例和回合隔离、同时碰撞、额度耗尽、最后一点/无限耐久、价值修正与正常结算，以及真实 PhysX 接触和持续贴住去重。
+当前普通、耐久 20、购买价 9、出售价 120、初始库存 0。没有新增专用引擎 API。`Editor/Validation/GameContentValidation.GoldMine.cs` 随统一验证执行，覆盖低值/零值、实例和回合隔离、同时碰撞、额度耗尽、最后一点/无限耐久、价值修正与正常结算，以及真实 PhysX 接触和持续贴住去重。
 
 <a id="goldrush"></a>
 
@@ -467,7 +467,7 @@ api:AddBase("BALL_BASE_VALUE", combo * api.Parameter)
 
 Lua 只跨回调保存本回合 ID、球 ID、截止时间、批次编号和显示文字。各库存实例独立；状态显示运输倒计时及最近结果。弹珠消失/到期、装置移除/收回/视图消失或新回合取消运输，不抽结果、不补金币、不扣耐久；寿命和回合排空计时仍正常推进，完成与寿命/排空超时同一步时以清理优先。无球时也通过 `OnTick` 清理失效的忙碌标记。暂停不推进运输时间。
 
-参数 `Authoring/Data/GoldRush.device.json`：`Value = 10` 为运输秒数，范围 `(0, 60]`；`Strength = 2` 为返还弹珠时的金币数；`Range = 5` 为仅金币结果的金币数，后两项取非负整数。概率权重在 Lua 顶部 `returnWeight, coinsWeight, lossWeight = 1, 1, 1`，可编辑为非负权重且总和必须为正。这里的 `Range` 为金币参数，不代表空间距离。Metadata 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。
+参数 `Authoring/Data/GoldRush.device.json`：`Value = 10` 为运输秒数，范围 `(0, 60]`；`Strength = 2` 为返还弹珠时的金币数；`Range = 5` 为仅金币结果的金币数，后两项取非负整数。概率权重在 Lua 顶部 `returnWeight, coinsWeight, lossWeight = 1, 1, 1`，可编辑为非负权重且总和必须为正。这里的 `Range` 为金币参数，不代表空间距离。Metadata 当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。
 
 `Editor/Validation/GoldRushDeviceValidation.cs` 随统一验证执行，覆盖固定随机种子的全部结果、十秒边界、容量/实例隔离、重复运输、最后一次/无限耐久、原球价值/速度、受阻回退、显示所有权及恢复、取消/寿命/回合/对象池清理和真实洞口触发器。
 
@@ -486,7 +486,7 @@ local restored = api:RestoreBlood(api.Value * api.Strength) -- 默认 5
 - 仅实际碰撞触发。当前基础价值减半向下取整，按**减半后的价值 ×5** 回复血量，不计尚未结算的装置倍率。例如 11 → 5、回复 25；5 → 2、回复 10；1 → 0、回复 0。弹珠保留并正常反弹，同一颗球之后再撞可继续处理。
 - 每次对正价值球成功处理扣 1 耐久；同一碰撞的重复通知去重，持续贴住不逐帧扣。已经为 0 的球不触发、不扣耐久；满血仍按碰撞规则减半价值并扣耐久，超出上限的回血舍弃。最后一次完整处理，`-1` 无限耐久。
 - 倍率继续按 `1 + Σ(倍率 - 1)` 累计，剩余价值在得分区统一结算。若这颗球已有基础价值属性修正，`SetCurrent` 将修改后的当前价值作为本次输入并替换结果，清除该属性的旧修正，后续过期不会把消耗掉的价值恢复；新效果仍可再次增值。普通 `Set` / `AddBase` 继续保留修正，语义不变。
-- `Authoring/Data/BloodFactory.device.json`：`Value = 0.5` 为保留比例（须在 0 与 1 之间），`Strength = 5` 为每点剩余价值回复的血量；减半和取整在 Lua 中。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。
+- `Authoring/Data/BloodFactory.device.json`：`Value = 0.5` 为保留比例（须在 0 与 1 之间），`Strength = 5` 为每点剩余价值回复的血量；减半和取整在 Lua 中。当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。
 
 验证入口 `Editor/Validation/GameContentValidation.BloodFactory.cs`：奇数/小数/零价值、满血截断、倍率与属性修正、重复碰撞、耐久/跨回合、血量耗尽后恢复发射、提现不恢复发射、通用 API 有效期，以及两种固定步长下的真实倾斜棋盘碰撞。
 
@@ -503,7 +503,7 @@ Lua 为 `MResPacker/Authoring/Lua/MarbleMachineGun.lua`，配置 `Authoring/Prof
 - 自己产出的球及其复制/分裂后代回到同一台时直接穿过，不再装填。其他实例可处理符合通用分裂代数条件的球。
 - 沿用原球剩余寿命，存储不暂停寿命。装置移除或视图消失时，剩余原球恢复可见和进入速度；寿命结束、回合结束或排空超时按现有生命周期清理未发射部分。未完成批次不扣耐久。
 
-`Authoring/Data/MarbleMachineGun.device.json`：`Value = 0.1` 是发射间隔，`Strength = 6` 是速度，`Range = 45` 是完整扇形宽度。Lua 顶部 `radius = 0.04`、`mass = 0.1`、`period = 1` 控制小球尺寸与扫射往返时间。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。
+`Authoring/Data/MarbleMachineGun.device.json`：`Value = 0.1` 是发射间隔，`Strength = 6` 是速度，`Range = 45` 是完整扇形宽度。Lua 顶部 `radius = 0.04`、`mass = 0.1`、`period = 1` 控制小球尺寸与扫射往返时间。当前普通、耐久 20、购买价 9、出售价 120、初始库存 0。
 
 装置事件新增只读 `Down`，返回棋盘平面内的世界下坡方向；水平棋盘时回退到当前装置朝向。Lua 组合 `TrySetYaw(0)`、`Down`、`Vectors:Rotate` / `SignedAngle` 和 `TrySetYaw` 计算表现朝向，避免视图重建时累计旋转。分出后重新隐藏原球仍使用既有 `TryHold` 与 `TrySetHeldVisible`，不跨回调保存 API 对象。
 
@@ -522,7 +522,7 @@ Lua 为 `MResPacker/Authoring/Lua/MarbleMachineGun.lua`，配置 `Authoring/Prof
 - 出口阻挡、球数或代数限制导致生成失败时，保留首次快照，等待原窗口内下一次不同球的有效碰撞，不自动逐帧出球。超时照常清空。首次球消失不影响已经保存的数值；各实例独立，每回合清空状态，不保存过期上下文或球对象。
 - `HasCopiedFrom(api.InstanceId)` 排除本实例产生的球及其复制/分裂后代。它们仍会物理反弹，但不占配对位置、不扣耐久，可以触发其他装置。
 
-`Authoring/Data/Turf.device.json`：ID 9021，`Value = 5` 是配对窗口秒数，`Strength = 6` 是出射速度。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Turf Device` 定位制作配置。
+`Authoring/Data/Turf.device.json`：ID 9021，`Value = 5` 是配对窗口秒数，`Strength = 6` 是出射速度。当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Turf Device` 定位制作配置。
 
 `Editor/Validation/GameContentValidation.Turf.cs` 覆盖价值/倍率快照与平均、小数/零价值、5 秒边界、同球与同帧去重、重置、祖先过滤、独立实例、容量/物理失败重试、有限/无限耐久、球消失/跨回合、接口有效期，以及两种步长下真实倾斜棋盘的碰撞、反弹、出口阻挡和向下出射。
 
@@ -536,7 +536,7 @@ Lua 为 `MResPacker/Authoring/Lua/MarbleMachineGun.lua`，配置 `Authoring/Prof
 - 副本初始价值为 0，旧固定加分清空；继承累计倍率，之后可以被其他装置增值、吞噬或触发其效果，到得分区统一结算。
 - 每个实例对每颗原球成功复制一次，自己的复制后代（包括再分裂后的后代）不再触发它。这里不触发指不再复制；圆柱仍有实体碰撞，球会正常反弹。
 - 成功复制扣 1 耐久，阻挡、数量/代数限制及无效碰撞不扣；失败后原球下次碰撞仍可重试。复制球放在原球反射方向前方，留出两球半径及少量间隔，避免重叠。
-- 默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。`Authoring/Data/Duplicator.device.json` 的 ID 为 9018；价值 0 的选择和每球一次规则均在 Lua 中。
+- 当前稀有、耐久 20、购买价 23、出售价 120、初始库存 0。`Authoring/Data/Duplicator.device.json` 的 ID 为 9018；价值 0 的选择和每球一次规则均在 Lua 中。
 
 `Editor/Validation/GameContentValidation.Duplicator.cs` 验证零价值及固定加分清理、其他装置增值、祖先记录、重试/容量/耐久、回调有效期，以及两种物理步长下的真实倾斜棋盘正撞和斜撞。
 
@@ -551,7 +551,7 @@ Lua 为 `MResPacker/Authoring/Lua/MarbleMachineGun.lua`，配置 `Authoring/Prof
 - 完整分流成功扣 1 耐久，第 20 次仍生成全部 3 球；失败保留原球，不扣耐久，下次进入可重试。
 - 分出的球及其后代再次经过同一台时**直接穿过**，不反弹、不改速度、不再分裂、不扣耐久。其他分流器实例可再次分流，但仍受通用代数、属性下限和数量上限约束。
 
-`Authoring/Data/Splitter.device.json`：`Range = 30` 为侧口相对向下的角度，支持 1–80°；`Value` / `Strength` 未使用。修改侧口角度时同步调整制作 Prefab 的管口朝向。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。
+`Authoring/Data/Splitter.device.json`：`Range = 30` 为侧口相对向下的角度，支持 1–80°；`Value` / `Strength` 未使用。修改侧口角度时同步调整制作 Prefab 的管口朝向。当前普通、耐久 20、购买价 9、出售价 120、初始库存 0。
 
 行为验证位于 `Editor/Validation/GameContentValidation.Splitter.cs`，覆盖均分守恒、得分结算、同实例后代穿过、其他实例分流、复制继承、失败回滚、容量、耐久、回合恢复、零速，以及真实倾斜棋盘的三出口与物理阻挡。
 
@@ -567,7 +567,7 @@ Lua 为 `MResPacker/Authoring/Lua/MarbleMachineGun.lua`，配置 `Authoring/Prof
 4. 全部出口成功后才消耗原球，并用 `TryUse()` 扣 1 耐久；第 20 次仍完成全部八球。任一出口受阻时撤销整批，原球保留、不扣耐久，下次进入可重试。
 5. `HasSplitFrom(api.InstanceId)` 排除本实例产生的球及后代，再次经过时直接穿过，不反弹、不改变速度、不再分裂、不扣耐久。其他实例仍可分流，受通用属性下限、代数和数量上限约束。
 
-`Authoring/Data/PuffMushroom.device.json` 的 `Range = 60` 表示半扇形角，即两侧各 60°、总计 120°；支持半角 1–90°，符合通用参数上限。`Value` / `Strength` 未使用，出口数量固定为 Lua 顶部 `outlets = 8`。修改扇形角或数量时同步调整制作 Prefab 的喷口。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。
+`Authoring/Data/PuffMushroom.device.json` 的 `Range = 60` 表示半扇形角，即两侧各 60°、总计 120°；支持半角 1–90°，符合通用参数上限。`Value` / `Strength` 未使用，出口数量固定为 Lua 顶部 `outlets = 8`。修改扇形角或数量时同步调整制作 Prefab 的喷口。当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。
 
 现有质量下限为 0.1，因此八等分要求原球质量至少 0.8；默认质量 1 的弹珠可以触发，刚八等分出的默认小球（质量 0.125）不能继续八等分。沿用 `DeviceSplitBatch` 的拒绝规则，失败保留原球和耐久，不强行钳制子球质量。未新增专用引擎 API。
 
@@ -585,7 +585,7 @@ Lua 为 `MResPacker/Authoring/Lua/MarbleMachineGun.lua`，配置 `Authoring/Prof
 - 同一装置产生的后代不再被它分裂；这一爆仍扣耐久。沿用分裂代数、质量/半径下限和容量限制，默认八等分至少需要原球质量 0.8。某颗原球八等分受阻时整颗回滚保留，继续处理其他原球；并非整个范围共同回滚，失败或全不符合条件仍算一次爆炸。
 - 范围查询取球形相交和原球快照，不重复选中新碎片；已滞留的球不受影响。爆炸不提前结算，不扣血或生成额外总价值。
 
-`Authoring/Data/Bomb.device.json`：`Value = 5` 为投掷间隔，支持 0.1–60 秒；`Strength = 3` 为投掷速度，`Range = 0.8` 为爆炸半径。Lua 顶部 `flightSeconds = 1`、`scatterSpeed = 6`、`pieces = 8` 控制引信、散射速度和份数。修改爆炸半径时同步调整 `BlastTemplate` 的显示大小。默认普通、耐久 20、购买价 5、出售价 120、初始库存 0。
+`Authoring/Data/Bomb.device.json`：`Value = 5` 为投掷间隔，支持 0.1–60 秒；`Strength = 3` 为投掷速度，`Range = 0.8` 为爆炸半径。Lua 顶部 `flightSeconds = 1`、`scatterSpeed = 6`、`pieces = 8` 控制引信、散射速度和份数。修改爆炸半径时同步调整 `BlastTemplate` 的显示大小。当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。
 
 `Editor/Validation/GameContentValidation.Bomb.cs` 覆盖周期/引信、空爆扣除、最终一次处理多球、随机方向、价值/倍率守恒、失败与容量回滚、来源过滤、取消/回合清理、新回调有效期及异常隔离，以及真实倾斜棋盘的飞行视觉和物理碎片。
 
@@ -602,7 +602,7 @@ Lua 为 `MResPacker/Authoring/Lua/MarbleMachineGun.lua`，配置 `Authoring/Prof
 5. 出口受阻或达到弹珠上限时保留满蓄力，每 0.1 模拟秒尝试新批，不扣耐久、不提前进入冷却，也不要求第 9 击。装置移除后不再重试，新回合清空蓄力与冷却。
 6. Lua 比较 `SpawnSourceId` 与 `InstanceId`，自身发出的球及其复制/分裂后代不会为自己蓄力；它们仍可影响其他装置。各装置独立保存普通 Lua 状态，状态文字显示蓄力进度、等待发射或冷却倒计时。
 
-`Authoring/Data/StoneBurst.device.json`：`Value = 8` 是蓄力次数（取整数），`Strength = 6` 是速度，`Range = 5` 是冷却秒数。Lua 顶部 `projectileCount = 16`、`projectileValue = 1` 控制数量与价值。元数据普通、耐久 20、购买价 5、出售价 120、初始库存 0。效果只组合碰撞数据、访问记录、计时、`Vectors.Rotate`、批量生成和耐久登记。
+`Authoring/Data/StoneBurst.device.json`：`Value = 8` 是蓄力次数（取整数），`Strength = 6` 是速度，`Range = 5` 是冷却秒数。Lua 顶部 `projectileCount = 16`、`projectileValue = 1` 控制数量与价值。元数据罕见、耐久 20、购买价 14、出售价 120、初始库存 0。效果只组合碰撞数据、访问记录、计时、`Vectors.Rotate`、批量生成和耐久登记。
 
 验证入口为统一运行时验证中的 `GameContentValidation.StoneBurst.cs`：真实碰撞、倾斜棋盘均匀出射、正常反弹与球价值、8 次/冷却边界、同一步多球、来源过滤、容量/物理生成中途失败回滚、自动重试、最后一点与无限耐久、新回合清理，以及批对象有效期。
 
@@ -641,7 +641,7 @@ end
 
 `game/device.json.Value = 30` 表示相对于镜面反射方向的 **±30° 半角范围**。Lua 把可配置半角限制在 `[0, 90]`；`0` 表示镜面反射。方向在装置所在棋盘平面内计算，出射速度大小取完整的 `IncomingSpeed`，仍受当前弹珠限速约束。只改变当前速度，不传送，也不主动修改角速度。
 
-擦边时，Lua 将角度区间与“朝向表面外侧”的半平面取交集，再从有效区间取样，避免朝圆柱内部弹出。入射平面速度过小、顶部法线在平面上投影为零、正在离开表面或没有碰撞几何数据时，不改变普通物理结果，也不消耗触发次数/随机数。默认无装置额外冷却、每球触发次数不限，同一逻辑帧仍受通用去重规则约束。ID 9002，初始库存 0，购买价 5、出售价格 120。
+擦边时，Lua 将角度区间与“朝向表面外侧”的半平面取交集，再从有效区间取样，避免朝圆柱内部弹出。入射平面速度过小、顶部法线在平面上投影为零、正在离开表面或没有碰撞几何数据时，不改变普通物理结果，也不消耗触发次数/随机数。默认无装置额外冷却、每球触发次数不限，同一逻辑帧仍受通用去重规则约束。ID 9002，初始库存 0，购买价 9、出售价格 120。
 
 <a id="collector"></a>
 
@@ -656,7 +656,7 @@ Lua 组合 `OnBallUpdate`、范围/向量计算、`TrySetVelocity`、带障碍�
 3. 磁力满 2 秒后，在同一个固定步释放已聚集弹珠，各自设置为 `Source.Down * 进入时速度`。保留聚集位置，不把所有球送到同一个出口；零速仍为零，之后由普通重力继续运动，当前速度上限仍生效。
 4. 截止时还没抵达、目标受阻的弹珠同样结束吸引，在当前位置向下释放。满员找不到安全预留位置时不接纳新球。每球对同一实例只参加一次，新弹珠可启动下一批；不同实例的 Lua 状态独立。
 
-配置 `game/device.json`：`Value = 2` 为磁力秒数（Lua 最大取 60），`Range = 1.2` 为世界吸引半径，`Strength = 3` 为世界单位/秒的收拢速度。非正时长/收拢速度不启动。ID 9003，圆柱直径 0.4、高 0.1，使用触发器，购买价 5、出售价格 120，初始库存 0。`Cooldown = 0`、`MaxTriggersPerBall = 1`；首球用 `TryPrepareTrigger` 应用通用修正，其他参与者只登记访问，聚集不扣耐久。到期释放用同一个 `batch:n` 登记一次；最后一点耐久释放整批，并申请一个固定步的完成窗口，让尚未抵达的成员也能完成。窗口期间不接纳新的批次。
+配置 `game/device.json`：`Value = 2` 为磁力秒数（Lua 最大取 60），`Range = 1.2` 为世界吸引半径，`Strength = 3` 为世界单位/秒的收拢速度。非正时长/收拢速度不启动。ID 9003，圆柱直径 0.4、高 0.1，使用触发器，购买价 14、出售价格 120，初始库存 0。`Cooldown = 0`、`MaxTriggersPerBall = 1`；首球用 `TryPrepareTrigger` 应用通用修正，其他参与者只登记访问，聚集不扣耐久。到期释放用同一个 `batch:n` 登记一次；最后一点耐久释放整批，并申请一个固定步的完成窗口，让尚未抵达的成员也能完成。窗口期间不接纳新的批次。
 
 Lua 只跨回调保存 ID、数字和世界位置副本。聚集位置在接纳时固定；滞留阶段不跟随移动装置，释放方向读取当前装置姿态。移除装置会取消滞留并恢复滞留前运动；不会补发 Lua 的向下释放。弹珠消失时引擎回收物理/计时状态，其少量 Lua 普通数据最迟在下一回合首次更新时清空；正常释放立即删除对应记录。
 
@@ -678,7 +678,7 @@ end
 
 `game/device.json.Strength = 3` 即 3 N。进入区域的弹珠持续受力，较重弹珠加速更慢；逆着力场运动会先减速，侧向速度保留。没有磁性要求、距离衰减或公共冷却；每球每次进入扣 1 耐久，停留不重复扣。最后一次进入仍执行当前力场回调，随后本回合停止施力。区域直接读取 BoxCollider 几何，不依赖 `Range` 或 `Value`：修改 Prefab 的 `Field` 节点缩放或 BoxCollider 参数后重新打包即可，边框和箭头可同步调整。
 
-ID 9004，初始库存 0、购买价 5、出售价格 120。配置 `Radius = 0.633` 是放置时的保守外接圆半径，不是实际力场形状；通用装置放置半径支持 `[0.01, 10]`，以容纳长形资源。改变宽度/长度时应同步更新此放置半径，避免通用放置检查低估占用范围。宽 `w`、长 `l` 的居中矩形可用 `sqrt((w/2)^2 + (l/2)^2)` 并略向上取整。
+ID 9004，初始库存 0、购买价 9、出售价格 120。配置 `Radius = 0.633` 是放置时的保守外接圆半径，不是实际力场形状；通用装置放置半径支持 `[0.01, 10]`，以容纳长形资源。改变宽度/长度时应同步更新此放置半径，避免通用放置检查低估占用范围。宽 `w`、长 `l` 的居中矩形可用 `sqrt((w/2)^2 + (l/2)^2)` 并略向上取整。
 
 <a id="blackhole"></a>
 
@@ -704,6 +704,6 @@ end
 
 默认 `Strength = 8 N`，`Range = 1` 是**半强度距离**，不是范围边界；距离 1、2、20 时分别为 4、1.6、约 0.01995 N。引力沿装置平面指向中心，中心处零向量避免奇点，不把弹珠拉离棋盘。引擎负责 `Δv = F × dt / mass`，保留重力/其他区域力；多个黑洞或力场的力相加，沿用总场力 100 N 和弹珠限速约束。时间按固定步量化，力在到期后的下一步停止，最多一个固定步误差；没有弹珠时 `OnTick` 也会及时到期。
 
-参数位于 `MResPacker/Authoring/Data/BlackHole.device.json`：`Value = 10` 是持续秒数，`ScoreMultiplier = 10` 是结算倍率，`Strength = 8`、`Range = 1` 控制衰减，`Radius = 0.2` 是放置占位半径。充能颗数为 Lua 顶部 `chargeRequired = 10`。购买价 5、出售价格 120、一次购买一个、初始库存 0。圆柱模型、圆环、材质、Prefab、场景和打包配置都在 `MResPacker` 内；修改后重新打包并同步游戏副本。
+参数位于 `MResPacker/Authoring/Data/BlackHole.device.json`：`Value = 10` 是持续秒数，`ScoreMultiplier = 10` 是结算倍率，`Strength = 8`、`Range = 1` 控制衰减，`Radius = 0.2` 是放置占位半径。充能颗数为 Lua 顶部 `chargeRequired = 10`。购买价 23、出售价格 120、一次购买一个、初始库存 0。圆柱模型、圆环、材质、Prefab、场景和打包配置都在 `MResPacker` 内；修改后重新打包并同步游戏副本。
 
 新增代码入口：`DeviceEventContext.cs`、`DeviceScriptSystem.cs`、`MarbleSimulation.Devices.cs`、`ContentSettlementSystem.TrySettleAmount`、`MarblePhysicsBridge.Picking.cs`、`DeviceActivationUI.cs`。这些 API 均可独立用于其他装置，充能流程与公式只存在于 Lua。

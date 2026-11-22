@@ -49,7 +49,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(rootPath + "/Lua/Reflector.lua");
-            profile.Metadata = new MResMetadataData { name = "弹弹", description = "保留入射速度大小，在镜面反射方向的 ±30° 范围内随机弹出。", value = 120, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "弹弹", description = "保留入射速度大小，在镜面反射方向的 ±30° 范围内随机弹出。", value = 120, purchasePrice = 9, rarity = "common", type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/Reflector.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",
                 Source = AssetDatabase.LoadAssetAtPath<TextAsset>(rootPath + "/Data/Reflector.device.json") } };

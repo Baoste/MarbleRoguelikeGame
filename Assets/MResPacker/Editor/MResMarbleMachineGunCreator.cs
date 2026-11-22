@@ -47,7 +47,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/MarbleMachineGun.lua");
-            profile.Metadata = new MResMetadataData { name = "弹珠机关枪", description = "将弹珠基础价值拆成每颗价值1的小球，舍弃不足1的余数，继承累计倍率。每0.1秒以速度6从下方45°扇形往返扫射，整批完成扣1耐久；忙碌时其他球及自身后代直接穿过。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "弹珠机关枪", description = "将弹珠基础价值拆成每颗价值1的小球，舍弃不足1的余数，继承累计倍率。每0.1秒以速度6从下方45°扇形往返扫射，整批完成扣1耐久；忙碌时其他球及自身后代直接穿过。", value = 120, purchasePrice = 9, rarity = "common", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/MarbleMachineGun.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/MarbleMachineGun.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "MarbleMachineGunAuthoring"); AssetDatabase.SaveAssets(); return profile;

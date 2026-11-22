@@ -43,7 +43,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/StarLamp.lua");
-            profile.Metadata = new MResMetadataData { name = "星星灯", description = "无实体碰撞，弹珠进入切换开关；场上至少2盏且全部点亮后，所有弹珠获得灯总数点临时附加倍率，持续5秒，期间保持亮灯且不重复叠加。时间结束移除加成、全部熄灭，参与的每盏灯扣1耐久。每回合初始关闭。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "星星灯", description = "无实体碰撞，弹珠进入切换开关；场上至少2盏且全部点亮后，所有弹珠获得灯总数点临时附加倍率，持续5秒，期间保持亮灯且不重复叠加。时间结束移除加成、全部熄灭，参与的每盏灯扣1耐久。每回合初始关闭。", value = 120, purchasePrice = 23, rarity = "rare", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/StarLamp.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/StarLamp.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "StarLampAuthoring"); AssetDatabase.SaveAssets(); return profile;

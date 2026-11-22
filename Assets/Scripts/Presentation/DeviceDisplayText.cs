@@ -7,7 +7,7 @@ namespace MarblesECS.Presentation
             switch (rarity)
             {
                 case DeviceRarity.Rare: return "稀有";
-                case DeviceRarity.Epic: return "史诗";
+                case DeviceRarity.Uncommon: return "罕见";
                 case DeviceRarity.Legendary: return "传奇";
                 default: return "普通";
             }

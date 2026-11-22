@@ -31,7 +31,7 @@ namespace MarblesECS.Editor
                 Check(owned.Length == 4 && owned.All(x => x.DefinitionId == 103), "two purchases give four portal devices");
                 Check(owned[0].PairId > 0 && owned[0].PairId == owned[1].PairId && owned[2].PairId == owned[3].PairId &&
                     owned[0].PairId != owned[2].PairId, "each purchase has its own nonzero pair ID");
-                Near(1000 - 2 * 5, r.C.Campaign.Coins, "charge the metadata purchase price once per pair");
+                Near(1000 - 2 * r.C.Balance.Devices.Single(d => d.Id == 103).Price, r.C.Campaign.Coins, "charge the metadata purchase price once per pair");
                 Check(owned.All(x => x.Placed), "the two members of each purchase can be placed individually");
                 var key = r.Launch(new Vector3(0, .085f, .5f), Vector3.zero);
                 for (int i = 0; i < owned.Length; i++)
@@ -44,9 +44,9 @@ namespace MarblesECS.Editor
                 r.C.Balance.Campaign.MaxOwnedDevices = 5;
                 Check(!r.Simulation.BuyOffer(0), "one remaining inventory slot cannot accept half a pair");
                 Check(r.Simulation.GetOwnedDevices().Length == 4 && r.C.Campaign.NextDeviceId == nextId, "failed pair purchase creates no partial device");
-                Near(990, r.C.Campaign.Coins, "rejected purchase does not charge coins");
+                Near(1000 - 2 * r.C.Balance.Devices.Single(d => d.Id == 103).Price, r.C.Campaign.Coins, "rejected purchase does not charge coins");
                 r.C.Balance.Campaign.MaxOwnedDevices = 100;
-                var campaign = r.C.Campaign; campaign.Coins = 4; r.C.Campaign = campaign;
+                var campaign = r.C.Campaign; campaign.Coins = r.C.Balance.Devices.Single(d => d.Id == 103).Price - 1; r.C.Campaign = campaign;
                 Check(!r.Simulation.BuyOffer(0) && r.Simulation.GetOwnedDevices().Length == 4, "insufficient funds cannot create either portal");
             }
         }

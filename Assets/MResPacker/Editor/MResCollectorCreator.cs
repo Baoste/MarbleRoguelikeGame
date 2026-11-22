@@ -59,7 +59,7 @@ namespace MResPacker
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab;
             profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(rootPath + "/Lua/Collector.lua");
-            profile.Metadata = new MResMetadataData { name = "吸吸", description = "吸引附近弹珠聚成一团，2 秒后保留各自进入时的速度大小，沿棋盘向下释放。", value = 120, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "吸吸", description = "吸引附近弹珠聚成一团，2 秒后保留各自进入时的速度大小，沿棋盘向下释放。", value = 120, purchasePrice = 14, rarity = "uncommon", type = "device" };
             profile.ShaderRegistry = registry;
             profile.OutputPath = "Assets/MResPacker/Output/Collector.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",

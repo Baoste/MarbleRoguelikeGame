@@ -52,7 +52,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/PiggyBank.lua");
-            profile.Metadata = new MResMetadataData { name = "猪猪存钱罐", description = "每次撞击按当前金币提供1+0.1×满10金币档数的倍率；每次只累加倍率-1，最终倍率为1+累计增量，到得分区统一计算。不消耗金币，金币不足10时不生效、不扣耐久。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "猪猪存钱罐", description = "每次撞击按当前金币提供1+0.1×满10金币档数的倍率；每次只累加倍率-1，最终倍率为1+累计增量，到得分区统一计算。不消耗金币，金币不足10时不生效、不扣耐久。", value = 120, purchasePrice = 14, rarity = "uncommon", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/PiggyBank.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/PiggyBank.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "PiggyBankAuthoring"); AssetDatabase.SaveAssets(); return profile;

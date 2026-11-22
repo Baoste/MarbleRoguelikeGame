@@ -49,7 +49,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/LessIsMore.lua");
-            profile.Metadata = new MResMetadataData { name = "less is more", description = "撞击时提供附加倍率，初始+20，每个其他已放置装置减少2，最低为0；不计自身，已耗尽但仍在场的装置也计数。倍率累加后到得分区统一计算。有增量时扣1耐久，其他装置达到10个时不生效，原球正常反弹。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "less is more", description = "撞击时提供附加倍率，初始+20，每个其他已放置装置减少2，最低为0；不计自身，已耗尽但仍在场的装置也计数。倍率累加后到得分区统一计算。有增量时扣1耐久，其他装置达到10个时不生效，原球正常反弹。", value = 120, purchasePrice = 9, rarity = "common", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/LessIsMore.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/LessIsMore.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "LessIsMoreAuthoring"); AssetDatabase.SaveAssets(); return profile;

@@ -2,7 +2,7 @@ using System;
 
 namespace MarblesECS
 {
-    public enum DeviceRarity { Common, Rare, Epic, Legendary }
+    public enum DeviceRarity { Common = 0, Uncommon = 1, Rare = 2, Legendary = 3 }
     [Serializable]
     public sealed class DeviceDefinition
     {

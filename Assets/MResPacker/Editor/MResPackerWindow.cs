@@ -46,10 +46,15 @@ namespace MResPacker
             EditorGUILayout.PropertyField(metadata.FindPropertyRelative("purchasePrice"), new GUIContent("购买价格"));
             EditorGUILayout.PropertyField(metadata.FindPropertyRelative("durability"), new GUIContent("每回合耐久"));
             var rarity = metadata.FindPropertyRelative("rarity");
-            var rarities = new[] { "common", "rare", "epic", "legendary" };
+            var rarities = new[] { "common", "uncommon", "rare", "legendary" };
             int rarityIndex = Array.IndexOf(rarities, rarity.stringValue);
-            int rarityNext = EditorGUILayout.Popup("稀有度", rarityIndex, new[] { "普通", "稀有", "史诗", "传奇" });
-            if (rarityNext != rarityIndex && rarityNext >= 0) rarity.stringValue = rarities[rarityNext];
+            int rarityNext = EditorGUILayout.Popup("稀有度", rarityIndex, new[] { "普通", "罕见", "稀有", "传奇" });
+            if (rarityNext != rarityIndex && rarityNext >= 0)
+            {
+                rarity.stringValue = rarities[rarityNext];
+                if (metadata.FindPropertyRelative("type").stringValue == "device")
+                    metadata.FindPropertyRelative("purchasePrice").floatValue = new[] { 9f, 14f, 23f, 38f }[rarityNext];
+            }
             var type = metadata.FindPropertyRelative("type");
             int index = type.stringValue == "medicine" ? 0 : type.stringValue == "device" ? 1 : -1;
             int next = EditorGUILayout.Popup("Type", index, new[] { "Medicine", "Device" });

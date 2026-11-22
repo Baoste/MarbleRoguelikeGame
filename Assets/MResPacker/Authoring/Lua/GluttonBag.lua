@@ -1,6 +1,6 @@
 -- 大胃袋：喂食规则属于 Lua，库存消耗与回合状态提交由通用引擎 API 执行。
 -- Value: initial bonus; Strength: bonus per rarity tier (common=1 ... legendary=4).
-local tiers = { common = 1, rare = 2, epic = 3, legendary = 4 }
+local tiers = { common = 1, uncommon = 2, rare = 3, legendary = 4 }
 
 local function bonus(api)
     return math.max(0, api.Parameter) + api:GetRoundValue("bonus")

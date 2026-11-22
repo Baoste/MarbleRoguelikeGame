@@ -78,7 +78,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(Root + "/Lua/BouncePad.lua"); profile.ShaderRegistry = registry;
-            profile.Metadata = new MResMetadataData { name = "示例弹射台", description = "保持或提高速度，并沿装置出口朝向弹出。", value = 120, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "示例弹射台", description = "保持或提高速度，并沿装置出口朝向弹出。", value = 120, purchasePrice = 9, rarity = "common", type = "device" };
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(Root + "/Data/BouncePad.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath);
             EnsureScene(prefab);

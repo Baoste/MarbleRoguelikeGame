@@ -51,7 +51,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/Bomb.lua");
-            profile.Metadata = new MResMetadataData { name = "炸弹", description = "每5秒沿随机方向投出炸弹，速度3，1秒后爆炸；半径0.8内每颗弹珠均分8球，价值和体积均分，继承累计倍率，以速度6向四周散开。每次爆炸扣1耐久，空爆也扣；后代不再被同一台分裂。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "炸弹", description = "每5秒沿随机方向投出炸弹，速度3，1秒后爆炸；半径0.8内每颗弹珠均分8球，价值和体积均分，继承累计倍率，以速度6向四周散开。每次爆炸扣1耐久，空爆也扣；后代不再被同一台分裂。", value = 120, purchasePrice = 14, rarity = "uncommon", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/Bomb.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/Bomb.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "BombAuthoring"); AssetDatabase.SaveAssets(); return profile;

@@ -30,6 +30,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
 
     private readonly Dictionary<int, MRes.MResLoadHandle> placedObjects = new Dictionary<int, MRes.MResLoadHandle>();
     private MRes.MResLoadHandle preview;
+    private QuickOutline previewOutline;
     private GameObject previewObject => preview?.Root;
     private int displayedRevision = -1;
     private int displayedRoundId = -1;
@@ -47,6 +48,8 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         SelectedInstanceId = 0;
         preview?.Dispose();
         preview = null;
+        previewOutline?.Dispose();
+        previewOutline = null;
     }
 
     private void Update()
@@ -58,7 +61,6 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
             return;
         }
         SyncPlacedObjects();
-        ValidateSelection();
 #if ENABLE_LEGACY_INPUT_MANAGER
         if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
         {
@@ -70,36 +72,32 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         Vector2 pointer = IsDraggingInventory ? dragPointer : (Vector2)Input.mousePosition;
         UpdatePlacementPointer(pointer);
         if (Input.GetMouseButtonDown(0) && !IsDraggingInventory) HandleBoardClick(pointer);
+#else
+        ValidateSelection();
 #endif
     }
 
-    private bool TryGetBoardPoint(out Vector3 localPoint)
-        => TryGetBoardPoint(IsDraggingInventory ? dragPointer : (Vector2)Input.mousePosition, out localPoint);
-
     private bool TryGetBoardPoint(Vector2 screenPoint, out Vector3 localPoint)
     {
-        GetPlacementPlanePose(out Vector3 planePosition, out Quaternion planeRotation);
-        Vector3 planeUp = planeRotation * Vector3.up;
-        Ray ray = ViewCamera.ScreenPointToRay(screenPoint);
-        var plane = new Plane(planeUp, planePosition);
-        if (plane.Raycast(ray, out float distance))
+        if (TryProjectOntoPlacementPlane(screenPoint, out var worldPoint) && IsInsidePlacementPlane(worldPoint))
         {
-            Vector3 worldPoint = ray.GetPoint(distance);
-            if (Controller != null && Controller.PlacementSurface != null &&
-                !Controller.PlacementSurface.ContainsWorldPoint(worldPoint, 0))
-            { localPoint = default; return false; }
-            Vector3 planePoint = Quaternion.Inverse(planeRotation) * (worldPoint - planePosition);
-            if (Mathf.Abs(planePoint.x) > PlacementPlaneSize.x * 0.5f ||
-                Mathf.Abs(planePoint.z) > PlacementPlaneSize.y * 0.5f)
-            {
-                localPoint = default;
-                return false;
-            }
             localPoint = BoardRoot.InverseTransformPoint(worldPoint);
             return true;
         }
         localPoint = default;
         return false;
+    }
+
+    private bool TryProjectOntoPlacementPlane(Vector2 screenPoint, out Vector3 worldPoint)
+    {
+        worldPoint = default;
+        if (!ViewCamera) return false;
+        GetPlacementPlanePose(out var planePosition, out var planeRotation);
+        Ray ray = ViewCamera.ScreenPointToRay(screenPoint);
+        var plane = new Plane(planeRotation * Vector3.up, planePosition);
+        if (!plane.Raycast(ray, out float distance)) return false;
+        worldPoint = ray.GetPoint(distance);
+        return SimulationContext.IsFinite(worldPoint);
     }
 
     private bool IsInsidePlacementPlane(Vector3 worldPoint)

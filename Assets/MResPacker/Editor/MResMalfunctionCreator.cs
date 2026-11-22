@@ -46,7 +46,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/Malfunction.lua");
-            profile.Metadata = new MResMetadataData { name = "故障装置", description = "碰撞后等概率抽取0、1、2、3、5、7、11、13倍率。0将当前累计装置倍率归零；其他结果累加倍率减1，归零后仍可继续增加，到得分区统一计算。每次有效碰撞扣1耐久，原球正常反弹。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "故障装置", description = "碰撞后等概率抽取0、1、2、3、5、7、11、13倍率。0将当前累计装置倍率归零；其他结果累加倍率减1，归零后仍可继续增加，到得分区统一计算。每次有效碰撞扣1耐久，原球正常反弹。", value = 120, purchasePrice = 14, rarity = "uncommon", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/Malfunction.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/Malfunction.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "MalfunctionAuthoring"); AssetDatabase.SaveAssets(); return profile;

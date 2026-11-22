@@ -42,7 +42,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/StoneBurst.lua");
-            profile.Metadata = new MResMetadataData { name = "大石碎胸口", description = "受到8次撞击后，向四周均匀发射16颗价值1、速度6的弹珠；冷却5秒后重新蓄力。每轮发射扣1耐久，自身发出的球不为自身蓄力。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "大石碎胸口", description = "受到8次撞击后，向四周均匀发射16颗价值1、速度6的弹珠；冷却5秒后重新蓄力。每轮发射扣1耐久，自身发出的球不为自身蓄力。", value = 120, purchasePrice = 14, rarity = "uncommon", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/StoneBurst.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",
                 Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/StoneBurst.device.json") } };

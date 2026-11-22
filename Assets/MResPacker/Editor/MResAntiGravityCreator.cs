@@ -59,7 +59,7 @@ namespace MResPacker
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab;
             profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(rootPath + "/Lua/AntiGravity.lua");
-            profile.Metadata = new MResMetadataData { name = "反重力", description = "弹珠从装置上方朝上射出，保留速度大小，反转重力 2 秒；撞击其他装置时提前恢复。", value = 120, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "反重力", description = "弹珠从装置上方朝上射出，保留速度大小，反转重力 2 秒；撞击其他装置时提前恢复。", value = 120, purchasePrice = 23, rarity = "rare", type = "device" };
             profile.ShaderRegistry = registry;
             profile.OutputPath = "Assets/MResPacker/Output/AntiGravity.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",

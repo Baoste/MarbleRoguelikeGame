@@ -11,15 +11,15 @@ import math
 import struct
 
 ASSETS = Path(__file__).resolve().parents[2]
-RARITIES = {"common": 0, "rare": 1, "epic": 2, "legendary": 3}
+RARITIES = {"common": 0, "uncommon": 1, "rare": 2, "legendary": 3}
 # Serialized defaults in Scripts/Marbles/Rules/DeviceDefinition.cs.
 DEFAULTS = dict(Id=0, Name=None, Price=0, SellPrice=0, Rarity=0, Durability=20,
-                ScoreMultiplier=1.0, RushChanceAdd=0.0, Radius=0.18,
+                ScoreMultiplier=1.0, RushChanceAdd=0.0,
                 StartingCount=0, PurchaseQuantity=1, RushCategory=False,
                 LinkGroup="", GroupClearance=0.01, Kind=0, SourceId="",
                 Description=None, Cooldown=0.1, MaxTriggersPerBall=0,
                 Range=0.2, Strength=2.0, Value=1.0)
-FLOAT_FIELDS = ("Radius", "GroupClearance", "Cooldown", "Range", "Strength")
+FLOAT_FIELDS = ("GroupClearance", "Cooldown", "Range", "Strength")
 
 
 def float32(value):
@@ -82,7 +82,7 @@ def read_device(path):
     raw = json.loads(entry("game/device.json", 255).decode("utf-8-sig"))
     device = {key: raw.get(key, value) for key, value in DEFAULTS.items()}
     device.update(Name=metadata["name"], Description=metadata["description"],
-                  Price=float32(metadata.get("purchasePrice", 5)), SellPrice=float32(metadata["value"]),
+                  Price=float32(metadata.get("purchasePrice", 9)), SellPrice=float32(metadata["value"]),
                   Rarity=RARITIES[metadata.get("rarity", "common")],
                   Durability=metadata.get("durability", 20))
     for key, minimum, maximum in (("Id", 1, 2**32-1), ("Price", 1, 9_000_000_000_000_000),

@@ -2,6 +2,11 @@ namespace MarblesECS
 {
     public sealed partial class MarbleSimulation
     {
+        internal bool CanPlaceDevice(int instanceId, float x, float z, float clearance, float? angle)
+        {
+            return CanCampaignAct(RoundPhase.Build) && DevicePlacementSystem.CanPlace(context, instanceId, x, z, clearance, angle);
+        }
+
         /// <summary>Checks device spacing after the scene has accepted the placement plane and obstacle checks.</summary>
         public bool PlaceDevice(int instanceId, float x, float z, float clearance = 0.15f, float? angle = null)
         {

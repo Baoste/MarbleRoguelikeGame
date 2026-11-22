@@ -45,7 +45,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/BloodFactory.lua");
-            profile.Metadata = new MResMetadataData { name = "造血工厂", description = "弹珠撞击后价值减半并向下取整，回复减半后价值×5的血量（不超过血量上限），不消耗弹珠。每次处理扣1耐久；价值已为0不触发。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "造血工厂", description = "弹珠撞击后价值减半并向下取整，回复减半后价值×5的血量（不超过血量上限），不消耗弹珠。每次处理扣1耐久；价值已为0不触发。", value = 120, purchasePrice = 14, rarity = "uncommon", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/BloodFactory.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",
                 Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/BloodFactory.device.json") } };

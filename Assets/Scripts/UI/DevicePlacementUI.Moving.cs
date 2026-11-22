@@ -4,6 +4,9 @@ using UnityEngine;
 
 public sealed partial class DevicePlacementUI
 {
+    private static readonly Color ValidOutline = new Color(0.2f, 1f, 0.35f);
+    private static readonly Color InvalidOutline = new Color(1f, 0.15f, 0.12f);
+
     public bool IsMovingPlacedDevice { get; private set; }
     public bool CanEdit => isActiveAndEnabled && Controller != null && Controller.IsReady &&
         !Controller.Paused && Controller.Session.Phase == RoundPhase.Build && BoardRoot != null;
@@ -62,14 +65,32 @@ public sealed partial class DevicePlacementUI
     public void UpdatePlacementPointer(Vector2 pointer)
     {
         ValidateSelection();
-        if (!TryGetSelectedDevice(out _) || !previewObject) return;
+        if (!previewObject) return;
         if (!ViewCamera) ViewCamera = Camera.main;
-        if (!ViewCamera || (SellArea && SellArea.ContainsPointer(pointer)) || !TryGetBoardPoint(pointer, out var point))
-        { previewObject.SetActive(false); return; }
-        SnapPoint(ref point);
-        SetDeviceTransform(previewObject.transform, point.x, point.z);
-        previewObject.transform.rotation *= Quaternion.Euler(0, previewAngle, 0);
+        bool overSellArea = SellArea && SellArea.ContainsPointer(pointer);
+        if ((!IsDraggingInventory && overSellArea) || !TryProjectOntoPlacementPlane(pointer, out var worldPoint))
+        {
+            previewObject.SetActive(false);
+            return;
+        }
+
+        var point = BoardRoot.InverseTransformPoint(worldPoint);
+        Transform pose = SetPreviewPose(ref point);
+        bool canPlace = !overSellArea && IsInsidePlacementPlane(worldPoint) && IsInsidePlacementPlane(pose.position) &&
+            Controller.CanPlaceDevice(SelectedInstanceId, point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation) &&
+            !PointerOnControl(pointer) && (!IsDraggingInventory || !TryFindOfferTarget(pointer, out _));
+        previewOutline ??= new QuickOutline(previewObject);
+        previewOutline.SetColor(canPlace ? ValidOutline : InvalidOutline);
         previewObject.SetActive(true);
+    }
+
+    private Transform SetPreviewPose(ref Vector3 point)
+    {
+        SnapPoint(ref point);
+        var pose = previewObject.transform;
+        SetDeviceTransform(pose, point.x, point.z);
+        pose.rotation *= Quaternion.Euler(0, previewAngle, 0);
+        return pose;
     }
 
     private void SnapPoint(ref Vector3 point)
@@ -101,13 +122,19 @@ public sealed partial class DevicePlacementUI
     private bool CommitSelected(Vector3 point)
     {
         if (!TryGetSelectedDevice(out _) || !previewObject) return false;
-        SnapPoint(ref point);
-        SetDeviceTransform(previewObject.transform, point.x, point.z);
-        previewObject.transform.rotation *= Quaternion.Euler(0, previewAngle, 0);
-        // Package geometry already includes the authored root scale; only the board scale remains.
-        var scale = BoardRoot.lossyScale;
-        return IsInsidePlacementPlane(previewObject.transform.position) && Controller.PlaceDevice(SelectedInstanceId,
-            point.x, point.z, previewObject.transform.position, Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z)), previewAngle, previewObject.transform.rotation);
+        Transform pose = SetPreviewPose(ref point);
+        return IsInsidePlacementPlane(pose.position) && Controller.PlaceDevice(SelectedInstanceId,
+            point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation);
+    }
+
+    private float PlacementRadiusScale
+    {
+        get
+        {
+            // Packaged footprints already include the device's authored scale.
+            var scale = BoardRoot.lossyScale;
+            return Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
+        }
     }
 
     public bool TrySellSelected()

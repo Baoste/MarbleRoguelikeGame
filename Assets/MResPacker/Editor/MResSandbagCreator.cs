@@ -43,7 +43,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/Sandbag.lua");
-            profile.Metadata = new MResMetadataData { name = "沙包", description = "撞击使连击数加1，并给弹珠增加连击数×1的基础价值；连击保留3/√连击数秒，最短0.3秒，超时清零。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "沙包", description = "撞击使连击数加1，并给弹珠增加连击数×1的基础价值；连击保留3/√连击数秒，最短0.3秒，超时清零。", value = 120, purchasePrice = 14, rarity = "uncommon", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/Sandbag.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",
                 Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/Sandbag.device.json") } };

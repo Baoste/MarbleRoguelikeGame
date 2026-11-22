@@ -103,7 +103,7 @@ end
 - `SetDeviceScoreMultiplier(amount)`：替换当前累计装置倍率；故障装置抽到 0 时设为 0，随后仍可通过 `AddScoreMultiplier` 增加，进入得分区按当前累计值结算。
 - `CountPlacedDevices(excludedInstanceId = 0)`：实时统计已放置实例，可排除指定实例。more is more 排除自身，每个其他装置提供 +2，单次最多 +20；less is more 同样排除自身，从 +20 起每个其他装置减 2，最低为 0。耗尽但仍在场的装置计入，库存不计；公式由各自 Lua 决定。
 - `RoundId` 配合 Lua 实例状态：雪糕机每回合依次提供 ×10、×9 至 ×2，之后 ×1 无效果；每次只累加“倍率 − 1”，有效作用扣耐久，下一回合重置次数。
-- `OnOffer` / `Accept` 与 `GetRoundValue` / `SetRoundValue`：接受库存物品并准备下一回合的实例数值；回调成功才同时保存数值并消耗物品。大胃袋用 Lua 按普通/稀有/史诗/传奇增加 2/4/6/8，碰撞时施加增量，下一轮布置清空。
+- `OnOffer` / `Accept` 与 `GetRoundValue` / `SetRoundValue`：接受库存物品并准备下一回合的实例数值；回调成功才同时保存数值并消耗物品。大胃袋用 Lua 按普通/罕见/稀有/传奇增加 2/4/6/8，碰撞时施加增量，下一轮布置清空。
 - `AddRushChance`、`Roll`、`BreakPinsOnCross`、`RemoveDevice`：概率、随机与通用场景操作。
 
 磁力脚本通过 `DeviceFieldContext` 的距离、方向、磁性参数计算作用力，再调用 `AddRadialForce`。C# 只负责通用物理执行及总力/速度上限，磁极方向与距离衰减公式在包内 Lua。

@@ -47,7 +47,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/CashOut.lua");
-            profile.Metadata = new MResMetadataData { name = "赚赚", description = "弹珠进入时，若此前成功触发过其他装置实例，则销毁并返还四舍五入后的当前价值×累计装置倍率金币；否则保持速度大小从棋盘下方射出。每次成功处理扣1耐久，不计回合分数。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "赚赚", description = "弹珠进入时，若此前成功触发过其他装置实例，则销毁并返还四舍五入后的当前价值×累计装置倍率金币；否则保持速度大小从棋盘下方射出。每次成功处理扣1耐久，不计回合分数。", value = 120, purchasePrice = 9, rarity = "common", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/CashOut.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/CashOut.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "CashOutAuthoring"); AssetDatabase.SaveAssets(); return profile;

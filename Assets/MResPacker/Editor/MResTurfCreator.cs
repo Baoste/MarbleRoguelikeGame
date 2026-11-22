@@ -51,7 +51,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/Turf.lua");
-            profile.Metadata = new MResMetadataData { name = "草皮", description = "首次碰撞后5秒内有另一颗弹珠碰撞，生成价值与累计装置倍率分别为两球平均值的新球，向下以速度6射出。原球正常反弹，成功生成后重置并扣1耐久；同球及自身后代不参与配对。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "草皮", description = "首次碰撞后5秒内有另一颗弹珠碰撞，生成价值与累计装置倍率分别为两球平均值的新球，向下以速度6射出。原球正常反弹，成功生成后重置并扣1耐久；同球及自身后代不参与配对。", value = 120, purchasePrice = 14, rarity = "uncommon", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/Turf.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",
                 Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/Turf.device.json") } };

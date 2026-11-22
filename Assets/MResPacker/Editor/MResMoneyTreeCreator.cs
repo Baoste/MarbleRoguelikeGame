@@ -57,7 +57,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/MoneyTree.lua");
-            profile.Metadata = new MResMetadataData { name = "摇钱树", description = "无实体碰撞，弹珠每次进入区域计1次，离开后重入可重复计数；每累计10次发放5金币并扣1耐久。弹珠正常穿过，不消耗、不改价值或速度，计数每回合清零。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "摇钱树", description = "无实体碰撞，弹珠每次进入区域计1次，离开后重入可重复计数；每累计10次发放5金币并扣1耐久。弹珠正常穿过，不消耗、不改价值或速度，计数每回合清零。", value = 120, purchasePrice = 14, rarity = "uncommon", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/MoneyTree.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/MoneyTree.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "MoneyTreeAuthoring"); AssetDatabase.SaveAssets(); return profile;

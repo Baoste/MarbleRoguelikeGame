@@ -55,7 +55,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/Splitter.lua");
-            profile.Metadata = new MResMetadataData { name = "分流器", description = "弹珠进入后均分为3颗小球，每颗价值和体积各为原球1/3，继承累计装置倍率，保持入口速度大小从向下及左右30°三口射出。成功分流扣1耐久，分出的球再次经过同一台时直接穿过。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "分流器", description = "弹珠进入后均分为3颗小球，每颗价值和体积各为原球1/3，继承累计装置倍率，保持入口速度大小从向下及左右30°三口射出。成功分流扣1耐久，分出的球再次经过同一台时直接穿过。", value = 120, purchasePrice = 9, rarity = "common", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/Splitter.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/Splitter.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "SplitterAuthoring"); AssetDatabase.SaveAssets(); return profile;

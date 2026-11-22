@@ -73,10 +73,10 @@ namespace MRes
             if (type != "medicine" && type != "device") throw m.Error("type (medicine/device only)");
             metadata = new MResMetadata { name = m.String("name"), description = m.String("description"),
                 value = m.Float("value"), type = type == "medicine" ? MResItemType.Medicine : MResItemType.Device,
-                purchasePrice = m.Float("purchasePrice", 5, true), durability = m.Int("durability", 20, true),
+                purchasePrice = m.Float("purchasePrice", 9, true), durability = m.Int("durability", 20, true),
                 rarity = m.String("rarity", "common", true) };
             if (metadata.value < 0 || metadata.purchasePrice < 1 || (metadata.durability != -1 && (metadata.durability < 1 || metadata.durability > 10000)) ||
-                (metadata.rarity != "common" && metadata.rarity != "rare" && metadata.rarity != "epic" && metadata.rarity != "legendary"))
+                (metadata.rarity != "common" && metadata.rarity != "uncommon" && metadata.rarity != "rare" && metadata.rarity != "legendary"))
                 throw m.Error("value/purchasePrice/rarity/durability");
             string lua = manifest.String("lua", optional: true);
             if (lua != null) { Require(lua, MResEntryType.Lua); LuaSource = Text(lua); }

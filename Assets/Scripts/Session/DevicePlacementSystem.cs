@@ -1,16 +1,37 @@
 using Unity.Collections;
+using Unity.Entities;
 
 namespace MarblesECS
 {
     internal static class DevicePlacementSystem
     {
+        internal static bool CanPlace(SimulationContext context, int instanceId, float x, float z, float clearance, float? angle)
+            => TryValidatePlacement(context, instanceId, x, z, clearance, angle, out _, out _);
+
         internal static bool Place(SimulationContext context, int instanceId, float x, float z, float clearance, float? angle = null)
         {
+            if (!TryValidatePlacement(context, instanceId, x, z, clearance, angle, out var entity, out var device)) return false;
+            device.X = x;
+            device.Z = z;
+            device.Placed = true;
+            if (angle.HasValue) device.Angle = angle.Value % 360;
+            context.Manager.SetComponentData(entity, device);
+            var campaign = context.Campaign;
+            campaign.LayoutRevision++;
+            context.Campaign = campaign;
+            return true;
+        }
+
+        private static bool TryValidatePlacement(SimulationContext context, int instanceId, float x, float z, float clearance,
+            float? angle, out Entity entity, out OwnedDeviceData device)
+        {
+            entity = Entity.Null;
+            device = default;
             if (!MarbleRules.IsFinite(x) || !MarbleRules.IsFinite(z) ||
                 !MarbleRules.IsFinite(clearance) || clearance < 0 ||
                 (angle.HasValue && !MarbleRules.IsFinite(angle.Value)) ||
-                !CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
-            var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+                !CampaignStateUtility.FindDevice(context, instanceId, out entity)) return false;
+            device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
             var definition = CampaignStateUtility.Device(context, device.DefinitionId);
             float radius = definition.PlacementRadius;
             if (radius <= 0) return false;
@@ -28,14 +49,6 @@ namespace MarblesECS
                     otherDefinition.PlacementCenter(other.X, other.Z, other.Angle, out float otherX, out float otherZ);
                     if (Overlaps(centerX, centerZ, otherX, otherZ, distance)) return false;
                 }
-            device.X = x;
-            device.Z = z;
-            device.Placed = true;
-            if (angle.HasValue) device.Angle = angle.Value % 360;
-            context.Manager.SetComponentData(entity, device);
-            var campaign = context.Campaign;
-            campaign.LayoutRevision++;
-            context.Campaign = campaign;
             return true;
         }
 

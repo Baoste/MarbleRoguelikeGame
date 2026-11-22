@@ -83,7 +83,7 @@ namespace MResPacker
             if (durability != Math.Truncate(durability) || (durability != -1 && (durability < 1 || durability > 10000))) throw new FormatException("Invalid durability.");
             new MResMetadataData { name = (string)metadata["name"], description = (string)metadata["description"],
                 value = (float)(double)metadata["value"], type = (string)metadata["type"],
-                purchasePrice = metadata.TryGetValue("purchasePrice", out var purchaseNumber) ? (float)(double)purchaseNumber : 5,
+                purchasePrice = metadata.TryGetValue("purchasePrice", out var purchaseNumber) ? (float)(double)purchaseNumber : 9,
                 rarity = metadata.TryGetValue("rarity", out var rarityName) ? (string)rarityName : "common", durability = (int)durability }.Validate();
             if (m.TryGetValue("lua", out var lua) && lua != null)
             {

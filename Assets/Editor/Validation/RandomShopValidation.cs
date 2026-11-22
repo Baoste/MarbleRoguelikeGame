@@ -7,7 +7,7 @@ using UnityEngine;
 namespace MarblesECS.Editor
 {
     /// <summary>Isolated campaign checks: no scene objects or live player state are changed.</summary>
-    public static class RandomShopValidation
+    public static partial class RandomShopValidation
     {
         private static int assertions;
 
@@ -30,6 +30,7 @@ namespace MarblesECS.Editor
             SamplingAndSeeds(balance);
             PurchaseAndRoundFlow(balance);
             CatalogShortages(balance);
+            WeightedRarities(balance);
             Debug.Log("RANDOM_SHOP_VALIDATION_PASSED: " + assertions + " assertions; " +
                 balance.Devices.Length + " devices reachable; 4 device offers, shared run seed, exact draw counts, " +
                 "purchases, sold-out protection, refresh inventory and two settlements.");

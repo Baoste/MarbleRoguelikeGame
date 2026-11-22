@@ -49,7 +49,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/IceCreamMachine.lua");
-            profile.Metadata = new MResMetadataData { name = "雪糕机", description = "每台每回合首次撞击提供×10倍率，之后每次有效触发递减1，依次×10、×9至×2，最低×1。每次累加倍率减1，到得分区统一计算；有增量时扣1耐久，降至×1后不生效、不扣耐久，新回合重置。原球正常反弹。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "雪糕机", description = "每台每回合首次撞击提供×10倍率，之后每次有效触发递减1，依次×10、×9至×2，最低×1。每次累加倍率减1，到得分区统一计算；有增量时扣1耐久，降至×1后不生效、不扣耐久，新回合重置。原球正常反弹。", value = 120, purchasePrice = 9, rarity = "common", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/IceCreamMachine.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/IceCreamMachine.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "IceCreamMachineAuthoring"); AssetDatabase.SaveAssets(); return profile;

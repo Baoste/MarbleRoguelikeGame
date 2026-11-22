@@ -68,7 +68,7 @@ namespace MResPacker
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab;
             profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/AccelerationField.lua");
-            profile.Metadata = new MResMetadataData { name = "加速力场", description = "在长方形区域内，持续沿箭头方向对弹珠施加恒力。", value = 120, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "加速力场", description = "在长方形区域内，持续沿箭头方向对弹珠施加恒力。", value = 120, purchasePrice = 9, rarity = "common", type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/AccelerationField.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",
                 Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/AccelerationField.device.json") } };

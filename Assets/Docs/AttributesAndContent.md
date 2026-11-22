@@ -20,7 +20,7 @@
 - 全部装置位于 `Resources/Devices/*.mres`，当前为 35 种（34 个 MResPacker 成品和 Multi Ding），外观、碰撞体和 Lua 行为随包加载，不再绑定装置 prefab。详见 [MRes 装置目录](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
 - 传送门按一对购买，两门分别放置并共享配对 ID；两门都放置后才可传送。
 
-装置基础购买价 `metadata.purchasePrice` 当前均为 5，单件出售价格读取 `metadata.value`；普通/稀有/史诗/传奇由 `metadata.rarity` 表示，耐久读取 `metadata.durability`（默认 20，-1 无限）。旧 `Drugs` 配置已删除，装置初始赠送以包内配置为准。
+装置基础购买价 `metadata.purchasePrice` 按普通/罕见/稀有/传奇分别为 9/14/23/38，单件出售价格读取 `metadata.value`；普通/罕见/稀有/传奇由 `metadata.rarity` 表示，耐久读取 `metadata.durability`（默认 20，-1 无限）。旧 `Drugs` 配置已删除，装置初始赠送以包内配置为准。
 
 `Multi Ding` 的定义 ID 为 113，行为通过 Lua 实现；当前包的 `StartingCount` 为 1，没有额外的 C# 开局赠送规则。Rush Ding 已移出当前装置目录。`SourceId` 继续记录原始来源编号。
 

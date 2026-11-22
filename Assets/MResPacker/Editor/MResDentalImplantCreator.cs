@@ -45,7 +45,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/DentalImplant.lua");
-            profile.Metadata = new MResMetadataData { name = "种植牙", description = "首次放置为无效果的洞；向其拖入一件背包中的种植牙可逐级升级。不锈钢牙每次撞击增加2点累计倍率、耐久5；陶瓷牙增加5点、耐久8；金刚钻牙增加20点、耐久20。每次有效撞击扣1，耗尽立即退回洞。升级补满耐久，最高阶段不再接受；阶段跨回合保留，新回合补满当前阶段耐久。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "种植牙", description = "首次放置为无效果的洞；向其拖入一件背包中的种植牙可逐级升级。不锈钢牙每次撞击增加2点累计倍率、耐久5；陶瓷牙增加5点、耐久8；金刚钻牙增加20点、耐久20。每次有效撞击扣1，耗尽立即退回洞。升级补满耐久，最高阶段不再接受；阶段跨回合保留，新回合补满当前阶段耐久。", value = 120, purchasePrice = 14, rarity = "uncommon", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/DentalImplant.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/DentalImplant.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "DentalImplantAuthoring"); AssetDatabase.SaveAssets(); return profile;

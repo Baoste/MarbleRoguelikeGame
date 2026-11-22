@@ -49,7 +49,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(rootPath + "/Lua/Duplicator.lua");
-            profile.Metadata = new MResMetadataData { name = "复制体", description = "碰撞后生成一颗初始价值为0的复制球，尺寸和质量不变，沿入射速度的镜面反射方向等速射出；原球正常反弹。复制球可触发其他装置。每颗原球仅复制一次，自己的复制后代不再触发，成功复制扣1耐久。", value = 120, purchasePrice = 5, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "复制体", description = "碰撞后生成一颗初始价值为0的复制球，尺寸和质量不变，沿入射速度的镜面反射方向等速射出；原球正常反弹。复制球可触发其他装置。每颗原球仅复制一次，自己的复制后代不再触发，成功复制扣1耐久。", value = 120, purchasePrice = 23, rarity = "rare", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/Duplicator.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json",
                 Source = AssetDatabase.LoadAssetAtPath<TextAsset>(rootPath + "/Data/Duplicator.device.json") } };

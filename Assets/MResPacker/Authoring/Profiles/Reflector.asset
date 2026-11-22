@@ -20,7 +20,7 @@ MonoBehaviour:
     description: "\u4FDD\u7559\u5165\u5C04\u901F\u5EA6\u5927\u5C0F\uFF0C\u5728\u955C\u9762\u53CD\u5C04\u65B9\u5411\u7684
       \xB130\xB0 \u8303\u56F4\u5185\u968F\u673A\u5F39\u51FA\u3002"
     value: 120
-    purchasePrice: 5
+    purchasePrice: 9
     rarity: common
     durability: 20
     type: device
