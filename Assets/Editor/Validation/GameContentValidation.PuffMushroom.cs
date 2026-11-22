@@ -130,15 +130,38 @@ namespace MarblesECS.Editor
                     Check(bridge.TryGetDevicePose(owned.InstanceId, out var pose), "loaded mushroom has physics pose");
                     var uphill = -BallInteractionSystem.Down(pose); var spawn = pose.Position + pose.Up * .12f - uphill * .9f;
                     void Step() { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); simulation.AfterPhysics(bridge); }
+
+                    var multiplier = c.Balance.Devices.Single(d => d.Id == 113);
+                    CampaignStateUtility.CreateDevice(c, multiplier, multiplier.Price);
+                    Check(CampaignStateUtility.FindDevice(c, c.Campaign.NextDeviceId, out var multiplierEntity), "create Multi Ding in the test scene");
+                    var multiplierData = c.Manager.GetComponentData<OwnedDeviceData>(multiplierEntity);
+                    multiplierData.Placed = true;
+                    c.Manager.SetComponentData(multiplierEntity, multiplierData);
+                    var multiplierSnapshot = simulation.GetOwnedDevices().Single(d => d.InstanceId == multiplierData.InstanceId);
+                    using var multiplierView = MResDeviceView.Create(multiplierSnapshot, board.transform,
+                        c.DeviceScripts.Get(multiplierData.InstanceId, multiplier.Id));
+                    var target = multiplierView.Root.transform;
+                    target.localPosition = new Vector3(2, 0, 0);
+                    multiplierView.Root.SetActive(true);
+                    void HitMultiplier(MarbleKey ball)
+                    {
+                        Check(bridge.TryMove(ball, target.TransformPoint(new Vector3(0, .2f, .5f)), -target.forward * 4),
+                            "approach the actual Multi Ding collider");
+                        for (int n = 0; n < 20; n++) Step();
+                    }
+
                     simulation.FireOnce(); simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge);
                     var key = c.Marbles.Keys.Single(); const float radius = .04f; float distance = pose.Radius + radius + .02f;
+                    HitMultiplier(key);
+                    Near(multiplier.ScoreMultiplier, c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier,
+                        "parent activates the once-per-ball multiplier");
                     var center = pose.Position + pose.Up * (radius + .005f);
                     obstacle = new GameObject("BlockedFourthMouth"); SceneManager.MoveGameObjectToScene(obstacle, scene);
                     obstacle.transform.position = center + Quaternion.AngleAxis(-60 + 3 * (120f / 7), pose.Up) * uphill * distance;
                     obstacle.AddComponent<SphereCollider>().radius = .015f; Physics.SyncTransforms();
                     Check(bridge.TryMove(key, pose.Position + pose.Up * .12f, Vector3.zero), "place ball inside mushroom sensor"); Step();
                     Check(c.Marbles.ContainsKey(key) && c.Marbles.Count == 1 && bridge.ActiveBodyCount == 1, "fourth blocked mouth rolls back all physical children");
-                    Near(20, simulation.GetOwnedDevices().Single().RemainingDurability, "physical obstruction is free");
+                    Near(20, simulation.GetOwnedDevices().Single(d => d.InstanceId == owned.InstanceId).RemainingDurability, "physical obstruction is free");
                     UnityEngine.Object.DestroyImmediate(obstacle); obstacle = null;
                     Check(bridge.TryMove(key, spawn, Vector3.zero), "exit before reentry"); Step();
                     float speed = 0;
@@ -168,7 +191,14 @@ namespace MarblesECS.Editor
                     for (int n = 0; n < 130; n++) { Step(); bridge.TryGetState(returning, out var state); if (Vector3.Dot(state.Position - pose.Position, uphill) > .9f) break; }
                     Check(bridge.TryGetState(returning, out var output) && Vector3.Dot(output.Position - pose.Position, uphill) > .9f, "descendant passes straight through mushroom and mouths");
                     VectorNear(uphill, output.LinearVelocity.normalized, "self return never redirects or reflects");
-                    Near(1, bridge.ActiveBodyCount, "self return creates no more children"); Near(19, simulation.GetOwnedDevices().Single().RemainingDurability, "self return is free");
+                    Near(1, bridge.ActiveBodyCount, "self return creates no more children");
+                    Near(19, simulation.GetOwnedDevices().Single(d => d.InstanceId == owned.InstanceId).RemainingDurability, "self return is free");
+                    HitMultiplier(returning);
+                    Near(1 + 2 * (multiplier.ScoreMultiplier - 1),
+                        c.Manager.GetComponentData<MarbleScore>(c.Marbles[returning]).ScoreMultiplier,
+                        "child inherits the multiplier and can activate the same once-per-ball device independently");
+                    Near(multiplier.Durability - 2, simulation.GetOwnedDevices().Single(d => d.InstanceId == multiplierData.InstanceId).RemainingDurability,
+                        "parent and child each spend one use on a physical impact");
                 }
                 finally { if (obstacle != null) UnityEngine.Object.DestroyImmediate(obstacle); view?.Dispose(); simulation.Dispose(); bridge.Dispose(); UnityEngine.Object.DestroyImmediate(board); SceneManager.UnloadSceneAsync(scene); }
             }

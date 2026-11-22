@@ -25,7 +25,7 @@ public sealed class DiegeticUIHit : MonoBehaviour, IPointerEnterHandler, IPointe
     public void OnEndDrag(PointerEventData e)
     {
         if(!Owner||!dragged||e.button!=PointerEventData.InputButton.Left)return;
-        if(Kind==2){Owner.EndDeviceDrag(e.position,e.pointerCurrentRaycast.gameObject);return;}
+        if(Kind==2){dragged=false;Owner.EndDeviceDrag(e.position,e.pointerCurrentRaycast.gameObject);return;}
         if(Kind!=0)return;
         float dy=e.position.y-dragStart.y;
         float threshold=Mathf.Max(12,Screen.height*.012f);
@@ -36,7 +36,7 @@ public sealed class DiegeticUIHit : MonoBehaviour, IPointerEnterHandler, IPointe
     {
         if(!Owner || !isActiveAndEnabled)return;
         var button=GetComponent<Button>();if(button && !button.IsInteractable())return;
-        switch(Kind){case 0:Owner.TryToggleLever();break;case 2:Owner.SelectDevice(Index);break;
+        switch(Kind){case 0:Owner.TryToggleLever();break;
             case 4:Owner.ChangeDevicePage(Index);break;case 5:Owner.TryContinue();break;}
     }
     void OnDisable(){if(Owner){Owner.Hover(Kind,Index,false);if(dragged && Kind==2)Owner.CancelDeviceDrag();}}

@@ -8,5 +8,6 @@
   "Range": 60,
   "Strength": 0,
   "Value": 1,
+  "RotationLocked": true,
   "SourceId": "PuffMushroom"
 }

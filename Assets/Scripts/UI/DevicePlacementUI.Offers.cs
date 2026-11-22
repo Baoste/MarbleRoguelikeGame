@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using MarblesECS;
 using UnityEngine;
@@ -5,84 +6,115 @@ using UnityEngine.EventSystems;
 
 public sealed partial class DevicePlacementUI
 {
-    public bool IsDraggingInventory { get; private set; }
+    private enum DropTarget { Blocked, Board, Backpack, Sale, Offer }
+
+    public bool IsDraggingInventory => IsDraggingDevice && !IsMovingPlacedDevice;
+    internal bool IsDraggingDevice => SelectedInstanceId != 0;
+    internal event Action DeviceDropFinished;
     private Vector2 dragPointer;
     private readonly List<RaycastResult> offerUiHits = new List<RaycastResult>();
+    private EventSystem pointerEventSystem;
+    private PointerEventData pointerEvent;
 
     public bool BeginInventoryDrag(int instanceId, Vector2 pointer)
     {
-        if (Controller == null || Controller.Paused || !TryGetDevice(instanceId, out var device) || device.Placed) return false;
-        BeginPlacement(instanceId);
-        IsDraggingInventory = SelectedInstanceId == instanceId;
+        if (!CanEdit || IsDraggingDevice || !TryGetDevice(instanceId, out var device) || device.Placed) return false;
+        BeginDrag(device);
         UpdateInventoryDrag(pointer);
-        return IsDraggingInventory;
+        return true;
     }
     public void UpdateInventoryDrag(Vector2 pointer)
     {
         if (!IsDraggingInventory) return;
         dragPointer = pointer;
         UpdatePlacementPointer(pointer);
-        if (!IsDraggingInventory) return;
-        LastFeedback = TryFindOfferTarget(pointer, out var target)
-            ? "松开投入「" + target.Name + "」，消耗这一件库存装置。"
-            : "拖到空白棋盘放置，或拖到可接收装置上投入；右键或 Esc 取消。";
     }
-    public bool EndInventoryDrag(Vector2 pointer, GameObject pointerTarget = null)
+    public bool EndInventoryDrag(Vector2 pointer, GameObject pointerTarget = null) =>
+        IsDraggingInventory && FinishDrag(pointer, pointerTarget);
+
+    private DropTarget FindDropTarget(Vector2 pointer, GameObject pointerTarget, out OwnedDeviceSnapshot receiver)
     {
-        if (!IsDraggingInventory) return false;
-        IsDraggingInventory = false;
-        if (!CanEdit || !TryGetSelectedDevice(out _))
-        { LastFeedback = "已取消拖放，装置保留在背包。"; CancelPlacement(); return false; }
-        // Dropping over the sale area only selects the sale; a separate left click must confirm it.
-        if (SellArea && SellArea.ContainsPointer(pointer))
-        { if (previewObject) previewObject.SetActive(false); LastFeedback = "左键点击红色区域确认出售，右键取消。"; return false; }
-        if (IsControl(pointerTarget) || PointerOnControl(pointer))
-        { LastFeedback = "已取消拖放，装置保留在背包。"; CancelPlacement(); return false; }
-        if (TryOfferSelected(pointer, out bool accepted)) return accepted;
-        bool placed = false;
-        if (previewObject != null && TryGetBoardPoint(pointer, out var point))
+        receiver = default;
+        if (SellArea && SellArea.ContainsPointer(pointer)) return DropTarget.Sale;
+        if (PointerOnBackpack(pointer)) return DropTarget.Backpack;
+        if (IsControl(pointerTarget) || PointerOnControl(pointer)) return DropTarget.Blocked;
+        return (!IsMovingPlacedDevice || BoardPointerMoved(pointer)) && TryFindOfferTarget(pointer, out receiver)
+            ? DropTarget.Offer : DropTarget.Board;
+    }
+
+    private bool FinishDrag(Vector2 pointer, GameObject pointerTarget)
+    {
+        if (!TryGetSelectedDevice(out var device))
         {
-            placed = CommitSelected(point);
+            CancelPlacement();
+            return false;
         }
-        LastFeedback = placed ? "装置已放置。" : "此处不能放置，装置保留在背包。";
-        CancelPlacement(); return placed;
+
+        bool committed;
+        switch (FindDropTarget(pointer, pointerTarget, out var receiver))
+        {
+            case DropTarget.Sale:
+                committed = Controller.SellDevice(device.InstanceId);
+                LastFeedback = committed ? $"已出售「{device.Name}」，获得 {device.SellPrice} 金币。" : "出售未完成。";
+                break;
+            case DropTarget.Backpack:
+                committed = device.Placed && Controller.RemoveDevicePlacement(device.InstanceId);
+                LastFeedback = device.Placed ? (committed ? "已收回背包。" : "收回未完成。") : "已放回背包。";
+                break;
+            case DropTarget.Offer:
+                committed = Controller.TryOfferDevice(device.InstanceId, receiver.InstanceId);
+                LastFeedback = committed ? $"已投入「{receiver.Name}」。\n{Controller.GetDeviceStatus(receiver.InstanceId)}"
+                    : "目标未接受，装置已退回原处。";
+                break;
+            case DropTarget.Board:
+                committed = TryGetBoardPoint(pointer, out var point) && CommitSelected(point);
+                LastFeedback = committed ? string.Empty : "此处不能放置，装置已退回原处。";
+                break;
+            default:
+                committed = false;
+                LastFeedback = "已取消拖放，装置已退回原处。";
+                break;
+        }
+        if (committed) SyncPlacedObjects();
+        CancelPlacement();
+        DeviceDropFinished?.Invoke();
+        return committed;
     }
-    private bool TryOfferSelected(Vector2 pointer, out bool accepted)
-    {
-        accepted = false;
-        if (!TryFindOfferTarget(pointer, out var target)) return false;
-        accepted = Controller.TryOfferDevice(SelectedInstanceId, target.InstanceId);
-        LastFeedback = accepted ? "已投入「" + target.Name + "」。\n" + Controller.GetDeviceStatus(target.InstanceId)
-            : "目标未接受，装置保留在背包。";
-        CancelPlacement(); return true;
-    }
+
     private bool TryFindOfferTarget(Vector2 pointer, out OwnedDeviceSnapshot target)
     {
         target = default;
-        if (SelectedInstanceId == 0 || Controller == null || !Controller.IsReady || Controller.Paused || BoardRoot == null) return false;
+        if (!CanEdit || SelectedInstanceId == 0) return false;
         if (ViewCamera == null) ViewCamera = Camera.main;
-        if (ViewCamera == null || !TryGetBoardPoint(pointer, out var point)) return false;
-        float nearest = float.PositiveInfinity;
-        foreach (var device in Controller.GetOwnedDevices())
-        {
-            if (!device.Placed || device.InstanceId == SelectedInstanceId) continue;
-            float distance = new Vector2(point.x - device.PlacementX, point.z - device.PlacementZ).sqrMagnitude;
-            if (distance > device.Radius * device.Radius || distance >= nearest || !Controller.CanOfferDevice(SelectedInstanceId, device.InstanceId)) continue;
-            nearest = distance; target = device;
-        }
-        return target.InstanceId != 0;
+        if (ViewCamera == null || !TryPickPlaced(pointer, out var view) ||
+            !Controller.CanOfferDevice(SelectedInstanceId, view.Device.InstanceId)) return false;
+        target = view.Device;
+        return true;
     }
-    private bool PointerOnControl(Vector2 position)
+    private bool PointerOnControl(Vector2 position, bool includePanels = false)
     {
-        if (EventSystem.current == null) return false;
+        var events = EventSystem.current;
+        if (events == null) return false;
+        if (pointerEventSystem != events)
+        {
+            pointerEventSystem = events;
+            pointerEvent = new PointerEventData(events);
+        }
+        pointerEvent.position = position;
         offerUiHits.Clear();
-        EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = position }, offerUiHits);
+        events.RaycastAll(pointerEvent, offerUiHits);
         foreach (var hit in offerUiHits)
-            if (IsControl(hit.gameObject)) return true;
+        {
+            var target = hit.gameObject;
+            if (!target) continue;
+            if (IsControl(target) || (includePanels && target.TryGetComponent<CanvasGroup>(out var panel) &&
+                panel.blocksRaycasts && panel.alpha > 0f)) return true;
+        }
         return false;
     }
     private static bool IsControl(GameObject target) => target != null &&
         (target.GetComponentInParent<UnityEngine.UI.Selectable>() != null ||
+         target.GetComponentInParent<ShopOfferItemUI>() != null ||
          ExecuteEvents.GetEventHandler<IPointerClickHandler>(target) != null ||
          ExecuteEvents.GetEventHandler<IBeginDragHandler>(target) != null);
 }

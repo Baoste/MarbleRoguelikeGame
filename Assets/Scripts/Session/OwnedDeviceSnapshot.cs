@@ -21,6 +21,7 @@ namespace MarblesECS
         public double RushChanceAdd;
         public DeviceKind Kind;
         public string Description;
+        public bool RotationLocked;
         public float Angle, Range, Strength;
         public int PairId;
     }

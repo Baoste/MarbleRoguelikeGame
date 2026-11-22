@@ -5,7 +5,7 @@ using UnityEngine.Scripting;
 
 namespace MarblesECS
 {
-    /// <summary>Build-phase inventory offer. Writes and acceptance commit only after Lua completes successfully.</summary>
+    /// <summary>Build-phase device offer. Writes and acceptance commit only after Lua completes successfully.</summary>
     [Preserve]
     public sealed class DeviceOfferContext
     {
@@ -49,7 +49,7 @@ namespace MarblesECS
         public int RemainingDurability => DeviceDurabilitySystem.Remaining(C, device);
         public void SetDurabilityLimit(int maximum) { _ = C; device = DeviceDurabilitySystem.WithLimit(device, maximum); }
         public void RestoreDurability() => device = DeviceDurabilitySystem.Restored(C, device);
-        /// <summary>Accept exactly the offered inventory instance; does not spend durability or award sale coins.</summary>
+        /// <summary>Marks the offered device instance for consumption if the callback succeeds.</summary>
         public void Accept() { _ = C; Accepted = true; }
         public void SetStatus(string text) { _ = C; status = text ?? string.Empty; }
         internal void Commit(Entity target)

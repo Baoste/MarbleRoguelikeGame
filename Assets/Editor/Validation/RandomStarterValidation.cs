@@ -17,8 +17,10 @@ namespace MarblesECS.Editor
             var balance = GameBalanceLoader.Load();
             foreach (var device in balance.Devices) device.StartingCount = 0;
             balance.Devices[0].StartingCount = 1;
-            balance.Campaign.MaxOwnedDevices = 200;
             var physics = new EmptyPhysics();
+            balance.Campaign.MaxOwnedDevices = balance.Devices[0].PurchaseQuantity;
+            ValidateAllStartingDevices(balance, physics);
+            balance.Campaign.MaxOwnedDevices = 200;
             using (var simulation = new MarbleSimulation(balance))
             {
                 const uint seed = 240127;
@@ -97,7 +99,38 @@ namespace MarblesECS.Editor
                         "actual paired starter creates its whole linked group");
                 }
             }
-            Debug.Log("RANDOM_STARTER_VALIDATION_PASSED: seed, device catalog, pairs, wallet, restart and two-round flow.");
+            Debug.Log("RANDOM_STARTER_VALIDATION_PASSED: full catalog, random draws, pairs, wallet, restart and two-round flow.");
+        }
+
+        private static void ValidateAllStartingDevices(GameBalance balance, IMarblePhysics physics)
+        {
+            const uint seed = 240127;
+            using (var simulation = new MarbleSimulation(balance))
+            {
+                simulation.StartSession(physics, grantAllStartingDevices: true, randomSeed: seed);
+                var inventory = simulation.GetOwnedDevices();
+                int count = balance.Devices.Sum(d => d.PurchaseQuantity);
+                Check(inventory.Length == count && inventory.All(d => !d.Placed && d.PurchasePrice == 0),
+                    "full starter mode grants every device pack to the backpack for free");
+                foreach (var definition in balance.Devices)
+                {
+                    var pack = inventory.Where(d => d.DefinitionId == definition.Id).ToArray();
+                    Check(pack.Length == definition.PurchaseQuantity, "one complete starter pack for " + definition.Name);
+                    if (pack.Length > 1)
+                        Check(pack.All(d => d.PairId > 0 && d.PairId == pack[0].PairId), "starter pack shares its pair identity");
+                }
+                Check(simulation.Session.Phase == RoundPhase.Build && simulation.Session.Coins == balance.Campaign.StartingCoins,
+                    "full starter mode starts in placement at the configured wallet balance");
+                Check(simulation.GetRandomStartingDeviceIds().Length == 0 && simulation.Context.Round.RandomState == seed,
+                    "granting the full catalog consumes no shared random draws");
+                Check(simulation.BeginRound() && simulation.GetOwnedDevices().Length == count,
+                    "beginning play carries the starting backpack into the first round");
+                simulation.StartSession(physics, grantAllStartingDevices: true, randomSeed: seed);
+                Check(simulation.GetOwnedDevices().Length == count, "restarting replaces the full starting inventory");
+                simulation.StartSession(physics, grantAllStartingDevices: false, randomSeed: seed);
+                Check(simulation.GetOwnedDevices().Length == balance.Devices[0].PurchaseQuantity,
+                    "turning off full starter mode uses the authored starting count");
+            }
         }
 
         private static void Check(bool condition, string message)

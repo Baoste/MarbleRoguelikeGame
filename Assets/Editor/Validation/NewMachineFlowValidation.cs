@@ -377,14 +377,14 @@ namespace MarblesECS.Editor
             var device = game.GetOwnedDevices().Single(d => d.InstanceId == id);
             var card = CardFor(id);
             var e = ClickVisible(card.gameObject);
-            Check(rig.Placement.SelectedInstanceId == id, "Actual card click selects real instance #" + id);
+            Check(rig.Placement.SelectedInstanceId == 0, "Actual card click leaves placement idle");
             var invalid = rig.Placement.BoardRoot.TransformPoint(new Vector3(0, 0, game.PlacementSurface.BottomWidth));
             Check(!game.PlaceDevice(id, 0, game.PlacementSurface.BottomWidth, invalid),
                 "Controller refuses a placement outside the new trapezoid");
             Check(FindFreePoint(device, out var point), "Found a visible, unobstructed new-board point for #" + id);
             // Dispatch the same drag handlers as the EventSystem; this exercises screen-to-board conversion.
             ExecuteEvents.Execute(card.gameObject, e, ExecuteEvents.beginDragHandler);
-            Check(rig.Placement.IsDraggingInventory, "Real card starts inventory drag for #" + id);
+            Check(rig.Placement.IsDraggingInventory && rig.Placement.SelectedInstanceId == id, "Real card starts inventory drag for #" + id);
             e.position = point;
             e.pointerCurrentRaycast = default;
             ExecuteEvents.Execute(card.gameObject, e, ExecuteEvents.dragHandler);
@@ -444,10 +444,12 @@ namespace MarblesECS.Editor
             Check(rig.Placement && rig.Placement.Controller == game && rig.ViewCamera &&
                 rig.Placement.ViewCamera == rig.ViewCamera, "Controller, physical UI and camera references agree");
             Check(EventSystem.current, "Scene supplies its own active EventSystem");
+            game.EnableRandomStartingDevices = false;
+            game.RestartRound();
             Check(game.Session.Phase == RoundPhase.Playing && !game.Paused,
                 "Empty starting inventory enters unpaused Playing");
-            Check(!game.EnableRandomStartingDevices && game.Balance.Devices.All(d => d.StartingCount == 0),
-                "Scene random gifts are disabled and no MRes device grants fixed starters");
+            Check(game.Balance.Devices.All(d => d.StartingCount == 0),
+                "The empty-inventory scenario has no fixed MRes starters");
             Check(game.GetOwnedDevices().Length == 0 && game.LastRandomStarterDeviceIds.Length == 0,
                 "Initial inventory contains no gifted devices");
             ValidateGeometry();

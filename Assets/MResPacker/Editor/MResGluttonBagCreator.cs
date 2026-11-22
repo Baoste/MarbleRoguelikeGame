@@ -48,7 +48,7 @@ namespace MResPacker
             finally { UnityEngine.Object.DestroyImmediate(root); }
             var profile = ScriptableObject.CreateInstance<MResBuildProfile>();
             profile.SourcePrefab = prefab; profile.LuaScript = AssetDatabase.LoadMainAssetAtPath(folder + "/Lua/GluttonBag.lua");
-            profile.Metadata = new MResMetadataData { name = "大胃袋", description = "布置时将背包装置拖入，消耗该装置，按普通/罕见/稀有/传奇增加2/4/6/8点本回合附加倍率。弹珠碰撞时累加这些倍率增量，到得分区结算；初始无效果。喂食不扣耐久，有效碰撞扣1。成长仅用于即将开始的回合，下一轮布置清空，原球正常反弹。", value = 120, purchasePrice = 9, rarity = "common", durability = 20, type = "device" };
+            profile.Metadata = new MResMetadataData { name = "大胃袋", description = "布置时将盘面或背包中的装置拖入，消耗该装置，按普通/罕见/稀有/传奇增加2/4/6/8点本回合附加倍率。弹珠碰撞时累加这些倍率增量，到得分区结算；初始无效果。喂食不扣耐久，有效碰撞扣1。成长仅用于即将开始的回合，下一轮布置清空，原球正常反弹。", value = 120, purchasePrice = 14, rarity = "uncommon", durability = 20, type = "device" };
             profile.ShaderRegistry = registry; profile.OutputPath = "Assets/MResPacker/Output/GluttonBag.mres";
             profile.ExtraFiles = new[] { new MResExtraFile { VirtualPath = "game/device.json", Source = AssetDatabase.LoadAssetAtPath<TextAsset>(folder + "/Data/GluttonBag.device.json") } };
             AssetDatabase.CreateAsset(profile, ProfilePath); MResExampleCreator.EnsureScene(prefab, "GluttonBagAuthoring"); AssetDatabase.SaveAssets(); return profile;

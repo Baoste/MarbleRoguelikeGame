@@ -6,7 +6,7 @@
   "Cooldown": 0,
   "MaxTriggersPerBall": 0,
   "Range": 0.633,
-  "Strength": 3,
+  "Strength": 15,
   "Value": 0,
   "SourceId": "AccelerationField"
 }

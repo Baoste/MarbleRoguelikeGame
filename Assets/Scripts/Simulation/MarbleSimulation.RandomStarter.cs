@@ -12,9 +12,16 @@ namespace MarblesECS
             return (uint[])randomStartingDeviceIds.Clone();
         }
 
-        private void CreateStartingDevices(int randomTypeCount)
+        private void CreateStartingDevices(int randomTypeCount, bool grantAllStartingDevices)
         {
             randomStartingDeviceIds = Array.Empty<uint>();
+            if (grantAllStartingDevices)
+            {
+                foreach (var device in context.Balance.Devices)
+                    CampaignStateUtility.CreateDevice(context, device, 0);
+                return;
+            }
+
             if (randomTypeCount > 0)
             {
                 var round = context.Round;

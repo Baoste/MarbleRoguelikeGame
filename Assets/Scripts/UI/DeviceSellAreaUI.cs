@@ -2,10 +2,11 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-/// <summary>A Build-only confirmation target. Hover and drag release never sell an item.</summary>
+/// <summary>Displays the Build-phase sale drop target.</summary>
 [DisallowMultipleComponent]
 public sealed class DeviceSellAreaUI : MonoBehaviour, IPointerClickHandler
 {
+    internal const string DragHint = "按住左键拖动  ·  松开放置  ·  R 旋转  ·  右键取消";
     public DevicePlacementUI Placement;
     public CanvasGroup Group;
     public UnityEngine.UI.Image Background;
@@ -30,7 +31,8 @@ public sealed class DeviceSellAreaUI : MonoBehaviour, IPointerClickHandler
     public void Refresh()
     {
         bool visible = Placement && Placement.CanEdit;
-        bool selected = visible && Placement.TryGetSelectedDevice(out _);
+        MarblesECS.OwnedDeviceSnapshot device = default;
+        bool dragging = visible && Placement.TryGetSelectedDevice(out device);
         if (Group)
         {
             Group.alpha = visible ? 1 : 0;
@@ -39,25 +41,24 @@ public sealed class DeviceSellAreaUI : MonoBehaviour, IPointerClickHandler
         }
         if (!visible) return;
         bool hover = ContainsPointer(Input.mousePosition);
-        if (Background) Background.color = selected && hover
+        if (Background) Background.color = dragging && hover
             ? new Color32(186, 44, 53, 248) : new Color32(104, 27, 35, 240);
-        if (selected && Placement.TryGetSelectedDevice(out var device))
+        if (dragging)
         {
             if (Title) Title.text = "售出「" + device.Name + "」  +" + device.SellPrice + " 金币";
-            if (Hint) Hint.text = "左键点击此区域确认出售  ·  右键取消";
+            if (Hint) Hint.text = "拖到这里松开出售  ·  右键取消";
         }
         else
         {
             if (Title) Title.text = "装置售出区";
-            if (Hint) Hint.text = "左键选中装置并移动  ·  再次左键放置  ·  R 旋转  ·  右键取消";
+            if (Hint) Hint.text = DragHint;
         }
     }
 
     public void OnPointerClick(PointerEventData e)
     {
-        if (!ContainsPointer(e.position)) return;
-        if (e.button == PointerEventData.InputButton.Left) Placement.TrySellSelected();
-        else if (e.button == PointerEventData.InputButton.Right) Placement.CancelPlacement();
+        if (e.button != PointerEventData.InputButton.Right || !ContainsPointer(e.position)) return;
+        Placement.CancelPlacement();
         Refresh();
     }
     private void OnDisable()

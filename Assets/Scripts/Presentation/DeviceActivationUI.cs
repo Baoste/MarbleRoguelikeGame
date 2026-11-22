@@ -6,14 +6,13 @@ using UnityEngine.UI;
 
 namespace MarblesECS.Presentation
 {
-    /// <summary>Generic interaction for devices with OnActivate; all availability and status text come from Lua.</summary>
+    /// <summary>Routes pointer clicks to devices with OnActivate.</summary>
     [DisallowMultipleComponent]
     public sealed class DeviceActivationUI : MonoBehaviour
     {
         public MarbleGameController Controller;
         public Camera ViewCamera;
         private readonly List<RaycastResult> uiHits = new List<RaycastResult>();
-        private GUIStyle statusStyle;
         private bool Running => Controller != null && Controller.IsReady &&
             (Controller.Snapshot.Phase == RoundPhase.Playing || Controller.Snapshot.Phase == RoundPhase.Draining);
 
@@ -50,29 +49,6 @@ namespace MarblesECS.Presentation
             if (camera != null && !PointerBlocked(Input.mousePosition))
                 Controller.TryActivateDevice(camera.ScreenPointToRay(Input.mousePosition));
 #endif
-        }
-        private void OnGUI()
-        {
-            if (!Running) return;
-            var camera = ResolveCamera();
-            if (camera == null) return;
-            if (statusStyle == null) statusStyle = new GUIStyle(GUI.skin.box) { richText = false, fontSize = 14 };
-            var owned = new Dictionary<int, OwnedDeviceSnapshot>();
-            foreach (var item in Controller.GetOwnedDevices()) owned[item.InstanceId] = item;
-            foreach (var device in MResDeviceBody.Active)
-            {
-                if (device == null || !device.isActiveAndEnabled || Controller.PhysicsRoot == null ||
-                    device.gameObject.scene != Controller.PhysicsRoot.gameObject.scene) continue;
-                string status = Controller.GetDeviceStatus(device.InstanceId);
-                if (!owned.TryGetValue(device.InstanceId, out var snapshot)) continue;
-                status = DeviceDisplayText.Durability(snapshot) +
-                    (string.IsNullOrEmpty(status) ? "" : "\n" + status);
-                Vector3 point = camera.WorldToScreenPoint(device.transform.position);
-                if (point.z <= 0) continue;
-                var content = new GUIContent(status);
-                Vector2 size = statusStyle.CalcSize(content);
-                GUI.Box(new Rect(point.x - size.x * .5f, Screen.height - point.y - size.y - 24, size.x, size.y), content, statusStyle);
-            }
         }
     }
 }

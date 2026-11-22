@@ -43,7 +43,7 @@ namespace MarblesECS.Editor
                 foreach (var definition in definitions)
                     using (MResLoader.Load(validation.Get(definition.Id).Package, registry,
                         new MResLoadOptions { ExecuteLua = false, ActivateRoot = false })) { }
-                // Replace the entire snapshot; never merge stale JSON/Excel device rows.
+                // Replace the snapshot with definitions from the current MRes packages.
                 if (SyncContentSnapshot(ContentPath, definitions)) AssetDatabase.ImportAsset(ContentPath);
             }
             finally { UnityEngine.Object.DestroyImmediate(validation); }
@@ -62,7 +62,7 @@ namespace MarblesECS.Editor
                 .Where(p => p.EndsWith(".mres", StringComparison.OrdinalIgnoreCase)).OrderBy(p => p, StringComparer.Ordinal)
                 .Select(p => new DeviceResourceCatalog.Entry { File = p.Replace('\\', '/'), Bytes = File.ReadAllBytes(p) }).ToArray();
         }
-        // Excel imports also read the current files, not a possibly outdated in-memory catalog.
+        // Read device definitions directly from the current package files.
         internal static DeviceDefinition[] ReadDefinitions()
         {
             var catalog = ScriptableObject.CreateInstance<DeviceResourceCatalog>();

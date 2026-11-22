@@ -36,7 +36,11 @@ namespace MResPacker
             try
             {
                 var body = root.AddComponent<Rigidbody>(); body.isKinematic = true; body.useGravity = false;
-                Visual(root, "Cup", cylinder, cup, new Vector3(0, .27f, 0), new Vector3(.56f, .27f, .56f));
+                var cupBody = Visual(root, "Cup", cylinder, cup, new Vector3(0, .27f, 0), new Vector3(.56f, .27f, .56f));
+                var collider = cupBody.AddComponent<MeshCollider>();
+                collider.sharedMesh = cylinder;
+                collider.convex = true;
+                collider.sharedMaterial = AssetDatabase.LoadAssetAtPath<PhysicMaterial>(folder + "/Materials/DeviceBounce04.physicMaterial");
                 Visual(root, "Sleeve", cylinder, green, new Vector3(0, .25f, 0), new Vector3(.57f, .09f, .57f));
                 Visual(root, "Rim", cylinder, cup, new Vector3(0, .55f, 0), new Vector3(.63f, .025f, .63f));
                 Visual(root, "Coffee", cylinder, coffee, new Vector3(0, .579f, 0), new Vector3(.55f, .006f, .55f));
@@ -49,8 +53,6 @@ namespace MResPacker
                 }
                 var straw = Visual(root, "Straw", cylinder, green, new Vector3(.07f, .74f, .025f), new Vector3(.035f, .2f, .035f));
                 straw.transform.localRotation = Quaternion.Euler(0, 0, -12);
-                var collider = root.AddComponent<CapsuleCollider>();
-                collider.center = new Vector3(0, .285f, 0); collider.radius = .285f; collider.height = .57f;
                 prefab = PrefabUtility.SaveAsPrefabAsset(root, folder + "/Prefabs/IcedAmericano.prefab");
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }

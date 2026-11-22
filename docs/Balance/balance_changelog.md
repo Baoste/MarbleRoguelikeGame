@@ -66,7 +66,7 @@ Recommended 不只是对齐胜率：Balanced/Aggressive 的支出/收入比分�
 ## 数据与工具变更
 
 - `GameBalance.xlsx` 与 `GameBalance.json` 同步阶段正式值。
-- `GameContent.json` 与规范工作簿同步 34 个属性、赌博权重和关键药物说明；规范工作簿没有运行时商品价格列，商品价以 JSON 为准。
+- 当时的 `GameContent.json` 保存 34 个属性、赌博权重、药物定义及商品价格。
 - `TestScene.unity` 仅修改 TargetId 2 的终点倍率；几何、Collider、材质与发射器不变。
 - 新增独立真实 PhysX 采样器、Monte Carlo 经济模拟器、固定 Seed/逐 Run CSV、配置快照和 `Tools > Pachinko > Balance Dashboard`。
 - 将已有内容验证改为数据驱动断言：赌博按当前权重、银行按当前倍率、测试夹具显式创建初始装置；未改变 Gameplay Code。
@@ -77,7 +77,7 @@ Recommended 不只是对齐胜率：Balanced/Aggressive 的支出/收入比分�
 - Monte Carlo：120,000 Runs；Baseline 与三 Proposal 使用相同经济 Seed 和相同物理 Profile。
 - 逐阶段 Build Snapshot：记录 Strength Index、Device 数与 Medicine 数；完整 27 项 × 4 配置 EV/Pick Rate 已导出到 `item_ev.csv`。
 - Combo Matrix：自动导出 380 个 Device/Medicine 配对；SpecialBall 相关组合明确标为 N/A，缺乏证据的组合标为 UNKNOWN。
-- 内容/阶段一致性：规范工作簿对 JSON 属性差异 `0`；`GameBalance.xlsx` 阶段表与 JSON 完全一致。
+- 本轮验证时，`GameBalance.xlsx` 阶段表与 JSON 一致。
 - Unity 临时验证副本：编译通过，`CONTENT_VALIDATION_PASSED: 639 assertions.`；最终场景恢复版 Physical Sampler 以 90 球冒烟测试完成并正常退出。
 - QA 限制：一次内容验证在 639 条断言全部通过后，于 Entities `RuntimeContentManager` 的批处理关闭阶段崩溃；同一隔离副本的后续物理冒烟测试正常关闭。该退出问题未影响断言或正式 CSV，但应与 Gameplay 失败区分。
 
@@ -279,8 +279,7 @@ Item 效果对比使用修改前 V5 快照、同一 1,800 球 Profile、Seed `20
 
 ### 数据与实现
 
-- `GameContent.json` 为运行时正式值；规范工作簿新增“运行时平衡表”，覆盖全部 27 项价格、效果、证据等级、旧值/新值和原因。
+- 当时的 `GameContent.json` 保存运行时正式值，调价依据见本节报告。
 - 四叶草改为从 `DeviceDefinition.Value` 读取概率，消除 Gameplay Code 中 `.75` 常量。
 - 复制新增独立 `ReplicationGeneration`，复用 `MaxSplitGeneration=2` 作安全上限；不影响普通分流器的 `Generation`。
-- 工作簿 23 条可导入定义与 JSON 的描述、时长、叠加规则一致；修复平衡沙盘 4 个 `#REF!` 公式，最终无公式错误。
 - 详细候选对比见 `item_tuning_report.md`、`item_tuning_results.csv`、`item_tuning_ev.csv`；组合风险见 `combo_risk_report.md`。

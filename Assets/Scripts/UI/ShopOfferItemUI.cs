@@ -3,10 +3,11 @@ using MarblesECS;
 using MarblesECS.Presentation;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-public sealed class ShopOfferItemUI : MonoBehaviour
+public sealed class ShopOfferItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     public TMP_Text NameText;
     public TMP_Text DescriptionText;
@@ -26,6 +27,12 @@ public sealed class ShopOfferItemUI : MonoBehaviour
     private bool descriptionDirty;
     private float descriptionWidth = -1f;
     private LayoutElement descriptionLayout;
+    private Outline hoverOutline;
+
+    private void Awake()
+    {
+        if (TryGetComponent<Image>(out var background)) background.raycastTarget = true;
+    }
 
     private void OnEnable()
     {
@@ -37,6 +44,24 @@ public sealed class ShopOfferItemUI : MonoBehaviour
     {
         if (BuyButton != null)
             BuyButton.onClick.RemoveListener(HandleBuyClicked);
+        if (hoverOutline) hoverOutline.enabled = false;
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (!hasOffer || !TryGetComponent<Image>(out _)) return;
+        if (!hoverOutline)
+        {
+            hoverOutline = gameObject.AddComponent<Outline>();
+            hoverOutline.effectColor = QuickOutline.HoverColor;
+            hoverOutline.effectDistance = new Vector2(2f, -2f);
+        }
+        hoverOutline.enabled = true;
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        if (hoverOutline) hoverOutline.enabled = false;
     }
 
     private void LateUpdate()

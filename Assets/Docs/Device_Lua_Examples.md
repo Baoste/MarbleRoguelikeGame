@@ -45,7 +45,7 @@
 
 ## 超大杯全冰美式
 
-业务 ID `9032`，源脚本 `MResPacker/Authoring/Lua/IcedAmericano.lua`，运行时 `Resources/Devices/9032_IcedAmericano.mres`。模型为大杯咖啡、六块冰和吸管，使用实体碰撞体，弹珠正常反弹。
+业务 ID `9032`，源脚本 `MResPacker/Authoring/Lua/IcedAmericano.lua`，运行时 `Resources/Devices/9032_IcedAmericano.mres`。模型为大杯咖啡、六块冰和吸管。杯身使用圆柱形凸网格碰撞体，材质弹性为 `0.4`，贴着盘面的弹珠撞到杯壁后会沿盘面弹开。
 
 每次有效碰撞将当前基础价值乘 **0.5**，保留小数，同时增加 **20 点额外 RUSH 贡献**。通用装置触发仍加 5：新球贡献从 2 变为 27，第二次碰撞后变为 52。此时不直接增加 RUSH 条；到底部按贡献入账，到得分区按贡献 ×1.5 入账。价值为 0 也可触发；同一步重复碰撞通知只处理一次，之后再次撞击可继续生效。
 
@@ -298,12 +298,12 @@ Metadata 当前罕见、购买 14、出售 120、耐久 20，初始库存 0。Me
 
 制作源 `MResPacker/Authoring/Lua/GluttonBag.lua`，配置 `Authoring/Profiles/GluttonBag.asset`，成品 `Output/GluttonBag.mres`，运行时 `Resources/Devices/9026_GluttonBag.mres`。模型为橄榄绿圆柱袋身、浅褐色袋口与牙齿、深色口部，袋身有实体凸碰撞。
 
-1. 先放置大胃袋，布置阶段从背包拖入其他装置；普通、罕见、稀有、传奇分别增加 **2、4、6、8 点附加增量**，消耗提交的单件。不同大胃袋独立成长，喂入另一台大胃袋也只按其稀有度计算，不转移它的成长。
+1. 先放置大胃袋。布置阶段从盘面或背包将其他装置拖到袋上，松开后消耗提交的单件。普通、罕见、稀有、传奇分别增加 **2、4、6、8 点附加增量**。不同大胃袋独立成长，喂入另一台大胃袋也按其稀有度计算。
 2. 初始增量为 0，不产生效果。喂入普通装置后增量为 2，弹珠碰撞调用 `AddScoreMultiplier(3)`，实际增加 2；同球两次为 `1 + 2 + 2 = 5`。四档各喂一件共增加 20，碰撞提供完整 ×21。重复碰撞继续累加，到得分区统一结算，基础价值不直接修改；仍遵守通用倍率上限 1000。
 3. 喂食不扣耐久；有正增量的真实碰撞每次扣 1，同球同一步重复报告去重，不同球各自生效。无成长、Trigger 和连线不生效；最后一点耐久完整作用，`-1` 无限。弹珠正常反弹。
 4. 成长用于即将开始的这一回合，进入该回合保留，下一轮布置清空。界面在拖放前提示会消耗库存，接受后显示成长；失败、取消、越界、松开在控件上或离开布置阶段时保留物品。实体物品板与旧 uGUI 背包均支持拖放，拖到合法空白区域仍可正常放置。
 
-`Authoring/Data/GluttonBag.device.json`：ID 9026，`Value = 0` 为初始附加增量，`Strength = 2` 为每档稀有度增量，Lua 使用档位 1/2/3/4；`Range` 未使用。`Strength <= 0` 时拒绝喂食。当前普通、耐久 20、购买价 9、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Glutton Bag Device` 定位配置。
+`Authoring/Data/GluttonBag.device.json`：ID 9026，`Value = 0` 为初始附加增量，`Strength = 2` 为每档稀有度增量，Lua 使用档位 1/2/3/4；`Range` 未使用。`Strength <= 0` 时拒绝喂食。当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。菜单 `Tools > MRes > Create or Locate Glutton Bag Device` 定位配置。
 
 验证源 `Editor/Validation/GameContentValidation.GluttonBag.cs`、`GameContentValidation.GluttonBagUI.cs` 覆盖四档稀有度、原子提交和回调异常、库存实例校验、配对物品、回合准备与清空、独立实例、耐久、真实拖放控件和两种步长下的实际物理碰撞与得分结算。
 
@@ -561,13 +561,16 @@ Lua 为 `MResPacker/Authoring/Lua/MarbleMachineGun.lua`，配置 `Authoring/Prof
 
 制作源 `MResPacker/Authoring/Lua/PuffMushroom.lua`，配置 `Authoring/Profiles/PuffMushroom.asset`，成品 `Output/PuffMushroom.mres`，运行时 `Resources/Devices/9016_PuffMushroom.mres`。紫色蘑菇模型带八个扇形喷口，根 BoxCollider Trigger 检测进入，模型和喷口均无实体碰撞。
 
-1. Lua 使用 `CreateSplitBatch(8)`，把原球价值、体积和质量各均分成八份；每颗半径为原球一半，继承累计装置倍率，到得分区才结算。
+1. Lua 使用 `CreateSplitBatch(8, false)`，把原球价值、体积和质量各均分成八份。每颗半径为原球一半，继承累计装置倍率，独立记录装置访问次数。
 2. 以 `source.Down * -1` 得到**棋盘平面内向上**的方向，不是离开棋盘的法向 `source.Up`。八个方向覆盖总计 120°，角度从 −60° 到 +60°，相邻间隔 `120 / 7` 度。
 3. `source:Rotate` 计算每个方向，`batch:TryAdd` 设置出生位置与入射速度大小；零速仍输出零速。出生距离为 `max(装置半径 + 子球半径 + 0.02, (子球直径 + 0.02) / (2 × sin(相邻夹角 / 2)))`，避免八球重叠。
 4. 全部出口成功后才消耗原球，并用 `TryUse()` 扣 1 耐久；第 20 次仍完成全部八球。任一出口受阻时撤销整批，原球保留、不扣耐久，下次进入可重试。
 5. `HasSplitFrom(api.InstanceId)` 排除本实例产生的球及后代，再次经过时直接穿过，不反弹、不改变速度、不再分裂、不扣耐久。其他实例仍可分流，受通用属性下限、代数和数量上限约束。
+6. 小球可以触发母球已触发过的其他装置。每颗小球分别遵守该装置的次数限制与耐久规则。
 
 `Authoring/Data/PuffMushroom.device.json` 的 `Range = 60` 表示半扇形角，即两侧各 60°、总计 120°；支持半角 1–90°，符合通用参数上限。`Value` / `Strength` 未使用，出口数量固定为 Lua 顶部 `outlets = 8`。修改扇形角或数量时同步调整制作 Prefab 的喷口。当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。
+
+`RotationLocked = true` 将装置固定在棋盘上的默认朝向。
 
 现有质量下限为 0.1，因此八等分要求原球质量至少 0.8；默认质量 1 的弹珠可以触发，刚八等分出的默认小球（质量 0.125）不能继续八等分。沿用 `DeviceSplitBatch` 的拒绝规则，失败保留原球和耐久，不强行钳制子球质量。未新增专用引擎 API。
 
@@ -676,7 +679,7 @@ end
 
 `Field` 是制作 Prefab 中的普通 BoxCollider 节点名，由这份 Lua 选择，不是引擎硬编码名称。默认区域长 **1.2**（本地 Z）、宽 **0.4**（本地 X）、高 **0.24**（本地 Y），中心位于本地 Y=0.14。使用透明蓝色盒体、边框和指向本地 -Z 的箭头；Collider 为 Trigger，不阻挡弹珠。
 
-`game/device.json.Strength = 3` 即 3 N。进入区域的弹珠持续受力，较重弹珠加速更慢；逆着力场运动会先减速，侧向速度保留。没有磁性要求、距离衰减或公共冷却；每球每次进入扣 1 耐久，停留不重复扣。最后一次进入仍执行当前力场回调，随后本回合停止施力。区域直接读取 BoxCollider 几何，不依赖 `Range` 或 `Value`：修改 Prefab 的 `Field` 节点缩放或 BoxCollider 参数后重新打包即可，边框和箭头可同步调整。
+`game/device.json.Strength = 15` 即 15 N。进入区域的弹珠持续受力，较重弹珠加速更慢；逆着力场运动会先减速，侧向速度保留。没有磁性要求、距离衰减或公共冷却；每球每次进入扣 1 耐久，停留不重复扣。最后一次进入仍执行当前力场回调，随后本回合停止施力。区域直接读取 BoxCollider 几何，不依赖 `Range` 或 `Value`：修改 Prefab 的 `Field` 节点缩放或 BoxCollider 参数后重新打包即可，边框和箭头可同步调整。
 
 ID 9004，初始库存 0、购买价 9、出售价格 120。配置 `Radius = 0.633` 是放置时的保守外接圆半径，不是实际力场形状；通用装置放置半径支持 `[0.01, 10]`，以容纳长形资源。改变宽度/长度时应同步更新此放置半径，避免通用放置检查低估占用范围。宽 `w`、长 `l` 的居中矩形可用 `sqrt((w/2)^2 + (l/2)^2)` 并略向上取整。
 

@@ -48,15 +48,15 @@
 4. 包引用的 shader ID 必须在 `ShaderRegistry.asset` 显式注册。装置使用 `device-lit`；BouncePad 使用已注册的 `MRes/ExampleSurface`。
 5. 等待 Unity 导入，或执行 `Tools/MRes/Rebuild Device Catalog`。进入 Play 和构建 Player 前也会校验并刷新。
 
-`Resources/GameContent.json` 的 `Devices` 同步为本目录当前全部 MRes 的完整列表，包含子目录；包被删除后对应 JSON 条目也移除。打开项目、脚本重载和 JSON 导入同样会检查同步，不保留旧 JSON/Excel 的装置数据。其他属性、药物与内容规则继续使用原配置。离线可运行 `python Assets/Editor/Balance/sync_mres_devices.py`，`--check` 检查快照是否最新。
+`Resources/GameContent.json` 的 `Devices` 同步为本目录当前全部 MRes 的完整列表，包含子目录。包被删除后对应 JSON 条目也移除。打开项目、脚本重载和 JSON 导入同样会检查同步，其他属性与内容规则沿用原配置。离线可运行 `python Assets/Editor/Balance/sync_mres_devices.py`，`--check` 检查快照是否最新。
 
 Unity 不会将未知扩展名直接作为 `TextAsset` 收录，因此 `DeviceCatalog.asset` 保存原包的完整字节副本，供编辑器和 Player 统一读取。它由编辑器生成，不需要手工编辑，也不使用 ScriptedImporter，不会解包文件到磁盘。发布时需包含 Resources 中的目录资产和 shader 注册表。损坏包、重复 ID、缺失 shader 会阻止刷新、进入 Play 或构建，并报告源文件。
 
-`GameContent.json` 中的 `Devices` 由目录刷新生成，作为现有离线平衡/工作簿工具的兼容快照；运行时会用 `.mres` 定义覆盖它。请修改包内参数，不要修改该快照。属性和药物仍在 `GameContent.json` 编辑。
+离线平衡工具读取生成的 `Devices` 快照。装置参数通过 MRes 制作源编辑，属性直接在 `GameContent.json` 中编辑。
 
 ## 包内通用参数
 
-- `StartingCount`：开局赠送份数；当前全部为 `0`，场景随机赠送也已关闭，开局空背包。`PurchaseQuantity`：每份产生的装置数量（传送门为 2），自动分配配对 ID。
+- `StartingCount` 为包内配置的开局赠送份数，当前全部为 `0`。开启场景的「开局获得全部装置」后，背包会收到目录中每种装置一套。`PurchaseQuantity` 为每套的装置数量，传送门为 2，自动分配配对 ID。
 - `Radius`：放置半径；`Cooldown`、`MaxTriggersPerBall`：默认触发冷却和每球次数上限。
 - `Value`、`Strength`、`Range`：供脚本读取的数值。
 - `RushCategory`：商店 Rush 分类；`LinkGroup`：相同非空组名的装置可连接；`GroupClearance`：同组放置间距。
@@ -103,7 +103,7 @@ end
 - `SetDeviceScoreMultiplier(amount)`：替换当前累计装置倍率；故障装置抽到 0 时设为 0，随后仍可通过 `AddScoreMultiplier` 增加，进入得分区按当前累计值结算。
 - `CountPlacedDevices(excludedInstanceId = 0)`：实时统计已放置实例，可排除指定实例。more is more 排除自身，每个其他装置提供 +2，单次最多 +20；less is more 同样排除自身，从 +20 起每个其他装置减 2，最低为 0。耗尽但仍在场的装置计入，库存不计；公式由各自 Lua 决定。
 - `RoundId` 配合 Lua 实例状态：雪糕机每回合依次提供 ×10、×9 至 ×2，之后 ×1 无效果；每次只累加“倍率 − 1”，有效作用扣耐久，下一回合重置次数。
-- `OnOffer` / `Accept` 与 `GetRoundValue` / `SetRoundValue`：接受库存物品并准备下一回合的实例数值；回调成功才同时保存数值并消耗物品。大胃袋用 Lua 按普通/罕见/稀有/传奇增加 2/4/6/8，碰撞时施加增量，下一轮布置清空。
+- `OnOffer` / `Accept` 与 `GetRoundValue` / `SetRoundValue` 用于接受提交的装置并准备下一回合。大胃袋可接收盘面和背包中的装置，回调成功后消耗该装置并按稀有度增加 2/4/6/8。增量在碰撞时施加，下一轮布置清空。
 - `AddRushChance`、`Roll`、`BreakPinsOnCross`、`RemoveDevice`：概率、随机与通用场景操作。
 
 磁力脚本通过 `DeviceFieldContext` 的距离、方向、磁性参数计算作用力，再调用 `AddRadialForce`。C# 只负责通用物理执行及总力/速度上限，磁极方向与距离衰减公式在包内 Lua。

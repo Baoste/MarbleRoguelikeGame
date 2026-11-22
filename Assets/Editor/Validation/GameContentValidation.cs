@@ -40,6 +40,7 @@ namespace MarblesECS.Editor
                 assertions = 0;
                 DeviceResourceValidation.Run();
                 Rules();
+                RuntimeContentSources();
                 ContentAuthority();
                 ContentLimitAuthority();
                 BounceAuthority();
@@ -137,6 +138,28 @@ namespace MarblesECS.Editor
             catch (ArgumentException) { rejected = true; }
             Check(rejected, "unsupported operation rejected");
         }
+
+        private static void RuntimeContentSources()
+        {
+            var source = Resources.Load<TextAsset>("GameContent");
+            Check(source != null, "runtime content JSON is available");
+            var authored = JsonUtility.FromJson<GameContent>(source.text);
+            var loaded = GameBalanceLoader.Load().Content;
+            Check(loaded.Attributes.Length == (int)GameAttribute.Count, "runtime has a complete attribute dictionary");
+            foreach (var attribute in authored.Attributes)
+            {
+                var id = (GameAttribute)Enum.Parse(typeof(GameAttribute), attribute.Id);
+                Check(JsonUtility.ToJson(attribute) == JsonUtility.ToJson(loaded.Definition(id)),
+                    "runtime uses the JSON definition for " + id);
+            }
+
+            var packages = DeviceCatalogBuilder.ReadDefinitions();
+            Check(loaded.Devices.Length == packages.Length, "runtime lists every current MRes device");
+            foreach (var definition in packages)
+                Check(JsonUtility.ToJson(definition) == JsonUtility.ToJson(loaded.Devices.Single(x => x.Id == definition.Id)),
+                    "runtime uses the MRes definition for device " + definition.Id);
+        }
+
         private static void ContentAuthority()
         {
             var balance = Balance();
@@ -237,13 +260,18 @@ namespace MarblesECS.Editor
 
         private static void BounceAuthority()
         {
-            foreach (float bounce in new[] { 0f, .5f, 1.5f })
+            foreach (var (ballBounce, surfaceBounce, isDevice, expectedBounce) in new[]
             {
-                var scene = SceneManager.CreateScene("Bounce authority " + bounce, new CreateSceneParameters(LocalPhysicsMode.Physics3D));
-                var wall = new GameObject("High bounce wall");
-                SceneManager.MoveGameObjectToScene(wall, scene);
-                var collider = wall.AddComponent<BoxCollider>(); collider.size = new Vector3(.2f, 4, 4);
-                var material = new PhysicMaterial { bounciness = 1, bounceCombine = PhysicMaterialCombine.Maximum };
+                (0f, 1f, false, 0f), (.5f, 1f, false, .5f), (1.5f, 1f, false, 1.5f),
+                (0f, .4f, true, .4f), (.5f, .4f, true, .5f), (1.5f, .4f, true, 1.5f)
+            })
+            {
+                var scene = SceneManager.CreateScene($"Bounce authority {isDevice} {ballBounce}", new CreateSceneParameters(LocalPhysicsMode.Physics3D));
+                var surface = new GameObject(isDevice ? "Solid device" : "Wall");
+                SceneManager.MoveGameObjectToScene(surface, scene);
+                if (isDevice) surface.AddComponent<MResDeviceBody>();
+                var collider = surface.AddComponent<BoxCollider>(); collider.size = new Vector3(.2f, 4, 4);
+                var material = new PhysicMaterial { bounciness = surfaceBounce, bounceCombine = PhysicMaterialCombine.Maximum };
                 collider.sharedMaterial = material;
                 var bridge = new MarblePhysicsBridge(scene, null, material, _ => { });
                 try
@@ -251,15 +279,16 @@ namespace MarblesECS.Editor
                     var key = new MarbleKey(1, 1);
                     Check(bridge.TrySpawn(new MarbleSpawnData { Key = key, Position = Vector3.left, Rotation = Quaternion.identity,
                         Quote = new ShotQuote(1, 1, .08f, 1, 10, 1), LinearVelocity = Vector3.right * 3,
-                        HasRestitution = true, Restitution = Mathf.Min(1, bounce), HasSettings = true,
-                        Settings = new MarblePhysicalSettings { Radius = .08f, Mass = 1, Bounce = bounce, Gravity = 0, Friction = 0, MaxSpeed = 20 } }), "bounce authority spawn");
+                        HasRestitution = true, Restitution = Mathf.Min(1, ballBounce), HasSettings = true,
+                        Settings = new MarblePhysicalSettings { Radius = .08f, Mass = 1, Bounce = ballBounce, Gravity = 0, Friction = 0, MaxSpeed = 20 } }), "bounce authority spawn");
                     for (int i = 0; i < 25; i++) bridge.Simulate(.02f);
                     bridge.TryGetState(key, out var state);
-                    Check(Math.Abs(state.LinearVelocity.x + 3 * bounce) < .2, "wall material cannot override BALL_BOUNCE=" + bounce);
+                    Check(Math.Abs(state.LinearVelocity.x + 3 * expectedBounce) < .2,
+                        $"{surface.name} rebound with ball elasticity {ballBounce} and surface elasticity {surfaceBounce}");
                 }
                 finally
                 {
-                    bridge.Dispose(); UnityEngine.Object.DestroyImmediate(wall); UnityEngine.Object.DestroyImmediate(material);
+                    bridge.Dispose(); UnityEngine.Object.DestroyImmediate(surface); UnityEngine.Object.DestroyImmediate(material);
                     SceneManager.UnloadSceneAsync(scene);
                 }
             }
@@ -542,15 +571,6 @@ namespace MarblesECS.Editor
         }
         private static void Boundaries()
         {
-            var recipes = Balance().Content;
-            var imported = GameContentImporter.Read(GameContentImporter.Workbook, recipes);
-            Check(imported.Attributes.Length == 34 && imported.Devices.Length == DeviceResourceCatalog.Current.Entries.Length, "real workbook import preserves current devices and attributes");
-            foreach (var definition in DeviceResourceCatalog.Current.Definitions())
-                Check(JsonUtility.ToJson(definition) == JsonUtility.ToJson(imported.Devices.Single(x => x.Id == definition.Id)), "Excel import preserves MRes device authority " + definition.Id);
-            Near(recipes.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue,
-                imported.Definition(GameAttribute.GAMBLE_QUADRUPLE_CHANCE).DefaultValue,
-                "import preserves retired attribute schema without influencing wheel odds");
-            Check(imported.Devices.Select(d => d.Id).Distinct().Count() == imported.Devices.Length, "import contains unique current package IDs");
             using (var f = new Fixture())
             {
                 f.C.Tuning.MinInvestment = f.C.Tuning.MaxInvestment = 5;

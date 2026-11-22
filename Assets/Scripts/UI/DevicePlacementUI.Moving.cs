@@ -1,6 +1,7 @@
 using MarblesECS;
 using MarblesECS.Presentation;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public sealed partial class DevicePlacementUI
 {
@@ -10,30 +11,30 @@ public sealed partial class DevicePlacementUI
     public bool IsMovingPlacedDevice { get; private set; }
     public bool CanEdit => isActiveAndEnabled && Controller != null && Controller.IsReady &&
         !Controller.Paused && Controller.Session.Phase == RoundPhase.Build && BoardRoot != null;
+    internal CanvasGroup BackpackDropArea { get; set; }
     private GameObject hiddenPlacedObject;
+    private Vector2 boardPressPosition;
     private float previewAngle;
     private int selectionRound;
 
-    private bool BeginSelection(int id)
+    private void BeginDrag(OwnedDeviceSnapshot device)
     {
-        if (!CanEdit || !TryGetDevice(id, out var device)) return false;
-        CancelPlacement();
+        ClearPlacedDeviceHover();
         SyncPlacedObjects();
         preview = MResDeviceView.Create(device, BoardRoot, null, true);
-        SelectedInstanceId = id;
+        SelectedInstanceId = device.InstanceId;
         selectionRound = Controller.Snapshot.RoundId;
         previewAngle = device.Angle;
         IsMovingPlacedDevice = device.Placed;
         HideSelectedView();
-        LastFeedback = "左键确认位置，R 旋转，右键取消；移到下方红色区域可出售。";
-        return true;
+        LastFeedback = string.Empty;
     }
 
     public bool TryGetSelectedDevice(out OwnedDeviceSnapshot device)
     {
         device = default;
         return CanEdit && SelectedInstanceId != 0 && selectionRound == Controller.Snapshot.RoundId &&
-            TryGetDevice(SelectedInstanceId, out device);
+            TryGetDevice(SelectedInstanceId, out device) && device.Placed == IsMovingPlacedDevice;
     }
 
     private void ValidateSelection()
@@ -43,10 +44,10 @@ public sealed partial class DevicePlacementUI
 
     private void HideSelectedView()
     {
-        if (!IsMovingPlacedDevice || SelectedInstanceId == 0 ||
-            !placedObjects.TryGetValue(SelectedInstanceId, out var handle) || !handle.Root) return;
-        hiddenPlacedObject = handle.Root;
-        // Only hide the view. The instance, Lua state and original placement stay committed until confirmation.
+        if (!IsMovingPlacedDevice || SelectedInstanceId == 0) return;
+        hiddenPlacedObject = GetPlacedDeviceRoot(SelectedInstanceId);
+        if (!hiddenPlacedObject) return;
+        // Keep the committed placement and hide its view while dragging.
         hiddenPlacedObject.SetActive(false);
     }
 
@@ -58,7 +59,7 @@ public sealed partial class DevicePlacementUI
 
     public void RotateSelected(float degrees)
     {
-        if (!TryGetSelectedDevice(out _) || !MarbleRules.IsFinite(degrees)) return;
+        if (!TryGetSelectedDevice(out var device) || device.RotationLocked || !MarbleRules.IsFinite(degrees)) return;
         previewAngle = (previewAngle + degrees) % 360;
     }
 
@@ -67,20 +68,29 @@ public sealed partial class DevicePlacementUI
         ValidateSelection();
         if (!previewObject) return;
         if (!ViewCamera) ViewCamera = Camera.main;
-        bool overSellArea = SellArea && SellArea.ContainsPointer(pointer);
-        if ((!IsDraggingInventory && overSellArea) || !TryProjectOntoPlacementPlane(pointer, out var worldPoint))
+        var drop = FindDropTarget(pointer, null, out var receiver);
+        if (drop == DropTarget.Sale || drop == DropTarget.Backpack)
         {
+            if (drop == DropTarget.Sale && TryGetSelectedDevice(out var device))
+                LastFeedback = $"松开出售「{device.Name}」，获得 {device.SellPrice} 金币。";
+            else
+                LastFeedback = IsMovingPlacedDevice ? "松开收回背包" : "松开放回背包";
             previewObject.SetActive(false);
             return;
         }
 
+        LastFeedback = drop == DropTarget.Offer ? $"松开投入「{receiver.Name}」，会消耗这件装置。" : string.Empty;
+        if (!TryProjectOntoPlacementPlane(pointer, out var worldPoint))
+        {
+            previewObject.SetActive(false);
+            return;
+        }
         var point = BoardRoot.InverseTransformPoint(worldPoint);
         Transform pose = SetPreviewPose(ref point);
-        bool canPlace = !overSellArea && IsInsidePlacementPlane(worldPoint) && IsInsidePlacementPlane(pose.position) &&
-            Controller.CanPlaceDevice(SelectedInstanceId, point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation) &&
-            !PointerOnControl(pointer) && (!IsDraggingInventory || !TryFindOfferTarget(pointer, out _));
+        bool canPlace = drop == DropTarget.Board && IsInsidePlacementPlane(worldPoint) && IsInsidePlacementPlane(pose.position) &&
+            Controller.CanPlaceDevice(SelectedInstanceId, point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation);
         previewOutline ??= new QuickOutline(previewObject);
-        previewOutline.SetColor(canPlace ? ValidOutline : InvalidOutline);
+        previewOutline.SetColor(canPlace || drop == DropTarget.Offer ? ValidOutline : InvalidOutline);
         previewObject.SetActive(true);
     }
 
@@ -100,23 +110,44 @@ public sealed partial class DevicePlacementUI
         point.z = Mathf.Round(point.z / Controller.GridSize) * Controller.GridSize;
     }
 
-    public bool HandleBoardClick(Vector2 pointer)
+    internal bool HandleBoardPointerDown(Vector2 pointer)
     {
-        if (!CanEdit || IsDraggingInventory || (SellArea && SellArea.ContainsPointer(pointer)) || PointerOnControl(pointer)) return false;
+        if (!CanEdit || IsDraggingDevice || (SellArea && SellArea.ContainsPointer(pointer)) ||
+            PointerOnBackpack(pointer) || PointerOnControl(pointer)) return false;
         if (!ViewCamera) ViewCamera = Camera.main;
         if (!ViewCamera) return false;
-        ValidateSelection();
-        if (SelectedInstanceId == 0)
-        {
-            SyncPlacedObjects();
-            return TryPickPlaced(pointer, out int id) && BeginSelection(id);
-        }
-        if (!TryGetBoardPoint(pointer, out var point))
-        { LastFeedback = "请在盘面空位左键放置，或移到红色区域出售；右键取消。"; return false; }
-        bool placed = CommitSelected(point);
-        LastFeedback = placed ? "装置已放置。" : "此处不能放置，请避开边缘、固定障碍和其他装置；右键取消。";
-        if (placed) { CancelPlacement(); SyncPlacedObjects(); }
-        return placed;
+        SyncPlacedObjects();
+        if (!TryPickPlaced(pointer, out var view) || !TryGetDevice(view.Device.InstanceId, out var device) || !device.Placed)
+            return false;
+        boardPressPosition = pointer;
+        BeginDrag(device);
+        return true;
+    }
+
+    internal bool HandleBoardPointerUp(Vector2 pointer)
+    {
+        if (!IsMovingPlacedDevice) return false;
+        if (BoardPointerMoved(pointer)) return FinishDrag(pointer, null);
+        CancelPlacement();
+        return false;
+    }
+
+    private bool BoardPointerMoved(Vector2 pointer)
+    {
+        var events = EventSystem.current;
+        float threshold = events ? Mathf.Max(1, events.pixelDragThreshold) : 5;
+        return (pointer - boardPressPosition).sqrMagnitude >= threshold * threshold;
+    }
+
+    private bool PointerOnBackpack(Vector2 pointer)
+    {
+        if (!BackpackDropArea || !BackpackDropArea.isActiveAndEnabled || !BackpackDropArea.interactable ||
+            !BackpackDropArea.blocksRaycasts || BackpackDropArea.alpha <= 0f ||
+            !(BackpackDropArea.transform is RectTransform rect)) return false;
+        var canvas = BackpackDropArea.GetComponentInParent<Canvas>();
+        if (!canvas || !canvas.isActiveAndEnabled) return false;
+        Camera camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+        return RectTransformUtility.RectangleContainsScreenPoint(rect, pointer, camera);
     }
 
     private bool CommitSelected(Vector3 point)
@@ -137,38 +168,4 @@ public sealed partial class DevicePlacementUI
         }
     }
 
-    public bool TrySellSelected()
-    {
-        if (IsDraggingInventory || !TryGetSelectedDevice(out var device)) return false;
-        if (!Controller.SellDevice(device.InstanceId)) return false;
-        LastFeedback = "已出售「" + device.Name + "」，获得 " + device.SellPrice + " 金币。";
-        CancelPlacement();
-        SyncPlacedObjects();
-        return true;
-    }
-
-    private bool TryPickPlaced(Vector2 pointer, out int id)
-    {
-        id = 0;
-        var ray = ViewCamera.ScreenPointToRay(pointer);
-        float nearest = float.PositiveInfinity;
-        foreach (var item in placedObjects)
-        {
-            if (!item.Value.Root) continue;
-            foreach (var collider in item.Value.Root.GetComponentsInChildren<Collider>())
-                if (collider.enabled && collider.Raycast(ray, out var hit, nearest))
-                { id = item.Key; nearest = hit.distance; }
-        }
-        if (id != 0) return true;
-        // Exhausted devices can have disabled colliders; their logical footprint remains selectable in Build.
-        if (!TryGetBoardPoint(pointer, out var point)) return false;
-        foreach (var device in Controller.GetOwnedDevices())
-        {
-            if (!device.Placed) continue;
-            float distance = new Vector2(point.x - device.PlacementX, point.z - device.PlacementZ).sqrMagnitude;
-            if (distance <= device.Radius * device.Radius && distance < nearest)
-            { id = device.InstanceId; nearest = distance; }
-        }
-        return id != 0;
-    }
 }

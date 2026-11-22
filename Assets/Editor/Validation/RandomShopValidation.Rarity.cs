@@ -10,7 +10,7 @@ namespace MarblesECS.Editor
         private static void WeightedRarities(GameBalance original)
         {
             int before = assertions;
-            var uncommon = new HashSet<uint> { 103, 9003, 9007, 9008, 9009, 9011, 9012, 9014, 9016, 9017, 9019, 9021, 9022, 9028, 9029, 9030, 9032 };
+            var uncommon = new HashSet<uint> { 103, 9003, 9007, 9008, 9009, 9011, 9012, 9014, 9016, 9017, 9019, 9021, 9022, 9026, 9028, 9029, 9030, 9032 };
             var rare = new HashSet<uint> { 9005, 9006, 9018, 9027, 9031 };
             foreach (var definition in original.Devices)
             {

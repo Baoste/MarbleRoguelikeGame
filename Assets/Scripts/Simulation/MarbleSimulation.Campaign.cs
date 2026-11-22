@@ -9,7 +9,13 @@ namespace MarblesECS
         public void StartSession(IMarblePhysics physics) => StartSession(physics, 0);
 
         /// <summary>Initialize the one shared stream, then draw starters. Null uses Marble.RandomSeed.</summary>
-        public void StartSession(IMarblePhysics physics, int randomStarterTypeCount, uint? randomSeed = null)
+        public void StartSession(IMarblePhysics physics, int randomStarterTypeCount, uint? randomSeed = null) =>
+            StartSession(physics, randomStarterTypeCount, randomSeed, grantAllStartingDevices: false);
+
+        internal void StartSession(IMarblePhysics physics, bool grantAllStartingDevices, uint? randomSeed = null) =>
+            StartSession(physics, 0, randomSeed, grantAllStartingDevices);
+
+        private void StartSession(IMarblePhysics physics, int randomStarterTypeCount, uint? randomSeed, bool grantAllStartingDevices)
         {
             ThrowIfDisposed();
             if (context.Balance == null) throw new InvalidOperationException("Construct with GameBalance to start a campaign.");
@@ -29,7 +35,7 @@ namespace MarblesECS
                 Coins = context.Balance.Campaign.StartingCoins
             };
             context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity).Clear();
-            CreateStartingDevices(randomStarterTypeCount);
+            CreateStartingDevices(randomStarterTypeCount, grantAllStartingDevices);
             var round = context.Round;
             round.Phase = (byte)RoundPhase.Build;
             round.TargetScore = context.Balance.Stages[0].TargetScore;

@@ -12,6 +12,7 @@ namespace MarblesECS.Editor
 {
     public static class AccelerationFieldValidation
     {
+        private const float ExpectedForce = 15f;
         private static int assertions;
         public static void Validate()
         {
@@ -36,7 +37,7 @@ namespace MarblesECS.Editor
                         for (int i = 0; i < count; i++)
                         {
                             r.Step();
-                            VectorNear(initial + r.Forward * (3f * step * (i + 1) / mass), r.Body(key).velocity,
+                            VectorNear(initial + r.Forward * (ExpectedForce * step * (i + 1) / mass), r.Body(key).velocity,
                                 "constant F produces delta-v = F * elapsed / mass, including multiple PhysX substeps");
                             VectorNear(r.Body(key).velocity, r.C.Manager.GetComponentData<Motion3D>(r.Ball(key)).LinearVelocity, "force readback synchronizes ECS");
                         }
@@ -49,7 +50,7 @@ namespace MarblesECS.Editor
             {
                 r.AddDevice(); // Independent package instance occupying the same test region.
                 var key = r.Launch(new Vector3(0, .14f, 0), Vector3.zero, 1);
-                r.Step(); VectorNear(r.Forward * (6 * r.StepSeconds), r.Body(key).velocity, "overlapping fields add forces");
+                r.Step(); VectorNear(r.Forward * (2 * ExpectedForce * r.StepSeconds), r.Body(key).velocity, "overlapping fields add forces");
                 r.Simulation.ApplyAttribute(key, 984, GameAttribute.BALL_MAX_SPEED, AttributeOperation.Set, 1);
                 Check(r.Bridge.TrySetVelocity(key, r.Forward), "set initial velocity at the configured speed cap");
                 r.Step(); Near(1, r.Body(key).velocity.magnitude, "field retains the gameplay speed cap");
@@ -99,7 +100,7 @@ namespace MarblesECS.Editor
                 r.Box.transform.localScale = new Vector3(.8f, .24f, 1.6f); r.Box.center = new Vector3(.1f, 0, 0);
                 Physics.SyncTransforms(); r.Move(key, new Vector3(.45f, .14f, 0), Vector3.zero);
                 var resized = r.Api(key); Check(resized.OverlapsBox("Field"), "box size and center changes are read from the collider"); resized.Close();
-                r.Step(); VectorNear(r.Forward * (3 * r.StepSeconds), r.Body(key).velocity, "packaged Lua follows resized region");
+                r.Step(); VectorNear(r.Forward * (ExpectedForce * r.StepSeconds), r.Body(key).velocity, "packaged Lua follows resized region");
             }
         }
 
@@ -127,7 +128,7 @@ namespace MarblesECS.Editor
                 }
                 Check(entered && exited, "actual physics crosses and exits the rectangular field");
                 r.Move(key, new Vector3(0, .14f, 0), Vector3.zero); r.Step();
-                VectorNear(r.Forward * (3 * r.StepSeconds), r.Body(key).velocity, "re-entry applies continuous force again");
+                VectorNear(r.Forward * (ExpectedForce * r.StepSeconds), r.Body(key).velocity, "re-entry applies continuous force again");
 
                 r.Box.enabled = false;
                 var velocity = r.Body(key).velocity; r.Step();
@@ -160,7 +161,7 @@ namespace MarblesECS.Editor
                     r.Move(key, new Vector3(0, .14f, 2), Vector3.zero); r.Step();
                     r.Move(key, new Vector3(0, .14f, 0), Vector3.zero); r.Step();
                     Near(budget == -1 ? -1 : 19 - i, r.Simulation.GetOwnedDevices().Single().RemainingDurability, "each re-entry spends one use; infinite budget stays infinite");
-                    VectorNear(r.Forward * (3 * r.StepSeconds), r.Body(key).velocity, "last accepted entry still receives its force");
+                    VectorNear(r.Forward * (ExpectedForce * r.StepSeconds), r.Body(key).velocity, "last accepted entry still receives its force");
                     if (i == 0)
                     {
                         for (int j = 0; j < 3; j++) r.Step();

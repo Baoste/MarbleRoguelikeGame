@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using MarblesECS;
 using MarblesECS.PhysX;
+using MarblesECS.Presentation;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -50,6 +51,8 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     bool initialized;
     float deviceFeedbackUntil;
     string deviceFeedback;
+    Outline hoveredCardOutline;
+    Color cardOutlineColor;
     public bool IsBoardOpen => slide >= .999f;
     public int VisibleDeviceCount { get; private set; }
 
@@ -66,6 +69,13 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         if(LeverHighlight) LeverHighlight.SetActive(false);
         BindScoreListener();
     }
+    void OnEnable()
+    {
+        if (!Placement) return;
+        Placement.BackpackDropArea = ItemGroup;
+        Placement.DeviceDropFinished += ShowPlacementFeedback;
+    }
+
     public void BindScoreListener()
     {
         var listener=FindObjectOfType<ScoreListener>();
@@ -88,7 +98,10 @@ public sealed class DiegeticMachineUI : MonoBehaviour
             leverOnRotation*Quaternion.AngleAxis(on?0:LeverOffAngle,LeverAxis.normalized),Time.unscaledDeltaTime*240);
         if(LeverState)LeverState.text=on?(CanCashOut()?"CASH OUT  /  向下结算":"ON  /  目标未达成"):"OFF";
         if(Time.unscaledTime>=nextRefresh){RefreshInventory();nextRefresh=Time.unscaledTime+.1f;}
-        if(hoverKind>=0 || (Placement && Placement.IsDraggingInventory) || deviceFeedbackUntil>0)UpdateTooltip();
+    }
+    void LateUpdate()
+    {
+        if (initialized) UpdateTooltip();
     }
     public bool CanCashOut() => Controller && Controller.IsReady && !Controller.Paused && Controller.Session.Phase==RoundPhase.Playing && Controller.Session.CanCashOut;
     public bool TryCashOut()
@@ -110,12 +123,6 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         if(Placement)Placement.CancelPlacement();
         return Controller.BeginRound();
     }
-    public void SelectDevice(int index)
-    {
-        if(!Controller||!Controller.IsReady||Controller.Paused||Controller.Session.Phase!=RoundPhase.Build||!IsBoardOpen||index<0||index>=deviceIds.Length)return;
-        if(Placement && deviceIds[index]!=0)Placement.BeginPlacement(deviceIds[index]);
-    }
-
     public bool BeginDeviceDrag(int index, Vector2 pointer)
     {
         if(!Controller||!Controller.IsReady||Controller.Paused||Controller.Session.Phase!=RoundPhase.Build||!IsBoardOpen||!Placement||index<0||index>=deviceIds.Length)return false;
@@ -126,8 +133,13 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     {
         if(!Placement)return;
         Placement.EndInventoryDrag(pointer,pointerTarget);
-        deviceFeedback=Placement.LastFeedback;deviceFeedbackUntil=Time.unscaledTime+3;
-        RefreshInventory();UpdateTooltip();
+        UpdateTooltip();
+    }
+    void ShowPlacementFeedback()
+    {
+        deviceFeedback = Placement.LastFeedback;
+        deviceFeedbackUntil = string.IsNullOrEmpty(deviceFeedback) ? 0 : Time.unscaledTime + 3;
+        RefreshInventory();
     }
     public void CancelDeviceDrag(){if(Placement && Placement.IsDraggingInventory)Placement.CancelPlacement();}
     public void ChangeDevicePage(int step)
@@ -159,36 +171,91 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         if(!entering){if(hoverKind==kind && hoverIndex==index)ClearHover();return;}
         ClearHover();hoverKind=kind;hoverIndex=index;
         if(kind==0 && LeverHighlight)LeverHighlight.SetActive(true);
+        if (kind == 2 && DeviceButtons != null && index >= 0 && index < DeviceButtons.Length &&
+            DeviceButtons[index] && DeviceButtons[index].TryGetComponent(out hoveredCardOutline))
+        {
+            cardOutlineColor = hoveredCardOutline.effectColor;
+            hoveredCardOutline.effectColor = QuickOutline.HoverColor;
+        }
         UpdateTooltip();
     }
     public void ClearHover()
     {
         hoverKind=-1;
+        if (hoveredCardOutline) hoveredCardOutline.effectColor = cardOutlineColor;
+        hoveredCardOutline = null;
+        if (Placement) Placement.ClearPlacedDeviceHover();
         if(Tooltip)Tooltip.gameObject.SetActive(false);
         if(LeverHighlight)LeverHighlight.SetActive(false);
     }
-    void OnDisable(){ClearHover();CancelDeviceDrag();}
-    void UpdateTooltip()
+    void OnDisable()
     {
-        if(!Tooltip||!Controller||!Controller.IsReady)return;
-        string text="";
-        if(hoverKind==0)
-            text=CanCashOut()?"<b>结算开关</b>\n向下拨动 / 点击结算\n关闭供血，按原规则结算本回合。":
-                Controller.Session.Phase==RoundPhase.Playing?"<b>供血已开启</b>\n达到目标分后才能向下拨动并结算。":
-                Controller.Session.Phase==RoundPhase.Build?"<b>供血已关闭</b>\n布置完成后点击或向上拨动，开始回合。\n也可使用物品板上的“开始回合”。":"<b>供血已关闭</b>\n等待结算和购买阶段结束。";
-        else if(hoverKind==2 && hoverIndex>=0 && hoverIndex<deviceIds.Length)
+        if (Placement)
         {
-            var d=unplacedDevices.Find(x=>x.InstanceId==deviceIds[hoverIndex]);
-            if(d.InstanceId!=0)text=$"<b>{d.Name}</b>\n{MarblesECS.Presentation.DeviceDisplayText.Details(d)}\n{d.Description}\n拖到盘面空位放置；F1 可查完整道具库。";
+            if (Placement.BackpackDropArea == ItemGroup) Placement.BackpackDropArea = null;
+            Placement.DeviceDropFinished -= ShowPlacementFeedback;
         }
-        if(Placement && Placement.IsDraggingInventory)text=Placement.LastFeedback;
-        else if(deviceFeedbackUntil>Time.unscaledTime)text=deviceFeedback;
-        else deviceFeedbackUntil=0;
-        if(string.IsNullOrEmpty(text)){Tooltip.gameObject.SetActive(false);return;}
-        TooltipText.text=text;Tooltip.gameObject.SetActive(true);
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(Overlay,Input.mousePosition,null,out var p);
-        var rect=Overlay.rect;var size=Tooltip.sizeDelta;
-        Tooltip.anchoredPosition=new Vector2(Mathf.Clamp(p.x+22,rect.xMin+12,rect.xMax-size.x-12),Mathf.Clamp(p.y-18,rect.yMin+size.y+12,rect.yMax-12));
+        ClearHover();
+        CancelDeviceDrag();
+    }
+    void UpdateTooltip() => UpdateTooltip(Input.mousePosition);
+
+    internal void UpdateTooltip(Vector2 pointer)
+    {
+        if (!Tooltip || !TooltipText || !Overlay || !Controller || !Controller.IsReady)
+        {
+            if (Placement) Placement.ClearPlacedDeviceHover();
+            if (Tooltip) Tooltip.gameObject.SetActive(false);
+            return;
+        }
+
+        bool dragging = Placement && Placement.IsDraggingDevice;
+        bool showFeedback = deviceFeedbackUntil > Time.unscaledTime;
+        if (!showFeedback) deviceFeedbackUntil = 0;
+        string text = string.Empty;
+
+        if (dragging)
+        {
+            Placement.ClearPlacedDeviceHover();
+            text = Placement.LastFeedback;
+        }
+        else if (Placement && Placement.UpdatePlacedDeviceHover(pointer, out var placedDevice))
+        {
+            text = $"<b>{placedDevice.Name}</b>\n{DeviceDisplayText.Details(placedDevice)}\n{placedDevice.Description}";
+            if (showFeedback) text += "\n" + deviceFeedback;
+        }
+        else if (showFeedback) text = deviceFeedback;
+        else if (hoverKind == 0)
+            text = CanCashOut() ? "<b>结算开关</b>\n向下拨动 / 点击结算\n关闭供血，按原规则结算本回合。" :
+                Controller.Session.Phase == RoundPhase.Playing ? "<b>供血已开启</b>\n达到目标分后才能向下拨动并结算。" :
+                Controller.Session.Phase == RoundPhase.Build ? "<b>供血已关闭</b>\n布置完成后点击或向上拨动，开始回合。\n也可使用物品板上的“开始回合”。" :
+                "<b>供血已关闭</b>\n等待结算和购买阶段结束。";
+        else if (hoverKind == 2 && hoverIndex >= 0 && hoverIndex < deviceIds.Length)
+        {
+            var device = unplacedDevices.Find(x => x.InstanceId == deviceIds[hoverIndex]);
+            if (device.InstanceId != 0)
+                text = $"<b>{device.Name}</b>\n{DeviceDisplayText.Details(device)}\n{device.Description}\n按住左键拖到盘面，松开放置。F1 可查完整道具库。";
+        }
+
+        if (string.IsNullOrEmpty(text))
+        {
+            Tooltip.gameObject.SetActive(false);
+            return;
+        }
+
+        TooltipText.text = text;
+        Tooltip.gameObject.SetActive(true);
+        var canvas = Overlay.GetComponent<Canvas>();
+        Camera camera = canvas && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(Overlay, pointer, camera, out var point);
+        var rect = Overlay.rect;
+        var size = Tooltip.sizeDelta;
+        float x = point.x + 22;
+        float y = point.y - 18;
+        if (x + size.x > rect.xMax - 12) x = point.x - size.x - 22;
+        if (y - size.y < rect.yMin + 12) y = point.y + size.y + 18;
+        Tooltip.anchoredPosition = new Vector2(Mathf.Clamp(x, rect.xMin + 12, rect.xMax - size.x - 12),
+            Mathf.Clamp(y, rect.yMin + size.y + 12, rect.yMax - 12));
     }
 
     // Called by the scene installer too, so all UI objects/anchors can be edited in the Hierarchy.

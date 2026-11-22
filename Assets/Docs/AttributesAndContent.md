@@ -2,11 +2,6 @@
 
 2026-10-22：旧药物系统已移除，后续将用 Lua 重新实现。当前没有药物商品、初始库存、服药入口或药效计时；本次未接入新的 Lua 药物系统。
 
-
-实现依据：规范修订工作簿的 `00_ATTRIBUTE_DICTIONARY (2)` 和 `设计总表`。
-不导入旧 `效果参数`，因为设计 ID、内容与参数已经不一致；不实现道具。
-赌博按本次确认改为全损 ×0、返还 ×1、双倍 ×2、四倍 ×4，各 25%。
-
 ## 配置与使用
 
 - `Resources/GameContent.json` 配置属性和内容规则；装置以 `Resources/Devices/*.mres` 为唯一运行时来源。半径、质量、基础分、弹性、发射速度、寿命、Rush 和赌博等属性不再叠乘旧数值；完整对应关系见 `Balance.md`。
@@ -14,9 +9,7 @@
 - 盘面由场景手工搭建，区域在 `MarbleZone` 和 Trigger Collider 中配置；网格和间距在 `MarbleGameController.GridSize/PlacementClearance` 配置，固定钉避让检测 `PlacementObstacleRoots` 下实际启用的非 Trigger Collider。`TestScene` 已绑定 `PhysicsRoot/MarblePins`，完整迁移说明见 `Balance.md`。
 - `Resources/GameContent.json` 保存 34 个属性定义和内容规则；其中 `Devices` 是从当前 `.mres` 完整生成的离线平衡工具快照。新增、修改、删除包及导入 JSON 时自动同步，旧条目不会合并回来；手动同步与离线命令见 `Balance.md`。
 - `GameBalanceLoader` 加载基础配置、属性配置和 MRes 装置目录，装置列表直接引用会话内容目录；运行会话深拷贝后仍共享该会话的一份目录，避免两份数据不同步。
-- 直接修改内容 JSON，重新进入 Play 后生效。保存规范工作簿不再自动覆盖内容 JSON；显式执行 `Marbles ECS/Import Attribute and Content Excel` 才会把表中数值导入。
-- 数值属性列可直接导入；旧药物总表不再导入。装置由 `.mres` 中的 Lua 和参数定义，Excel 导入不会覆盖它们。
-- `Editor/Balance/build_content.py` 只补充缺少的属性，保留其已有数值；装置列表每次重新读取当前 MRes，不沿用旧 JSON。日常属性修改内容 JSON，装置修改制作源并重新打包。
+- 直接编辑 `Resources/GameContent.json` 中的属性和内容规则。装置通过修改制作源并重新打包更新。保存后重新进入 Play 生效。
 - 全部装置位于 `Resources/Devices/*.mres`，当前为 35 种（34 个 MResPacker 成品和 Multi Ding），外观、碰撞体和 Lua 行为随包加载，不再绑定装置 prefab。详见 [MRes 装置目录](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
 - 传送门按一对购买，两门分别放置并共享配对 ID；两门都放置后才可传送。
 
@@ -41,11 +34,11 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 | BLOOD_DIVIDEND_RATE | 主动提现的每单位剩余血量兑换金币数；再应用阶段倍率和金币获取倍率 |
 | BALL_SPAWN_COUNT | 一次发射生成一排互不重叠的球；不足容量／余额／空间则整批回滚 |
 | BALL_BASE_VALUE | 出生、增值装置、银行和最终计分 |
-| BALL_GAMBLE_VALUE_MOD | 与 GAMBLE_POT_VALUE 合并为一次赌池价值乘区 |
+| BALL_GAMBLE_VALUE_MOD | 旧兼容属性，保留字典 ID |
 | BALL_RUSH_GAIN | 旧兼容属性；当前球贡献从 2 开始，每次有效装置作用 +5，通过 RushContribution API 累积 |
 | BALL_RADIUS | 独立球体半径，乘 0.16 换算为世界单位；不随抽血档位变化 |
 | BALL_MASS | 直接设置实际刚体质量，不再乘抽血量 |
-| BALL_BOUNCE | 独立物理材质；静态／运动学障碍碰撞按球属性校正反弹，支持 0～2 |
+| BALL_BOUNCE | 独立物理材质，支持 0～2。棋盘障碍按球属性校正反弹，静态或运动学实体装置取球属性和装置材质弹性中的较大值 |
 | BALL_FRICTION | 独立材质的静摩擦和动摩擦 |
 | BALL_GRAVITY_MOD | 每个 PhysX 子步按该球倍率施加重力 |
 | BALL_LAUNCH_SPEED | 直接设置发射速度（m/s），生成后不持续加速 |
@@ -62,17 +55,14 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 | RUSH_DURATION | 旧兼容属性；当前满 666 条值后固定 6 秒，再加触发球的 RushDurationBonus；结束后冷却 3 秒 |
 | RUSH_MULT | 旧兼容属性；不再自动乘入 RUSH 得分 |
 | RUSH_DECAY | 旧兼容属性；当前条值不衰减，RUSH 每模拟秒倒计时 1 秒 |
-| GAMBLE_LOSS_CHANCE | ×0 的概率权重 |
-| GAMBLE_RETURN_CHANCE | ×1 的概率权重 |
-| GAMBLE_WIN_CHANCE | ×2 的概率权重 |
-| GAMBLE_QUADRUPLE_CHANCE | ×4 的概率权重 |
-| GAMBLE_POT_VALUE | 与单球赌博修正合并，按字典 MaxValue 封顶，当前 10 |
+| GAMBLE_LOSS_CHANCE / GAMBLE_RETURN_CHANCE / GAMBLE_WIN_CHANCE / GAMBLE_QUADRUPLE_CHANCE | 旧兼容属性，保留字典 ID |
+| GAMBLE_POT_VALUE | 旧兼容属性，保留字典 ID |
 | DEVICE_TRIGGER_RATE | 机关有效冷却除以触发率，0 禁止触发 |
 | DEVICE_COOLDOWN | 装置基础冷却的秒数修正；最低有效间隔为一个玩法 tick |
 | SHOP_PRICE_MOD | 商品和刷新价格，最低 1 金币；出售仍按原购买价格计算 |
 | COIN_GAIN_RATE | 银行、提现、阶段／超额奖励各计算一次；出售退款不放大 |
 
-默认概率合计必须为 1；运行时概率修正后按四项比例归一化，合计不得为 0。旧三档工作簿暂时兼容迁移为本次确认的四档各 25%；加入四倍属性后按工作簿直接导入。
+当前赌博转盘固定为八个等概率档位，奖池按入球得分累计。玩法见 [赌博转盘](Balance.md#赌博转盘)。
 
 空间口径：总表 cm 换算为 0.01 世界单位。BALL_RADIUS 使用 1 属性单位 = 0.16 世界单位，默认 0.5 对应 0.08 世界半径。尺寸、质量、基础价值和发射速度都直接使用内容属性；不再乘旧发射配置，也不随抽血档位隐式改变大小或质量。发射速度采用 m/s；装置仍能通过属性效果修改这些数值。
 
@@ -101,13 +91,13 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 
 2026-10-22：旧药物系统已移除，后续将用 Lua 重新实现。当前没有药物商品、初始库存、服药入口或药效计时；本次未接入新的 Lua 药物系统。
 
-旧药物定义、库存、使用接口、出生配方与旧药物得分层已删除。通用属性修改、复制/分裂、磁力和碰撞能力继续供装置使用。历史设计工作簿保留作参考，导入不会恢复旧药物。
+旧药物定义、库存、使用接口、出生配方与旧药物得分层已删除。通用属性修改、复制/分裂、磁力和碰撞能力继续供装置使用。
 
 ## 验证
 
 菜单 `Marbles ECS/Validate Attribute and Content Runtime` 在 Play 模式运行真实游戏系统和独立 PhysX 场景。
 批处理入口 `MarblesECS.Editor.GameContentValidation.Run` 创建临时空场景，不保存游戏场景。
-覆盖属性运算顺序、上下限、概率档位、批量回滚、旧药物输入不可恢复、装置商店、装置效果、传送配对、分裂守恒、复制继承、返血、经济，以及实际重力、限速、穿钉和磁力。
+覆盖 JSON 属性和 MRes 装置来源、属性运算顺序、上下限、概率档位、批量回滚、旧药物输入不可恢复、装置商店、装置效果、传送配对、分裂守恒、复制继承、返血、经济，以及实际重力、限速、穿钉和磁力。
 
 ## 当前 RUSH 规则
 

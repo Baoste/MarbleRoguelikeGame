@@ -74,7 +74,7 @@ end
 - Shader 必须显式注册，无自动替换。支持 Float / Range / Int / Color / Vector / Texture2D 属性、关键词和材质设置；非 Texture2D 属性会报错。
 - 贴图转换为 RGBA32 PNG，保存色彩空间、wrap U/V、filter、aniso、mipmap 设置。不会修改源贴图的 Read/Write 开关。
 - Metadata 输出 `name`、`description`、`value`、`purchasePrice`、`rarity`、`durability`、`type` 七字段；名称和描述非空，出售价格 `value` 有限且 ≥ 0，购买价格 `purchasePrice` 有限且 ≥ 1，装置价格为整数。类型只能为 `medicine` / `device`。
-- 稀有度为 `common`（普通）、`uncommon`（罕见）、`rare`（稀有）、`legendary`（传奇）；新配置默认普通/9，切换档位自动填写购买价 9/14/23/38。当前分档见 [装置稀有度](../Docs/Device_Rarity.md)。耐久默认 20，**`-1` 代表无限耐久**，其余合法值为整数 1～10000。新配置和包显式保存，兼容读取缺少新字段的旧包时补默认值。
+- 稀有度为 `common`（普通）、`uncommon`（罕见）、`rare`（稀有）、`legendary`（传奇）；新配置默认普通/9，切换档位自动填写购买价 9/14/23/38。当前分档见 [装置一览](../Docs/Device_Overview.md)。耐久默认 20，**`-1` 代表无限耐久**，其余合法值为整数 1～10000。新配置和包显式保存，兼容读取缺少新字段的旧包时补默认值。
 - 非凸 MeshCollider 不能是 Trigger，不能附着到动态 Rigidbody；运动学 Rigidbody 检测模式必须为 Discrete / ContinuousSpeculative。
 
 ## 与现有 v1 格式对齐
@@ -116,7 +116,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 
 ## 游戏价格与耐久
 
-当前按普通/罕见/稀有/传奇设置基础购买价 9/14/23/38，`value` 保留原有数值并用于出售单个实例，旧购买价乘出售比例的计算已移除。传送门购买 14 获得配对的两扇门，每扇单独出售获得 15；两扇门耐久分别计算。商店原有价格修正继续生效，分档与概率见 [装置稀有度](../Docs/Device_Rarity.md)。
+当前按普通/罕见/稀有/传奇设置基础购买价 9/14/23/38，`value` 保留原有数值并用于出售单个实例，旧购买价乘出售比例的计算已移除。传送门购买 14 获得配对的两扇门，每扇单独出售获得 15；两扇门耐久分别计算。商店原有价格修正继续生效，分档与概率见 [装置一览](../Docs/Device_Overview.md)。
 
 有限耐久按本回合有效作用扣除：普通即时效果每次触发扣 1，持续力场每球每次进入扣 1。储存类在释放效果时计数：黑洞点击启动一次引力扣 1，吸吸一批释放扣 1，大炮一批成功发射扣 1，黏黏每颗释放扣 1；储存、充能、取消和空点击不扣。最后一次仍完成整批或完整持续时间，然后本回合停用；新回合恢复，`-1` 无限。详细字段、显式登记与按批去重规则见 [装置 Lua API](../Docs/Device_Lua_API.md)。
 
@@ -174,7 +174,7 @@ Unity.exe -batchmode -force-d3d11 -projectPath <制作项目>
 选择 `Authoring/Profiles/AccelerationField.asset` 构建到 `Output/AccelerationField.mres`。菜单 `Tools > MRes > Create or Locate Acceleration Field Device` 定位配置；批处理入口为 `MResPacker.MResAccelerationFieldCreator.CreateAndBuild`。
 
 - Lua：`Authoring/Lua/AccelerationField.lua`，每个物理子步分别调用 `OverlapsBox("Field")`、`TryUse()` 与 `TryAddForce(api.Forward * api.Strength)`。区域判定和施力均为独立、可复用的引擎 API。
-- 力度：`Authoring/Data/AccelerationField.device.json` 的 `Strength = 3`，表示 3 N 恒力。质量越大加速度越小，离开区域后停止加力，保留已获得的速度；旋转装置改变力的方向。
+- 力度：`Authoring/Data/AccelerationField.device.json` 的 `Strength = 15`，表示 15 N 恒力。质量越大加速度越小，离开区域后停止加力，保留已获得的速度；旋转装置改变力的方向。
 - 区域：`Authoring/Prefabs/AccelerationField.prefab` 的 `Field` 子节点，默认缩放 `(0.4, 0.24, 1.2)`，BoxCollider 是 Trigger。尺寸和几何来源于这个节点，不在 Lua 中重复写死；编辑它的缩放/Collider 后重新打包，边框与箭头可同步调整。
 - 模型/材质：`Authoring/Models/AccelerationFieldBox.asset`、`Authoring/Materials/AccelerationFieldGlass.mat` 和 `AccelerationFieldCyan.mat`。透明蓝色长方形体积、细边框及三组 -Z 方向箭头，URP/Lit 通过独立 Registry 映射为 `device-lit`。
 - 场景：`Authoring/Scenes/AccelerationFieldAuthoring.unity`。源模型、材质、Prefab、Lua、制作配置均位于本制作目录。
@@ -357,6 +357,7 @@ Lua 组合 `Visit`、`Vectors.Rotate`、`CreateSpawnBatch` 和 `TryUse`；根据
 
 - Lua：`Authoring/Lua/PuffMushroom.lua`。进入后均分八球，各有原球 1/8 的价值、体积和质量，继承累计装置倍率，沿棋盘上方 120° 扇形均匀射出，保留速度大小。全部成功扣 1 耐久；失败保留原球。
 - 参数：`Authoring/Data/PuffMushroom.device.json` 的 `Range = 60` 为半扇形角（1–90°），默认总角度 120°；数量为 Lua 中 `outlets = 8`，`Value` / `Strength` 未使用。角度或数量变化时同步修改 Prefab 喷口。
+- `RotationLocked = true` 固定装置在棋盘上的默认朝向。Lua 给每颗小球独立记录装置触发次数。
 - 制作资源：`Authoring/Models/PuffMushroomSphere.asset`、`PuffMushroomCylinder.asset`，三份 `PuffMushroom*.mat`、`Authoring/Prefabs/PuffMushroom.prefab` 与 `Authoring/Scenes/PuffMushroomAuthoring.unity`。紫色菌盖、浅色菌柄和八个喷口均为纯视觉，根 BoxCollider Trigger 检测进入。
 - 当前罕见、耐久 20、购买价 14、出售价 120、初始库存 0。后代回到同一台直接穿过；等分仍遵守属性下限、代数和容量限制，默认八等分至少需要原球质量 0.8。
 
@@ -422,10 +423,10 @@ RUSH 已改为全盘 100 点累积机制，完整运行规则和 API 见 [装置
 
 选择 `Authoring/Profiles/GluttonBag.asset` 执行 Analyze / Build MRes；菜单 `Tools > MRes > Create or Locate Glutton Bag Device` 定位配置，批处理入口 `MResPacker.MResGluttonBagCreator.CreateAndBuild`。输出 `Output/GluttonBag.mres`，游戏副本 `Resources/Devices/9026_GluttonBag.mres`。
 
-- Lua：`Authoring/Lua/GluttonBag.lua`。布置阶段接收拖入的库存装置，普通/罕见/稀有/传奇增加 2/4/6/8 点附加增量；来源只消耗一件，喂食不扣耐久、不奖励出售金币。
+- `Authoring/Lua/GluttonBag.lua` 按来源稀有度增加 2/4/6/8 点附加增量。`AcceptsPlacedOffers = true` 允许布置时从盘面和背包投喂。每次消耗拖入的一件装置，接受本身不扣耐久或发放出售金币。
 - 弹珠每次真实碰撞调用 `AddScoreMultiplier(1 + 成长)`，有增量时扣 1 耐久，到得分区统一计算。初始无效果，原球正常反弹；每台独立成长。
 - 通用 `OnOffer` / `DeviceOfferContext` 把库存接受和回合数值同时提交。布置时通过 `SetRoundValue` 准备下一回合，开局保留，下一轮布置查询为 0。回调拒绝或报错不消耗物品、不增加成长。接口契约见 `Docs/Device_Lua_API.md`。
-- 参数：`Authoring/Data/GluttonBag.device.json` 的 `Value = 0` 为初始附加增量，`Strength = 2` 为每档稀有度增量，`Range` 未使用；ID 9026。普通、20 耐久、购买价 9、出售价 120、初始库存 0。
+- 参数：`Authoring/Data/GluttonBag.device.json` 的 `Value = 0` 为初始附加增量，`Strength = 2` 为每档稀有度增量，`Range` 未使用；ID 9026。罕见、20 耐久、购买价 14、出售价 120、初始库存 0。
 - 制作资源：`GluttonBagCylinder.asset`、三份 `GluttonBag*.mat`、`GluttonBag.prefab` 与 `GluttonBagAuthoring.unity`，分别位于 `Authoring/Models`、`Materials`、`Prefabs`、`Scenes`。橄榄绿圆柱袋身、浅褐袋口和牙齿、深色口部，袋身使用实体凸碰撞。
 
 2026-10-14 验证：大胃袋专项 **226** 条断言、玩法回归 **6314** 条断言通过，元数据/耐久 **261** 条，全部 **29** 个包加载通过。覆盖四档稀有度、库存消耗与异常回滚、回合准备/清空、数值有效期和实例隔离、配对物品、耐久、两种背包控件的拖放/取消/暂停/库存重排，以及两种步长下真实碰撞与最终结算。无窗口测试中，UI 遮挡使用拖拽事件的明确控件命中验证，未依赖尚未绘制的测试画布。制作成品与运行时副本一致，目录和 JSON 已完整同步，原有 28 个包和非装置内容保持不变。

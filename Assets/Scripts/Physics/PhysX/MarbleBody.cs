@@ -49,6 +49,7 @@ namespace MarblesECS.PhysX
         private void ReportPin(Collision collision)
         {
             if (Bridge == null || Body == null || Suspended) return;
+            var device = collision.collider.GetComponentInParent<MResDeviceBody>();
             if (HasSettings && collision.contactCount > 0 &&
                 (collision.rigidbody == null || collision.rigidbody.isKinematic))
             {
@@ -58,12 +59,13 @@ namespace MarblesECS.PhysX
                 float incoming = Mathf.Max(0, -Vector3.Dot(BeforeVelocity - surfaceVelocity, normal));
                 if (incoming > 0)
                 {
-                    // Static/kinematic surface materials must not override BALL_BOUNCE (including zero).
+                    // Board geometry uses the ball's elasticity. Device materials can add their own.
+                    var surface = device != null ? collision.collider.sharedMaterial : null;
+                    float bounce = surface != null ? Mathf.Max(Settings.Bounce, surface.bounciness) : Settings.Bounce;
                     float outgoing = Vector3.Dot(Body.velocity - surfaceVelocity, normal);
-                    Body.velocity = Vector3.ClampMagnitude(Body.velocity + normal * (incoming * Settings.Bounce - outgoing), Settings.MaxSpeed);
+                    Body.velocity = Vector3.ClampMagnitude(Body.velocity + normal * (incoming * bounce - outgoing), Settings.MaxSpeed);
                 }
             }
-            var device = collision.collider.GetComponentInParent<MResDeviceBody>();
             if (device != null)
             {
                 Bridge.ReportDevice(this, device, collision.contactCount > 0 ? (ContactPoint?)collision.GetContact(0) : null);

@@ -68,13 +68,14 @@ namespace MarblesECS.Editor.Diegetic
             Canvas.ForceUpdateCanvases();var hits=new List<RaycastResult>();
             EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current){position=point},hits);return hits;
         }
-        static void ClickVisible(GameObject target)
+        static void PressVisible(GameObject target, bool beginDrag = false)
         {
             var point=rig.ViewCamera.WorldToScreenPoint(target.transform.position);var hits=Hits(point);
             report.Add("Raycast "+target.name+": "+string.Join(" > ",hits.Select(h=>DiegeticUIProbe.PathOf(h.gameObject.transform))));
             Check(hits.Count>0 && (hits[0].gameObject==target || hits[0].gameObject.transform.IsChildOf(target.transform)),"Top mouse hit reaches "+target.name);
             var e=new PointerEventData(EventSystem.current){position=point,button=PointerEventData.InputButton.Left};
             ExecuteEvents.ExecuteHierarchy(hits[0].gameObject,e,ExecuteEvents.pointerDownHandler);
+            if(beginDrag){ExecuteEvents.ExecuteHierarchy(hits[0].gameObject,e,ExecuteEvents.beginDragHandler);return;}
             ExecuteEvents.ExecuteHierarchy(hits[0].gameObject,e,ExecuteEvents.pointerUpHandler);
             ExecuteEvents.ExecuteHierarchy(hits[0].gameObject,e,ExecuteEvents.pointerClickHandler);
         }
@@ -109,8 +110,10 @@ namespace MarblesECS.Editor.Diegetic
             Check(result.DisplayGroup.alpha==0,"Old result clears before the next Build");
             report.Add("Paused="+rig.Controller.Paused+" selected="+rig.Placement.SelectedInstanceId);
             var card=rig.DeviceButtons.First(b=>b.gameObject.activeSelf && rig.DeviceNames[Array.IndexOf(rig.DeviceButtons,b)].text==magnet.Name);
-            ClickVisible(card.gameObject);
-            Check(rig.Placement.SelectedInstanceId==id,"Clicking the bought card selects its real instance");
+            PressVisible(card.gameObject);
+            Check(rig.Placement.SelectedInstanceId==0,"Clicking the bought card leaves placement idle");
+            PressVisible(card.gameObject, true);
+            Check(rig.Placement.SelectedInstanceId==id&&rig.Placement.IsDraggingInventory,"Dragging the bought card captures its real instance");
             var probe=Hits(rig.ViewCamera.WorldToScreenPoint(rig.Placement.PlacementPlane.position));
             report.Add("Playfield hits: "+string.Join(" > ",probe.Select(h=>DiegeticUIProbe.PathOf(h.gameObject.transform))));
             Check(probe.Count==0,"Playfield is not blocked by an invisible UI surface");
@@ -126,8 +129,8 @@ namespace MarblesECS.Editor.Diegetic
                     rig.Placement.CancelPlacement();
                     // Even if an old animation leaves the result visible, it cannot block the card.
                     result.DisplayGroup.alpha=1;
-                    ClickVisible(card.gameObject);
-                    Check(rig.Placement.SelectedInstanceId==id,$"{width}x{height} card selects purchased device with result overlay visible");
+                    PressVisible(card.gameObject, true);
+                    Check(rig.Placement.SelectedInstanceId==id&&rig.Placement.IsDraggingInventory,$"{width}x{height} card can be dragged with result overlay visible");
                     Check(Hits(cam.WorldToScreenPoint(rig.Placement.PlacementPlane.position)).Count==0,$"{width}x{height} placement area receives mouse input");
                     result.DisplayGroup.alpha=0;
                     Canvas.ForceUpdateCanvases();
@@ -156,7 +159,7 @@ namespace MarblesECS.Editor.Diegetic
             Check(rig.Controller.GetOwnedDevices().Single(d=>d.InstanceId==id).Placed,"Placement is stored on the purchased instance");
             wait=Wait(.2f);while(wait.MoveNext())yield return null;
             Check(UnityEngine.Object.FindObjectsOfType<MResDeviceBody>().Any(d=>d.InstanceId==id&&d.enabled),"Purchased magnetic device has its active gameplay component");
-            ClickVisible(rig.Continue.gameObject);
+            PressVisible(rig.Continue.gameObject);
             Check(rig.Controller.Session.Phase==RoundPhase.Playing && !rig.Controller.Paused,"Physical Continue starts the next playable round");
             wait=Wait(.8f);while(wait.MoveNext())yield return null;
             Check(!result.DisplayGroup.blocksRaycasts && !rig.ItemGroup.blocksRaycasts && rig.ItemGroup.alpha==0,"Result and board UI release input in Playing");

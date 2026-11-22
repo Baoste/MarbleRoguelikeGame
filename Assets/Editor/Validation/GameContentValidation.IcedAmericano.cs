@@ -104,23 +104,33 @@ namespace MarblesECS.Editor
         private static void IcedAmericanoPhysics(float dt)
         {
             var scene = SceneManager.CreateScene("IcedAmericanoPhysics_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
-            var simulation = new MarbleSimulation(Balance()); int impacts = 0;
-            var bridge = new MarblePhysicsBridge(scene, null, null, hit => { if (hit.HasImpact) impacts++; simulation.EnqueueContact(hit); });
+            var simulation = new MarbleSimulation(Balance());
+            int impacts = 0;
+            Vector3 impactNormal = default;
+            var bridge = new MarblePhysicsBridge(scene, null, null, hit =>
+            {
+                if (hit.HasImpact) { impacts++; impactNormal = hit.Normal; }
+                simulation.EnqueueContact(hit);
+            });
             var board = new GameObject("IcedAmericanoBoard"); SceneManager.MoveGameObjectToScene(board, scene); MResLoadHandle view = null;
             try
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
                 simulation.ApplyGlobalAttribute(998, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
-                simulation.ApplyGlobalAttribute(999, GameAttribute.BALL_BOUNCE, AttributeOperation.Set, .8);
                 var definition = c.Balance.Devices.Single(d => d.Id == 9032); CampaignStateUtility.CreateDevice(c, definition, definition.Price);
                 int id = c.Campaign.NextDeviceId; MorePlace(c, id, true);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
+                var surface = board.AddComponent<BoxCollider>();
+                surface.center = new Vector3(0, -.1f, 0);
+                surface.size = new Vector3(3, .2f, 3);
                 view = MResDeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));
                 view.Root.SetActive(true); Physics.SyncTransforms();
                 var colliders = view.Root.GetComponentsInChildren<Collider>(true).Where(c => c.name != "PlacementVolume").ToArray();
                 Check(colliders.Length == 1 && !colliders[0].isTrigger, "coffee cup has one solid collider");
+                Near(.4, colliders[0].sharedMaterial.bounciness, "cup retains its configured elasticity");
                 Check(view.Root.transform.Find("Cup") != null && view.Root.transform.Find("Ice6") != null && view.Root.transform.Find("Straw") != null, "package includes cup, six ice cubes and straw");
-                var spawn = board.transform.TransformPoint(new Vector3(0, .285f, .9f));
+                float radius = AttributeRuntime.Prepare(c, c.Launcher.Flow).Quote.Radius;
+                var spawn = board.transform.TransformPoint(new Vector3(0, radius + .001f, .9f));
                 void Step() { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); simulation.AfterPhysics(bridge); }
                 simulation.FireOnce(); simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge); var key = c.Marbles.Keys.Single();
                 var body = scene.GetRootGameObjects().Select(go => go.GetComponent<MarbleBody>()).Single(b => b != null && b.Key.Equals(key)).Body;
@@ -138,7 +148,9 @@ namespace MarblesECS.Editor
                     Near(2 + 25 * (pass + 1), c.Manager.GetComponentData<MarbleRush>(c.Marbles[key]).Contribution, "physical impact adds complete contribution once");
                     Near(19 - pass, simulation.GetOwnedDevices().Single().RemainingDurability, "physical effective-hit wear");
                     VectorNear(solved, body.velocity, "Lua preserves natural collision response");
-                    Check(Vector3.Dot(body.velocity, incoming) < 0, "ball bounces away from cup");
+                    Check(Mathf.Abs(Vector3.Dot(impactNormal, board.transform.up)) < .05f, "cup wall deflects a board-level ball within the board plane");
+                    Check(Mathf.Abs(Vector3.Dot(body.velocity, board.transform.forward) - 1.2f) < .2f,
+                        "a default marble hitting the cup at 3 m/s rebounds along the board at about 1.2 m/s");
                 }
                 Near(0, c.Round.RushMeter, "physical cup does not deposit Rush before settlement");
             }

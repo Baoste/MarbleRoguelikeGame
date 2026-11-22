@@ -14,7 +14,6 @@ namespace MarblesECS
             device.X = x;
             device.Z = z;
             device.Placed = true;
-            if (angle.HasValue) device.Angle = angle.Value % 360;
             context.Manager.SetComponentData(entity, device);
             var campaign = context.Campaign;
             campaign.LayoutRevision++;
@@ -34,8 +33,9 @@ namespace MarblesECS
             device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
             var definition = CampaignStateUtility.Device(context, device.DefinitionId);
             float radius = definition.PlacementRadius;
-            if (radius <= 0) return false;
-            definition.PlacementCenter(x, z, angle ?? device.Angle, out float centerX, out float centerZ);
+            if (radius <= 0 || (definition.RotationLocked && angle.GetValueOrDefault() % 360 != 0)) return false;
+            device.Angle = definition.ResolvePlacementAngle(angle.HasValue ? angle.Value % 360 : device.Angle);
+            definition.PlacementCenter(x, z, device.Angle, out float centerX, out float centerZ);
             using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
                 for (int i = 0; i < entities.Length; i++)
                 {

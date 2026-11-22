@@ -93,7 +93,8 @@ namespace MarblesECS.PhysX
             var definition = CampaignStateUtility.Device(context, device.DefinitionId);
             if (definition.PlacementRadius <= 0) return false;
             float radius = (definition.PlacementRadius + PlacementClearance) * radiusScale;
-            var rotation = worldRotation ?? ((PhysicsRoot ? PhysicsRoot.rotation : Quaternion.identity) * Quaternion.Euler(0, angle ?? device.Angle, 0));
+            float placementAngle = definition.ResolvePlacementAngle(angle ?? device.Angle);
+            var rotation = worldRotation ?? ((PhysicsRoot ? PhysicsRoot.rotation : Quaternion.identity) * Quaternion.Euler(0, placementAngle, 0));
             if (!MarbleRules.IsFinite(radius) || !SimulationContext.IsFinite(rotation)) return false;
             var offset = new Vector3(definition.PlacementOffsetX, definition.PlacementOffsetY, definition.PlacementOffsetZ);
             Vector3 center = worldPosition + rotation * (offset * radiusScale);

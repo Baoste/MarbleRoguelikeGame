@@ -6,7 +6,7 @@ function OnContact(api)
     if api.LinkKey ~= 0 or api.Impact ~= nil or api.RemainingDurability == 0 then return end
     if api:HasSplitFrom(api.InstanceId) or not api:Visit(0, 0) then return end
     if api.Range < 1 or api.Range > 90 then return end
-    local batch = api:CreateSplitBatch(outlets)
+    local batch = api:CreateSplitBatch(outlets, false)
     if not batch.CanSplit then return end
     local motion = api.Motion
     local source, radius = motion.Source, batch.Radius

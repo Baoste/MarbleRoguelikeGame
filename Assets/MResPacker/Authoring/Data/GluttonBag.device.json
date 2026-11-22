@@ -8,5 +8,6 @@
     "Range": 0.2,
     "Strength": 2,
     "Value": 0,
+    "AcceptsPlacedOffers": true,
     "SourceId": "GluttonBag"
 }

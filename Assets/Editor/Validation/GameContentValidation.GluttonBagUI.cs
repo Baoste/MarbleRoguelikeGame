@@ -32,10 +32,10 @@ namespace MarblesECS.Editor
                 try
                 {
                     int source = BagFood(f.C);
-                    card.Bind(f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == source), true, placement.BeginPlacement, placement);
+                    card.Bind(f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == source), true, placement);
                     Vector2 pointer = camera.WorldToScreenPoint(Vector3.zero);
                     var data = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left, position = pointer };
-                    card.OnPointerDown(data); card.OnBeginDrag(data);
+                    card.OnBeginDrag(data);
                     Check(placement.IsDraggingInventory && placement.SelectedInstanceId == source, "inventory drag captures actual instance identity");
                     card.OnDrag(data); Check(placement.LastFeedback.Contains("松开投入"), "drag announces inventory consumption before release");
                     card.OnEndDrag(data);
@@ -56,10 +56,10 @@ namespace MarblesECS.Editor
                     control.transform.SetParent(blockingCanvas.transform, false);
                     var rect = (RectTransform)control.transform; rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
                     rect.offsetMin = rect.offsetMax = Vector2.zero; Canvas.ForceUpdateCanvases();
-                    Check(placement.BeginInventoryDrag(source, pointer), "begin obstructed drop");
                     // Headless canvas depth is -1; supply the pointer event's control hit directly.
-                    card.Bind(f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == source), true, placement.BeginPlacement, placement);
-                    card.OnPointerDown(data); card.OnBeginDrag(data);
+                    card.Bind(f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == source), true, placement);
+                    card.OnBeginDrag(data);
+                    Check(placement.IsDraggingInventory, "begin an inventory drag for the obstructed drop");
                     data.pointerCurrentRaycast = new RaycastResult { gameObject = control };
                     card.OnEndDrag(data);
                     Check(!placement.IsDraggingInventory && CampaignStateUtility.FindDevice(f.C, source, out _), "UI control hit blocks feeding through it");

@@ -20,9 +20,11 @@ namespace MarblesECS
         private readonly List<Item> items = new List<Item>();
         private bool submitted;
         private readonly bool registerRush;
-        internal DeviceSplitBatch(Func<SimulationContext> context, Entity parent, int sourceId, int count, bool registerRush = true)
+        private readonly bool inheritVisits;
+        internal DeviceSplitBatch(Func<SimulationContext> context, Entity parent, int sourceId, int count, bool inheritVisits, bool registerRush)
         {
             this.context = context; this.parent = parent; this.sourceId = sourceId;
+            this.inheritVisits = inheritVisits;
             this.registerRush = registerRush;
             var c = context();
             if (count < 2 || count > 256) throw new ArgumentOutOfRangeException(nameof(count));
@@ -103,9 +105,12 @@ namespace MarblesECS
                     created.Add(child);
                     c.Manager.SetComponentData(child, score); c.Manager.SetComponentData(child, rush);
                     MarbleAppearanceSystem.Copy(c, parent, child);
-                    c.Manager.GetBuffer<DeviceVisit>(child).CopyFrom(visits);
+                    if (inheritVisits)
+                    {
+                        c.Manager.GetBuffer<DeviceVisit>(child).CopyFrom(visits);
+                        c.Manager.GetBuffer<VisitedDeviceData>(child).CopyFrom(legacyVisits);
+                    }
                     c.Manager.GetBuffer<DeviceCopySource>(child).CopyFrom(copies);
-                    c.Manager.GetBuffer<VisitedDeviceData>(child).CopyFrom(legacyVisits);
                     var history = c.Manager.GetBuffer<DeviceSplitSource>(child); history.CopyFrom(sources);
                     bool known = false; foreach (var entry in history) if (entry.InstanceId == sourceId) known = true;
                     if (!known) history.Add(new DeviceSplitSource { InstanceId = sourceId });

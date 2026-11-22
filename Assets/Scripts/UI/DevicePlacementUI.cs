@@ -28,22 +28,16 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
     public int SelectedInstanceId { get; private set; }
     public string LastFeedback { get; private set; }
 
-    private readonly Dictionary<int, MRes.MResLoadHandle> placedObjects = new Dictionary<int, MRes.MResLoadHandle>();
+    private readonly Dictionary<int, PlacedDeviceView> placedObjects = new Dictionary<int, PlacedDeviceView>();
     private MRes.MResLoadHandle preview;
     private QuickOutline previewOutline;
     private GameObject previewObject => preview?.Root;
     private int displayedRevision = -1;
     private int displayedRoundId = -1;
 
-    public void BeginPlacement(int instanceId)
-    {
-        BeginSelection(instanceId);
-    }
-
     public void CancelPlacement()
     {
         RestoreSelectedView();
-        IsDraggingInventory = false;
         IsMovingPlacedDevice = false;
         SelectedInstanceId = 0;
         preview?.Dispose();
@@ -68,13 +62,19 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
             LastFeedback = "已取消，装置保留原状。";
             return;
         }
+        Vector2 pointer = Input.mousePosition;
+        if (Input.GetMouseButtonDown(0)) HandleBoardPointerDown(pointer);
         if (Input.GetKeyDown(KeyCode.R)) RotateSelected(45);
-        Vector2 pointer = IsDraggingInventory ? dragPointer : (Vector2)Input.mousePosition;
-        UpdatePlacementPointer(pointer);
-        if (Input.GetMouseButtonDown(0) && !IsDraggingInventory) HandleBoardClick(pointer);
+        if (Input.GetMouseButtonUp(0) && IsMovingPlacedDevice) HandleBoardPointerUp(pointer);
+        UpdatePlacementPointer(IsDraggingInventory ? dragPointer : pointer);
 #else
         ValidateSelection();
 #endif
+    }
+
+    private void OnApplicationFocus(bool focused)
+    {
+        if (!focused) CancelPlacement();
     }
 
     private bool TryGetBoardPoint(Vector2 screenPoint, out Vector3 localPoint)
@@ -119,6 +119,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         displayedRevision = revision;
         displayedRoundId = roundId;
 
+        ClearPlacedDeviceHover();
         foreach (var item in placedObjects.Values) item.Dispose();
         hiddenPlacedObject = null;
         placedObjects.Clear();
@@ -129,7 +130,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
             var item = handle.Root;
             SetDeviceTransform(item.transform, device.X, device.Z);
             item.transform.rotation *= Quaternion.Euler(0, device.Angle, 0);
-            placedObjects.Add(device.InstanceId, handle);
+            placedObjects.Add(device.InstanceId, new PlacedDeviceView(handle, device));
             item.SetActive(true);
         }
         HideSelectedView();
@@ -170,7 +171,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
 
     private bool TryGetDevice(int instanceId, out OwnedDeviceSnapshot result)
     {
-        if (Controller != null && Controller.IsReady && Controller.Session.Phase == RoundPhase.Build)
+        if (Controller != null && Controller.IsReady)
             foreach (OwnedDeviceSnapshot device in Controller.GetOwnedDevices())
                 if (device.InstanceId == instanceId)
                 {
@@ -183,6 +184,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
 
     private void OnDisable()
     {
+        ClearPlacedDeviceHover();
         CancelPlacement();
     }
 

@@ -59,7 +59,8 @@ namespace MarblesECS
                         RemainingDurability = DeviceDurabilitySystem.Remaining(context, item),
                         CompletingEffect = DeviceDurabilitySystem.Remaining(context, item) == 0 && DeviceScriptSystem.CanComplete(context, item.InstanceId),
                         ScoreMultiplier = definition.ScoreMultiplier, RushChanceAdd = definition.RushChanceAdd,
-                        Kind = definition.Kind, Description = definition.Description, Angle = item.Angle,
+                        Kind = definition.Kind, Description = definition.Description, RotationLocked = definition.RotationLocked,
+                        Angle = definition.ResolvePlacementAngle(item.Angle),
                         PairId = item.PairId, Range = definition.Range * (context.Content?.CentimetersToUnits ?? .01f) / .01f, Strength = definition.Strength
                     };
                 }

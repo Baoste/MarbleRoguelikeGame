@@ -53,7 +53,7 @@ public static class DeviceEditingInstaller
             existing.Background.color = new Color32(104, 27, 35, 240);
             existing.Background.raycastTarget = true;
             existing.Title = Label(rect, "Title", font, "装置售出区", -13, 30, 24);
-            existing.Hint = Label(rect, "Hint", font, "左键选中装置并移动  ·  再次左键放置  ·  R 旋转  ·  右键取消", -51, 27, 18);
+            existing.Hint = Label(rect, "Hint", font, DeviceSellAreaUI.DragHint, -51, 27, 18);
             existing.Hint.color = new Color32(255, 216, 213, 255);
             placement.SellArea = existing;
         }

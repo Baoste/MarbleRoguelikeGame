@@ -7218,7 +7218,6 @@ MonoBehaviour:
   - {fileID: 221511279}
   RefreshRandomSeedOnNewRun: 1
   EnableRandomStartingDevices: 0
-  RandomStartingDeviceCount: 1
 --- !u!4 &130887920
 Transform:
   m_ObjectHideFlags: 0
@@ -10096,7 +10095,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &199552582
 Transform:
   m_ObjectHideFlags: 0
@@ -35710,6 +35709,7 @@ GameObject:
   m_Component:
   - component: {fileID: 708961953}
   - component: {fileID: 708961954}
+  - component: {fileID: 708961955}
   m_Layer: 0
   m_Name: "\u53F3\u4FA7\u659C\u8FB9"
   m_TagString: Untagged
@@ -35739,7 +35739,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 708961952}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 28041f94c0c4f044a924053a93b22251, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -35753,6 +35753,33 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.16, y: 0.56, z: 8.268302}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!54 &708961955
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 708961952}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &709651757
 GameObject:
   m_ObjectHideFlags: 0
@@ -39034,7 +39061,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &767965330
 Transform:
   m_ObjectHideFlags: 0
@@ -83524,7 +83551,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u5DE6\u952E\u9009\u4E2D\u88C5\u7F6E\u5E76\u79FB\u52A8  \xB7  \u518D\u6B21\u5DE6\u952E\u653E\u7F6E 
+  m_text: "\u6309\u4F4F\u5DE6\u952E\u62D6\u52A8  \xB7  \u677E\u5F00\u653E\u7F6E 
     \xB7  R \u65CB\u8F6C  \xB7  \u53F3\u952E\u53D6\u6D88"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 159c4bcc88dad204aad22830629f5be1, type: 2}
@@ -88730,6 +88757,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1674282052}
   - component: {fileID: 1674282053}
+  - component: {fileID: 1674282054}
   m_Layer: 0
   m_Name: "\u5DE6\u4FA7\u659C\u8FB9"
   m_TagString: Untagged
@@ -88759,7 +88787,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1674282051}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 28041f94c0c4f044a924053a93b22251, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -88773,6 +88801,33 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.16, y: 0.56, z: 8.268302}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!54 &1674282054
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1674282051}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &1674899323
 GameObject:
   m_ObjectHideFlags: 0

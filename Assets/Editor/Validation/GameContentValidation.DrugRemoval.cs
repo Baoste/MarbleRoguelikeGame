@@ -14,8 +14,6 @@ namespace MarblesECS.Editor
             var oldJson = json.Replace("\"Attributes\":", "\"Drugs\":[{\"Id\":1,\"StartingCount\":999}],\"Attributes\":");
             var content = JsonUtility.FromJson<GameContent>(oldJson); content.Validate();
             Check(!JsonUtility.ToJson(content).Contains("\"Drugs\""), "old JSON cannot restore removed drug definitions");
-            var imported = GameContentImporter.Read(GameContentImporter.Workbook, content);
-            Check(!JsonUtility.ToJson(imported).Contains("\"Drugs\""), "legacy workbook cannot restore drugs");
             using (var f = new Fixture())
             {
                 var first = f.Launch(); double bounce = f.Simulation.GetMarbleAttribute(first, GameAttribute.BALL_BOUNCE);

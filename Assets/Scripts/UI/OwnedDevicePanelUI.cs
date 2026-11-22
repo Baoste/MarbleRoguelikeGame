@@ -58,7 +58,7 @@ public sealed class OwnedDevicePanelUI : MonoBehaviour
 
         OwnedDeviceSnapshot[] devices = Controller.GetOwnedDevices();
         RoundPhase phase = Controller.Session.Phase;
-        bool canSelect = phase == RoundPhase.Build;
+        bool canDrag = phase == RoundPhase.Build;
         int visibleCount = 0;
 
         for (int i = 0; i < devices.Length; i++)
@@ -68,7 +68,7 @@ public sealed class OwnedDevicePanelUI : MonoBehaviour
                 continue;
 
             OwnedDeviceButtonUI item = GetOrCreateItem(visibleCount++);
-            item.Bind(device, canSelect, PlacementUI != null ? PlacementUI.BeginPlacement : null, PlacementUI);
+            item.Bind(device, canDrag, PlacementUI);
             item.gameObject.SetActive(true);
         }
 

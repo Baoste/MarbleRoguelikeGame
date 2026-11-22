@@ -82,13 +82,18 @@ namespace MarblesECS.Editor.Diegetic
             Check(rig.IsBoardOpen&&rig.ItemGroup.alpha==1&&rig.ItemGroup.blocksRaycasts,"Build opens board and reveals its UI");
             Check(rig.VisibleDeviceCount==6&&rig.DevicePager.activeSelf,"More than six devices paginate instead of overflowing");
             int firstId=rig.Controller.GetOwnedDevices().First(d=>!d.Placed).InstanceId;
-            Click(Hit(2,0));Check(rig.Placement.SelectedInstanceId==firstId,"Physical board selection reaches existing placement logic");
+            var card=Hit(2,0);
+            Click(card);Check(rig.Placement.SelectedInstanceId==0,"Clicking an inventory card leaves the board idle");
+            var dragCard=new PointerEventData(EventSystem.current){button=PointerEventData.InputButton.Left,position=rig.ViewCamera.WorldToScreenPoint(card.transform.position)};
+            card.OnPointerDown(dragCard);card.OnBeginDrag(dragCard);
+            Check(rig.Placement.IsDraggingInventory&&rig.Placement.SelectedInstanceId==firstId,"Physical board drag captures the inventory instance");
+            rig.Placement.CancelPlacement();
             rig.ChangeDevicePage(1);Check(rig.VisibleDeviceCount>0,"Second page devices remain accessible");rig.ChangeDevicePage(-1);
             // Find a legal placement on the original plane, keeping collision rejection active.
             bool placed=false;var plane=rig.Placement.PlacementPlane?rig.Placement.PlacementPlane:rig.Placement.BoardRoot;
             for(float x=-1.4f;x<=1.4f&&!placed;x+=.35f)for(float z=-1.9f;z<=1.9f&&!placed;z+=.35f)
             {var w=plane.TransformPoint(new Vector3(x,0,z));var local=rig.Placement.BoardRoot.InverseTransformPoint(w);placed=rig.Controller.PlaceDevice(firstId,local.x,local.z,w,1);}
-            Check(placed,"A selected device can still be placed on the original playfield");rig.Placement.CancelPlacement();rig.RefreshInventory();
+            Check(placed,"The original playfield accepts placement for the same device");rig.RefreshInventory();
             wait=Wait(.2f);while(wait.MoveNext())yield return null;
             Capture("03_Build_1080p",1920,1080);Capture("04_Build_4K",3840,2160);
             CheckViewport();

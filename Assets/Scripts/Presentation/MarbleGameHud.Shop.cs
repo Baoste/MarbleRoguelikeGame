@@ -54,7 +54,7 @@ namespace MarblesECS.Presentation
                 GUILayout.Label(device.Description);
                 GUILayout.Label(DeviceDisplayText.Details(device));
                 GUILayout.BeginHorizontal();
-                if (editable && GUILayout.Button("旋转 45°")) Controller.RotateDevice(device.InstanceId, 45);
+                if (editable && !device.RotationLocked && GUILayout.Button("旋转 45°")) Controller.RotateDevice(device.InstanceId, 45);
                 if (editable && Board != null && GUILayout.Button(Board.SelectedDeviceId == device.InstanceId ? "已选中" : "选择 / 移动"))
                     Board.Select(device.InstanceId);
                 if (editable && device.Placed && GUILayout.Button("收回"))

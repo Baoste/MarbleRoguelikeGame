@@ -33,8 +33,12 @@ namespace MarblesECS
         [OptionalBalanceField] public float Range = 0.2f;
         [OptionalBalanceField] public float Strength = 2;
         [OptionalBalanceField] public double Value = 1;
+        [OptionalBalanceField] public bool RotationLocked;
+        [OptionalBalanceField] public bool AcceptsPlacedOffers;
 
         public DeviceDefinition Copy() { return (DeviceDefinition)MemberwiseClone(); }
+
+        public float ResolvePlacementAngle(float angle) => RotationLocked ? 0f : angle;
 
         public void SetPlacementSphere(float x, float y, float z, float radius)
         {
@@ -46,7 +50,7 @@ namespace MarblesECS
 
         public void PlacementCenter(float x, float z, float angle, out float centerX, out float centerZ)
         {
-            double radians = angle * Math.PI / 180, cos = Math.Cos(radians), sin = Math.Sin(radians);
+            double radians = ResolvePlacementAngle(angle) * Math.PI / 180, cos = Math.Cos(radians), sin = Math.Sin(radians);
             centerX = x + (float)(cos * PlacementOffsetX + sin * PlacementOffsetZ);
             centerZ = z + (float)(-sin * PlacementOffsetX + cos * PlacementOffsetZ);
         }

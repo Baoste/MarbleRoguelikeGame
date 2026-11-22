@@ -4,7 +4,7 @@
 
 ## 已接入
 
-- 正式数值 JSON、两份可编辑 Excel、道具与药物运行时修正、商店 RUSH 商品保底及去重逻辑。
+- 正式数值 JSON、基础数值 Excel、道具与药物运行时修正、商店 RUSH 商品保底及去重逻辑。
 - Unity Excel 导入器、内容校验、Balance Dashboard、物理采样器、Python 模拟程序和交接文档。
 - 六关目标为 **120 / 380 / 815 / 1410 / 2200 / 3145**，商店刷新基础价 **2**。
 - 黑色四叶草 **65%**；增值透镜 **×1.85**；资本主义 **×2.70**；倍分钉 **×1.85**；RUSH 钉 **+11 个百分点**。
@@ -22,7 +22,6 @@
 | 检查 | 结果 |
 | --- | --- |
 | Unity C# 编译 | 通过，0 个编译错误 |
-| Excel 导入 | 34 个属性、15 个装置、12 个药物；导入后数值与交接包一致 |
 | 内容运行时校验 | 643 项断言通过 |
 | 装置碰撞放置校验 | 11 项断言通过 |
 | TestScene 播放模式 | 控制器初始化成功，首关目标 120；成功发射实体弹珠，血量 100 → 99，推进 599 个模拟步 |
@@ -45,8 +44,8 @@
 打开 `Assets/Scenes/TestScene.unity` 后进入 Play，即使用新的正式配置。
 
 - 修改血量、阶段目标或商店规则：编辑 `Assets/Config/GameBalance.xlsx`，使用 `Marbles ECS > Import Game Balance Excel`。
-- 修改属性表：编辑 `Assets/Docs/血色柏青哥_道具药物装置_规范修订版.xlsx`，使用 `Marbles ECS > Import Attribute and Content Excel`。
-- 商品价格与已注册效果参数仍由 `Assets/Resources/GameContent.json` 管理；Excel 的“运行时平衡表”是核对摘要，不是价格导入源。不要使用历史“四档赌博更新版”覆盖正式内容表。
+- 修改属性和内容规则时，直接编辑 `Assets/Resources/GameContent.json`。
+- 装置价格和效果在 MRes 制作源中编辑，重新打包后同步到运行时目录。
 - 检查运行时：`Marbles ECS > Validate Attribute and Content Runtime`。
 - 查看和重跑模拟：`Tools > Pachinko > Balance Dashboard`。换电脑后如找不到 Python，可在面板中选择 Python 3.10 或更新版本。核心模拟只使用 Python 标准库；独立的 `workbook_audit.py` 需要 openpyxl。
 
@@ -56,7 +55,7 @@
 
 ## 备份和证据
 
-整合前的文件、完整 Unity 日志、Excel 核对结果、场景差异清单保存在：
+整合前的文件、完整 Unity 日志和场景差异清单保存在：
 
 `E:\毕设\Codex工作文件\血色柏青哥_20260922\balance_integration_20261001`
 

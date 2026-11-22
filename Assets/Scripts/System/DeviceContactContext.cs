@@ -132,7 +132,9 @@ namespace MarblesECS
             foreach (var source in sources) if (source.InstanceId == instanceId) return true;
             return false;
         }
-        public DeviceSplitBatch CreateSplitBatch(int count) => new DeviceSplitBatch(() => C, ball, InstanceId, count, allowRushContribution);
+        public DeviceSplitBatch CreateSplitBatch(int count) => CreateSplitBatch(count, true);
+        public DeviceSplitBatch CreateSplitBatch(int count, bool inheritVisits) =>
+            new DeviceSplitBatch(() => C, ball, InstanceId, count, inheritVisits, allowRushContribution);
         public bool HasSplitFrom(int instanceId)
         {
             var sources = C.Manager.GetBuffer<DeviceSplitSource>(ball);

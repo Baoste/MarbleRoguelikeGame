@@ -93,7 +93,6 @@ GameObject:
   m_Component:
   - component: {fileID: 6177764087180706757}
   - component: {fileID: 1089688928449874}
-  - component: {fileID: 8274167746565985870}
   m_Layer: 0
   m_Name: IcedAmericano
   m_TagString: Untagged
@@ -155,14 +154,14 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!136 &8274167746565985870
-CapsuleCollider:
+--- !u!64 &8274167746565985870
+MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 642140424730037996}
-  m_Material: {fileID: 0}
+  m_GameObject: {fileID: 4389591542406332650}
+  m_Material: {fileID: 13400000, guid: a8963ac7241f4ac6a91964119078e0a5, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -173,11 +172,10 @@ CapsuleCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.285
-  m_Height: 0.57
-  m_Direction: 1
-  m_Center: {x: 0, y: 0.285, z: 0}
+  serializedVersion: 5
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 4300000, guid: 7c3ac42a16021094fbaa7abed0c22177, type: 2}
 --- !u!1 &1360666453964994225
 GameObject:
   m_ObjectHideFlags: 0
@@ -438,6 +436,7 @@ GameObject:
   - component: {fileID: 6769199933419718575}
   - component: {fileID: 7937376345173001093}
   - component: {fileID: 810381744446888656}
+  - component: {fileID: 8274167746565985870}
   m_Layer: 0
   m_Name: Cup
   m_TagString: Untagged

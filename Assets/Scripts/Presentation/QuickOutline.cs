@@ -10,8 +10,11 @@ namespace MarblesECS.Presentation
 {
     internal sealed class QuickOutline : IDisposable
     {
+        internal static readonly Color HoverColor = new Color(.22f, .62f, 1f);
         private static readonly int OutlineColor = Shader.PropertyToID("_OutlineColor");
         private readonly List<Object> owned = new List<Object>();
+        private readonly List<(MeshRenderer Source, MeshRenderer Overlay)> parts =
+            new List<(MeshRenderer, MeshRenderer)>();
         private readonly Material fill;
         private Color currentColor;
 
@@ -33,7 +36,7 @@ namespace MarblesECS.Presentation
                 var meshes = new Dictionary<Mesh, Mesh>();
                 foreach (var source in root.GetComponentsInChildren<MeshRenderer>(true))
                 {
-                    if (!source.enabled || !source.TryGetComponent<MeshFilter>(out var filter)) continue;
+                    if (!source.TryGetComponent<MeshFilter>(out var filter)) continue;
                     var mesh = filter.sharedMesh;
                     if (!mesh || !mesh.isReadable) continue;
 
@@ -51,7 +54,9 @@ namespace MarblesECS.Presentation
                     var renderer = child.GetComponent<MeshRenderer>();
                     renderer.shadowCastingMode = ShadowCastingMode.Off;
                     renderer.sharedMaterials = materials;
+                    parts.Add((source, renderer));
                 }
+                SetVisible(true);
             }
             catch
             {
@@ -65,6 +70,17 @@ namespace MarblesECS.Presentation
             if (!fill || currentColor == color) return;
             currentColor = color;
             fill.SetColor(OutlineColor, color);
+        }
+
+        internal void SetVisible(bool visible)
+        {
+            foreach (var part in parts)
+            {
+                if (!part.Overlay) continue;
+                bool show = visible && part.Source && part.Source.enabled && !part.Source.forceRenderingOff;
+                if (part.Overlay.gameObject.activeSelf != show) part.Overlay.gameObject.SetActive(show);
+                if (show && !part.Overlay.enabled) part.Overlay.enabled = true;
+            }
         }
 
         private Mesh CreateOutlineMesh(Mesh source)
@@ -124,6 +140,7 @@ namespace MarblesECS.Presentation
                 else Object.DestroyImmediate(item);
             }
             owned.Clear();
+            parts.Clear();
         }
     }
 }

@@ -102,10 +102,17 @@ namespace MarblesECS.Editor
                 Check(!f.Simulation.TryOfferDevice(d.InstanceId, d.InstanceId), "cannot consume self");
                 Check(!f.Simulation.TryOfferDevice(-1, d.InstanceId) && !f.Simulation.TryOfferDevice(source, -1), "unknown inventory and receivers are rejected");
                 MorePlace(f.C, d.InstanceId, false); Check(!f.Simulation.TryOfferDevice(source, d.InstanceId), "receiver must be placed"); MorePlace(f.C, d.InstanceId, true);
-                MorePlace(f.C, source, true); Check(!f.Simulation.TryOfferDevice(source, d.InstanceId), "placed food is rejected");
+                MorePlace(f.C, source, true);
+                Check(f.Simulation.CanOfferDevice(source, d.InstanceId), "the packaged receiver opts into placed food");
+                var receiver = f.C.Balance.Devices.Single(x => x.Id == d.DefinitionId);
+                receiver.AcceptsPlacedOffers = false;
+                Check(!f.Simulation.CanOfferDevice(source, d.InstanceId) && !f.Simulation.TryOfferDevice(source, d.InstanceId),
+                    "receivers without the opt-in reject placed food");
+                receiver.AcceptsPlacedOffers = true;
                 Check(!f.Simulation.TryOfferDevice(d.InstanceId, source), "normal device has no OnOffer callback"); MorePlace(f.C, source, false);
                 var ordinary = BagFood(f.C); MorePlace(f.C, ordinary, true);
                 Check(!f.Simulation.CanOfferDevice(source, ordinary) && !f.Simulation.TryOfferDevice(source, ordinary), "valid inventory cannot be offered to a target without OnOffer");
+                MorePlace(f.C, source, true);
                 CampaignStateUtility.FindDevice(f.C, d.InstanceId, out var entity); CampaignStateUtility.FindDevice(f.C, source, out var food);
                 var api = new DeviceOfferContext(f.C, entity, food);
                 Near(f.C.Round.RoundId + 1, api.RoundId, "build context targets upcoming round");
@@ -134,7 +141,8 @@ function Verify() assert(not pcall(function() return saved.RoundId end)) end", p
                 for (int n = 0; n < 2; n++)
                 {
                     Check(!f.Simulation.TryOfferDevice(source, d.InstanceId), "rejected and throwing callbacks abort offer");
-                    Check(CampaignStateUtility.FindDevice(f.C, source, out _), "aborted offer retains source");
+                    Check(CampaignStateUtility.FindDevice(f.C, source, out var remaining) &&
+                        f.C.Manager.GetComponentData<OwnedDeviceData>(remaining).Placed, "aborted offer keeps the source on the board");
                     Near(0, DeviceRoundState.Get(f.C, entity, "bonus"), "aborted offer retains original growth");
                     Near(0, DeviceInstanceState.Get(f.C, entity, "growth"), "aborted offer retains persistent state");
                     Near(20, DeviceDurabilitySystem.Limit(f.C, f.C.Manager.GetComponentData<OwnedDeviceData>(entity)), "aborted offer retains capacity");

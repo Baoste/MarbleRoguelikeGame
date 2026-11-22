@@ -4,9 +4,9 @@
 
 `TestScene` 的 `PhysicsRoot/新盘面_局部X上坡_Z横向/玻璃罩碰撞_不遮挡操作` 限制弹珠飞离盘面。罩面平行盘面，内侧距离盘面 1.5 个世界单位、厚度 0.1，三个子对象补齐左右侧和上沿的碰撞边界，底部得分出口保持开放。罩体仅含静态 BoxCollider，不渲染；使用 Ignore Raycast 层，保留弹珠碰撞和装置操作。可在该对象的 BoxCollider 调整尺寸；若调整罩面高度，同时调整侧面子碰撞体，避免留下空隙。
 
-布置阶段可以调整已有装置：左键点击盘面上的装置后跟随鼠标，再次左键确认新位置；`R` 旋转预览，右键或 `Esc` 取消并恢复原位置、朝向。位置必须通过盘面边界、障碍物和装置间距检查；确认前不修改装置数据，移动保留耐久、配对和 Lua 状态。即使没有待放置的新装置，只要仍拥有装置，商店结束后也会进入布置阶段。
+布置阶段按住左键从盘面或背包拖动装置。拖到空位松开即可摆放，拖到左侧背包松开即可收回，拖到可接收装置上松开即可投入。拖动时按 `R` 旋转预览，右键或 `Esc` 取消。位置必须通过盘面边界、障碍物和装置间距检查，松在无效位置会退回原处。移动保留耐久、配对和 Lua 状态。即使没有待放置的新装置，只要仍拥有装置，商店结束后也会进入布置阶段。
 
-界面底部红色售出区仅在布置阶段显示。选中装置后显示其 Metadata `value` 售价；将鼠标移到红色区域，再次左键才确认出售并获得金币。悬停或背包拖拽松手不直接出售，右键可取消；传送门按单件出售，配对的另一件保留。场景入口为 `DeviceEditCanvas/DeviceSellArea`，可用菜单 `Marbles ECS/UI/配置装置移动与售出区` 给其他场景配置相同界面。
+界面底部红色售出区仅在布置阶段显示。拖动时显示装置的 Metadata `value` 售价，拖入红区松开即可出售并获得金币。传送门按单件出售，配对的另一件保留。场景入口为 `DeviceEditCanvas/DeviceSellArea`，可用菜单 `Marbles ECS/UI/配置装置移动与售出区` 给其他场景配置相同界面。
 
 ## 属性的唯一入口
 
@@ -34,7 +34,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 半径按现有单位转换：**实际世界半径 = 最终 BALL_RADIUS × 0.16**。最低档默认属性值 `0.5` 对应半径 `0.08`、直径 `0.16`。高档位以 `Investment / MinInvestment` 为投入倍率：半径按立方根增长，质量线性增长，基础价值按 `FlowValueExponent` 次方增长；当前指数为 `1.15`。通用体积缩放按体积倍率的立方根换算半径。旧药物不再影响发射参数。
 
-发射速度直接采用 `BALL_LAUNCH_SPEED`，单位为 m/s，不再乘旧发射速度；最终仍受 `BALL_MAX_SPEED` 限制。弹性在属性范围内结算；与静态或运动学障碍物碰撞时，按该球属性校正反弹，障碍物的高弹性材质不会把 `BALL_BOUNCE = 0` 抬高。超过 `1` 的属性值提供额外反弹增益。
+发射速度直接采用 `BALL_LAUNCH_SPEED`，单位为 m/s，最终仍受 `BALL_MAX_SPEED` 限制。静态或运动学棋盘障碍按 `BALL_BOUNCE` 校正反弹，实体装置取该值与自身物理材质弹性中的较大值。超过 `1` 的属性值提供额外反弹增益。各装置的材质弹性见 [装置一览](Device_Overview.md)。
 
 抽血档位仍在 `MinInvestment/MaxInvestment` 间选择投入量。基础耗血为「投入量 × BLOOD_COST」，随后应用属性 ADD/MUL/SET 和上下限；批量发射按球数收费。低档位用于增加携带 RUSH 贡献的球数，高档位用于 Rush 窗口内快速兑现价值。提现为「剩余血量 × BLOOD_DIVIDEND_RATE × 当前阶段 CashoutRate × COIN_GAIN_RATE」，金币向下取整。
 
@@ -70,17 +70,15 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 装置的名称、价格、参数和 `StartingCount` 在 `Resources/Devices/*.mres` 中配置；旧 `Drugs` 已删除。`Devices` 是 MRes 目录自动生成的离线分析快照。`StartingCount = 0` 不赠送，正整数表示开局数量；传送门每份生成一对，容量按两个实体计算。
 
-打开项目/脚本重载、导入/删除/移动 MRes、导入 `GameContent.json`、进入 Play 或构建 Player 时都会同步。同步完整替换 `Devices`，移除当前包目录中已不存在的条目；名称、描述、买卖价格、稀有度和耐久取包内 Metadata，其余参数取包内 `game/device.json`。旧 JSON、Excel 不再补回装置或覆盖包内配置，属性和内容规则保留。Play 中不修改当前会话，退出后同步，重新进入 Play 使用新配置。
+打开项目/脚本重载、导入/删除/移动 MRes、导入 `GameContent.json`、进入 Play 或构建 Player 时都会同步。同步完整替换 `Devices`，移除当前包目录中已不存在的条目。名称、描述、买卖价格、稀有度和耐久取包内 Metadata，其余参数取包内 `game/device.json`。属性和内容规则保留。Play 中不修改当前会话，退出后同步，重新进入 Play 使用新配置。
 
 手动同步菜单为 `Tools/MRes/Rebuild Device Catalog`。Unity 未打开时可在项目根目录运行 `python Assets/Editor/Balance/sync_mres_devices.py`；加 `--check` 只检查是否与当前 MRes 一致。脚本仅解析快照所需的 Metadata/业务参数，完整资源、Shader、Lua 校验由 Unity 完成；包损坏或 ID 重复会报错，不使用旧列表兜底。离线数值工具继续读取这份最新快照，历史分析结果和显式选择的旧实验快照不会被重写。
 
-给程序/策划交接的工作簿是 `Assets/Docs/血色柏青哥_道具药物装置_规范修订版.xlsx`。优先查看其中的“运行时平衡表”：其中的旧药物行仅作为历史设计参考，不代表当前游戏内容。该页不自动覆盖配置，运行时装置来源是 `Resources/Devices/*.mres`，属性来源是 `Resources/GameContent.json`。
+商店当前只出售 MRes 装置，每回合按普通/罕见/稀有/传奇权重 60/30/7/3 选择档位，再在该档剩余装置中等概率、无重复抽取 `Campaign.ShopOfferCount` 个装置（默认 4），不设 RUSH 保底；目录不足时只显示实际可用装置。无货或已抽空的档位不参与，剩余权重归一化；当前无传奇时为 60:30:7。基础购买价分别为 9/14/23/38，分档见 [装置一览](Device_Overview.md)。付费刷新采用同样规则，购买不会重抽其他货位。商店与初始装置、装置 Lua、赌博开奖共用整局唯一随机序列；生成和刷新商品会推进后续玩法的随机状态。目录按 ID 排序，相同种子和调用次序可复现抽取结果。旧药物商品、初始库存、服药和药效代码保持删除，后续药物将改用 Lua。
 
-商店当前只出售 MRes 装置，每回合按普通/罕见/稀有/传奇权重 60/30/7/3 选择档位，再在该档剩余装置中等概率、无重复抽取 `Campaign.ShopOfferCount` 个装置（默认 4），不设 RUSH 保底；目录不足时只显示实际可用装置。无货或已抽空的档位不参与，剩余权重归一化；当前无传奇时为 60:30:7。基础购买价分别为 9/14/23/38，分档见 [装置稀有度](Device_Rarity.md)。付费刷新采用同样规则，购买不会重抽其他货位。商店与初始装置、装置 Lua、赌博开奖共用整局唯一随机序列；生成和刷新商品会推进后续玩法的随机状态。目录按 ID 排序，相同种子和调用次序可复现抽取结果。旧药物商品、初始库存、服药和药效代码保持删除，后续药物将改用 Lua。
+控制器的「开局获得全部装置」（`EnableRandomStartingDevices`）在 `TestScene` 中已开启。每次开新局或重开整局时，背包免费获得当前 MRes 目录中每种装置一套，数量按 `PurchaseQuantity` 发放，传送门为完整的一对。全目录赠送可超过库存购买上限，后续商店购买按 `MaxOwnedDevices` 检查。
 
-当前默认开局空背包，不赠送装置：`TestScene` 关闭 `EnableRandomStartingDevices`，全部 MRes 的 `StartingCount` 为 `0`。进入游戏和重新开局都直接开始第一回合，之后通过商店购买装置。
-
-控制器的 `EnableRandomStartingDevices` 保留为测试选项，手动开启后可启用每局随机初始装置，替代固定 `StartingCount`；抽取数量由 `RandomStartingDeviceCount` 控制。进入下一回合不重新抽取，成套装置完整赠送。初始抽取直接消耗统一随机序列，不再提供初始装置或商店的独立种子。
+关闭开关时按包内的 `StartingCount` 发放。当前全部 MRes 的 `StartingCount` 为 `0`，此时空背包直接开始第一回合。全目录赠送在整局初始化时执行一次，直接按目录发放，不抽取随机数。
 
 在场景的 `MarbleGameController` Inspector「随机数」分组中，`每次开新局刷新随机种子`（`RefreshRandomSeedOnNewRun`）默认勾选：每次进入游戏或重新开局生成一个新的非零整局种子；取消勾选时使用 `Resources/GameBalance.json` 的 `Marble.RandomSeed`（当前为 `12345`）。进入下一回合、打开商店或道具库均不重新播种；只在需要随机结果时依次取数。`LastRunRandomSeed` 记录本次实际种子，方便复现。固定种子只保证相同随机调用次序的结果，不保证物理在不同平台完全一致。战役和独立模式均遵守此开关。
 
@@ -107,10 +105,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 日常直接修改 JSON，保存后退出 Play 并重新进入。运行会话使用深拷贝，重开当前局不重新读取磁盘配置。
 
 - `Config/GameBalance.xlsx` 只保留 `Marble`、`Campaign`、`Stages` 和说明页；保存会自动导入基础 JSON，也可使用 `Marbles ECS/Import Game Balance Excel`。
-- 规范工作簿不再自动覆盖 `GameContent.json`。只有显式执行 `Marbles ECS/Import Attribute and Content Excel`，才会采用表中的属性数值；需要使用该菜单时，先把希望保留的 JSON 修改同步到表格。
-- “运行时平衡表”是汇总审阅页，不被 Importer 自动读取；显式导入只读取属性字典，忽略旧药物设计行，装置每次直接解析当前 MRes 文件。
-- 旧属性表将发射速度标为倍率 `x`；导入器统一标记为 `m/s`，数值本身不做额外缩放。
-- `Editor/Balance/build_content.py` 只补充缺失的属性，保留其现有数值及内容规则；`Devices` 每次直接从当前 MRes 完整生成，不保留旧 JSON 中的装置行。数据完全一致时不重写文件。
+- 属性和内容规则直接在 `Resources/GameContent.json` 中编辑。装置以 `Resources/Devices` 下的 MRes 为配置来源，`GameContent.json.Devices` 由目录同步生成。
 
 基础 Excel 不识别已删除的属性字段、`Devices/Drugs/Board/Zones` 工作表，导入失败时不会发布 JSON。JSON 中遗留的旧属性字段被忽略，不能重新控制内容属性。`GameContent.json` 是场景启动的必需资源，缺失时报错，不再静默切回旧数值。
 
@@ -137,4 +132,4 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 ## 验证
 
-Unity 菜单 `Marbles ECS/Validate Attribute and Content Runtime` 验证配置优先级、旧 JSON 字段忽略、Excel 输出、属性、装置、库存、赌博、提现、放置和物理表现。测试会进入 Play；如不希望占用当前场景，可在独立临时项目中运行。
+Unity 菜单 `Marbles ECS/Validate Attribute and Content Runtime` 验证 JSON 属性和 MRes 装置来源、旧 JSON 字段忽略、基础 Excel 输出、库存、赌博、提现、放置和物理表现。测试会进入 Play，可在独立临时项目中运行。

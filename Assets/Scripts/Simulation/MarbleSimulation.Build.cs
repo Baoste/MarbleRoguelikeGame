@@ -31,6 +31,7 @@ namespace MarblesECS
             if (!CanCampaignAct(RoundPhase.Build) || !MarbleRules.IsFinite(degrees) ||
                 !CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
             var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+            if (CampaignStateUtility.Device(context, device.DefinitionId).RotationLocked) return false;
             device.Angle = (device.Angle + degrees) % 360; context.Manager.SetComponentData(entity, device);
             var campaign = context.Campaign; campaign.LayoutRevision++; context.Campaign = campaign; return true;
         }

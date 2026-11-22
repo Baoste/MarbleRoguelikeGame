@@ -48,7 +48,7 @@ namespace MResPacker
             first.SetVector("_Offset", new Vector4(.1f, .2f, .3f, .4f)); first.SetFloat("_Gain", 1.25f);
             var second = new Material(first) { name = "Pad Blue" }; second.SetColor("_BaseColor", new Color(.35f, .65f, 1, 1));
             AssetDatabase.CreateAsset(first, Root + "/Materials/PadGold.mat"); AssetDatabase.CreateAsset(second, Root + "/Materials/PadBlue.mat");
-            var physics = new PhysicsMaterialType("PadBounce") { dynamicFriction = .25f, staticFriction = .35f, bounciness = .7f,
+            var physics = new PhysicsMaterialType("PadBounce") { dynamicFriction = .25f, staticFriction = .35f, bounciness = 0,
                 frictionCombine = CombineType.Multiply, bounceCombine = CombineType.Maximum };
             AssetDatabase.CreateAsset(physics, Root + "/Materials/PadBounce.physicMaterial");
 

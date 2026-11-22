@@ -101,9 +101,9 @@ namespace MarblesECS.Editor
                 {
                     for (int stage = 1; stage <= 4; stage++)
                     {
-                        int source = DentalFood(f.C); card.Bind(f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == source), true, placement.BeginPlacement, placement);
+                        int source = DentalFood(f.C); card.Bind(f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == source), true, placement);
                         var data = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left, position = camera.WorldToScreenPoint(Vector3.zero) };
-                        card.OnPointerDown(data); card.OnBeginDrag(data); card.OnDrag(data); card.OnEndDrag(data);
+                        card.OnBeginDrag(data); card.OnDrag(data); card.OnEndDrag(data);
                         Check(CampaignStateUtility.FindDevice(f.C, source, out _) == (stage == 4), "real inventory drag consumes only accepted upgrades");
                         var grown = f.Simulation.GetOwnedDevices().Single(x => x.InstanceId == tooth.InstanceId);
                         Near(stage == 1 ? 5 : stage == 2 ? 8 : 20, grown.Durability, "inventory snapshot uses stage capacity");

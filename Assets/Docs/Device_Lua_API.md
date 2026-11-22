@@ -64,9 +64,9 @@ end
 | `OnTick(api)` | [DeviceEventContext](#deviceeventcontext) | 每个固定模拟步开始时调用，无弹珠时也调用。 |
 | `OnActivate(api)` | [DeviceEventContext](#deviceeventcontext) | 玩家在 Playing / Draining 阶段激活已放置装置时。分发成功不代表 Lua 接受了激活。 |
 | `OnField(api)` | [DeviceFieldContext](#devicefieldcontext) | 每个 PhysX 子步前，为未滞留弹珠收集连续力。 |
-| `OnOffer(api)` | [DeviceOfferContext](#deviceoffercontext) | Build 阶段向已放置装置提交一件未放置库存物品时。 |
+| `OnOffer(api)` | [DeviceOfferContext](#deviceoffercontext) | Build 阶段向已放置装置提交一件装置时。 |
 | `OnCreated(api)` | [DeviceEventContext](#deviceeventcontext) | 库存实例创建后一次；配对购买中的每件实例分别调用。 |
-| `OnOfferAccepted(api)` | [DeviceEventContext](#deviceeventcontext) | 库存提交事务成功后一次，读取已提交状态。 |
+| `OnOfferAccepted(api)` | [DeviceEventContext](#deviceeventcontext) | 装置提交事务成功后一次，读取已提交状态。 |
 | `OnRoundStart(api)` | [DeviceEventContext](#deviceeventcontext) | 回合重置和耐久恢复后，按实例 ID 通知全部已拥有装置。 |
 
 `OnCreated`、`OnOfferAccepted`、`OnRoundStart` 不要求实例已放置、有物理视图或有剩余耐久。没有物理视图时，读取装置姿态属性会失败。
@@ -364,7 +364,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 | [Roll(probability)](#roll) | `boolean` | 概率抽取。 |
 | [CreateCopy()](#createcopy) | `DeviceCopy` | 复制请求。 |
 | [CreatePortion(value)](#createportion) | `DevicePortion` | 按价值分出请求。 |
-| [CreateSplitBatch(count)](#createsplitbatch) | `DeviceSplitBatch` | 等分请求。 |
+| [CreateSplitBatch(count, inheritVisits = true)](#createsplitbatch) | `DeviceSplitBatch` | 等分请求。 |
 | [HasCopiedFrom(instanceId)](#hascopiedfrom) / [HasSplitFrom(instanceId)](#hassplitfrom) | `boolean` | 查询生成祖先。 |
 | [BreakPinsOnCross()](#breakpinsoncross) / [RemoveDevice()](#removedevice) | `void` | 移除普通钉 / 当前装置。 |
 
@@ -401,7 +401,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 | `maximum` | `integer` | 正数限制每球总访问次数；0 表示不限次数。 |
 | `inheritOnCopy` | `boolean` | 默认 false；true 允许该条记录随 `CreateCopy` 继承。 |
 
-登记成功返回 `true`；同球同键同一步重复访问或达到次数上限返回 `false`。不扣耐久、不施加倍率、不设置公共冷却。等分和按价值分出继承全部访问记录；普通复制只继承显式标记的记录。
+登记成功返回 `true`；同球同键同一步重复访问或达到次数上限返回 `false`。不扣耐久、不施加倍率、不设置公共冷却。等分默认继承全部访问记录，可用 `CreateSplitBatch(count, false)` 让子球独立计数。按价值分出继承全部访问记录，普通复制继承显式标记的记录。
 
 <a id="marktriggered"></a>
 
@@ -549,9 +549,9 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 <a id="createsplitbatch"></a>
 
-### CreateSplitBatch(count) → DeviceSplitBatch
+### CreateSplitBatch(count, inheritVisits = true) → DeviceSplitBatch
 
-参数：`count: integer`，范围 `[2, 256]`，越界抛出异常。
+`count` 为 `[2, 256]` 内的整数，越界抛出异常。`inheritVisits` 为布尔值，默认 `true`。传入 `false` 时，每颗子球从空的装置访问记录开始。
 
 创建[等分批次](#devicesplitbatch)，此时获取当前属性快照，不生成球、不消耗原球或耐久。
 
@@ -712,7 +712,7 @@ Build 阶段的一次库存提交上下文。源码：[DeviceOfferContext.cs](..
 
 | 属性 | 类型 | 说明 |
 | --- | --- | --- |
-| `OfferedInstanceId` | `integer` | 本次提交的单件库存实例。 |
+| `OfferedInstanceId` | `integer` | 本次提交的单件装置实例。 |
 | `OfferedDefinitionId` | `integer` | 来源装置定义 ID。 |
 | `OfferedName` | `string` | 来源装置名称。 |
 | `OfferedRarity` | `string` | `common` / `uncommon` / `rare` / `legendary`。 |
@@ -723,13 +723,13 @@ Build 阶段的一次库存提交上下文。源码：[DeviceOfferContext.cs](..
 
 无参数。标记接受本次提交，重复调用仍只处理这一件物品。
 
-回调正常结束且已接受时，提交暂存的回合/实例数值、耐久和状态文字，删除来源库存实例，更新布局与可用性，再分发新的 `OnOfferAccepted`。接受不发出售金币、不继承来源成长、不扣接收方耐久，也不自动消费配对的另一件物品。
+回调正常结束且已接受时，提交暂存的回合/实例数值、耐久和状态文字，删除来源装置实例，更新布局与可用性，再分发新的 `OnOfferAccepted`。接受不发出售金币、不继承来源成长、不扣接收方耐久，也不自动消费配对的另一件物品。
 
 未调用 Accept 或回调异常时，上述暂存数据不提交，物品保留。Lua 局部变量不属于事务；需要与物品消耗一起提交的成长使用 `SetRoundValue` / `SetInstanceValue`。提交后的 `OnOfferAccepted` 异常不会撤销已完成事务。
 
 ### 提交条件
 
-来源须为本会话未放置库存，目标已放置，不能提交自身。暂停、战斗阶段或无 OnOffer 的目标不接受。Build 阶段可以给上回合已耗尽的实例准备下一回合。
+来源和目标均为本会话的装置，目标已放置，不能提交自身。接收方可在 `game/device.json` 中设置 `AcceptsPlacedOffers = true`，允许直接提交盘面上的装置。缺省时只接收未放置的背包装置。暂停、战斗阶段或无 OnOffer 的目标不接受。Build 阶段可以给上回合已耗尽的实例准备下一回合。
 
 控制器的 CanOfferDevice 只检查资格和函数存在，不执行 Lua，也不保证脚本最终 Accept。
 
@@ -1086,7 +1086,7 @@ destination.Position
 
 ## DeviceSplitBatch
 
-由 `api:CreateSplitBatch(count)` 创建。源码：[DeviceSplitBatch.cs](../Scripts/System/DeviceSplitBatch.cs)。
+由 `api:CreateSplitBatch(count, inheritVisits)` 创建。参见 [DeviceSplitBatch.cs](../Scripts/System/DeviceSplitBatch.cs)。
 
 ### 属性
 
@@ -1114,7 +1114,7 @@ destination.Position
 
 全部创建成功后消耗原球并返回 true；任一失败清理本批全部子球、保留原球并返回 false。均分后低于属性下限时拒绝，不以钳制放大总量；容量按替换后的净数量检查。
 
-子球当前属性作为新基础，不复制属性修正列表；持有装置倍率、独立倍率、RUSH、外观、访问记录、作用历史、祖先、家族和原寿命继承。ScoreBonus / ScoreAdd 均分，其他独立倍率修正及其截止时间保留；临时重力沿用截止时间。
+子球当前属性作为新基础，不复制属性修正列表。持有装置倍率、独立倍率、RUSH、外观、作用历史、祖先、家族和原寿命继承。`inheritVisits` 控制访问记录的继承。ScoreBonus / ScoreAdd 均分，其他独立倍率修正和临时重力沿用截止时间。
 
 Generation 加 1，SpawnSourceId 改为本实例，等分祖先加入本实例。新球零角速度，区域力按出生位置重新计算。不重新抽血，家族返还仍最多一次。
 
