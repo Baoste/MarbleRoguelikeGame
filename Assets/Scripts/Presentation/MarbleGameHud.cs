@@ -68,6 +68,7 @@ namespace MarblesECS.Presentation
         private void DrawReady()
         {
             DrawStatus();
+            if (!Controller.ProductionCommandsAvailable) return;
             RoundPhase phase = Controller.Snapshot.Phase;
             if (phase == RoundPhase.Playing) DrawLaunch();
             else if (phase == RoundPhase.Draining)
@@ -84,7 +85,7 @@ namespace MarblesECS.Presentation
                 { autoFire = false; Controller.SetFireHeld(false); Controller.SetPaused(!Controller.Paused); }
             }
             if (Controller.RequiresRestart) GUILayout.Label("模拟异常，请重开并检查 Console。");
-            if (GUILayout.Button("重新开始整局 Restart"))
+            if (Controller.Day.Status == DayCampaignStatus.NotStarted && GUILayout.Button("重新开始整局 Restart"))
             {
                 autoFire = false;
                 Controller.SetFireHeld(false);

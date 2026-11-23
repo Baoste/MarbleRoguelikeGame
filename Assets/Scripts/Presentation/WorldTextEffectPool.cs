@@ -57,6 +57,17 @@ namespace MarblesECS.PhysX
                 Instance = null;
         }
 
+        internal void ClearActive()
+        {
+            foreach (var item in active)
+            {
+                if (item.Text == null) continue;
+                item.Text.gameObject.SetActive(false);
+                available.Enqueue(item.Text);
+            }
+            active.Clear();
+        }
+
         public static bool TryShow(string value, Vector3 worldPosition)
         {
             return Instance != null && Instance.Show(value, worldPosition);

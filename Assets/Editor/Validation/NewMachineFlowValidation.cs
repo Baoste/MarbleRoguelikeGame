@@ -203,7 +203,6 @@ namespace MarblesECS.Editor
                     camera.targetTexture = target;
                     camera.rect = new Rect(0, 0, 1, 1);
                     camera.aspect = 16f / 9f;
-                    camera.GetComponent<MarblesECS.Presentation.MachineCameraAspect>()?.Apply();
                     foreach (var canvas in overlays)
                     {
                         canvas.renderMode = RenderMode.ScreenSpaceCamera;

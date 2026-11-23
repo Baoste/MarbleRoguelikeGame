@@ -17,6 +17,12 @@ namespace MarblesECS
 
         private void StartSession(IMarblePhysics physics, int randomStarterTypeCount, uint? randomSeed, bool grantAllStartingDevices)
         {
+            if (dayFlow != null || startingDay) throw new InvalidOperationException("The Day campaign owns this production session.");
+            StartSessionCore(physics, randomStarterTypeCount, randomSeed, grantAllStartingDevices);
+        }
+
+        private void StartSessionCore(IMarblePhysics physics, int randomStarterTypeCount, uint? randomSeed, bool grantAllStartingDevices)
+        {
             ThrowIfDisposed();
             if (context.Balance == null) throw new InvalidOperationException("Construct with GameBalance to start a campaign.");
             if (randomStarterTypeCount < 0 || randomStarterTypeCount > 200)
@@ -46,6 +52,7 @@ namespace MarblesECS
         public bool BeginRound()
         {
             if (!CanCampaignAct(RoundPhase.Build)) return false;
+            var before = context.Round;
             ResetRound(context.Physics, resetRandom: false);
             var round = context.Round;
             round.TargetScore = context.Balance.Stages[context.Campaign.StageIndex].TargetScore;
@@ -55,22 +62,26 @@ namespace MarblesECS
             campaign.LastCashoutCoins = 0;
             context.Campaign = campaign;
             DeviceScriptSystem.RoundStart(context);
+            dayFlow?.ObserveRound(before, context.Round, stepped: false);
             return true;
         }
 
         public bool EnterBuild()
         {
             if (!CanCampaignAct(RoundPhase.Shop)) return false;
-            var round = context.Round;
+            var before = context.Round;
+            var round = before;
             round.Phase = (byte)RoundPhase.Build;
             round.TargetScore = context.Balance.Stages[context.Campaign.StageIndex].TargetScore;
             context.Round = round;
+            dayFlow?.ObserveRound(before, round, stepped: false);
             return true;
         }
 
         public bool CashOut()
         {
             if (!CanCampaignAct(RoundPhase.Playing) || !CampaignStateUtility.CanCashOut(context)) return false;
+            var before = context.Round;
             var campaign = context.Campaign;
             var stage = context.Balance.Stages[campaign.StageIndex];
             double dividend = AttributeRuntime.Enabled(context)
@@ -87,13 +98,15 @@ namespace MarblesECS
             var cashoutRound = context.Round; cashoutRound.CashoutRequested = true; context.Round = cashoutRound;
             if (!AttributeRuntime.Enabled(context)) context.RemoveAllMarbles();
             RoundFlowSystem.Execute(context);
+            dayFlow?.ObserveRound(before, context.Round, stepped: false, cashout: true);
             return true;
         }
 
         private bool CanCampaignAct(RoundPhase phase)
         {
             ThrowIfDisposed();
-            return started && !insidePhysicsStep && context.Balance != null && context.Round.Phase == (byte)phase;
+            return started && !insidePhysicsStep && context.Balance != null && ProductionCommandsAvailable &&
+                context.Round.Phase == (byte)phase;
         }
 
         private void FillBlood()

@@ -5,6 +5,9 @@ namespace MarblesECS
     internal struct CampaignData : IComponentData
     {
         public int StageIndex;
+        // Zero selects the full legacy stage list. A production plan can bound it.
+        public int StageEndExclusive;
+        public int StageStartIndex;
         public int StagesCleared;
         public long TotalScore;
         public long Coins;

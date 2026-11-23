@@ -20,7 +20,8 @@ namespace MarblesECS
                     LastRewardCoins = campaign.LastRewardCoins,
                     LastCashoutCoins = campaign.LastCashoutCoins, StagesCleared = campaign.StagesCleared,
                     LastSkippedStages = campaign.LastSkippedStages, ShopRefreshCount = campaign.ShopRefreshCount,
-                    LayoutRevision = campaign.LayoutRevision, CanCashOut = CampaignStateUtility.CanCashOut(context)
+                    LayoutRevision = campaign.LayoutRevision,
+                    CanCashOut = ProductionCommandsAvailable && CampaignStateUtility.CanCashOut(context)
                 };
                 if (context.Balance != null)
                 {

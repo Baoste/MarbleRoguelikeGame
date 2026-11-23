@@ -8,7 +8,7 @@ namespace MarblesECS.PhysX
     {
         private readonly List<MResDeviceBody> contentDevices = new List<MResDeviceBody>();
         private RaycastHit[] pinHits = new RaycastHit[64];
-        private readonly List<Collider> brokenPins = new List<Collider>();
+        private readonly Dictionary<Collider, Renderer[]> brokenPins = new Dictionary<Collider, Renderer[]>();
         private readonly List<MarbleBody> orderedFieldBodies = new List<MarbleBody>();
         private Func<int, bool> deviceAvailable, useDevice;
         private Action<MarbleKey, int> recordDeviceEffect;
@@ -229,15 +229,32 @@ namespace MarblesECS.PhysX
                     {
                         float tolerance = collider.bounds.extents.magnitude + .025f;
                         if (Math.Abs(Math.Abs(x) - Math.Abs(z)) > tolerance) continue;
-                        collider.enabled = false; brokenPins.Add(collider);
-                        foreach (var renderer in collider.GetComponentsInChildren<Renderer>()) renderer.enabled = false;
+                        BreakPin(collider);
                     }
                 }
         }
+        private void BreakPin(Collider collider)
+        {
+            if (!collider.enabled || brokenPins.ContainsKey(collider)) return;
+            collider.enabled = false;
+            var visible = new List<Renderer>();
+            foreach (var renderer in collider.GetComponentsInChildren<Renderer>())
+            {
+                if (!renderer.enabled) continue;
+                visible.Add(renderer);
+                renderer.enabled = false;
+            }
+            brokenPins.Add(collider, visible.ToArray());
+        }
+
         public void RestorePins()
         {
-            foreach (var collider in brokenPins)
-                if (collider != null) { collider.enabled = true; foreach (var renderer in collider.GetComponentsInChildren<Renderer>()) renderer.enabled = true; }
+            foreach (var item in brokenPins)
+            {
+                if (item.Key != null) item.Key.enabled = true;
+                foreach (var renderer in item.Value)
+                    if (renderer != null) renderer.enabled = true;
+            }
             brokenPins.Clear();
         }
     }

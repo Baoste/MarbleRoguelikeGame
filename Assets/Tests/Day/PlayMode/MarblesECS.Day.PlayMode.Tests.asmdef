@@ -1,0 +1,6 @@
+{
+  "name": "MarblesECS.Day.PlayMode.Tests",
+  "references": ["MarblesECS.Runtime", "MarblesECS.Rules", "MRes.Runtime", "Unity.Entities", "Unity.Collections"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}

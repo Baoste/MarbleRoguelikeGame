@@ -89,7 +89,7 @@ namespace MarblesECS.PhysX
 
         public void RestartRound()
         {
-            if (simulation == null || bridge == null) return;
+            if (simulation == null || bridge == null || simulation.HasDayFlow) return;
             bridge.RestorePins();
             StartSimulationSession();
             BeginRoundWhenInventoryIsEmpty();
@@ -106,7 +106,7 @@ namespace MarblesECS.PhysX
             if (!IsReady)
                 return;
 
-            bool canFire = !Paused && simulation.Snapshot.Phase == RoundPhase.Playing;
+            bool canFire = !Paused && simulation.ProductionCommandsAvailable && simulation.Snapshot.Phase == RoundPhase.Playing;
             bool held = canFire && (externalFireHeld || SpaceHeld());
             if (held == submittedFireHeld)
                 return;

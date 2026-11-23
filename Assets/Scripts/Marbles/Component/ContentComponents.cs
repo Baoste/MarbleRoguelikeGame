@@ -6,6 +6,7 @@ namespace MarblesECS
     internal struct AttributeModifierData : IBufferElementData
     {
         public uint Source;
+        public uint RuleHandle;
         public AttributeEffect Effect;
         public long ExpireTick;
     }

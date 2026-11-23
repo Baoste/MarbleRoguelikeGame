@@ -34,6 +34,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
     private GameObject previewObject => preview?.Root;
     private int displayedRevision = -1;
     private int displayedRoundId = -1;
+    private MarbleGameController dayProjectionController;
 
     public void CancelPlacement()
     {
@@ -48,6 +49,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
 
     private void Update()
     {
+        BindDayProjection();
         if (!CanEdit)
         {
             CancelPlacement();
@@ -119,10 +121,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         displayedRevision = revision;
         displayedRoundId = roundId;
 
-        ClearPlacedDeviceHover();
-        foreach (var item in placedObjects.Values) item.Dispose();
-        hiddenPlacedObject = null;
-        placedObjects.Clear();
+        ClearPlacedObjects();
         foreach (OwnedDeviceSnapshot device in Controller.GetOwnedDevices())
         {
             if (!device.Placed) continue;
@@ -188,11 +187,50 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         CancelPlacement();
     }
 
-    private void OnDestroy()
+    private void OnEnable() => BindDayProjection();
+
+    private void BindDayProjection()
+    {
+        if (ReferenceEquals(dayProjectionController, Controller)) return;
+        UnbindDayProjection();
+        dayProjectionController = Controller;
+        if (dayProjectionController == null) return;
+        dayProjectionController.DayBoardResetting += ResetDayProjection;
+        dayProjectionController.DayBoardRestored += RestoreDayProjection;
+    }
+
+    private void UnbindDayProjection()
+    {
+        if (ReferenceEquals(dayProjectionController, null)) return;
+        dayProjectionController.DayBoardResetting -= ResetDayProjection;
+        dayProjectionController.DayBoardRestored -= RestoreDayProjection;
+        dayProjectionController = null;
+    }
+
+    private void ClearPlacedObjects()
+    {
+        ClearPlacedDeviceHover();
+        foreach (var item in placedObjects.Values) item.Dispose();
+        hiddenPlacedObject = null;
+        placedObjects.Clear();
+    }
+
+    private void ResetDayProjection()
     {
         CancelPlacement();
-        foreach (var item in placedObjects.Values) item.Dispose();
-        placedObjects.Clear();
+        ClearPlacedObjects();
+        displayedRevision = displayedRoundId = -1;
+    }
+
+    private void RestoreDayProjection()
+    {
+        if (Controller != null && Controller.IsReady && BoardRoot != null) SyncPlacedObjects();
+    }
+
+    private void OnDestroy()
+    {
+        UnbindDayProjection();
+        ResetDayProjection();
     }
 
     private void OnDrawGizmos()

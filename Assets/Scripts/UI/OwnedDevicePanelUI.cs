@@ -18,6 +18,7 @@ public sealed class OwnedDevicePanelUI : MonoBehaviour
     private readonly List<OwnedDeviceButtonUI> deviceItems = new List<OwnedDeviceButtonUI>();
     private int displayedLayoutRevision = -1;
     private RoundPhase displayedPhase = (RoundPhase)byte.MaxValue;
+    private bool displayedCanDrag;
 
     private void OnEnable()
     {
@@ -43,11 +44,12 @@ public sealed class OwnedDevicePanelUI : MonoBehaviour
             return;
         }
 
+        bool canBuild = Controller.ProductionCommandsAvailable && Controller.Session.Phase == RoundPhase.Build;
         if (ContinueButton != null)
-            ContinueButton.interactable = Controller.Session.Phase == RoundPhase.Build;
+            ContinueButton.interactable = canBuild;
 
         if (displayedLayoutRevision != Controller.Session.LayoutRevision ||
-            displayedPhase != Controller.Session.Phase)
+            displayedPhase != Controller.Session.Phase || displayedCanDrag != canBuild)
             Refresh();
     }
 
@@ -58,7 +60,7 @@ public sealed class OwnedDevicePanelUI : MonoBehaviour
 
         OwnedDeviceSnapshot[] devices = Controller.GetOwnedDevices();
         RoundPhase phase = Controller.Session.Phase;
-        bool canDrag = phase == RoundPhase.Build;
+        bool canDrag = Controller.ProductionCommandsAvailable && phase == RoundPhase.Build;
         int visibleCount = 0;
 
         for (int i = 0; i < devices.Length; i++)
@@ -77,6 +79,7 @@ public sealed class OwnedDevicePanelUI : MonoBehaviour
 
         displayedLayoutRevision = Controller.Session.LayoutRevision;
         displayedPhase = phase;
+        displayedCanDrag = canDrag;
     }
 
     private OwnedDeviceButtonUI GetOrCreateItem(int index)

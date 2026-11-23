@@ -8,6 +8,11 @@ namespace MarblesECS.PhysX
         private void Update()
         {
             if (!IsReady) return;
+            if (simulation.HasDayFlow && !RequiresRestart)
+            {
+                try { simulation.PumpDayLifecycle(); PublishBloodIfChanged(); }
+                catch (Exception error) { StopAfterSimulationError(error); return; }
+            }
             UpdateFireInput();
             if (Paused) return;
             if (!IsSimulationRunning) return;
@@ -30,10 +35,7 @@ namespace MarblesECS.PhysX
                 }
                 catch (Exception error)
                 {
-                    simulation.AbortPhysicsStep();
-                    RequiresRestart = true;
-                    SetPaused(true);
-                    Debug.LogException(error, this);
+                    StopAfterSimulationError(error);
                     break;
                 }
                 if (!IsSimulationRunning)
@@ -45,6 +47,14 @@ namespace MarblesECS.PhysX
             // 超载时丢弃额外积欠时间，整局模拟一起放慢，不用巨大dt追赶导致穿透。
             if (accumulator >= step) accumulator %= step;
             FlushScores();
+        }
+
+        private void StopAfterSimulationError(Exception error)
+        {
+            simulation.AbortPhysicsStep();
+            RequiresRestart = true;
+            SetPaused(true);
+            Debug.LogException(error, this);
         }
 
     }

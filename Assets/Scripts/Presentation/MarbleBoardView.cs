@@ -17,7 +17,13 @@ namespace MarblesECS.Presentation
         private readonly Dictionary<int, MRes.MResLoadHandle> devices = new Dictionary<int, MRes.MResLoadHandle>();
 
         internal void Initialize(MarbleGameController game, Transform boardRoot, MarbleVisualPalette looks)
-        { controller = game; board = boardRoot;  }
+        {
+            UnbindDayProjection();
+            controller = game;
+            board = boardRoot;
+            controller.DayBoardResetting += ResetDayProjection;
+            controller.DayBoardRestored += SyncBoard;
+        }
 
         public void Select(int id)
         {
@@ -25,7 +31,9 @@ namespace MarblesECS.Presentation
             Feedback = "点击空白盘面放置或移动；点击已有钉子可选中。";
         }
 
-        private void LateUpdate()
+        private void LateUpdate() => SyncBoard();
+
+        private void SyncBoard()
         {
             if (controller == null || !controller.IsReady) return;
             if (revision == controller.Session.LayoutRevision && roundId == controller.Snapshot.RoundId) return;
@@ -50,13 +58,28 @@ namespace MarblesECS.Presentation
 
         private void OnDestroy()
         {
+            UnbindDayProjection();
+            ResetDayProjection();
+        }
+
+        private void UnbindDayProjection()
+        {
+            if (ReferenceEquals(controller, null)) return;
+            controller.DayBoardResetting -= ResetDayProjection;
+            controller.DayBoardRestored -= SyncBoard;
+        }
+
+        private void ResetDayProjection()
+        {
             foreach (var item in devices.Values) item.Dispose();
             devices.Clear();
+            revision = roundId = -1;
+            SelectedDeviceId = 0;
         }
 
         private void OnGUI()
         {
-            if (controller == null || !controller.IsReady || controller.Session.Phase != RoundPhase.Build) return;
+            if (controller == null || !controller.ProductionCommandsAvailable || controller.Session.Phase != RoundPhase.Build) return;
             if (ViewCamera == null) ViewCamera = Camera.main;
             if (ViewCamera == null) return;
             Event input = Event.current;

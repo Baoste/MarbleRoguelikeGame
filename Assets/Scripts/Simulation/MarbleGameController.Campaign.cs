@@ -12,8 +12,7 @@ namespace MarblesECS.PhysX
         public GameBalance Balance { get; private set; }
         public SessionSnapshot Session => !IsReady ? default : simulation.Session;
 
-        private bool IsSimulationRunning => Snapshot.Phase == RoundPhase.Playing ||
-            Snapshot.Phase == RoundPhase.Draining;
+        private bool IsSimulationRunning => simulation.CanSimulateProduction;
 
         public void ConfigureCampaign(GameBalance balance)
         {
@@ -84,7 +83,7 @@ namespace MarblesECS.PhysX
 
         private bool IsDevicePlacementClear(int id, Vector3 worldPosition, float radiusScale, float? angle, Quaternion? worldRotation)
         {
-            if (!IsReady || Paused || Session.Phase != RoundPhase.Build || !SimulationContext.IsFinite(worldPosition) ||
+            if (!ProductionCommandsAvailable || Paused || Session.Phase != RoundPhase.Build || !SimulationContext.IsFinite(worldPosition) ||
                 !MarbleRules.IsFinite(radiusScale) || radiusScale <= 0 ||
                 !MarbleRules.IsFinite(PlacementClearance) || PlacementClearance < 0) return false;
             var context = simulation.Context;

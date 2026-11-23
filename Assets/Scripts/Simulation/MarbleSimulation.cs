@@ -103,6 +103,7 @@ namespace MarblesECS
         {
             RequirePhysics(physics);
             if (insidePhysicsStep) throw new InvalidOperationException("AfterPhysics must complete the previous step.");
+            if (!ProductionCommandsAvailable) throw new InvalidOperationException("Day production is suspended.");
             if (!MarbleRules.IsFinite(dt) || dt <= 0) throw new ArgumentOutOfRangeException(nameof(dt));
             if (context.StepSeconds > 0 && dt != context.StepSeconds)
                 throw new ArgumentException("Fixed step cannot change within a round; restart to change it.", nameof(dt));
@@ -133,6 +134,7 @@ namespace MarblesECS
         {
             RequirePhysics(physics);
             if (!insidePhysicsStep) throw new InvalidOperationException("BeforePhysics must precede AfterPhysics.");
+            var before = dayFlow != null ? context.Round : default;
             try
             {
                 if (!context.IsRunning) return;
@@ -151,6 +153,7 @@ namespace MarblesECS
                 context.Contacts.Clear();
                 insidePhysicsStep = false;
             }
+            dayFlow?.ObserveRound(before, context.Round, stepped: true);
         }
 
         /// <summary>Recover the step boundary after a failed PhysX step; restart the round before resuming.</summary>
@@ -175,6 +178,7 @@ namespace MarblesECS
         {
             if (disposed) return;
             disposed = true;
+            dayFlow?.Dispose();
             context.Transients.Clear(context);
             context.DeviceScripts.Clear();
             // Entities' global shutdown also disposes manually owned worlds before some MB callbacks.
@@ -190,7 +194,7 @@ namespace MarblesECS
             finally { if (context.World.IsCreated) context.World.Dispose(); }
         }
 
-        private bool CanAcceptInput => started && context.Round.Phase == (byte)RoundPhase.Playing;
+        private bool CanAcceptInput => started && ProductionCommandsAvailable && context.Round.Phase == (byte)RoundPhase.Playing;
 
         private void RequirePhysics(IMarblePhysics physics)
         {

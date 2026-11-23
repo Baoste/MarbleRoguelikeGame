@@ -58,14 +58,9 @@ namespace MarblesECS
         {
             var campaign = context.Campaign;
             int instanceId = checked(campaign.NextDeviceId + 1);
-            var entity = context.Manager.CreateEntity(typeof(OwnedDeviceData), typeof(StableIdentity),
-                typeof(Owner), typeof(OnBoard), typeof(DefinitionRef));
-            context.Manager.SetComponentData(entity, new OwnedDeviceData
-                { InstanceId = instanceId, DefinitionId = definition.Id, PurchasePrice = price, PairId = pair });
-            context.Manager.SetComponentData(entity, new StableIdentity { StableId = ++context.NextStableId });
-            context.Manager.SetComponentData(entity, new Owner { Player = context.PlayerEntity });
-            context.Manager.SetComponentData(entity, new OnBoard { Board = context.BoardEntity });
-            context.Manager.SetComponentData(entity, new DefinitionRef { DefinitionId = definition.Id });
+            var entity = CreateDeviceEntity(context, new OwnedDeviceData
+                { InstanceId = instanceId, DefinitionId = definition.Id, PurchasePrice = price, PairId = pair },
+                new StableIdentity { StableId = ++context.NextStableId });
             if (AttributeRuntime.Enabled(context))
             {
                 AttributeRuntime.Initialize(context, entity);
@@ -77,6 +72,19 @@ namespace MarblesECS
             campaign.LayoutRevision++;
             context.Campaign = campaign;
             DeviceScriptSystem.InstanceEvent(context, instanceId, "OnCreated");
+        }
+
+        internal static Entity CreateDeviceEntity(SimulationContext context, OwnedDeviceData device, StableIdentity identity)
+        {
+            var manager = context.Manager;
+            var entity = manager.CreateEntity(typeof(OwnedDeviceData), typeof(StableIdentity),
+                typeof(Owner), typeof(OnBoard), typeof(DefinitionRef));
+            manager.SetComponentData(entity, device);
+            manager.SetComponentData(entity, identity);
+            manager.SetComponentData(entity, new Owner { Player = context.PlayerEntity });
+            manager.SetComponentData(entity, new OnBoard { Board = context.BoardEntity });
+            manager.SetComponentData(entity, new DefinitionRef { DefinitionId = device.DefinitionId });
+            return entity;
         }
 
         internal static bool CanCashOut(SimulationContext context)

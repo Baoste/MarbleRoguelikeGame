@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using MarblesECS.PhysX;
-using MarblesECS.Presentation;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -229,7 +228,6 @@ namespace MarblesECS.Editor
                     Require(target.Create(), "Could not create target-sized render texture.");
                     camera.targetTexture = target; camera.rect = new Rect(0, 0, 1, 1);
                     camera.aspect = 16f / 9f;
-                    camera.GetComponent<MachineCameraAspect>()?.Apply();
                     foreach (var canvas in overlays)
                     {
                         canvas.renderMode = RenderMode.ScreenSpaceCamera;
@@ -257,7 +255,6 @@ namespace MarblesECS.Editor
                 Texture2D texture = null;
                 try
                 {
-                    camera.GetComponent<MachineCameraAspect>()?.Apply();
                     Canvas.ForceUpdateCanvases(); camera.Render();
                     RenderTexture.active = target;
                     texture = new Texture2D(Width, Height, TextureFormat.RGB24, false);

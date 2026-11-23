@@ -5,7 +5,8 @@ namespace MarblesECS
         public void EnqueueContact(MarbleContact contact)
         {
             ThrowIfDisposed();
-            if (!started || contact.Key.RoundId != context.Round.RoundId || !context.IsRunning) return;
+            if (!started || (dayFlow != null && !insidePhysicsStep) ||
+                contact.Key.RoundId != context.Round.RoundId || !context.IsRunning) return;
             if (contact.TargetId <= 0) return;
             if (contact.Kind != MarbleContactKind.Multiplier && contact.Kind != MarbleContactKind.Score &&
                 contact.Kind != MarbleContactKind.Drain && contact.Kind != MarbleContactKind.RushPin &&

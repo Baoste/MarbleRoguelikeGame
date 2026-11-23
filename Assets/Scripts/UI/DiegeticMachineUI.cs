@@ -87,13 +87,13 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     {
         if(!initialized)return;
         bool ready=Controller && Controller.IsReady;
-        bool build=ready && Controller.Session.Phase==RoundPhase.Build;
+        bool build=ready && Controller.ProductionCommandsAvailable && Controller.Session.Phase==RoundPhase.Build;
         slide=Mathf.MoveTowards(slide,build?1:0,Time.unscaledDeltaTime/Mathf.Max(.01f,SlideSeconds));
         if(ItemBoard)ItemBoard.localPosition=Vector3.Lerp(BoardClosedPosition,BoardOpenPosition,Mathf.SmoothStep(0,1,slide));
         bool show=build && IsBoardOpen;
         if(ItemGroup){ItemGroup.alpha=show?1:0;ItemGroup.blocksRaycasts=show;ItemGroup.interactable=show && !Controller.Paused;}
         if(Continue)Continue.interactable=show && !Controller.Paused;
-        bool on=ready && Controller.Session.Phase==RoundPhase.Playing;
+        bool on=ready && Controller.ProductionCommandsAvailable && Controller.Session.Phase==RoundPhase.Playing;
         if(LeverPivot) LeverPivot.localRotation=Quaternion.RotateTowards(LeverPivot.localRotation,
             leverOnRotation*Quaternion.AngleAxis(on?0:LeverOffAngle,LeverAxis.normalized),Time.unscaledDeltaTime*240);
         if(LeverState)LeverState.text=on?(CanCashOut()?"CASH OUT  /  向下结算":"ON  /  目标未达成"):"OFF";
@@ -119,13 +119,13 @@ public sealed class DiegeticMachineUI : MonoBehaviour
 
     public bool TryContinue()
     {
-        if(!Controller||!Controller.IsReady||Controller.Paused||Controller.Session.Phase!=RoundPhase.Build||!IsBoardOpen)return false;
+        if(!Controller||!Controller.ProductionCommandsAvailable||Controller.Paused||Controller.Session.Phase!=RoundPhase.Build||!IsBoardOpen)return false;
         if(Placement)Placement.CancelPlacement();
         return Controller.BeginRound();
     }
     public bool BeginDeviceDrag(int index, Vector2 pointer)
     {
-        if(!Controller||!Controller.IsReady||Controller.Paused||Controller.Session.Phase!=RoundPhase.Build||!IsBoardOpen||!Placement||index<0||index>=deviceIds.Length)return false;
+        if(!Controller||!Controller.ProductionCommandsAvailable||Controller.Paused||Controller.Session.Phase!=RoundPhase.Build||!IsBoardOpen||!Placement||index<0||index>=deviceIds.Length)return false;
         return Placement.BeginInventoryDrag(deviceIds[index],pointer);
     }
     public void UpdateDeviceDrag(Vector2 pointer){if(Placement)Placement.UpdateInventoryDrag(pointer);}
@@ -158,7 +158,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
             if(DeviceButtons!=null && DeviceButtons.Length>i)
             {
                 DeviceButtons[i].gameObject.SetActive(occupied);
-                DeviceButtons[i].interactable=occupied && IsBoardOpen && Controller.Session.Phase==RoundPhase.Build && !Controller.Paused;
+                DeviceButtons[i].interactable=occupied && IsBoardOpen && Controller.ProductionCommandsAvailable && Controller.Session.Phase==RoundPhase.Build && !Controller.Paused;
                 if(occupied){VisibleDeviceCount++;DeviceNames[i].text=unplacedDevices[n].Name;DeviceDescriptions[i].text=MarblesECS.Presentation.DeviceDisplayText.Details(unplacedDevices[n])+"\n"+(unplacedDevices[n].Description??"");}
             }
         }

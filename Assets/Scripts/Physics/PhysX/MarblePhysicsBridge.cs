@@ -80,8 +80,14 @@ namespace MarblesECS.PhysX
         {
             if (disposed) return;
             ClearTransientVisuals();
-            foreach (var key in new List<MarbleKey>(bodies.Keys)) Remove(key);
+            RestorePins();
+            RetireBodies();
             disposed = true;
+        }
+
+        private void RetireBodies()
+        {
+            foreach (var key in new List<MarbleKey>(bodies.Keys)) Remove(key);
             while (pool.Count > 0)
             {
                 var view = pool.Pop();

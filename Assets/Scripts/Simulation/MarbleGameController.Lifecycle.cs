@@ -58,6 +58,8 @@ namespace MarblesECS.PhysX
                 simulation = EnableCampaign ? new MarbleSimulation(Balance) : new MarbleSimulation(runtimeTuning, Balance.Content);
                 simulation.ConfigureLauncherMovement(LaunchPoint.localPosition, LauncherMoveHalfWidth, LauncherMoveSpeed);
                 bridge = new MarblePhysicsBridge(localScene, MarblePrefab, material, simulation.EnqueueContact);
+                simulation.DayBoardResetting += BeforeDayBoardRestore;
+                simulation.DayBoardRestored += AfterDayBoardRestore;
                 StartSimulationSession();
                 BeginRoundWhenInventoryIsEmpty();
                 if (GetComponent<MarblesECS.Presentation.DeviceActivationUI>() == null)
@@ -111,17 +113,25 @@ namespace MarblesECS.PhysX
             bridge = null;
             simulation = null;
             publishedBlood = float.NaN;
-            try { releasedBridge?.Dispose(); }
+            try
+            {
+                if (releasedSimulation != null && releasedSimulation.HasDayFlow)
+                    BeforeDayBoardRestore();
+            }
             finally
             {
                 try { releasedSimulation?.Dispose(); }
                 finally
                 {
-                    try { ReleasePhysicsScene(); }
+                    try { releasedBridge?.Dispose(); }
                     finally
                     {
-                        if (ownedMaterial != null) Destroy(ownedMaterial);
-                        ownedMaterial = null;
+                        try { ReleasePhysicsScene(); }
+                        finally
+                        {
+                            if (ownedMaterial != null) Destroy(ownedMaterial);
+                            ownedMaterial = null;
+                        }
                     }
                 }
             }

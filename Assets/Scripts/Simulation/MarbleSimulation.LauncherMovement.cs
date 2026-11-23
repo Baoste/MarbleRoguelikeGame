@@ -30,6 +30,7 @@ namespace MarblesECS
         {
             ThrowIfDisposed();
             if (!MarbleRules.IsFinite(horizontal)) throw new ArgumentOutOfRangeException(nameof(horizontal));
+            if (!ProductionCommandsAvailable) return;
             var input = context.Manager.GetComponentData<LauncherMovementInput>(context.LauncherEntity);
             input.Horizontal = horizontal;
             input.Automatic = (byte)(automatic ? 1 : 0);
@@ -40,7 +41,7 @@ namespace MarblesECS
         {
             ThrowIfDisposed();
             if (!MarbleRules.IsFinite(x)) throw new ArgumentOutOfRangeException(nameof(x));
-            if (!context.IsRunning) return;
+            if (!CanSimulateProduction) return;
             var input = context.Manager.GetComponentData<LauncherMovementInput>(context.LauncherEntity);
             input.RequestedX = x;
             input.HasPositionRequest = 1;
@@ -53,6 +54,7 @@ namespace MarblesECS
             ThrowIfDisposed();
             if (insidePhysicsStep) throw new InvalidOperationException("Cannot move launcher during a physics step.");
             if (!MarbleRules.IsFinite(seconds) || seconds <= 0) throw new ArgumentOutOfRangeException(nameof(seconds));
+            if (!ProductionCommandsAvailable) return;
             LauncherMovementSystem.Execute(context, seconds);
         }
     }

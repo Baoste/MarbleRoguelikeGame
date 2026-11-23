@@ -29,9 +29,10 @@ namespace MarblesECS
         private static void AdvanceStages(SimulationContext context, ref CampaignData campaign, ref RoundData round)
         {
             var stages = context.Balance.Stages;
+            int end = campaign.StageEndExclusive == 0 ? stages.Length : campaign.StageEndExclusive;
             int first = campaign.StageIndex;
             int next = first;
-            while (next < stages.Length && campaign.TotalScore >= stages[next].TargetScore)
+            while (next < end && campaign.TotalScore >= stages[next].TargetScore)
             {
                 var stage = stages[next];
                 long reward = stage.RewardCoins;
@@ -41,7 +42,7 @@ namespace MarblesECS
                 next++;
             }
             campaign.LastSkippedStages = Math.Max(0, next - first - 1);
-            campaign.StagesCleared = next;
+            campaign.StagesCleared = next - campaign.StageStartIndex;
             if (AttributeRuntime.Enabled(context))
             {
                 long oldTotal = campaign.TotalScore - round.Score;
@@ -52,8 +53,8 @@ namespace MarblesECS
                 campaign.LastRewardCoins = MarbleRules.RoundScore(campaign.LastRewardCoins * AttributeRuntime.Global(context, GameAttribute.COIN_GAIN_RATE), CampaignStateUtility.MaxCoins);
             }
             campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastRewardCoins, CampaignStateUtility.MaxCoins);
-            campaign.StageIndex = Math.Min(next, stages.Length - 1);
-            round.Phase = (byte)(next == stages.Length ? RoundPhase.Won : RoundPhase.Shop);
+            campaign.StageIndex = Math.Min(next, end - 1);
+            round.Phase = (byte)(next == end ? RoundPhase.Won : RoundPhase.Shop);
         }
     }
 }

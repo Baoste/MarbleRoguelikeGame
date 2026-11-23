@@ -10,7 +10,8 @@ namespace MarblesECS
         public bool TryActivateDevice(int instanceId)
         {
             ThrowIfDisposed();
-            return started && !insidePhysicsStep && DeviceScriptSystem.DeviceEvent(context, instanceId, "OnActivate");
+            return started && !insidePhysicsStep && ProductionCommandsAvailable &&
+                DeviceScriptSystem.DeviceEvent(context, instanceId, "OnActivate");
         }
         public string GetDeviceStatus(int instanceId)
         {
