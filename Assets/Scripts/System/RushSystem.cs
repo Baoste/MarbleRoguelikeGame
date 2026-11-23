@@ -14,7 +14,8 @@ namespace MarblesECS
     {
         internal const double InitialContribution = 2, DeviceContribution = 5;
         internal const double Threshold = 666, Duration = 6, Cooldown = 3, ValueBonus = 5, ExtraShotsPerSecond = 5;
-        internal static bool Active(SimulationContext c) => c.IsRunning && c.Round.RushRemaining > 1e-7;
+        internal static bool Active(SimulationContext c) => c.IsRunning && c.Round.RushRemaining > 1e-7 &&
+            c.HasProductionFeature(ProductionFeature.Rush);
         internal static double BallValue(SimulationContext c, Entity ball) =>
             (AttributeRuntime.Enabled(c) ? AttributeRuntime.Get(c, ball, GameAttribute.BALL_BASE_VALUE)
                 : c.Manager.GetComponentData<MarbleScore>(ball).BaseScore) + (Active(c) ? ValueBonus : 0);
@@ -41,13 +42,15 @@ namespace MarblesECS
         internal static void AddContribution(SimulationContext c, Entity ball, double amount)
         {
             if (!MarbleRules.IsFinite(amount) || amount < 0 || amount > 1000000) throw new ArgumentOutOfRangeException(nameof(amount));
+            if (!c.HasProductionFeature(ProductionFeature.Rush)) return;
             var rush = c.Manager.GetComponentData<MarbleRush>(ball);
             rush.Contribution = Math.Min(1000000, rush.Contribution + amount);
             c.Manager.SetComponentData(ball, rush);
         }
         internal static void RecordTrigger(SimulationContext c, Entity ball, int source)
         {
-            if (!c.Manager.Exists(ball) || !c.Manager.HasComponent<MarbleRush>(ball)) return;
+            if (!c.HasProductionFeature(ProductionFeature.Rush) ||
+                !c.Manager.Exists(ball) || !c.Manager.HasComponent<MarbleRush>(ball)) return;
             var visits = c.Manager.GetBuffer<RushTriggerVisit>(ball);
             for (int i = 0; i < visits.Length; i++)
             {
@@ -61,7 +64,7 @@ namespace MarblesECS
         }
         internal static void RecordSpawn(SimulationContext c, Entity parent, System.Collections.Generic.IEnumerable<Entity> children, int source, bool accepted)
         {
-            if (!accepted) return;
+            if (!accepted || !c.HasProductionFeature(ProductionFeature.Rush)) return;
             double before = c.Manager.GetComponentData<MarbleRush>(parent).Contribution;
             RecordTrigger(c, parent, source);
             double delta = c.Manager.GetComponentData<MarbleRush>(parent).Contribution - before;
@@ -73,7 +76,7 @@ namespace MarblesECS
         }
         internal static void Settle(SimulationContext c, Entity ball, MarbleContact contact)
         {
-            if (Active(c) || c.Round.RushCooldownRemaining > 0 ||
+            if (!c.HasProductionFeature(ProductionFeature.Rush) || Active(c) || c.Round.RushCooldownRemaining > 0 ||
                 (contact.Kind != MarbleContactKind.Drain && contact.RushDisabled)) return;
             var rush = c.Manager.GetComponentData<MarbleRush>(ball);
             double amount = contact.Kind == MarbleContactKind.Drain ? rush.Contribution

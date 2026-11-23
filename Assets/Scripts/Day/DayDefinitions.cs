@@ -35,14 +35,19 @@ namespace MarblesECS
         public string DayId { get; }
         public int Order { get; }
         public DayProductionPlan ProductionPlan { get; }
+        public ProductionFeature ProductionFeatures { get; }
+        public IReadOnlyList<MorningPrepDefinition> MorningPrep { get; }
         public IReadOnlyList<DayEventDefinition> Events { get; }
         public IReadOnlyList<DayRuleDefinition> Rules { get; }
 
-        internal DayDefinition(string id, int order, DayProductionPlan plan, DayEventDefinition[] events, DayRuleDefinition[] rules)
+        internal DayDefinition(string id, int order, DayProductionPlan plan, ProductionFeature features,
+            MorningPrepDefinition[] morningPrep, DayEventDefinition[] events, DayRuleDefinition[] rules)
         {
             DayId = id;
             Order = order;
             ProductionPlan = plan;
+            ProductionFeatures = features;
+            MorningPrep = Array.AsReadOnly(morningPrep);
             Events = Array.AsReadOnly(events);
             Rules = Array.AsReadOnly(rules);
         }
@@ -53,21 +58,26 @@ namespace MarblesECS
         public string PlanId { get; }
         public uint FirstStageId { get; }
         public uint LastStageId { get; }
+        public long? TargetScore { get; }
 
-        internal DayProductionPlan(string id, uint firstStageId, uint lastStageId)
+        internal DayProductionPlan(string id, uint firstStageId, uint lastStageId, long? targetScore)
         {
             PlanId = id;
             FirstStageId = firstStageId;
             LastStageId = lastStageId;
+            TargetScore = targetScore;
         }
 
-        internal (int first, int end) Resolve(StageDefinition[] stages)
+        internal (int first, int end) Resolve(GameBalance balance)
         {
+            var stages = balance.Stages;
             int first = Array.FindIndex(stages, stage => stage.Id == FirstStageId);
             int last = Array.FindIndex(stages, stage => stage.Id == LastStageId);
             if (first < 0) throw new ArgumentException($"Production plan '{PlanId}'.firstStageId: unknown stage {FirstStageId}.");
             if (last < 0) throw new ArgumentException($"Production plan '{PlanId}'.lastStageId: unknown stage {LastStageId}.");
             if (last < first) throw new ArgumentException($"Production plan '{PlanId}'.lastStageId precedes firstStageId.");
+            if (TargetScore.HasValue && (first != last || TargetScore.Value <= 0 || TargetScore.Value > balance.Campaign.MaxTotalScore))
+                throw new ArgumentException($"Production plan '{PlanId}'.targetScore requires a single stage and a positive value within MaxTotalScore.");
             return (first, last + 1);
         }
     }

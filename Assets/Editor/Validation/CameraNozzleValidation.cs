@@ -66,7 +66,7 @@ namespace MarblesECS.Editor
             Succeeded = false;
             if (EditorApplication.isPlaying) { Start(); return; }
             SessionState.SetBool(PendingKey, true);
-            EditorApplication.EnterPlaymode();
+            LegacyMachineValidationStartup.EnterPlayMode();
         }
 
         private static void Start()
@@ -441,6 +441,8 @@ namespace MarblesECS.Editor
                 .Single(g => g.gameObject.scene.path == ScenePath);
             var wait = WaitFor(() => game.IsReady, "Production controller initializes");
             while (wait.MoveNext()) yield return null;
+            game.EnableRandomStartingDevices = true;
+            game.RestartRound();
             rig = UnityEngine.Object.FindObjectsOfType<DiegeticMachineUI>().Single(r => r.Controller == game);
             Check(rig.ViewCamera && rig.ItemBoard && rig.ItemUIAnchor && rig.ItemGroup && rig.Continue,
                 "Physical left-board references are assigned");

@@ -27,6 +27,7 @@ namespace MarblesECS
         /// <summary>Pass the version seen by the caller when completing an outer phase.</summary>
         public long Version { get; }
         public bool LifecyclePending { get; }
+        public int MorningPrepRemaining { get; }
         public string ProductionPlanId { get; }
         public int SettledRounds { get; }
         public long ProductionTicks { get; }
@@ -50,6 +51,7 @@ namespace MarblesECS
             LastTransition = state.LastTransition;
             Version = state.Version;
             LifecyclePending = pending;
+            MorningPrepRemaining = state.MorningPrepRemaining;
             ProductionPlanId = definition.ProductionPlan.PlanId;
             SettledRounds = state.SettledRounds;
             ProductionTicks = state.ProductionTicks;
@@ -101,7 +103,13 @@ namespace MarblesECS
         internal bool SettlementCommitted;
         internal DayTransitionReason LastTransition;
         internal long Version, ProductionTicks;
-        internal int SettledRounds;
+        internal int SettledRounds, MorningPrepRemaining;
         internal uint RunSeed, AttemptStartRandomState;
+    }
+
+    internal struct MorningPrepProgress : IBufferElementData
+    {
+        internal FixedString128Bytes ObjectiveId;
+        internal bool Completed;
     }
 }

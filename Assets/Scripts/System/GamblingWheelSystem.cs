@@ -7,7 +7,8 @@ namespace MarblesECS
     {
         internal static void Deposit(SimulationContext context, double value)
         {
-            if (!context.IsRunning || !MarbleRules.IsFinite(value) || value < 0) return;
+            if (!context.IsRunning || !context.HasProductionFeature(ProductionFeature.GamblingWheel) ||
+                !MarbleRules.IsFinite(value) || value < 0) return;
             // Expire the previous pool before accepting a ball on the deadline.
             Tick(context);
             var round = context.Round;
@@ -32,7 +33,7 @@ namespace MarblesECS
         {
             var round = context.Round;
             // A zero-value ball is still an entry; an empty pool consumes no randomness.
-            if (round.WheelBallCount == 0) return false;
+            if (round.WheelBallCount == 0 || !context.HasProductionFeature(ProductionFeature.GamblingWheel)) return false;
             round.WheelLastPool = round.PendingScore + round.FractionalPendingScore;
             round.WheelLastMultiplier = GamblingWheelRules.Outcome(MarbleRules.NextRandom(ref round.RandomState));
             double payout = round.WheelLastPool * round.WheelLastMultiplier;

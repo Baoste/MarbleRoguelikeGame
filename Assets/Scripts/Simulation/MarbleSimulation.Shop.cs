@@ -9,7 +9,7 @@ namespace MarblesECS
 
         public bool RefreshShop()
         {
-            if (!CanCampaignAct(RoundPhase.Shop)) return false;
+            if (!CanCampaignAct(RoundPhase.Shop) || !context.HasProductionFeature(ProductionFeature.Shop)) return false;
             var campaign = context.Campaign;
             long price = CampaignShopSystem.Price(context, context.Balance.Campaign.ShopRefreshCost);
             if (campaign.Coins < price) return false;
@@ -22,7 +22,8 @@ namespace MarblesECS
 
         public bool SellDevice(int instanceId)
         {
-            if (!CanCampaignAct(RoundPhase.Shop) && !CanCampaignAct(RoundPhase.Build)) return false;
+            if (!(CanCampaignAct(RoundPhase.Shop) && context.HasProductionFeature(ProductionFeature.Shop)) &&
+                !CanEditDevices) return false;
             if (!CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
             var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
             var campaign = context.Campaign;

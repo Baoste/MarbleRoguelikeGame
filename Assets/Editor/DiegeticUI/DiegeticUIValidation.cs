@@ -36,7 +36,7 @@ namespace MarblesECS.Editor.Diegetic
         {
             if(EditorApplication.isPlaying){Start();return;}
             EditorSceneManager.OpenScene("Assets/Scenes/TestScene.unity",OpenSceneMode.Single);
-            SessionState.SetBool(Key,true);EditorApplication.EnterPlaymode();
+            SessionState.SetBool(Key,true);LegacyMachineValidationStartup.EnterPlayMode();
         }
         static void Start()
         {

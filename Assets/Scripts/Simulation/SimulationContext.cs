@@ -59,6 +59,7 @@ namespace MarblesECS
         internal LauncherData Launcher { get => Manager.GetComponentData<LauncherData>(LauncherEntity); set => Manager.SetComponentData(LauncherEntity, value); }
         internal CampaignData Campaign { get => Manager.GetComponentData<CampaignData>(RoundEntity); set => Manager.SetComponentData(RoundEntity, value); }
         internal bool IsRunning => Round.Phase == (byte)RoundPhase.Playing || Round.Phase == (byte)RoundPhase.Draining;
+        internal bool HasProductionFeature(ProductionFeature feature) => (Campaign.DisabledFeatures & feature) == 0;
 
         internal void ClearFireInput()
         {

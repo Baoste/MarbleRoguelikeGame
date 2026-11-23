@@ -1,8 +1,30 @@
 {
   "schemaVersion": 1,
   "sequenceId": "campaign",
-  "days": [],
-  "productionPlans": [],
+  "days": [
+    {
+      "dayId": "day0",
+      "order": 1,
+      "productionPlanId": "day0-production",
+      "productionFeatures": [],
+      "morningPrep": [
+        {
+          "objectiveId": "read-daily-note",
+          "type": "ReadNote",
+          "anchorId": "desk",
+          "text": "hello，今日指标100"
+        }
+      ]
+    }
+  ],
+  "productionPlans": [
+    {
+      "planId": "day0-production",
+      "firstStageId": 1,
+      "lastStageId": 1,
+      "targetScore": 100
+    }
+  ],
   "events": [],
   "rules": [],
   "campaignRuleIds": []

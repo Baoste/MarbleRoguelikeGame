@@ -38,6 +38,7 @@ namespace MarblesECS
         internal static bool CanRun(SimulationContext c, int id) => CampaignStateUtility.FindDevice(c, id, out var entity) && CanRun(c, entity);
         internal static bool CanRun(SimulationContext c, Entity entity)
         {
+            if (!c.HasProductionFeature(ProductionFeature.DevicePlacement)) return false;
             var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
             return device.Placed && (Remaining(c, device) != 0 || Continuing(c, entity));
         }

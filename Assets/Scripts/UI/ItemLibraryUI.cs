@@ -24,6 +24,8 @@ public sealed partial class ItemLibraryUI : MonoBehaviour
     public Vector2 ReferenceResolution = new Vector2(1920, 1080);
 
     public bool IsOpen { get; private set; }
+    private bool CanOpen => Controller && Controller.ProductionCommandsAvailable &&
+        Controller.HasProductionFeature(ProductionFeature.DevicePlacement);
     public bool InputBlocked => IsOpen || releasePending;
     public int TotalEntryCount => entries.Count;
     public int DeviceEntryCount => entries.Count(e => e.Type == Category.Devices);
@@ -57,6 +59,7 @@ public sealed partial class ItemLibraryUI : MonoBehaviour
         ResolveReferences();
         BuildView();
         RefreshCatalog();
+        openButton.gameObject.SetActive(CanOpen);
     }
 
     private void OnEnable()
@@ -81,8 +84,10 @@ public sealed partial class ItemLibraryUI : MonoBehaviour
 
     private void Update()
     {
+        if (IsOpen && !CanOpen) Close();
+        if (openButton) openButton.gameObject.SetActive(CanOpen && !IsOpen);
 #if ENABLE_LEGACY_INPUT_MANAGER
-        if (Input.GetKeyDown(ToggleKey)) Toggle();
+        if (CanOpen && Input.GetKeyDown(ToggleKey)) Toggle();
         else if (IsOpen && Input.GetKeyDown(KeyCode.Escape)) Close();
 #endif
         // Other presentation controls must not accidentally release this modal's pause.
@@ -127,6 +132,7 @@ public sealed partial class ItemLibraryUI : MonoBehaviour
             LastError = "游戏尚未初始化完成，请稍后打开道具库。";
             return;
         }
+        if (!CanOpen) return;
         if (!EventSystem.current)
         {
             LastError = "场景缺少启用的 EventSystem，请在场景中配置后再打开道具库。";

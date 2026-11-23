@@ -25,7 +25,7 @@ namespace MarblesECS
             set => context.Manager.SetComponentData(context.RoundEntity, value);
         }
 
-        private DayDefinition Current => definition.Days[State.DayIndex];
+        internal DayDefinition Current => definition.Days[State.DayIndex];
         private bool Busy => processing || faulted || events.IsBusy ||
             transition != DayTransitionReason.None || outcome != DayTransitionReason.None;
         internal bool AllowsProduction
@@ -49,6 +49,7 @@ namespace MarblesECS
             this.retryRandom = retryRandom;
             context.Manager.AddComponentData(context.RoundEntity,
                 new DayRuntimeData { SequenceId = new FixedString128Bytes(definition.SequenceId), RunSeed = runSeed });
+            context.Manager.AddBuffer<MorningPrepProgress>(context.RoundEntity);
             rules = new DayRuleSystem(context);
             events = new DayEventSystem(context, rules);
         }
@@ -64,6 +65,8 @@ namespace MarblesECS
             var state = State;
             if (state.Version != version) { error = "The Day phase version is stale."; return false; }
             if (Busy) { error = "The Day lifecycle is still processing."; return false; }
+            if (reason == DayTransitionReason.WakeUpCompleted && state.Phase == DayPhase.WakeUp && state.MorningPrepRemaining != 0)
+            { error = "Finish Morning Prep before using the marble machine."; return false; }
             if (!DayStateMachine.CanTransition(state, reason))
             {
                 error = $"Day '{state.DayId}' attempt {state.Attempt}: {reason} is invalid in {state.Status}/{state.Phase}.";
@@ -73,6 +76,34 @@ namespace MarblesECS
             Pump();
             error = null;
             return true;
+        }
+
+        internal bool TryCompleteMorningPrep(string objectiveId, long version)
+        {
+            var state = State;
+            if (state.Status != DayCampaignStatus.Active || state.Phase != DayPhase.WakeUp ||
+                state.Version != version || state.MorningPrepRemaining == 0 || Busy) return false;
+            var objectives = context.Manager.GetBuffer<MorningPrepProgress>(context.RoundEntity);
+            for (int i = 0; i < Current.MorningPrep.Count; i++)
+            {
+                if (Current.MorningPrep[i].ObjectiveId != objectiveId) continue;
+                var objective = objectives[i];
+                if (objective.Completed) return false;
+                objective.Completed = true;
+                objectives[i] = objective;
+                state.MorningPrepRemaining--;
+                State = state;
+                return true;
+            }
+            return false;
+        }
+
+        internal bool IsMorningPrepComplete(string objectiveId)
+        {
+            var objectives = context.Manager.GetBuffer<MorningPrepProgress>(context.RoundEntity);
+            foreach (var item in objectives)
+                if (item.Completed && item.ObjectiveId.ToString() == objectiveId) return true;
+            return false;
         }
 
         internal void ObserveRound(RoundData before, RoundData after, bool stepped, bool cashout = false)
@@ -106,6 +137,7 @@ namespace MarblesECS
                 State = state;
                 Publish(DayTrigger.RoundSettled);
                 if (phase == RoundPhase.Shop) Publish(DayTrigger.ShopEntered);
+                else if (phase == RoundPhase.Build) Publish(DayTrigger.BuildEntered);
                 else ReportProductionResult(phase);
             }
             else if (before.Phase != after.Phase)
@@ -232,10 +264,10 @@ namespace MarblesECS
             var day = definition.Days[state.DayIndex];
             var range = stageRanges[state.DayIndex];
             if (!first) simulation.BeforeDayBoardRestore();
-            simulation.PrepareDayProduction(range.first, range.end, first);
+            simulation.PrepareDayProduction(day, range.first, range.end, first);
             state.DayId = new FixedString128Bytes(day.DayId);
             state.Attempt = 1;
-            InitializeWakeUp(ref state);
+            InitializeWakeUp(ref state, day);
             State = state;
             events.SetDay(day);
             if (first) rules.Install(definition.CampaignRules, DayRuleScope.Campaign, Snapshot);
@@ -262,7 +294,7 @@ namespace MarblesECS
             simulation.BeforeDayBoardRestore();
             checkpoint.Restore(context, random);
             state.Attempt = checked(state.Attempt + 1);
-            InitializeWakeUp(ref state);
+            InitializeWakeUp(ref state, Current);
             State = state;
             rules.Restore(checkpoint.Rules, definition.CampaignRules, Snapshot);
             simulation.AfterDayBoardRestore();
@@ -272,7 +304,7 @@ namespace MarblesECS
             Publish(DayTrigger.WakeUpEntered);
         }
 
-        private void InitializeWakeUp(ref DayRuntimeData state)
+        private void InitializeWakeUp(ref DayRuntimeData state, DayDefinition day)
         {
             state.Phase = DayPhase.WakeUp;
             state.Result = DayResult.Pending;
@@ -280,6 +312,11 @@ namespace MarblesECS
             state.SettledRounds = 0;
             state.ProductionTicks = 0;
             state.AttemptStartRandomState = context.Round.RandomState;
+            var objectives = context.Manager.GetBuffer<MorningPrepProgress>(context.RoundEntity);
+            objectives.Clear();
+            foreach (var objective in day.MorningPrep)
+                objectives.Add(new MorningPrepProgress { ObjectiveId = new FixedString128Bytes(objective.ObjectiveId) });
+            state.MorningPrepRemaining = objectives.Length;
         }
 
         private void EnterPhase()

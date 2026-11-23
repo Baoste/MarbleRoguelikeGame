@@ -50,7 +50,7 @@ namespace MarblesECS.Editor
             {
                 if (Application.isBatchMode) EditorSceneManager.OpenScene("Assets/Scenes/TestScene.unity");
                 SessionState.SetBool(Pending, true);
-                EditorApplication.EnterPlaymode();
+                LegacyMachineValidationStartup.EnterPlayMode();
             }
         }
         private static void Start()

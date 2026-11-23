@@ -112,7 +112,7 @@ namespace MarblesECS
             if (context.IsRunning)
             {
                 context.StepSeconds = dt;
-                DeviceScriptSystem.Tick(context);
+                if (context.HasProductionFeature(ProductionFeature.DevicePlacement)) DeviceScriptSystem.Tick(context);
                 var round = context.Round;
                 round.Time += dt;
                 round.Tick = checked(round.Tick + 1);
@@ -143,7 +143,7 @@ namespace MarblesECS
                 HeldMotionSystem.Execute(context);
                 ContactResolutionSystem.Execute(context);
                 context.Transients.Tick(context);
-                DeviceScriptSystem.BallUpdate(context);
+                if (context.HasProductionFeature(ProductionFeature.DevicePlacement)) DeviceScriptSystem.BallUpdate(context);
                 LostMarbleSystem.Execute(context, physics);
                 DespawnSystem.Execute(context, physics);
                 RoundFlowSystem.Execute(context);

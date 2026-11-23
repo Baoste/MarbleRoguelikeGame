@@ -10,6 +10,8 @@ namespace MarblesECS
         internal event Action DayBoardRestored;
 
         public DayProgressSnapshot Day => dayFlow == null ? default : dayFlow.Snapshot;
+        public DayDefinition CurrentDayDefinition => dayFlow?.Current;
+        public bool HasProductionFeature(ProductionFeature feature) => context.HasProductionFeature(feature);
         internal bool HasDayFlow => dayFlow != null;
         public bool ProductionCommandsAvailable => !startingDay && (dayFlow == null || dayFlow.AllowsProduction);
         internal bool CanSimulateProduction => ProductionCommandsAvailable && context.IsRunning;
@@ -38,7 +40,7 @@ namespace MarblesECS
                 for (int i = 0; i < ranges.Length; i++)
                 {
                     var day = definition.Days[i];
-                    ranges[i] = day.ProductionPlan.Resolve(context.Balance.Stages);
+                    ranges[i] = day.ProductionPlan.Resolve(context.Balance);
                     ValidateRuleAttributes(day.Rules);
                 }
             }
@@ -49,7 +51,7 @@ namespace MarblesECS
             {
                 uint runSeed = randomSeed ?? context.Tuning.RandomSeed;
                 BeforeDayBoardRestore();
-                StartSessionCore(physics, 0, runSeed, grantAllStartingDevices);
+                StartSessionCore(physics, 0, runSeed, grantAllStartingDevices, definition.Days[0].ProductionFeatures);
                 dayPhysics.ResetDayPhysics();
                 dayFlow = new DayFlowSystem(this, definition, ranges, retryRandom, runSeed);
                 dayFlow.Start();
@@ -72,6 +74,11 @@ namespace MarblesECS
 
         public bool TryCompleteWakeUp(long version, out string error) =>
             TryCompleteDayPhase(DayTransitionReason.WakeUpCompleted, version, out error);
+
+        public bool TryCompleteMorningPrep(string objectiveId, long version) =>
+            !insidePhysicsStep && !startingDay && dayFlow != null && dayFlow.TryCompleteMorningPrep(objectiveId, version);
+
+        public bool IsMorningPrepComplete(string objectiveId) => dayFlow != null && dayFlow.IsMorningPrepComplete(objectiveId);
 
         public bool TryCompleteDaySettlement(long version, out string error) =>
             TryCompleteDayPhase(DayTransitionReason.DaySettlementCompleted, version, out error);
@@ -96,13 +103,15 @@ namespace MarblesECS
         internal void BeforeDayBoardRestore() => DayBoardResetting?.Invoke();
         internal void AfterDayBoardRestore() => DayBoardRestored?.Invoke();
 
-        internal void PrepareDayProduction(int firstStage, int stageEnd, bool firstDay)
+        internal void PrepareDayProduction(DayDefinition day, int firstStage, int stageEnd, bool firstDay)
         {
             if (!firstDay) ResetRound(context.Physics, resetRandom: false);
             var campaign = context.Campaign;
             campaign.StageIndex = firstStage;
             campaign.StageStartIndex = firstStage;
             campaign.StageEndExclusive = stageEnd;
+            campaign.StageTargetOverride = day.ProductionPlan.TargetScore ?? 0;
+            campaign.DisabledFeatures = ProductionFeature.All & ~day.ProductionFeatures;
             campaign.StagesCleared = 0;
             campaign.TotalScore = 0;
             campaign.LastRewardCoins = campaign.LastCashoutCoins = 0;
@@ -111,7 +120,7 @@ namespace MarblesECS
             context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity).Clear();
             var round = context.Round;
             round.Phase = (byte)RoundPhase.Build;
-            round.TargetScore = context.Balance.Stages[firstStage].TargetScore;
+            round.TargetScore = CampaignStateUtility.TargetScore(context, firstStage);
             context.Round = round;
             FillBlood();
             if (AttributeRuntime.Enabled(context)) AttributeRuntime.Recompute(context, context.PlayerEntity);

@@ -41,6 +41,11 @@ namespace MarblesECS.Presentation
             roundId = controller.Snapshot.RoundId;
             foreach (var item in devices.Values) item.Dispose();
             devices.Clear();
+            if (!controller.HasProductionFeature(ProductionFeature.DevicePlacement))
+            {
+                SelectedDeviceId = 0;
+                return;
+            }
             bool selectedExists = false;
             foreach (var owned in controller.GetOwnedDevices())
             {
@@ -79,7 +84,8 @@ namespace MarblesECS.Presentation
 
         private void OnGUI()
         {
-            if (controller == null || !controller.ProductionCommandsAvailable || controller.Session.Phase != RoundPhase.Build) return;
+            if (controller == null || !controller.ProductionCommandsAvailable ||
+                !controller.HasProductionFeature(ProductionFeature.DevicePlacement) || controller.Session.Phase != RoundPhase.Build) return;
             if (ViewCamera == null) ViewCamera = Camera.main;
             if (ViewCamera == null) return;
             Event input = Event.current;

@@ -11,8 +11,9 @@ namespace MarblesECS.Tests
 {
     public sealed class DayFrameworkTests
     {
-        private const string First = "{\"dayId\":\"fixture-first\",\"order\":1,\"productionPlanId\":\"single\"}";
-        private const string Second = "{\"dayId\":\"fixture-second\",\"order\":2,\"productionPlanId\":\"multiple\"}";
+        private const string Features = ",\"productionFeatures\":[\"Shop\",\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]";
+        private const string First = "{\"dayId\":\"fixture-first\",\"order\":1,\"productionPlanId\":\"single\"" + Features + "}";
+        private const string Second = "{\"dayId\":\"fixture-second\",\"order\":2,\"productionPlanId\":\"multiple\"" + Features + "}";
         private const string Plans = "[{\"planId\":\"single\",\"firstStageId\":1,\"lastStageId\":1}," +
             "{\"planId\":\"multiple\",\"firstStageId\":1,\"lastStageId\":2}]";
 
@@ -27,7 +28,7 @@ namespace MarblesECS.Tests
             Assert.That(definition.Days[1].ProductionPlan.LastStageId, Is.EqualTo(2));
             Assert.Throws<NotSupportedException>(() => ((IList<DayDefinition>)definition.Days)[0] = null);
 
-            var empty = GameDaysLoader.Load(balance);
+            var empty = GameDaysLoader.Parse(Json(string.Empty), balance);
             Assert.That(empty.IsConfigured, Is.False);
             using var simulation = new MarbleSimulation(balance);
             var physics = new PhysicsStub();
@@ -39,6 +40,94 @@ namespace MarblesECS.Tests
             Assert.That(simulation.Day.Status, Is.EqualTo(DayCampaignStatus.NotStarted));
             Assert.That(simulation.Snapshot.RoundId, Is.EqualTo(round));
             Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Playing));
+        }
+
+        [Test]
+        public void DayZeroRequiresReadingItsNoteAndUsesItsOwnProductionTarget()
+        {
+            var balance = GameBalance.Default();
+            var definition = GameDaysLoader.Load(balance);
+            var day0 = definition.Days[0];
+            Assert.That(day0.DayId, Is.EqualTo("day0"));
+            Assert.That(day0.ProductionFeatures, Is.EqualTo(ProductionFeature.None));
+            Assert.That(day0.MorningPrep, Has.Count.EqualTo(1));
+            var note = day0.MorningPrep[0];
+            Assert.That(note.Text, Is.EqualTo("hello，今日指标100"));
+            using var simulation = new MarbleSimulation(balance);
+            var physics = new PhysicsStub();
+            Start(simulation, definition, physics);
+            long wake = simulation.Day.Version;
+            Assert.That(simulation.Day.MorningPrepRemaining, Is.EqualTo(1));
+            Assert.That(simulation.TryCompleteWakeUp(wake, out string error), Is.False);
+            StringAssert.Contains("Morning Prep", error);
+            Assert.That(simulation.TryCompleteMorningPrep(note.ObjectiveId, wake - 1), Is.False);
+            Assert.That(simulation.TryCompleteMorningPrep("unknown", wake), Is.False);
+            Assert.That(simulation.TryCompleteMorningPrep(note.ObjectiveId, wake), Is.True);
+            Assert.That(simulation.TryCompleteMorningPrep(note.ObjectiveId, wake), Is.False);
+            Assert.That(simulation.TryCompleteWakeUp(wake, out _), Is.True);
+            Assert.That(simulation.BeginRound(), Is.True);
+            Assert.That(simulation.Session.TargetScore, Is.EqualTo(100));
+
+            var player = simulation.Context.Player;
+            player.Blood = 0;
+            simulation.Context.Player = player;
+            Step(simulation, physics);
+            Assert.That(simulation.Day.Attempt, Is.EqualTo(2));
+            Assert.That(simulation.Day.MorningPrepRemaining, Is.EqualTo(1));
+            Assert.That(simulation.IsMorningPrepComplete(note.ObjectiveId), Is.False);
+            Assert.That(simulation.TryCompleteWakeUp(simulation.Day.Version, out _), Is.False);
+            Assert.That(simulation.TryCompleteMorningPrep(note.ObjectiveId, simulation.Day.Version), Is.True);
+            Assert.That(simulation.TryCompleteWakeUp(simulation.Day.Version, out _), Is.True);
+            Assert.That(simulation.BeginRound(), Is.True);
+            var round = simulation.Context.Round;
+            round.Score = 99;
+            simulation.Context.Round = round;
+            Assert.That(simulation.CashOut(), Is.False);
+            round.Score = 100;
+            simulation.Context.Round = round;
+            Assert.That(simulation.CashOut(), Is.True);
+            Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.DaySettlement));
+            Assert.That(balance.Stages[0].TargetScore, Is.EqualTo(150));
+        }
+
+        [Test]
+        public void DefaultDayProductionScoresTheWheelLaneDirectlyAndSkipsTheShop()
+        {
+            var balance = GameBalanceLoader.Load();
+            var definition = GameDaysLoader.Parse(Json(Second.Replace(Features, "")), balance);
+            using var simulation = new MarbleSimulation(balance);
+            var physics = new PhysicsStub();
+            Start(simulation, definition, physics);
+            Assert.That(simulation.TryCompleteWakeUp(simulation.Day.Version, out _), Is.True);
+            Assert.That(simulation.HasProductionFeature(ProductionFeature.Shop), Is.False);
+            Assert.That(simulation.HasProductionFeature(ProductionFeature.DevicePlacement), Is.False);
+            Assert.That(simulation.HasProductionFeature(ProductionFeature.Rush), Is.False);
+            Assert.That(simulation.HasProductionFeature(ProductionFeature.GamblingWheel), Is.False);
+            Assert.That(simulation.PlaceDevice(1, 0, 0), Is.False);
+            Assert.That(simulation.BeginRound(), Is.True);
+            uint random = simulation.Day.RandomState;
+            simulation.FireOnce();
+            simulation.BeforePhysics(.01f, physics, Vector3.zero, Quaternion.identity);
+            simulation.EnqueueContact(new MarbleContact
+            {
+                Key = physics.Last, TargetId = 1, Kind = MarbleContactKind.RandomScore,
+                FlatScore = balance.Stages[0].TargetScore, Multiplier = 1
+            });
+            simulation.AfterPhysics(physics);
+            Assert.That(simulation.TryDequeueScore(out var score), Is.True);
+            Assert.That(score.IsPending, Is.False);
+            Assert.That(simulation.GamblingWheel.BallCount, Is.Zero);
+            Assert.That(simulation.GamblingWheel.DrawCount, Is.Zero);
+            Assert.That(simulation.Snapshot.RushMeter, Is.Zero);
+            Assert.That(simulation.CashOut(), Is.True);
+            Assert.That(simulation.Day.RandomState, Is.EqualTo(random));
+            Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.Production));
+            Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Build));
+            Assert.That(simulation.GetShopOffers(), Is.Empty);
+            Assert.That(simulation.BuyOffer(0), Is.False);
+            Assert.That(simulation.RefreshShop(), Is.False);
+            Assert.That(simulation.BeginRound(), Is.True);
+            Assert.That(simulation.Snapshot.TargetScore, Is.EqualTo(balance.Stages[1].TargetScore));
         }
 
         [Test]

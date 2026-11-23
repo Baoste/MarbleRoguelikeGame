@@ -3,14 +3,15 @@ namespace MarblesECS
     public sealed partial class MarbleSimulation
     {
         public bool CanOfferDevice(int offeredId, int targetId) =>
-            CanCampaignAct(RoundPhase.Build) && DeviceOfferSystem.CanOffer(context, offeredId, targetId);
+            CanEditDevices && DeviceOfferSystem.CanOffer(context, offeredId, targetId);
         public bool TryOfferDevice(int offeredId, int targetId) =>
-            CanCampaignAct(RoundPhase.Build) && DeviceOfferSystem.Offer(context, offeredId, targetId);
+            CanEditDevices && DeviceOfferSystem.Offer(context, offeredId, targetId);
         /// <summary>Returns whether a placed device's callback ran; Lua decides whether its effect can start.</summary>
         public bool TryActivateDevice(int instanceId)
         {
             ThrowIfDisposed();
             return started && !insidePhysicsStep && ProductionCommandsAvailable &&
+                context.HasProductionFeature(ProductionFeature.DevicePlacement) &&
                 DeviceScriptSystem.DeviceEvent(context, instanceId, "OnActivate");
         }
         public string GetDeviceStatus(int instanceId)

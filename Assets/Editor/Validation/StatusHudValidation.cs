@@ -44,7 +44,7 @@ namespace MarblesECS.Editor
             if (sequence != null) throw new InvalidOperationException("Validation already running.");
             Succeeded = false;
             if (EditorApplication.isPlaying) Start();
-            else { SessionState.SetBool(Pending, true); EditorApplication.EnterPlaymode(); }
+            else { SessionState.SetBool(Pending, true); LegacyMachineValidationStartup.EnterPlayMode(); }
         }
         private static void Start()
         {

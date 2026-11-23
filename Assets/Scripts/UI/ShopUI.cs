@@ -51,6 +51,7 @@ public sealed class ShopUI : MonoBehaviour
     private void RefreshView(bool forceOffers)
     {
         bool open = Controller != null && Controller.ProductionCommandsAvailable &&
+            Controller.HasProductionFeature(ProductionFeature.Shop) &&
             Controller.Session.Phase == RoundPhase.Shop;
         SetShopVisible(open);
 

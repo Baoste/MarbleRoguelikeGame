@@ -122,6 +122,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         displayedRoundId = roundId;
 
         ClearPlacedObjects();
+        if (!Controller.HasProductionFeature(ProductionFeature.DevicePlacement)) return;
         foreach (OwnedDeviceSnapshot device in Controller.GetOwnedDevices())
         {
             if (!device.Placed) continue;

@@ -21,6 +21,9 @@ public sealed class GamblingWheelDisplay : MonoBehaviour
     private long shownDraw = -1;
     private int shownRound = -1;
 
+    private bool Visible => Controller && Controller.HasProductionFeature(ProductionFeature.GamblingWheel) &&
+        (Controller.Snapshot.Phase == RoundPhase.Playing || Controller.Snapshot.Phase == RoundPhase.Draining);
+
     private void OnEnable()
     {
         if (ModelCamera && ModelImage)
@@ -40,23 +43,20 @@ public sealed class GamblingWheelDisplay : MonoBehaviour
     private void Update()
     {
         Refresh();
-        if (Rotor && Controller && Controller.IsReady && !Controller.Paused &&
-            (Controller.Snapshot.Phase == RoundPhase.Playing || Controller.Snapshot.Phase == RoundPhase.Draining))
+        if (Rotor && Visible && !Controller.Paused)
             Rotor.Rotate(Vector3.forward, -DegreesPerSecond * Time.deltaTime, Space.Self);
     }
 
     private void Refresh()
     {
-        bool ready = Controller && Controller.IsReady;
-        var phase = ready ? Controller.Snapshot.Phase : RoundPhase.Lost;
-        bool visible = ready && (phase == RoundPhase.Playing || phase == RoundPhase.Draining);
+        bool visible = Visible;
         if (DisplayGroup)
         {
             DisplayGroup.alpha = visible ? 1 : 0;
             DisplayGroup.interactable = DisplayGroup.blocksRaycasts = false;
         }
         if (ModelCamera) ModelCamera.enabled = visible && texture;
-        if (!ready) return;
+        if (!Controller || !Controller.HasProductionFeature(ProductionFeature.GamblingWheel)) return;
         var wheel = Controller.GamblingWheel;
         if (PoolText) PoolText.text = $"奖池  {wheel.PoolValue:0.##}  ·  {wheel.BallCount} 球";
         if (TimerText) TimerText.text = wheel.BallCount > 0 ? $"{wheel.SecondsRemaining:0.00}s 后开奖" : "等待进球";

@@ -61,7 +61,7 @@ namespace MarblesECS.Editor
             Succeeded = false;
             if (EditorApplication.isPlaying) { Start(); return; }
             SessionState.SetBool(PendingKey, true);
-            EditorApplication.EnterPlaymode();
+            LegacyMachineValidationStartup.EnterPlayMode();
         }
 
         private static void Start()

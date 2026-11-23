@@ -8,7 +8,8 @@ namespace MarblesECS
             if (state.Status != DayCampaignStatus.Active) return false;
             switch (reason)
             {
-                case DayTransitionReason.WakeUpCompleted: return state.Phase == DayPhase.WakeUp;
+                case DayTransitionReason.WakeUpCompleted:
+                    return state.Phase == DayPhase.WakeUp && state.MorningPrepRemaining == 0;
                 case DayTransitionReason.ProductionSucceeded:
                     return state.Phase == DayPhase.Production && state.Result == DayResult.Succeeded && !state.SettlementCommitted;
                 case DayTransitionReason.ProductionFailed:

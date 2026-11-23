@@ -83,7 +83,8 @@ namespace MarblesECS.PhysX
 
         private bool IsDevicePlacementClear(int id, Vector3 worldPosition, float radiusScale, float? angle, Quaternion? worldRotation)
         {
-            if (!ProductionCommandsAvailable || Paused || Session.Phase != RoundPhase.Build || !SimulationContext.IsFinite(worldPosition) ||
+            if (!ProductionCommandsAvailable || !HasProductionFeature(ProductionFeature.DevicePlacement) || Paused ||
+                Session.Phase != RoundPhase.Build || !SimulationContext.IsFinite(worldPosition) ||
                 !MarbleRules.IsFinite(radiusScale) || radiusScale <= 0 ||
                 !MarbleRules.IsFinite(PlacementClearance) || PlacementClearance < 0) return false;
             var context = simulation.Context;

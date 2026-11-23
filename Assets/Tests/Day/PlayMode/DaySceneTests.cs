@@ -3,8 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Cinemachine;
 using MarblesECS.PhysX;
+using MarblesECS.Presentation;
 using NUnit.Framework;
+using TMPro;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -31,7 +34,16 @@ namespace MarblesECS.Tests
         [UnityTest]
         public IEnumerator TestSceneStillLaunchesScoresShopsAndRestartsTheLegacySession()
         {
-            yield return SceneManager.LoadSceneAsync("TestScene", LoadSceneMode.Additive);
+            void UseLegacy(Scene scene, LoadSceneMode mode)
+            {
+                if (scene.name != "TestScene") return;
+                var controller = scene.GetRootGameObjects().Select(root => root.GetComponent<MarbleGameController>())
+                    .Single(game => game);
+                controller.StartWithDayCampaign = false;
+            }
+            SceneManager.sceneLoaded += UseLegacy;
+            try { yield return SceneManager.LoadSceneAsync("TestScene", LoadSceneMode.Additive); }
+            finally { SceneManager.sceneLoaded -= UseLegacy; }
             testScene = SceneManager.GetSceneByName("TestScene");
             var game = testScene.GetRootGameObjects().Select(root => root.GetComponentInChildren<MarbleGameController>())
                 .First(controller => controller != null);
@@ -56,6 +68,116 @@ namespace MarblesECS.Tests
             game.RestartRound();
             Assert.That(game.GetOwnedDevices(), Is.Empty);
             Assert.That(game.Snapshot.Phase, Is.EqualTo(RoundPhase.Playing));
+        }
+
+        [UnityTest]
+        public IEnumerator DayZeroStartsInTheRoomAndUnlocksProductionOnlyAfterTheNote()
+        {
+            yield return SceneManager.LoadSceneAsync("TestScene", LoadSceneMode.Additive);
+            testScene = SceneManager.GetSceneByName("TestScene");
+            var game = InTestScene<MarbleGameController>();
+            var prep = InTestScene<MorningPrepController>();
+            var walker = InTestScene<RoomCameraMovement>();
+            var brain = InTestScene<CinemachineBrain>();
+            yield return Until(() => game.IsReady, "Day0 startup");
+            localScene = game.PhysicsRoot.gameObject.scene;
+            Assert.That(game.Day.DayId, Is.EqualTo("day0"));
+            Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.WakeUp));
+            Assert.That(game.Session.TargetScore, Is.EqualTo(100));
+            Assert.That(game.BeginRound(), Is.False);
+            Assert.That(prep.FadeAlpha, Is.GreaterThan(0), "wake-up starts black");
+            Assert.That(prep.TryInteract(), Is.False);
+            var origin = walker.transform.position;
+            walker.Move(Vector2.up, .25f);
+            Assert.That(walker.transform.position, Is.EqualTo(origin));
+
+            yield return Until(() => walker.CanMove, "fade finished and room camera is active");
+            Assert.That(brain.ActiveVirtualCamera.Name, Is.EqualTo("VCamera_Free"));
+            walker.Move(Vector2.up, .1f);
+            Assert.That(walker.transform.position.x, Is.LessThan(origin.x));
+            Assert.That(walker.transform.position.y, Is.EqualTo(origin.y).Within(.05f));
+            WalkTo(walker, -41, -13);
+            WalkTo(walker, -14, -13);
+            WalkTo(walker, -14, -2);
+            Assert.That(prep.CanUseMachine, Is.False);
+            Assert.That(prep.TryInteract(), Is.False, "E at the machine is blocked while the note is unread");
+            Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.False);
+
+            WalkTo(walker, -14, -13);
+            WalkTo(walker, -42, -13);
+            WalkTo(walker, -42, -6);
+            WalkTo(walker, -54, -6);
+            Assert.That(prep.TryInteract(), Is.True);
+            Assert.That(prep.IsReading, Is.True);
+            Assert.That(walker.CanMove, Is.False);
+            Assert.That(game.Day.MorningPrepRemaining, Is.EqualTo(1));
+            var displayedNote = prep.GetComponentsInChildren<TextMeshProUGUI>()
+                .Single(label => label.name == "Note Text");
+            Assert.That(displayedNote.text, Is.EqualTo("hello，今日指标100"));
+            Assert.That(displayedNote.font.HasCharacters(displayedNote.text, out uint[] _, true, true), Is.True);
+            Canvas.ForceUpdateCanvases();
+            Assert.That(displayedNote.rectTransform.rect.width, Is.GreaterThan(0));
+            Assert.That(prep.TryInteract(), Is.True);
+            Assert.That(game.Day.MorningPrepRemaining, Is.Zero);
+
+            yield return Until(() => walker.CanMove, "reading unlocks room movement");
+            WalkTo(walker, -42, -6);
+            WalkTo(walker, -42, -13);
+            WalkTo(walker, -14, -13);
+            WalkTo(walker, -14, -2);
+            Assert.That(prep.CanUseMachine, Is.True);
+            Assert.That(prep.TryInteract(), Is.True);
+            Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.WakeUp), "production waits for the priority blend");
+            Assert.That(walker.CanMove, Is.False);
+            yield return Until(() => game.Day.Phase == DayPhase.Production && game.Snapshot.Phase == RoundPhase.Playing,
+                "machine camera takes over and opens basic production");
+            Assert.That(brain.ActiveVirtualCamera.Name, Is.EqualTo("VCamera_Machine"));
+            Assert.That(brain.IsBlending, Is.False);
+            Assert.That(walker.CanMove, Is.False);
+            Assert.That(game.HasProductionFeature(ProductionFeature.Shop), Is.False);
+            Assert.That(game.HasProductionFeature(ProductionFeature.DevicePlacement), Is.False);
+            Assert.That(game.HasProductionFeature(ProductionFeature.Rush), Is.False);
+            Assert.That(game.HasProductionFeature(ProductionFeature.GamblingWheel), Is.False);
+            Assert.That(game.GetShopOffers(), Is.Empty);
+            Assert.That(InTestScene<DiegeticMachineUI>().IsBoardOpen, Is.False);
+            var library = InTestScene<ItemLibraryUI>();
+            library.Open();
+            Assert.That(library.IsOpen, Is.False);
+            var status = InTestScene<ScoreListener>();
+            Assert.That(status.RushText.enabled, Is.False);
+            Assert.That(status.RushSlider.gameObject.activeSelf, Is.False);
+            Assert.That(InTestScene<GamblingWheelDisplay>().DisplayGroup.alpha, Is.Zero);
+
+            game.AutoMoveLauncher = false;
+            var zone = AddZone(game.PhysicsRoot, game.LaunchPoint.TransformPoint(game.LaunchOffset), 100);
+            zone.Kind = MarbleContactKind.RandomScore;
+            zone.Priority = int.MaxValue;
+            game.FireOnce();
+            yield return Until(() => game.Session.CanCashOut, "physical marble reaches the basic target");
+            Assert.That(game.GamblingWheel.BallCount, Is.Zero);
+            Assert.That(game.CashOut(), Is.True);
+            yield return Until(() => game.Day.Phase == DayPhase.DaySettlement, "Day0 settlement");
+            Assert.That(prep.TryInteract(), Is.True);
+            Assert.That(prep.TryInteract(), Is.True);
+            Assert.That(game.Day.Status, Is.EqualTo(DayCampaignStatus.Completed));
+        }
+
+        private T InTestScene<T>() where T : Component =>
+            testScene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<T>(true)).First();
+
+        private static void WalkTo(RoomCameraMovement walker, float x, float z)
+        {
+            var target = new Vector3(x, walker.transform.position.y, z);
+            var heading = Quaternion.Euler(0f, walker.transform.eulerAngles.y, 0f);
+            for (int i = 0; i < 100; i++)
+            {
+                var displacement = target - walker.transform.position;
+                displacement.y = 0;
+                if (displacement.sqrMagnitude < .25f) return;
+                var local = Quaternion.Inverse(heading) * displacement;
+                walker.Move(new Vector2(local.x, local.z).normalized, .06f);
+            }
+            Assert.Fail($"Room walker did not reach {target}. It stopped at {walker.transform.position}.");
         }
 
         [UnityTest]
@@ -316,8 +438,8 @@ namespace MarblesECS.Tests
         }
 
         private const string FixtureJson = "{\"schemaVersion\":1,\"sequenceId\":\"fixture\"," +
-            "\"days\":[{\"dayId\":\"fixture-first\",\"order\":1,\"productionPlanId\":\"single\"}," +
-            "{\"dayId\":\"fixture-second\",\"order\":2,\"productionPlanId\":\"multiple\",\"eventIds\":[\"round\",\"retry\"]}]," +
+            "\"days\":[{\"dayId\":\"fixture-first\",\"order\":1,\"productionPlanId\":\"single\",\"productionFeatures\":[\"Shop\",\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]}," +
+            "{\"dayId\":\"fixture-second\",\"order\":2,\"productionPlanId\":\"multiple\",\"eventIds\":[\"round\",\"retry\"],\"productionFeatures\":[\"Shop\",\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]}]," +
             "\"productionPlans\":[{\"planId\":\"single\",\"firstStageId\":10,\"lastStageId\":10}," +
             "{\"planId\":\"multiple\",\"firstStageId\":10,\"lastStageId\":20}]," +
             "\"events\":[{\"eventId\":\"round\",\"trigger\":\"RoundSettled\",\"executionPolicy\":\"EveryOccurrence\",\"actions\":[{\"type\":\"record\"}]}," +

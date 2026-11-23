@@ -5,8 +5,12 @@ namespace MarblesECS.PhysX
 {
     public sealed partial class MarbleGameController
     {
+        [Header("Daily campaign")]
+        public bool StartWithDayCampaign;
         public DayProgressSnapshot Day => IsReady ? simulation.Day : default;
+        public DayDefinition CurrentDayDefinition => IsReady ? simulation.CurrentDayDefinition : null;
         public bool ProductionCommandsAvailable => IsReady && simulation.ProductionCommandsAvailable;
+        public bool HasProductionFeature(ProductionFeature feature) => IsReady && simulation.HasProductionFeature(feature);
         internal event Action DayBoardResetting;
         internal event Action DayBoardRestored;
 
@@ -39,6 +43,11 @@ namespace MarblesECS.PhysX
             if (!DayCommandsReady(out error)) return false;
             return simulation.TryCompleteWakeUp(version, out error);
         }
+
+        internal bool TryCompleteMorningPrep(string objectiveId, long version) =>
+            IsReady && !RequiresRestart && simulation.TryCompleteMorningPrep(objectiveId, version);
+
+        internal bool IsMorningPrepComplete(string objectiveId) => IsReady && simulation.IsMorningPrepComplete(objectiveId);
 
         public bool TryCompleteDaySettlement(long version, out string error)
         {

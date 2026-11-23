@@ -32,7 +32,7 @@ namespace MarblesECS
             int end = campaign.StageEndExclusive == 0 ? stages.Length : campaign.StageEndExclusive;
             int first = campaign.StageIndex;
             int next = first;
-            while (next < end && campaign.TotalScore >= stages[next].TargetScore)
+            while (next < end && campaign.TotalScore >= CampaignStateUtility.TargetScore(context, next))
             {
                 var stage = stages[next];
                 long reward = stage.RewardCoins;
@@ -54,7 +54,9 @@ namespace MarblesECS
             }
             campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastRewardCoins, CampaignStateUtility.MaxCoins);
             campaign.StageIndex = Math.Min(next, end - 1);
-            round.Phase = (byte)(next == end ? RoundPhase.Won : RoundPhase.Shop);
+            round.Phase = (byte)(next == end ? RoundPhase.Won :
+                context.HasProductionFeature(ProductionFeature.Shop) ? RoundPhase.Shop : RoundPhase.Build);
+            if (round.Phase == (byte)RoundPhase.Build) round.TargetScore = CampaignStateUtility.TargetScore(context, next);
         }
     }
 }

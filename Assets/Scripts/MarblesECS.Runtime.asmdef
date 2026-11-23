@@ -1,6 +1,6 @@
 {
   "name": "MarblesECS.Runtime",
   "rootNamespace": "MarblesECS",
-  "references": ["MRes.Runtime", "MarblesECS.Rules", "Unity.Entities", "Unity.Collections", "Unity.TextMeshPro"],
+  "references": ["MRes.Runtime", "MarblesECS.Rules", "Unity.Entities", "Unity.Collections", "Unity.TextMeshPro", "Cinemachine"],
   "autoReferenced": true
 }

@@ -87,7 +87,8 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     {
         if(!initialized)return;
         bool ready=Controller && Controller.IsReady;
-        bool build=ready && Controller.ProductionCommandsAvailable && Controller.Session.Phase==RoundPhase.Build;
+        bool build=ready && Controller.HasProductionFeature(ProductionFeature.DevicePlacement) &&
+            Controller.ProductionCommandsAvailable && Controller.Session.Phase==RoundPhase.Build;
         slide=Mathf.MoveTowards(slide,build?1:0,Time.unscaledDeltaTime/Mathf.Max(.01f,SlideSeconds));
         if(ItemBoard)ItemBoard.localPosition=Vector3.Lerp(BoardClosedPosition,BoardOpenPosition,Mathf.SmoothStep(0,1,slide));
         bool show=build && IsBoardOpen;
@@ -119,13 +120,13 @@ public sealed class DiegeticMachineUI : MonoBehaviour
 
     public bool TryContinue()
     {
-        if(!Controller||!Controller.ProductionCommandsAvailable||Controller.Paused||Controller.Session.Phase!=RoundPhase.Build||!IsBoardOpen)return false;
+        if(!Controller||!Controller.HasProductionFeature(ProductionFeature.DevicePlacement)||!Controller.ProductionCommandsAvailable||Controller.Paused||Controller.Session.Phase!=RoundPhase.Build||!IsBoardOpen)return false;
         if(Placement)Placement.CancelPlacement();
         return Controller.BeginRound();
     }
     public bool BeginDeviceDrag(int index, Vector2 pointer)
     {
-        if(!Controller||!Controller.ProductionCommandsAvailable||Controller.Paused||Controller.Session.Phase!=RoundPhase.Build||!IsBoardOpen||!Placement||index<0||index>=deviceIds.Length)return false;
+        if(!Controller||!Controller.HasProductionFeature(ProductionFeature.DevicePlacement)||!Controller.ProductionCommandsAvailable||Controller.Paused||Controller.Session.Phase!=RoundPhase.Build||!IsBoardOpen||!Placement||index<0||index>=deviceIds.Length)return false;
         return Placement.BeginInventoryDrag(deviceIds[index],pointer);
     }
     public void UpdateDeviceDrag(Vector2 pointer){if(Placement)Placement.UpdateInventoryDrag(pointer);}
@@ -149,7 +150,9 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     public void RefreshInventory()
     {
         if(!Controller||!Controller.IsReady)return;
-        unplacedDevices.Clear();unplacedDevices.AddRange(Controller.GetOwnedDevices().Where(d=>!d.Placed));
+        unplacedDevices.Clear();
+        if(Controller.HasProductionFeature(ProductionFeature.DevicePlacement))
+            unplacedDevices.AddRange(Controller.GetOwnedDevices().Where(d=>!d.Placed));
         devicePage=Mathf.Clamp(devicePage,0,Mathf.Max(0,(unplacedDevices.Count-1)/6));
         VisibleDeviceCount=0;
         for(int i=0;i<6;i++)
@@ -202,7 +205,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
 
     internal void UpdateTooltip(Vector2 pointer)
     {
-        if (!Tooltip || !TooltipText || !Overlay || !Controller || !Controller.IsReady)
+        if (!Tooltip || !TooltipText || !Overlay || !Controller || !Controller.ProductionCommandsAvailable)
         {
             if (Placement) Placement.ClearPlacedDeviceHover();
             if (Tooltip) Tooltip.gameObject.SetActive(false);

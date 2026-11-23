@@ -17,6 +17,7 @@ namespace MarblesECS
             var balance = context.Balance;
             var offers = context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);
             offers.Clear();
+            if (!context.HasProductionFeature(ProductionFeature.Shop)) return;
             var round = context.Round;
             var devices = new List<Candidate>(balance.Devices.Length);
             foreach (var definition in balance.Devices)
@@ -69,6 +70,7 @@ namespace MarblesECS
 
         internal static bool Buy(SimulationContext context, int index)
         {
+            if (!context.HasProductionFeature(ProductionFeature.Shop)) return false;
             var offers = context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);
             if (index < 0 || index >= offers.Length) return false;
             var offer = offers[index];

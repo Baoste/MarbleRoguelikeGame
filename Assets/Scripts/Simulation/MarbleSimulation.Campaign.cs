@@ -21,7 +21,8 @@ namespace MarblesECS
             StartSessionCore(physics, randomStarterTypeCount, randomSeed, grantAllStartingDevices);
         }
 
-        private void StartSessionCore(IMarblePhysics physics, int randomStarterTypeCount, uint? randomSeed, bool grantAllStartingDevices)
+        private void StartSessionCore(IMarblePhysics physics, int randomStarterTypeCount, uint? randomSeed, bool grantAllStartingDevices,
+            ProductionFeature features = ProductionFeature.All)
         {
             ThrowIfDisposed();
             if (context.Balance == null) throw new InvalidOperationException("Construct with GameBalance to start a campaign.");
@@ -38,10 +39,13 @@ namespace MarblesECS
                 context.Manager.DestroyEntity(entities);
             context.Campaign = new CampaignData
             {
-                Coins = context.Balance.Campaign.StartingCoins
+                Coins = context.Balance.Campaign.StartingCoins,
+                DisabledFeatures = ProductionFeature.All & ~features
             };
             context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity).Clear();
-            CreateStartingDevices(randomStarterTypeCount, grantAllStartingDevices);
+            randomStartingDeviceIds = Array.Empty<uint>();
+            if (context.HasProductionFeature(ProductionFeature.DevicePlacement))
+                CreateStartingDevices(randomStarterTypeCount, grantAllStartingDevices);
             var round = context.Round;
             round.Phase = (byte)RoundPhase.Build;
             round.TargetScore = context.Balance.Stages[0].TargetScore;
@@ -55,24 +59,24 @@ namespace MarblesECS
             var before = context.Round;
             ResetRound(context.Physics, resetRandom: false);
             var round = context.Round;
-            round.TargetScore = context.Balance.Stages[context.Campaign.StageIndex].TargetScore;
+            round.TargetScore = CampaignStateUtility.TargetScore(context, context.Campaign.StageIndex);
             context.Round = round;
             FillBlood();
             var campaign = context.Campaign;
             campaign.LastCashoutCoins = 0;
             context.Campaign = campaign;
-            DeviceScriptSystem.RoundStart(context);
+            if (context.HasProductionFeature(ProductionFeature.DevicePlacement)) DeviceScriptSystem.RoundStart(context);
             dayFlow?.ObserveRound(before, context.Round, stepped: false);
             return true;
         }
 
         public bool EnterBuild()
         {
-            if (!CanCampaignAct(RoundPhase.Shop)) return false;
+            if (!CanCampaignAct(RoundPhase.Shop) || !context.HasProductionFeature(ProductionFeature.Shop)) return false;
             var before = context.Round;
             var round = before;
             round.Phase = (byte)RoundPhase.Build;
-            round.TargetScore = context.Balance.Stages[context.Campaign.StageIndex].TargetScore;
+            round.TargetScore = CampaignStateUtility.TargetScore(context, context.Campaign.StageIndex);
             context.Round = round;
             dayFlow?.ObserveRound(before, round, stepped: false);
             return true;

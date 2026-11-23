@@ -30,8 +30,16 @@ namespace MarblesECS
                 string sequenceId = Id(input.String("sequenceId"), "sequenceId");
                 var plans = ReadIndex(input, "productionPlans", "planId", (entry, id) =>
                 {
-                    var plan = new DayProductionPlan(id, StageId(entry, "firstStageId"), StageId(entry, "lastStageId"));
-                    plan.Resolve(balance.Stages);
+                    long? targetScore = null;
+                    if (entry.Has("targetScore"))
+                    {
+                        double target = entry.Number("targetScore");
+                        if (target < 1 || target > balance.Campaign.MaxTotalScore || target != Math.Truncate(target))
+                            throw entry.Error("targetScore");
+                        targetScore = (long)target;
+                    }
+                    var plan = new DayProductionPlan(id, StageId(entry, "firstStageId"), StageId(entry, "lastStageId"), targetScore);
+                    plan.Resolve(balance);
                     return plan;
                 });
                 var events = ReadIndex(input, "events", "eventId", (entry, id) => ReadEvent(entry, id, behaviors));
@@ -46,7 +54,8 @@ namespace MarblesECS
                     var plan = Find(plans, entry.String("productionPlanId"), path + ".productionPlanId");
                     var dayRules = ReadRefs(entry, "ruleIds", rules);
                     CheckRuleScope(dayRules, false, path + ".ruleIds");
-                    return new DayDefinition(id, order, plan, ReadRefs(entry, "eventIds", events), dayRules);
+                    return new DayDefinition(id, order, plan, ReadProductionFeatures(entry), ReadMorningPrep(entry),
+                        ReadRefs(entry, "eventIds", events), dayRules);
                 }, required: true);
                 var ordered = new List<DayDefinition>(days.Values);
                 ordered.Sort((a, b) => a.Order.CompareTo(b.Order));
@@ -59,6 +68,40 @@ namespace MarblesECS
             {
                 throw new ArgumentException($"{source}: {error.Message}", error);
             }
+        }
+
+        private static ProductionFeature ReadProductionFeatures(MResFields entry)
+        {
+            var features = ProductionFeature.None;
+            foreach (var value in entry.Array("productionFeatures", optional: true))
+            {
+                string path = entry.Context + ".productionFeatures";
+                var flag = ReadEnum<ProductionFeature>(value as string, path);
+                if (flag == ProductionFeature.None || flag == ProductionFeature.All || (features & flag) != 0)
+                    throw new ArgumentException($"{path}: expected unique individual features, got '{value}'.");
+                features |= flag;
+            }
+            return features;
+        }
+
+        private static MorningPrepDefinition[] ReadMorningPrep(MResFields day)
+        {
+            var input = day.Array("morningPrep", optional: true);
+            var result = new MorningPrepDefinition[input.Count];
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < input.Count; i++)
+            {
+                string path = $"{day.Context}.morningPrep[{i}]";
+                var entry = MResFields.From(input[i], path);
+                string id = Id(entry.String("objectiveId"), path + ".objectiveId");
+                if (!ids.Add(id)) throw new ArgumentException($"{path}: duplicate Morning Prep objective '{id}'.");
+                var interaction = ReadEnum<MorningPrepInteraction>(entry.String("type"), path + ".type");
+                string anchor = Id(entry.String("anchorId"), path + ".anchorId");
+                string text = entry.String("text");
+                if (string.IsNullOrWhiteSpace(text)) throw entry.Error("text");
+                result[i] = new MorningPrepDefinition(id, interaction, anchor, text);
+            }
+            return result;
         }
 
         private static uint StageId(MResFields entry, string field)

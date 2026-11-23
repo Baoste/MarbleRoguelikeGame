@@ -7,6 +7,12 @@ namespace MarblesECS
     {
         internal const long MaxCoins = 9000000000000000L;
 
+        internal static long TargetScore(SimulationContext context, int stageIndex)
+        {
+            long target = context.Campaign.StageTargetOverride;
+            return target > 0 ? target : context.Balance.Stages[stageIndex].TargetScore;
+        }
+
         internal static DeviceDefinition Device(SimulationContext context, uint id)
         {
             foreach (var definition in context.Balance.Devices)

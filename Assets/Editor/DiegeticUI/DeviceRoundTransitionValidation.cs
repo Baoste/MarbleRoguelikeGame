@@ -38,7 +38,7 @@ namespace MarblesECS.Editor.Diegetic
         {
             Directory.CreateDirectory(Work);
             EditorSceneManager.OpenScene("Assets/Scenes/TestScene.unity",OpenSceneMode.Single);
-            SessionState.SetBool(Key,true);EditorApplication.EnterPlaymode();
+            SessionState.SetBool(Key,true);LegacyMachineValidationStartup.EnterPlayMode();
         }
         static void Start()
         {

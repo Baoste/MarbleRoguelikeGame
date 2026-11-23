@@ -7,9 +7,9 @@ Unity **2022.3.62f3c1 + Entities 1.0.11 + URP 14.0.12** 的三维弹珠游戏。
 ## 开始游戏
 
 1. 使用 Unity 2022.3 打开本项目，等待导入完成。
-2. 在场景中配置 `MarbleGameController`、场地、Launcher、摄像机和 HUD；Campaign 模式由 Controller 读取并校验 `GameBalance.json`。
-3. 按住左键把背包中的钉子拖到盘面，松开放置。开始回合后按住空格发射，用 A / D 或滑条移动发射口。
-4. 达到累计目标后可提现；或者继续发射直到血量不足以发射。已有血珠全部回收后，统一开奖并进入商店或结束整局。
+2. 运行 `Scenes/TestScene.unity` 从 Day0 开始。屏幕变亮后用 WASD 行走，按住鼠标右键转视角。到检测台按 E 读纸条，关闭阅读窗口后，到弹珠机旁按 E 开始生产。
+3. 生产时按空格发射，用 A / D 或滑条移动发射口。Day0 的实际目标是 100 分。达到目标后可操作结算开关，也可继续发射直到血量不足。
+4. 当天生产成功后按 E 完成当天结算，再按 E 结束休息。当天失败会重新开始 Morning Prep。制作入口见 [每日内容制作指南](DayFramework_Content_Guide.md)。
 
 
 本地 Windows 试玩程序在项目根目录 **`Builds/BloodMarble/BloodMarble.exe`**。复制给其他人时需要复制整个 `BloodMarble` 文件夹。菜单 **Marbles ECS → Build Windows Player** 可更新程序；修改 Excel 后需要重新构建才能更新试玩程序。

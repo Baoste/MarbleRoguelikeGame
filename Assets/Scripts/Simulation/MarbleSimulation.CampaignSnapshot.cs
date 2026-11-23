@@ -28,7 +28,7 @@ namespace MarblesECS
                     var stage = context.Balance.Stages[campaign.StageIndex];
                     result.StageId = stage.Id;
                     result.StageCount = context.Balance.Stages.Length;
-                    result.TargetScore = stage.TargetScore;
+                    result.TargetScore = CampaignStateUtility.TargetScore(context, campaign.StageIndex);
                     result.ConfirmedScore = round.SettlementComplete ? campaign.TotalScore :
                         MarbleRules.AddScore(campaign.TotalScore, round.Score, context.Balance.Campaign.MaxTotalScore);
                 }

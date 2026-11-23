@@ -38,7 +38,10 @@ namespace MarblesECS
                 if (IsDevice(contact.Kind) || !context.TryGetFlying(contact.Key, out var entity)) continue;
                 if (context.Manager.HasComponent<HeldMotion>(entity)) continue;
                 if (AttributeRuntime.Enabled(context) && context.Manager.GetComponentData<BallFeatures>(entity).MovedTick == context.Round.Tick) continue;
-                SettlementSystem.Settle(context, entity, contact);
+                var terminal = contact;
+                if (terminal.Kind == MarbleContactKind.RandomScore && !context.HasProductionFeature(ProductionFeature.GamblingWheel))
+                    terminal.Kind = MarbleContactKind.Score;
+                SettlementSystem.Settle(context, entity, terminal);
             }
         }
 

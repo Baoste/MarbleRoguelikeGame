@@ -10,7 +10,8 @@ public sealed partial class DevicePlacementUI
 
     public bool IsMovingPlacedDevice { get; private set; }
     public bool CanEdit => isActiveAndEnabled && Controller != null && Controller.IsReady &&
-        !Controller.Paused && Controller.ProductionCommandsAvailable && Controller.Session.Phase == RoundPhase.Build && BoardRoot != null;
+        !Controller.Paused && Controller.ProductionCommandsAvailable && Controller.HasProductionFeature(ProductionFeature.DevicePlacement) &&
+        Controller.Session.Phase == RoundPhase.Build && BoardRoot != null;
     internal CanvasGroup BackpackDropArea { get; set; }
     private GameObject hiddenPlacedObject;
     private Vector2 boardPressPosition;

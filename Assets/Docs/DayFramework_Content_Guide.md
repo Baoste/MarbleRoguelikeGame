@@ -7,12 +7,18 @@
 | 位置 | 字段与含义 |
 | --- | --- |
 | 根对象 | `schemaVersion` 为 1，`sequenceId` 是固定序列 ID，`days` 是按 `order` 排序的条目。可包含 `productionPlans`、`events`、`rules` 和 `campaignRuleIds`。 |
-| `days[]` | `dayId` 唯一，`order` 为唯一正整数，`productionPlanId` 指向计划。可用 `eventIds`、`ruleIds` 引用当天行为和规则。 |
-| `productionPlans[]` | `planId`，以及 `firstStageId`、`lastStageId`。两端都是现有 Balance Stage ID，且首端位于末端之前或相同。 |
+| `days[]` | `dayId` 唯一，`order` 为唯一正整数，`productionPlanId` 指向计划。可用 `eventIds`、`ruleIds` 引用当天行为和规则，`morningPrep` 定义房间前置目标。 |
+| `productionPlans[]` | `planId`，以及 `firstStageId`、`lastStageId`。两端都是现有 Balance Stage ID，且首端位于末端之前或相同。单 Stage 计划可填正整数 `targetScore` 作为当天分数。 |
 
 IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白。菜单 `Marbles ECS → Validate Day Configuration` 检查重复 ID、冲突顺序、Stage 范围、事件、规则与行为类型。可用 `GameDaysLoader.Parse` 在测试中从字符串加载同一 Schema。
 
 场景逻辑在 Controller 就绪后调用 `TryStartConfiguredDayCampaign`。调用者也能用 `TryStartDayCampaign` 安装已校验的定义。显示当前状态时读取 `Controller.Day`，以展示时读取的 `Version` 提交起床、结算和休息完成命令。清空日期后，配置仍可校验，显式启动会报告未配置。
+
+`productionFeatures` 是功能开关列表，允许 `Shop`、`DevicePlacement`、`Rush` 和 `GamblingWheel`。省略或留空会以基础生产开始。
+
+### Morning Prep
+
+每项 `morningPrep` 需要唯一 `objectiveId`、`type` 和 `anchorId`。`ReadNote` 额外需要显示的 `text`。在 TestScene 的 Morning Prep 对象上，把 Anchor ID 绑定到摆放物件的场景 Transform。Day0 的纸条使用 `desk`。所有目标完成且玩家到达机器交互点后，场景允许按 E 开始生产。
 
 ## 增加 Event 和 Action
 

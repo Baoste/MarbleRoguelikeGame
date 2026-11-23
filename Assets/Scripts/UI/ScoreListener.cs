@@ -97,8 +97,9 @@ public class ScoreListener : MonoBehaviour
         bool ready = Controller != null && Controller.IsReady;
         var snapshot = ready ? Controller.Snapshot : default;
         bool playing = ready && (snapshot.Phase == RoundPhase.Playing || snapshot.Phase == RoundPhase.Draining);
-        bool rushActive = playing && snapshot.RushSecondsRemaining > 0;
-        bool rushCooling = playing && snapshot.RushCooldownSecondsRemaining > 0;
+        bool rushVisible = playing && Controller.HasProductionFeature(ProductionFeature.Rush);
+        bool rushActive = rushVisible && snapshot.RushSecondsRemaining > 0;
+        bool rushCooling = rushVisible && snapshot.RushCooldownSecondsRemaining > 0;
         bool stackActive = playing && snapshot.ScoreStackSecondsRemaining > 0;
 
         if (StatusHud != null)
@@ -109,13 +110,13 @@ public class ScoreListener : MonoBehaviour
 
         if (RushText != null)
         {
-            RushText.enabled = playing;
+            RushText.enabled = rushVisible;
             RushText.text = rushActive ? $"RUSH  {snapshot.RushSecondsRemaining:0.0}s · 锁血"
                 : rushCooling ? $"RUSH 冷却  {snapshot.RushCooldownSecondsRemaining:0.0}s"
                 : $"RUSH  {(playing ? snapshot.RushMeter : 0):0.#} / {snapshot.RushMaximum:0}";
         }
 
-        SetProgress(RushSlider, playing, rushActive
+        SetProgress(RushSlider, rushVisible, rushActive
             ? Fraction(snapshot.RushSecondsRemaining, snapshot.RushDurationSeconds)
             : rushCooling ? 0 : Fraction(snapshot.RushMeter, snapshot.RushMaximum));
         if (ScoreStackText != null)

@@ -60,8 +60,15 @@ namespace MarblesECS.PhysX
                 bridge = new MarblePhysicsBridge(localScene, MarblePrefab, material, simulation.EnqueueContact);
                 simulation.DayBoardResetting += BeforeDayBoardRestore;
                 simulation.DayBoardRestored += AfterDayBoardRestore;
-                StartSimulationSession();
-                BeginRoundWhenInventoryIsEmpty();
+                if (StartWithDayCampaign)
+                {
+                    if (!TryStartConfiguredDayCampaign(out string error)) throw new InvalidOperationException(error);
+                }
+                else
+                {
+                    StartSimulationSession();
+                    BeginRoundWhenInventoryIsEmpty();
+                }
                 if (GetComponent<MarblesECS.Presentation.DeviceActivationUI>() == null)
                     gameObject.AddComponent<MarblesECS.Presentation.DeviceActivationUI>().Controller = this;
                 PublishBloodIfChanged();

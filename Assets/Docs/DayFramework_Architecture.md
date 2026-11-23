@@ -1,10 +1,10 @@
 # 每日挑战运行架构
 
-每日流程和原生产流程共用 `MarbleSimulation` 的 World。只有显式调用 `TryStartConfiguredDayCampaign` 或 `TryStartDayCampaign` 才启用 Day。当前 `Resources/GameDays.json` 是通过校验的空序列，启动命令返回未配置错误。TestScene 和 Balance 工具仍从原有入口启动。
+每日流程和原生产流程共用 `MarbleSimulation` 的 World。`TestScene` 通过 `StartWithDayCampaign` 从 `Resources/GameDays.json` 启动 Day0。调用者也可显式调用 `TryStartConfiguredDayCampaign` 或 `TryStartDayCampaign`。关闭场景的启动选项可使用旧流程，旧场景验证菜单在各自的 PlayMode 会话选择旧流程。
 
 ```mermaid
 flowchart LR
-    W["WakeUp"] -->|"完成起床"| P["Production"]
+    W["WakeUp · Morning Prep"] -->|"完成前置任务并进入机器"| P["Production"]
     P -->|"计划中的最后 Stage 达标"| S["DaySettlement"]
     S -->|"提交当天结算"| R["Rest"]
     R -->|"仍有日期"| N["下一天 WakeUp"]
@@ -32,7 +32,13 @@ flowchart LR
 
 `DayProductionPlan` 用首尾 Stage ID 绑定现有 Score 目标的连续区间。Stage 的累计分、越级奖励、提现和商店抽样仍由原生产系统计算。`CampaignSettlementSystem` 按计划上界截断本次结算跨过的 Stage。一个计划可以跑多个生产回合，也可以因越级较早完成。非末段结算为 `Shop`，购买或刷新后仍走 `EnterBuild` 和 `BeginRound`。
 
+Day 的 `productionFeatures` 逐项开启 `Shop`、`DevicePlacement`、`Rush` 和 `GamblingWheel`，默认四项都关闭。关闭商店时，非末段结算直接返回 Build。关闭转盘时，其现有分区按普通得分区即时计分。单 Stage 的计划可提供独立 `targetScore`，日程、HUD、提现和结算共享这个目标。Day0 使用 100 分。
+
 适配器在现有 `BeginRound`、`EnterBuild`、`CashOut` 和完整的 `AfterPhysics` 边界取结果。`SettlementComplete` 首次生效时发布 `RoundSettled`。若同一步进入排空并完成结算，先发 `DrainingEntered`，再发 `RoundSettled`。计划范围内的 `Won` 和 `Lost` 才触发 `ProductionSucceeded` 和 `ProductionFailed`。外层发射和布置命令只在无待处理生命周期的 Production 阶段可用。
+
+## Morning Prep
+
+Morning Prep 属于 `WakeUp`。ECS 保存当前尝试的目标完成记录，`TryCompleteWakeUp` 在剩余目标为零时才可进入生产。`MorningPrepController` 按配置生成房间物件，等待进入事件结束和自由相机就绪后淡入，淡入结束后才启用行走。玩家用 WASD 行走，按住鼠标右键转视角，靠近纸条按 E 阅读，关闭阅读窗口时提交目标。靠近弹珠机后按 E 提升 `VCamera_Machine` 的 Cinemachine Priority，镜头切换完成后由原生产控制器接手。重试重新实例化房间物件，恢复晨间目标和相机起点。
 
 ## 事件与规则
 
