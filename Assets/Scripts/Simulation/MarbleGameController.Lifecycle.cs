@@ -60,7 +60,7 @@ namespace MarblesECS.PhysX
                 bridge = new MarblePhysicsBridge(localScene, MarblePrefab, material, simulation.EnqueueContact);
                 simulation.DayBoardResetting += BeforeDayBoardRestore;
                 simulation.DayBoardRestored += AfterDayBoardRestore;
-                if (StartWithDayCampaign)
+                if (ShouldStartDayCampaign)
                 {
                     if (!TryStartConfiguredDayCampaign(out string error)) throw new InvalidOperationException(error);
                 }

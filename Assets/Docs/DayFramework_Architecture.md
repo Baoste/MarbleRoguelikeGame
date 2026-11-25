@@ -1,6 +1,6 @@
 # 每日挑战运行架构
 
-每日流程和原生产流程共用 `MarbleSimulation` 的 World。`TestScene` 通过 `StartWithDayCampaign` 从 `Resources/GameDays.json` 启动 Day0。调用者也可显式调用 `TryStartConfiguredDayCampaign` 或 `TryStartDayCampaign`。关闭场景的启动选项可使用旧流程，旧场景验证菜单在各自的 PlayMode 会话选择旧流程。
+每日流程和原生产流程共用 `MarbleSimulation` 的 World。`TestScene` 通过 `StartWithDayCampaign` 从 `Resources/GameDays.json` 启动 Day0。勾选 `EnableRandomStartingDevices` 会直接启动完整的弹珠机战役，发放全目录装置并启用全部生产功能。调用者也可显式调用 `TryStartConfiguredDayCampaign` 或 `TryStartDayCampaign`。关闭场景的每日挑战启动选项也可直接使用机台流程，旧场景验证菜单在各自的 PlayMode 会话选择这个流程。
 
 ```mermaid
 flowchart LR

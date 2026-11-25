@@ -43,7 +43,7 @@ namespace MarblesECS.Presentation
         private void Start()
         {
             // Initialize the overlay before the first frame on the scene's normal Day entry.
-            if (controller && controller.StartWithDayCampaign) PrepareView();
+            if (controller && controller.ShouldStartDayCampaign) PrepareView();
         }
 
         private void PrepareView()

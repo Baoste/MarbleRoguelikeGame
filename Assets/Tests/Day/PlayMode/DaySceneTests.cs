@@ -34,19 +34,8 @@ namespace MarblesECS.Tests
         [UnityTest]
         public IEnumerator TestSceneStillLaunchesScoresShopsAndRestartsTheLegacySession()
         {
-            void UseLegacy(Scene scene, LoadSceneMode mode)
-            {
-                if (scene.name != "TestScene") return;
-                var controller = scene.GetRootGameObjects().Select(root => root.GetComponent<MarbleGameController>())
-                    .Single(game => game);
-                controller.StartWithDayCampaign = false;
-            }
-            SceneManager.sceneLoaded += UseLegacy;
-            try { yield return SceneManager.LoadSceneAsync("TestScene", LoadSceneMode.Additive); }
-            finally { SceneManager.sceneLoaded -= UseLegacy; }
-            testScene = SceneManager.GetSceneByName("TestScene");
-            var game = testScene.GetRootGameObjects().Select(root => root.GetComponentInChildren<MarbleGameController>())
-                .First(controller => controller != null);
+            yield return LoadTestScene(controller => controller.StartWithDayCampaign = false);
+            var game = InTestScene<MarbleGameController>();
             yield return Until(() => game.IsReady, "TestScene controller startup");
             localScene = game.PhysicsRoot.gameObject.scene;
             Assert.That(game.Day.Status, Is.EqualTo(DayCampaignStatus.NotStarted));
@@ -68,6 +57,32 @@ namespace MarblesECS.Tests
             game.RestartRound();
             Assert.That(game.GetOwnedDevices(), Is.Empty);
             Assert.That(game.Snapshot.Phase, Is.EqualTo(RoundPhase.Playing));
+        }
+
+        [UnityTest]
+        public IEnumerator StartingDevicesLaunchTheFullMachineCampaign()
+        {
+            yield return LoadTestScene(controller => controller.EnableRandomStartingDevices = true);
+            var game = InTestScene<MarbleGameController>();
+            yield return Until(() => game.IsReady, "full machine startup");
+            localScene = game.PhysicsRoot.gameObject.scene;
+            Assert.That(game.StartWithDayCampaign, Is.True);
+            Assert.That(game.Day.Status, Is.EqualTo(DayCampaignStatus.NotStarted));
+            Assert.That(game.Session.Phase, Is.EqualTo(RoundPhase.Build));
+            Assert.That(game.HasProductionFeature(ProductionFeature.All), Is.True);
+            Assert.That(game.GetOwnedDevices().Select(device => device.DefinitionId).Distinct(),
+                Is.EquivalentTo(game.Balance.Devices.Select(device => device.Id)));
+            Assert.That(InTestScene<MorningPrepController>().transform.Find("Morning Prep Overlay"), Is.Null);
+
+            var brain = InTestScene<CinemachineBrain>();
+            var rig = InTestScene<DiegeticMachineUI>();
+            yield return Until(() => brain.ActiveVirtualCamera?.Name == "VCamera_Machine" && rig.IsBoardOpen,
+                "machine camera and build controls are active");
+            Assert.That(rig.TryContinue(), Is.True);
+            var score = InTestScene<ScoreListener>();
+            var wheel = InTestScene<GamblingWheelDisplay>();
+            yield return Until(() => game.Session.Phase == RoundPhase.Playing &&
+                score.RushText.enabled && wheel.DisplayGroup.alpha > 0, "RUSH and the wheel are visible during play");
         }
 
         [UnityTest]
@@ -160,6 +175,20 @@ namespace MarblesECS.Tests
             Assert.That(prep.TryInteract(), Is.True);
             Assert.That(prep.TryInteract(), Is.True);
             Assert.That(game.Day.Status, Is.EqualTo(DayCampaignStatus.Completed));
+        }
+
+        private IEnumerator LoadTestScene(Action<MarbleGameController> configure)
+        {
+            void OnLoaded(Scene scene, LoadSceneMode mode)
+            {
+                if (scene.name != "TestScene") return;
+                testScene = scene;
+                configure(InTestScene<MarbleGameController>());
+            }
+
+            SceneManager.sceneLoaded += OnLoaded;
+            try { yield return SceneManager.LoadSceneAsync("TestScene", LoadSceneMode.Additive); }
+            finally { SceneManager.sceneLoaded -= OnLoaded; }
         }
 
         private T InTestScene<T>() where T : Component =>

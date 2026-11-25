@@ -7,6 +7,7 @@ namespace MarblesECS.PhysX
     {
         [Header("Daily campaign")]
         public bool StartWithDayCampaign;
+        internal bool ShouldStartDayCampaign => StartWithDayCampaign && !EnableRandomStartingDevices;
         public DayProgressSnapshot Day => IsReady ? simulation.Day : default;
         public DayDefinition CurrentDayDefinition => IsReady ? simulation.CurrentDayDefinition : null;
         public bool ProductionCommandsAvailable => IsReady && simulation.ProductionCommandsAvailable;

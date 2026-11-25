@@ -13,7 +13,7 @@ namespace MarblesECS.PhysX
 
         [Header("测试 / 初始装置")]
         [InspectorName("开局获得全部装置")]
-        [Tooltip("开启后，每次启动游戏或重新开局时，背包免费获得目录中每种装置一套。成对装置按整套发放。")]
+        [Tooltip("勾选后直接启动完整的弹珠机流程。每次开局或重开都会免费获得目录中每种装置一套。成对装置按整套发放。")]
         public bool EnableRandomStartingDevices;
         public uint[] LastRandomStarterDeviceIds => simulation != null
             ? simulation.GetRandomStartingDeviceIds() : Array.Empty<uint>();

@@ -4400,8 +4400,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 76fbb91493ef44a3bd0d5e3f70b3684c, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   controller: {fileID: 130887919}
   roomCamera: {fileID: 2134904269}
   machineCamera: {fileID: 148541992}
@@ -7363,7 +7363,7 @@ MonoBehaviour:
   - {fileID: 221511279}
   StartWithDayCampaign: 1
   RefreshRandomSeedOnNewRun: 1
-  EnableRandomStartingDevices: 0
+  EnableRandomStartingDevices: 1
 --- !u!4 &130887920
 Transform:
   m_ObjectHideFlags: 0
@@ -116387,8 +116387,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c8fc5a636c014343b9f7a63a84ab2a9a, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   speed: 11
   lookSensitivity: 2
   walkMin: {x: -58, y: -18}
