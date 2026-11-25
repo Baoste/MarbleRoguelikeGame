@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
@@ -126,7 +125,7 @@ namespace MarblesECS.Editor
                 var simulation = new MarbleSimulation(Balance()); int contacts = 0;
                 var bridge = new MarblePhysicsBridge(scene, null, null, hit => { contacts++; simulation.EnqueueContact(hit); });
                 var board = new GameObject("SplitterBoard"); SceneManager.MoveGameObjectToScene(board, scene);
-                MResLoadHandle view = null; GameObject obstacle = null;
+                DeviceViewHandle view = null; GameObject obstacle = null;
                 try
                 {
                     simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -135,7 +134,7 @@ namespace MarblesECS.Editor
                     var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var e);
                     var data = c.Manager.GetComponentData<OwnedDeviceData>(e); data.Placed = true; c.Manager.SetComponentData(e, data);
                     board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(63, 121, 0));
-                    view = MResDeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
+                    view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
                     Check(view.Root.GetComponentsInChildren<Collider>().All(x => x.isTrigger), "splitter has no solid collision at any outlet");
                     for (int i = 0; i < 3; i++) Check(view.Root.transform.Find("Outlet" + i) != null, "model contains all three outlets");
                     Check(bridge.TryGetDevicePose(owned.InstanceId, out var pose), "loaded splitter exposes its pose");

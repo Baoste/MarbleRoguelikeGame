@@ -1,0 +1,9 @@
+{
+  "name": "传送门",
+  "description": "购买一对门，双向传送；保持世界运动方向、速度和自身重力等属性，区域力按出口环境计算。",
+  "value": 15,
+  "type": "device",
+  "purchasePrice": 14,
+  "rarity": "uncommon",
+  "durability": 20
+}

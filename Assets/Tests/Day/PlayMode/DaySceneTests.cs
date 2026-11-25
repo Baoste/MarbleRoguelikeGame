@@ -217,7 +217,7 @@ namespace MarblesECS.Tests
             int starterId = game.GetOwnedDevices().Single().InstanceId;
             Assert.That(game.PlaceDevice(starterId, 3, 2), Is.True);
             Assert.That(game.RotateDevice(starterId, 45), Is.True);
-            yield return Until(() => DeviceBody(starterId) != null, "initial collision geometry");
+            yield return Until(() => FindDeviceBody(starterId) != null, "initial collision geometry");
             yield return PlayScoringRound(game);
             Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.DaySettlement));
             FinishDay(game);
@@ -227,7 +227,7 @@ namespace MarblesECS.Tests
             var checkpoint = game.Day;
             var savedDevice = game.GetOwnedDevices().Single();
             long savedCoins = game.Session.Coins;
-            Assert.That(DeviceBody(starterId), Is.Not.Null);
+            Assert.That(FindDeviceBody(starterId), Is.Not.Null);
 
             Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.True);
             yield return PlayScoringRound(game);
@@ -241,10 +241,10 @@ namespace MarblesECS.Tests
             Assert.That(game.EnterBuild(), Is.True);
             Assert.That(game.PlaceDevice(starterId, -3, 2), Is.True);
             Assert.That(game.RotateDevice(starterId, 45), Is.True);
-            yield return Until(() => DeviceBody(starterId) != null, "moved collision geometry");
+            yield return Until(() => FindDeviceBody(starterId) != null, "moved collision geometry");
             Assert.That(game.BeginRound(), Is.True);
             yield return null;
-            var attemptDevice = DeviceBody(starterId);
+            var attemptDevice = FindDeviceBody(starterId);
             Assert.That(attemptDevice, Is.Not.Null);
             Assert.That(attemptDevice.transform.localPosition.x, Is.EqualTo(-3).Within(.01f));
             score.Kind = MarbleContactKind.Drain;
@@ -277,7 +277,7 @@ namespace MarblesECS.Tests
             Assert.That(restored.RemainingDurability, Is.EqualTo(savedDevice.RemainingDurability));
             Assert.That(restored.X, Is.EqualTo(savedDevice.X));
             Assert.That(restored.Angle, Is.EqualTo(savedDevice.Angle));
-            Assert.That(DeviceBody(starterId).transform.localPosition.x, Is.EqualTo(3).Within(.01f));
+            Assert.That(FindDeviceBody(starterId).transform.localPosition.x, Is.EqualTo(3).Within(.01f));
             Assert.That(log.Count(notice => notice.Trigger == DayTrigger.RoundSettled && notice.Day.Attempt == 1), Is.EqualTo(2));
             Assert.That(log.Count(notice => notice.Trigger == DayTrigger.DayRetried), Is.EqualTo(1));
             Assert.That(game.TryCompleteDaySettlement(game.Day.Version, out _), Is.False);
@@ -310,7 +310,7 @@ namespace MarblesECS.Tests
             Assert.That(game.Day.Status, Is.EqualTo(DayCampaignStatus.NotStarted));
             Assert.That(game.Snapshot.ActiveMarbles, Is.Zero);
             Assert.That(OwnedWorlds().Count, Is.EqualTo(worlds.Count + 1));
-            Assert.That(DeviceBody(starterId), Is.Null);
+            Assert.That(FindDeviceBody(starterId), Is.Null);
         }
 
         [UnityTest]
@@ -323,7 +323,7 @@ namespace MarblesECS.Tests
             var secondPin = AddPin(new Vector3(2, 0, 0));
             var tool = new GameObject("Fixture device");
             SceneManager.MoveGameObjectToScene(tool, localScene);
-            tool.AddComponent<MResDeviceBody>().Initialize(1, new DeviceDefinition(), null);
+            tool.AddComponent<DeviceBody>().Initialize(1, new DeviceDefinition(), null);
             Physics.SyncTransforms();
             bridge.BreakPinsOnCross(1);
             Assert.That(firstPin.enabled, Is.False);
@@ -403,8 +403,8 @@ namespace MarblesECS.Tests
             return zone;
         }
 
-        private MResDeviceBody DeviceBody(int id) =>
-            MResDeviceBody.Active.FirstOrDefault(item => item != null && item.InstanceId == id && item.gameObject.scene == localScene);
+        private DeviceBody FindDeviceBody(int id) =>
+            DeviceBody.Active.FirstOrDefault(item => item != null && item.InstanceId == id && item.gameObject.scene == localScene);
 
         private static List<World> OwnedWorlds()
         {

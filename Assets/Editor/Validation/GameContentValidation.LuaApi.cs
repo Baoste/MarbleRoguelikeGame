@@ -148,7 +148,7 @@ namespace MarblesECS.Editor
                     var go = new GameObject("LuaPortalEndpoint"); objects.Add(go);
                     SceneManager.MoveGameObjectToScene(go, scene);
                     go.transform.SetPositionAndRotation(new Vector3(owned.InstanceId * 3, 3, 0), Quaternion.Euler(61, 127, 19));
-                    go.AddComponent<MResDeviceBody>().Initialize(owned.InstanceId, definition, c.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                    go.AddComponent<DeviceBody>().Initialize(owned.InstanceId, definition, c.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 }
                 bridge.TryGetDevicePose(pair[1].InstanceId, out var exit);
                 VectorNear(objects[1].transform.rotation * Vector3.back, exit.Forward, "engine exit facing is local negative Z");
@@ -166,7 +166,7 @@ namespace MarblesECS.Editor
                     obstacle.AddComponent<BoxCollider>().size = Vector3.one;
                     Physics.SyncTransforms();
                 }
-                simulation.EnqueueContact(objects[0].GetComponent<MResDeviceBody>().Contact(key, before.Position));
+                simulation.EnqueueContact(objects[0].GetComponent<DeviceBody>().Contact(key, before.Position));
                 simulation.AfterPhysics(bridge);
                 bridge.TryGetState(key, out var after);
                 VectorNear(before.LinearVelocity, after.LinearVelocity, "Lua teleport retains real PhysX velocity whether successful or blocked");

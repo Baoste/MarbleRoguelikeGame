@@ -11,7 +11,7 @@ namespace MarblesECS
     public sealed class GameContent
     {
         public AttributeDefinition[] Attributes;
-        public DeviceDefinition[] Devices;
+        [NonSerialized] public DeviceDefinition[] Devices;
         public double RushThreshold = 100;
         public double OverkillCoinsPerScore = 0.01;
         public double FlowValueExponent = 1.15;

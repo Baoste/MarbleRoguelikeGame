@@ -1,9 +1,6 @@
 using System;
 using System.Linq;
-using System.IO;
-using System.Text;
 using System.Collections.Generic;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using Unity.Entities;
@@ -293,34 +290,6 @@ function Verify() assert(count == 2) end"))
             }
         }
 
-        // In-memory test packages retain the real model/configuration and replace only their Lua source.
-        private static byte[] WithLua(MResPackage package, string lua)
-        {
-            var entries = package.Entries.Values.ToArray();
-            var offsets = new List<long>(); var lengths = new List<int>();
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream, Encoding.UTF8))
-            {
-                writer.Write(new byte[28]);
-                foreach (var entry in entries)
-                {
-                    byte[] bytes = entry.Type == MResEntryType.Lua ? Encoding.UTF8.GetBytes(lua) : package.GetBytes(entry.Path);
-                    offsets.Add(stream.Position); lengths.Add(bytes.Length); writer.Write(bytes);
-                }
-                long toc = stream.Position;
-                for (int i = 0; i < entries.Length; i++)
-                {
-                    byte[] path = Encoding.UTF8.GetBytes(entries[i].Path);
-                    writer.Write(path.Length); writer.Write(path); writer.Write((byte)entries[i].Type);
-                    writer.Write((byte)0); writer.Write((ushort)0); writer.Write((ulong)offsets[i]); writer.Write((ulong)lengths[i]);
-                }
-                long size = stream.Position - toc; stream.Position = 0;
-                writer.Write(Encoding.ASCII.GetBytes("MRES")); writer.Write((ushort)1); writer.Write((ushort)0);
-                writer.Write(entries.Length); writer.Write((ulong)toc); writer.Write((ulong)size);
-                return stream.ToArray();
-            }
-        }
-
         private static void Check(bool condition, string message) { assertions++; if (!condition) throw new Exception("Sticky: " + message); }
         private static void VectorNear(Vector3 expected, Vector3 actual, string message) => Check((expected - actual).magnitude < .0001f, message + ": " + expected + " vs " + actual);
 
@@ -332,25 +301,15 @@ function Verify() assert(count == 2) end"))
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly Entity Device;
-            internal readonly MResLoadHandle View;
+            internal readonly DeviceViewHandle View;
             internal readonly OwnedDeviceSnapshot Owned;
             internal SimulationContext C => Simulation.Context;
-            internal MResLuaScript Script => C.DeviceScripts.Get(Owned.InstanceId, Owned.DefinitionId);
+            internal DeviceLuaScript Script => C.DeviceScripts.Get(Owned.InstanceId, Owned.DefinitionId);
             internal DevicePose Pose { get { Bridge.TryGetDevicePose(Owned.InstanceId, out var pose); return pose; } }
             internal Vector3 Down => Vector3.ProjectOnPlane(Vector3.down, Pose.Up).normalized;
             private int launches;
-            private readonly DeviceResourceCatalog catalog;
-            private readonly DeviceResourceCatalog.Entry[] originalEntries;
             internal Rig(string lua = null)
             {
-                if (lua != null)
-                {
-                    catalog = DeviceResourceCatalog.Current; originalEntries = catalog.Entries;
-                    var replacement = WithLua(catalog.Get(9001).Package, lua);
-                    catalog.Entries = originalEntries.Select(entry => entry.File.EndsWith("9001_Sticky.mres", StringComparison.Ordinal)
-                        ? new DeviceResourceCatalog.Entry { File = entry.File, Bytes = replacement } : entry).ToArray();
-                    catalog.Invalidate();
-                }
                 Scene = SceneManager.CreateScene("StickyValidation_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
                 var balance = GameBalanceLoader.Load();
                 foreach (var d in balance.Devices) d.StartingCount = 0;
@@ -360,6 +319,8 @@ function Verify() assert(count == 2) end"))
                 balance.Content.Definition(GameAttribute.BALL_LIFETIME).DefaultValue = 60;
                 Simulation = new MarbleSimulation(balance);
                 Bridge = new MarblePhysicsBridge(Scene, null, null, Simulation.EnqueueContact);
+                if (lua != null)
+                    C.DeviceScripts.CreateScript = resource => resource.CreateScript(resource.Definition.Id == 9001 ? lua : null);
                 Simulation.StartSession(Bridge); Simulation.BeginRound();
                 var definition = C.Balance.Devices.Single(d => d.Id == 9001);
                 CampaignStateUtility.CreateDevice(C, definition, definition.Price);
@@ -368,9 +329,9 @@ function Verify() assert(count == 2) end"))
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(Device); data.Placed = true; C.Manager.SetComponentData(Device, data);
                 Board = new GameObject("StickyBoard"); SceneManager.MoveGameObjectToScene(Board, Scene);
                 Board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 47, 0));
-                View = MResDeviceView.Create(Owned, Board.transform, C.DeviceScripts.Get(Owned.InstanceId, definition.Id));
+                View = DeviceView.Create(Owned, Board.transform, C.DeviceScripts.Get(Owned.InstanceId, definition.Id));
                 View.Root.SetActive(true); Physics.SyncTransforms();
-                Check(View.Root.GetComponentInChildren<MeshCollider>().isTrigger, "package contains a cylinder trigger");
+                Check(View.Root.GetComponentInChildren<MeshCollider>().isTrigger, "prefab contains a cylinder trigger");
             }
             internal Entity Ball(MarbleKey key) => C.Marbles[key];
             internal bool Held(MarbleKey key) => C.Marbles.TryGetValue(key, out var entity) && C.Manager.HasComponent<HeldMotion>(entity);
@@ -385,12 +346,12 @@ function Verify() assert(count == 2) end"))
                 return key;
             }
             internal DeviceContactContext Api(MarbleKey key) => new DeviceContactContext(C, Ball(key), Device,
-                View.Root.GetComponent<MResDeviceBody>().Contact(key, Body(key).position), Pose);
+                View.Root.GetComponent<DeviceBody>().Contact(key, Body(key).position), Pose);
             internal void Contact(MarbleKey key, float speed)
             {
                 Simulation.BeforePhysics(.1f, Bridge, Vector3.up * 10, Quaternion.identity);
                 Bridge.TrySetVelocity(key, new Vector3(3, 0, 4).normalized * speed); Body(key).angularVelocity = Spin;
-                Simulation.EnqueueContact(View.Root.GetComponent<MResDeviceBody>().Contact(key, Body(key).position));
+                Simulation.EnqueueContact(View.Root.GetComponent<DeviceBody>().Contact(key, Body(key).position));
                 Simulation.AfterPhysics(Bridge);
             }
             internal void Step()
@@ -400,12 +361,11 @@ function Verify() assert(count == 2) end"))
             }
             public void Dispose()
             {
-                try
-                {
-                    View.Dispose(); Simulation.Dispose(); Bridge.Dispose();
-                    UnityEngine.Object.DestroyImmediate(Board); SceneManager.UnloadSceneAsync(Scene);
-                }
-                finally { if (catalog != null) { catalog.Entries = originalEntries; catalog.Invalidate(); } }
+                View.Dispose();
+                Simulation.Dispose();
+                Bridge.Dispose();
+                UnityEngine.Object.DestroyImmediate(Board);
+                SceneManager.UnloadSceneAsync(Scene);
             }
         }
     }

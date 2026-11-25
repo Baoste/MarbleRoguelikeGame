@@ -49,7 +49,7 @@ namespace MarblesECS.PhysX
         private void ReportPin(Collision collision)
         {
             if (Bridge == null || Body == null || Suspended) return;
-            var device = collision.collider.GetComponentInParent<MResDeviceBody>();
+            var device = collision.collider.GetComponentInParent<DeviceBody>();
             if (HasSettings && collision.contactCount > 0 &&
                 (collision.rigidbody == null || collision.rigidbody.isKinematic))
             {
@@ -85,7 +85,7 @@ namespace MarblesECS.PhysX
         private void Report(Collider other)
         {
             if (Bridge == null || Body == null || Suspended || !other.isTrigger) return;
-            var device = other.GetComponentInParent<MResDeviceBody>();
+            var device = other.GetComponentInParent<DeviceBody>();
             if (device != null) { Bridge.ReportDevice(this, device); return; }
             var zone = other.GetComponentInParent<MarbleZone>();
             if (zone != null && zone.isActiveAndEnabled && zone.IsValid)

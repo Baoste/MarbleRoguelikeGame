@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
@@ -122,12 +121,11 @@ namespace MarblesECS.Editor
                 api.Close(); ExpectExpired(() => api.TrySpawnVisual("x", Vector3.zero, Vector3.zero, 1, ""));
                 f.Step(); VectorNear(Vector3.one + Vector3.right * .1f, f.Physics.Visuals[id].Position, "visual moves on simulation time");
                 f.Step(); Near(0, f.C.Transients.Count, "missing callback still cleans visual");
-                var package = DeviceResourceCatalog.Current.Get(9017).Package;
-                var probe = (MResLuaScript)Activator.CreateInstance(typeof(MResLuaScript), BindingFlags.NonPublic | BindingFlags.Instance, null,
-                    new object[] { @"local saved, info, calls = nil, nil, 0
+                var resource = DeviceResourceCatalog.Current.Get(9017);
+                var probe = resource.CreateScript(@"local saved, info, calls = nil, nil, 0
 function Done(a) saved, info, calls = a, a.Transient, calls+1; if calls==1 then error('EXPECTED_TRANSIENT_FAILURE') end end
-function Verify() assert(calls==2); assert(not pcall(function() return saved.Time end)); assert(not pcall(function() return info.Position end)) end", package.Metadata, "TransientProbe", null }, null);
-                var scripts = (Dictionary<int, MResLuaScript>)typeof(DeviceScriptSystem).GetField("scripts", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(f.C.DeviceScripts);
+function Verify() assert(calls==2); assert(not pcall(function() return saved.Time end)); assert(not pcall(function() return info.Position end)) end");
+                var scripts = (Dictionary<int, DeviceLuaScript>)typeof(DeviceScriptSystem).GetField("scripts", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(f.C.DeviceScripts);
                 f.C.DeviceScripts.Remove(device.InstanceId); scripts.Add(device.InstanceId, probe);
                 api = new DeviceEventContext(f.C, entity);
                 api.TrySpawnVisual("x", Vector3.zero, Vector3.zero, .1f, "Done"); api.TrySpawnVisual("x", Vector3.one, Vector3.zero, .1f, "Done"); api.Close();
@@ -142,7 +140,7 @@ function Verify() assert(calls==2); assert(not pcall(function() return saved.Tim
             {
                 var scene = SceneManager.CreateScene("BombPhysics_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
                 var simulation = new MarbleSimulation(Balance()); var bridge = new MarblePhysicsBridge(scene, null, null, simulation.EnqueueContact);
-                var board = new GameObject("BombBoard"); SceneManager.MoveGameObjectToScene(board, scene); MResLoadHandle view = null;
+                var board = new GameObject("BombBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
                 try
                 {
                     simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -151,7 +149,7 @@ function Verify() assert(calls==2); assert(not pcall(function() return saved.Tim
                     CampaignStateUtility.CreateDevice(c, def, def.Price); var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var e);
                     var data = c.Manager.GetComponentData<OwnedDeviceData>(e); data.Placed = true; c.Manager.SetComponentData(e, data);
                     board.transform.SetPositionAndRotation(new Vector3(0, 8, 0), Quaternion.Euler(-63, 121, 0));
-                    view = MResDeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
+                    view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
                     Check(!view.Root.transform.Find("BombTemplate").gameObject.activeSelf && !view.Root.transform.Find("BlastTemplate").gameObject.activeSelf, "templates hidden on original launcher");
                     var spawn = board.transform.TransformPoint(new Vector3(0, .12f, -2));
                     void Step() { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); simulation.AfterPhysics(bridge); }

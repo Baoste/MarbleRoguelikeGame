@@ -1,7 +1,5 @@
 using System;
 using System.Linq;
-using System.Text;
-using MRes;
 using UnityEngine;
 
 namespace MarblesECS.Editor
@@ -11,19 +9,18 @@ namespace MarblesECS.Editor
         private static void PlacementSphereValidation()
         {
             int start = assertions;
-            Check(!System.IO.File.ReadAllText("Assets/Resources/GameContent.json").Contains("\"Radius\""), "content snapshot has no legacy device radius");
             var catalog = DeviceResourceCatalog.Current;
             foreach (var definition in catalog.Definitions())
             {
-                var package = catalog.Get(definition.Id).Package;
-                Check(!Encoding.UTF8.GetString(package.GetBytes("game/device.json")).Contains("\"Radius\""), "no legacy radius in device package");
-                Check(MResPlacementSphere.TryRead(package, out var center, out float radius), "package has a placement sphere");
-                Near(radius, definition.PlacementRadius, "runtime radius comes from collider geometry");
+                var resource = catalog.Get(definition.Id);
+                var center = new Vector3(definition.PlacementOffsetX, definition.PlacementOffsetY, definition.PlacementOffsetZ);
+                float radius = definition.PlacementRadius;
                 Check(!JsonUtility.ToJson(definition).Contains("Radius"), "derived geometry is not written back as configuration");
                 var copy = definition.Copy(); Near(radius, copy.PlacementRadius, "copy preserves derived geometry");
-                using (var view = MResLoader.Load(package, catalog.Shaders, new MResLoadOptions { ExecuteLua = false, ActivateRoot = false }))
+                var root = UnityEngine.Object.Instantiate(resource.Prefab);
+                try
                 {
-                    var root = view.Root; root.transform.position = Vector3.zero; root.transform.rotation = Quaternion.identity;
+                    root.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
                     var volume = root.transform.Find("PlacementVolume");
                     Check(volume && volume.GetComponents<Collider>().Length == 1, "one authored placement collider");
                     var sphere = volume.GetComponent<SphereCollider>();
@@ -35,6 +32,7 @@ namespace MarblesECS.Editor
                     root.SetActive(true); Check(!sphere.enabled, "activation never enables placement collisions");
                     root.SetActive(false); root.SetActive(true); Check(!sphere.enabled, "reenabling the device keeps placement nonphysical");
                 }
+                finally { UnityEngine.Object.DestroyImmediate(root); }
             }
             using (var f = new Fixture())
             {

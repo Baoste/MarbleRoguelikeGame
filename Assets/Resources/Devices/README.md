@@ -1,67 +1,69 @@
-# MRes 装置目录
+# 装置资源
 
-本目录的原始 `.mres` 是装置外观、碰撞体、参数和行为的权威来源。当前包含以下 35 种装置，商店与背包使用这个目录；`Prefabs/Devices`、手工 prefab 绑定和 C# 装置行为分支已删除。
+本目录包含 35 种装置。游戏读取 [GameContent.json](../GameContent.json) 的 `Devices` 数字 ID 列表，再从对应的子目录加载资源。
 
-| ID | 装置 | 包文件 |
+| ID | 装置 | 目录 |
 | --- | --- | --- |
-| 103 | 传送门 | `103_Portal.mres` |
-| 113 | Multi Ding | `113_MultiDing.mres` |
-| 9000 | 示例弹射台 | `9000_BouncePad.mres` |
-| 9001 | 黏黏 | `9001_Sticky.mres` |
-| 9002 | 弹弹 | `9002_Reflector.mres` |
-| 9003 | 吸吸 | `9003_Collector.mres` |
-| 9004 | 加速力场 | `9004_AccelerationField.mres` |
-| 9005 | 黑洞 | `9005_BlackHole.mres` |
-| 9006 | 反重力 | `9006_AntiGravity.mres` |
-| 9007 | 大炮 | `9007_Cannon.mres` |
-| 9008 | 沙包 | `9008_Sandbag.mres` |
-| 9009 | 大石碎胸口 | `9009_StoneBurst.mres` |
-| 9010 | 矿老板 | `9010_GoldMine.mres` |
-| 9011 | 淘金热 | `9011_GoldRush.mres` |
-| 9012 | 猪猪存钱罐 | `9012_PiggyBank.mres` |
-| 9013 | 赚赚 | `9013_CashOut.mres` |
-| 9014 | 摇钱树 | `9014_MoneyTree.mres` |
-| 9015 | 分流器 | `9015_Splitter.mres` |
-| 9016 | 大喷菇 | `9016_PuffMushroom.mres` |
-| 9017 | 炸弹 | `9017_Bomb.mres` |
-| 9018 | 复制体 | `9018_Duplicator.mres` |
-| 9019 | 造血工厂 | `9019_BloodFactory.mres` |
-| 9020 | 弹珠机关枪 | `9020_MarbleMachineGun.mres` |
-| 9021 | 草皮 | `9021_Turf.mres` |
-| 9022 | 故障装置 | `9022_Malfunction.mres` |
-| 9023 | more is more | `9023_MoreIsMore.mres` |
-| 9024 | less is more | `9024_LessIsMore.mres` |
-| 9025 | 雪糕机 | `9025_IceCreamMachine.mres` |
-| 9026 | 大胃袋 | `9026_GluttonBag.mres` |
-| 9027 | 星星灯 | `9027_StarLamp.mres` |
-| 9028 | 种植牙 | `9028_DentalImplant.mres` |
-| 9029 | 有锅气 | `9029_Wok.mres` |
-| 9030 | 降降火 | `9030_CoolingTea.mres` |
-| 9031 | 台球 | `9031_Billiards.mres` |
-| 9032 | 超大杯全冰美式 | `9032_IcedAmericano.mres` |
+| 103 | 传送门 | `103/` |
+| 113 | Multi Ding | `113/` |
+| 9000 | 示例弹射台 | `9000/` |
+| 9001 | 黏黏 | `9001/` |
+| 9002 | 弹弹 | `9002/` |
+| 9003 | 吸吸 | `9003/` |
+| 9004 | 加速力场 | `9004/` |
+| 9005 | 黑洞 | `9005/` |
+| 9006 | 反重力 | `9006/` |
+| 9007 | 大炮 | `9007/` |
+| 9008 | 沙包 | `9008/` |
+| 9009 | 大石碎胸口 | `9009/` |
+| 9010 | 矿老板 | `9010/` |
+| 9011 | 淘金热 | `9011/` |
+| 9012 | 猪猪存钱罐 | `9012/` |
+| 9013 | 赚赚 | `9013/` |
+| 9014 | 摇钱树 | `9014/` |
+| 9015 | 分流器 | `9015/` |
+| 9016 | 大喷菇 | `9016/` |
+| 9017 | 炸弹 | `9017/` |
+| 9018 | 复制体 | `9018/` |
+| 9019 | 造血工厂 | `9019/` |
+| 9020 | 弹珠机关枪 | `9020/` |
+| 9021 | 草皮 | `9021/` |
+| 9022 | 故障装置 | `9022/` |
+| 9023 | more is more | `9023/` |
+| 9024 | less is more | `9024/` |
+| 9025 | 雪糕机 | `9025/` |
+| 9026 | 大胃袋 | `9026/` |
+| 9027 | 星星灯 | `9027/` |
+| 9028 | 种植牙 | `9028/` |
+| 9029 | 有锅气 | `9029/` |
+| 9030 | 降降火 | `9030/` |
+| 9031 | 台球 | `9031/` |
+| 9032 | 超大杯全冰美式 | `9032/` |
 
 ## 添加或更新装置
 
-1. 将符合 `MRes/README.md` 格式的 `.mres` 放在本目录或子目录中。文件名可自定，ID 必须唯一。
-2. 包内包含 `metadata.json`、节点/网格/材质/碰撞体数据、Lua 脚本，以及类型为 `Other (255)` 的 `game/device.json`。
-3. `game/device.json` 使用 `DeviceDefinition` 的字段名，至少提供唯一 `Id` 和所需玩法参数。名称、描述、购买价、出售价格、稀有度和耐久以 Metadata 的 `name`、`description`、`purchasePrice`、`value`、`rarity`、`durability` 为准；`type` 必须为 `device`。购买价为正整数，出售价格可为 0，耐久 `-1` 表示无限。
-4. 包引用的 shader ID 必须在 `ShaderRegistry.asset` 显式注册。装置使用 `device-lit`；BouncePad 使用已注册的 `MRes/ExampleSurface`。
-5. 等待 Unity 导入，或执行 `Tools/MRes/Rebuild Device Catalog`。进入 Play 和构建 Player 前也会校验并刷新。
+在 `Resources/Devices/<id>/` 创建以下资源。以 [示例弹射台](9000/manifest.json) 的目录为参考。
 
-`Resources/GameContent.json` 的 `Devices` 同步为本目录当前全部 MRes 的完整列表，包含子目录。包被删除后对应 JSON 条目也移除。打开项目、脚本重载和 JSON 导入同样会检查同步，其他属性与内容规则沿用原配置。离线可运行 `python Assets/Editor/Balance/sync_mres_devices.py`，`--check` 检查快照是否最新。
+| 文件 | 用途 |
+| --- | --- |
+| `manifest.json` | 版本 `1`、装置资源名称，以及同目录的元数据、玩法配置、Prefab 和 Lua 文件名 |
+| `metadata.json` | 名称、描述、购买价、售价、稀有度、耐久和 `type: "device"` |
+| `device.json` | `DeviceDefinition` 的玩法字段，`Id` 与目录名一致 |
+| `prefab.prefab` | Unity 物体层级、网格和材质引用、碰撞体与刚体 |
+| `main.lua` | 装置行为的 UTF-8 源文件，由 Unity 导入为 TextAsset |
 
-Unity 不会将未知扩展名直接作为 `TextAsset` 收录，因此 `DeviceCatalog.asset` 保存原包的完整字节副本，供编辑器和 Player 统一读取。它由编辑器生成，不需要手工编辑，也不使用 ScriptedImporter，不会解包文件到磁盘。发布时需包含 Resources 中的目录资产和 shader 注册表。损坏包、重复 ID、缺失 shader 会阻止刷新、进入 Play 或构建，并报告源文件。
+在 `GameContent.json.Devices` 加入该装置的唯一正整数 ID，即可让它进入游戏目录。移除 ID 会从下一次进入 Play 或启动游戏时停用该装置。完整字段及回调约定见 [装置 Lua API](../../Docs/Device_Lua_API.md)。
 
-离线平衡工具读取生成的 `Devices` 快照。装置参数通过 MRes 制作源编辑，属性直接在 `GameContent.json` 中编辑。
+模型、材质、贴图和装置预览场景位于 `Assets/Art/Devices`。在 Prefab 的 `PlacementVolume` 子节点用禁用的 SphereCollider 设置摆放占地。场景使用原生碰撞体进行物理模拟。
 
-## 包内通用参数
+## 通用参数
 
-- `StartingCount` 为包内配置的开局赠送份数，当前全部为 `0`。开启场景的「开局获得全部装置」后，背包会收到目录中每种装置一套。`PurchaseQuantity` 为每套的装置数量，传送门为 2，自动分配配对 ID。
-- `Radius`：放置半径；`Cooldown`、`MaxTriggersPerBall`：默认触发冷却和每球次数上限。
-- `Value`、`Strength`、`Range`：供脚本读取的数值。
-- `RushCategory`：商店 Rush 分类；`LinkGroup`：相同非空组名的装置可连接；`GroupClearance`：同组放置间距。
-- `ScoreMultiplier`、`RushChanceAdd`：供脚本读取的倍率和概率参数。
-- `Kind`、`SourceId`：历史分类/来源标签，供平衡工具识别，不用于运行时装置行为分派。
+- `StartingCount` 为初始赠送份数，当前全部为 `0`。开启场景的「开局获得全部装置」后，背包会收到 ID 列表中每种装置一套。传送门的 `PurchaseQuantity` 为 2，系统自动分配配对 ID。
+- `Cooldown` 和 `MaxTriggersPerBall` 控制触发冷却和每球次数上限。
+- `Value`、`Strength`、`Range` 为脚本参数。买卖参数取 `metadata.json`。
+- `LinkGroup` 指定可连接的装置组，`GroupClearance` 指定同组放置间距。
+- `ScoreMultiplier`、`RushChanceAdd` 为兼容倍率和概率参数。
+- `Kind`、`SourceId` 是历史分类和来源标签。玩法回调由 Lua 提供。
 
 ## Lua 事件与游戏接口
 
@@ -71,7 +73,7 @@ Unity 不会将未知扩展名直接作为 `TextAsset` 收录，因此 `DeviceCa
 
 淘金热一次只运输一颗球，隐藏并等待 10 秒后，等概率返还原球并加 2 金币、消耗球加 5 金币、或消耗球无金币；三种结果均在完成时扣 1 耐久，运输及取消不扣。等待中拒绝其他球，结果后恢复接收；返还沿棋盘向下且保留进入速度大小。隐藏使用通用 `Motion.TrySetHeldVisible`，释放、取消与回收都会恢复显示。
 
-每件库存装置拥有独立 Lua 环境，共享一个 xLua VM。`OnContact(a)` 在确定性接触处理阶段执行，`OnField(a)` 在手动物理子步前执行。脚本顶层只做声明和初始化；此时可能尚未生成视觉根节点。`self` 在实际视图绑定后可用，常规 Start/Update/物理事件仍由 MRes Loader 转发。
+每件库存装置拥有独立 Lua 环境，共享一个 xLua VM。`OnContact(a)` 在确定性接触处理阶段执行，`OnField(a)` 在手动物理子步前执行。脚本顶层只做声明和初始化；此时可能尚未生成视觉根节点。`self` 在实际视图绑定后可用，常规 Start/Update/物理事件由装置视图转发。
 
 接触示例（增值透镜）：
 
@@ -99,23 +101,22 @@ end
 - `ScaleVelocity(scale)`、`Exit(direction, speed, angle)`、`ExitPartner(direction, speed)`：运动操作；方向为 `down` 或 `forward`，出口仍执行障碍检查。
 - `StoredValue`、`RushOnSettlement`、`RefundOnDespawn`、`ExitDown`、`TransportLockedUntil`：装置或弹珠状态。
 - `Coins`：只读当前钱包；猪猪存钱罐每满 10 金币提供 `1 + 0.1 × 档数` 的倍率，不花金币。
-- `AddScoreMultiplier(amount)`：传入完整倍率，累加 `amount - 1`，到得分区以 `1 + 累计增量` 统一计算。两次 1.5 得到 2，两次 1.2 得到 1.4；基础 1 只算一次。`MultiplyScore` 是相同语义的旧包兼容名。Multi Ding、猪猪存钱罐、装置通用倍率修正与旧倍率钉统一使用此规则。
+- `AddScoreMultiplier(amount)`：传入完整倍率，累加 `amount - 1`，到得分区以 `1 + 累计增量` 统一计算。两次 1.5 得到 2，两次 1.2 得到 1.4；基础 1 只算一次。`MultiplyScore` 是相同语义的旧接口的兼容名。Multi Ding、猪猪存钱罐、装置通用倍率修正与旧倍率钉统一使用此规则。
 - `SetDeviceScoreMultiplier(amount)`：替换当前累计装置倍率；故障装置抽到 0 时设为 0，随后仍可通过 `AddScoreMultiplier` 增加，进入得分区按当前累计值结算。
 - `CountPlacedDevices(excludedInstanceId = 0)`：实时统计已放置实例，可排除指定实例。more is more 排除自身，每个其他装置提供 +2，单次最多 +20；less is more 同样排除自身，从 +20 起每个其他装置减 2，最低为 0。耗尽但仍在场的装置计入，库存不计；公式由各自 Lua 决定。
 - `RoundId` 配合 Lua 实例状态：雪糕机每回合依次提供 ×10、×9 至 ×2，之后 ×1 无效果；每次只累加“倍率 − 1”，有效作用扣耐久，下一回合重置次数。
 - `OnOffer` / `Accept` 与 `GetRoundValue` / `SetRoundValue` 用于接受提交的装置并准备下一回合。大胃袋可接收盘面和背包中的装置，回调成功后消耗该装置并按稀有度增加 2/4/6/8。增量在碰撞时施加，下一轮布置清空。
 - `AddRushChance`、`Roll`、`BreakPinsOnCross`、`RemoveDevice`：概率、随机与通用场景操作。
 
-磁力脚本通过 `DeviceFieldContext` 的距离、方向、磁性参数计算作用力，再调用 `AddRadialForce`。C# 只负责通用物理执行及总力/速度上限，磁极方向与距离衰减公式在包内 Lua。
+磁力脚本通过 `DeviceFieldContext` 的距离、方向、磁性参数计算作用力，再调用 `AddRadialForce`。C# 只负责通用物理执行及总力/速度上限，磁极方向与距离衰减公式在装置 Lua。
 
 预览不创建 Lua 实例，并关闭所有碰撞体。正式视图先进入棋盘所在的物理场景、设置位置，再启用。视图重建保留该装置的 Lua 状态；出售、消耗或结束会话会释放脚本。每回合的冷却/蓄积数值由通用 ECS 状态复位。调用上下文只在当前回调期间有效，不应保存后继续操作。
 
 ## 检查
 
-- `Marbles ECS/Validate Attribute and Content Runtime`：当前全部资源的原包字节一致性、加载、预览隔离、场景和生命周期，以及玩法/库存/商店回归。
-- Unity Test Runner 的 `MRes.Tests`：格式校验、资源释放、共享脚本、预览和 Lua/物理事件。
+- `Marbles ECS/Validate Attribute and Content Runtime` 检查 ID 选择、Prefab、Lua、预览、场景以及玩法、库存和商店。
 - `Marbles ECS/实体UI/验证跨回合购买与鼠标点击`：真实 TestScene 的购买、预览、摆放和跨回合交互。
 
 原 `Prefabs/DeviceItem.prefab` 是库存 UI 卡片，继续使用；普通固定钉和弹珠也保留其通用组件。
 
-RUSH 已迁移为 100 点累积条。`RushChanceAdd`、`RushOnSettlement`、`AddRushChance` 只保留兼容，不参与新触发。球贡献、固定得分区入账、临时价值和编号显示 API 统一见 [装置 Lua API](../../Docs/Device_Lua_API.md)。当前台球为 `9031_Billiards.mres`，有锅气的额外贡献为 +10，装置增益不翻倍。
+RUSH 使用累积条。`RushChanceAdd`、`RushOnSettlement`、`AddRushChance` 只保留兼容，不参与新触发。球贡献、固定得分区入账、临时价值和编号显示 API 统一见 [装置 Lua API](../../Docs/Device_Lua_API.md)。当前台球为 `9031/`，有锅气的额外贡献为 +10，装置增益不翻倍。

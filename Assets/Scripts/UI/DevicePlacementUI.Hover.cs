@@ -7,14 +7,14 @@ public sealed partial class DevicePlacementUI
 {
     private sealed class PlacedDeviceView : IDisposable
     {
-        private readonly MRes.MResLoadHandle handle;
+        private readonly DeviceViewHandle handle;
         internal readonly OwnedDeviceSnapshot Device;
         internal readonly Collider[] Colliders;
         internal QuickOutline Outline;
         internal GameObject Root => handle.Root;
         internal bool IsVisible => Root && Root.activeInHierarchy;
 
-        internal PlacedDeviceView(MRes.MResLoadHandle handle, OwnedDeviceSnapshot device)
+        internal PlacedDeviceView(DeviceViewHandle handle, OwnedDeviceSnapshot device)
         {
             this.handle = handle;
             Device = device;

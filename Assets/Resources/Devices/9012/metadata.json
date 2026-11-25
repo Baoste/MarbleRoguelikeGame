@@ -1,0 +1,9 @@
+{
+  "name": "猪猪存钱罐",
+  "description": "每次撞击按当前金币提供1+0.1×满10金币档数的倍率；每次只累加倍率-1，最终倍率为1+累计增量，到得分区统一计算。不消耗金币，金币不足10时不生效、不扣耐久。",
+  "value": 120,
+  "type": "device",
+  "purchasePrice": 14,
+  "rarity": "uncommon",
+  "durability": 20
+}

@@ -1,6 +1,6 @@
 {
   "name": "MarblesECS.Day.PlayMode.Tests",
-  "references": ["MarblesECS.Runtime", "MarblesECS.Rules", "MRes.Runtime", "Unity.Entities", "Unity.Collections", "Unity.TextMeshPro", "Cinemachine"],
+  "references": ["MarblesECS.Runtime", "MarblesECS.Rules", "Unity.Entities", "Unity.Collections", "Unity.TextMeshPro", "Cinemachine"],
   "optionalUnityReferences": ["TestAssemblies"],
   "autoReferenced": false
 }

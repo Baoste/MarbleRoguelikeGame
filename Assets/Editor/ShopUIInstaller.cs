@@ -55,7 +55,7 @@ public static class ShopUIInstaller
         fallback.atlasPopulationMode = AtlasPopulationMode.Dynamic;
         fallback.isMultiAtlasTexturesEnabled = true;
         font.fallbackFontAssetTable = new System.Collections.Generic.List<TMP_FontAsset> { fallback };
-        // Bake current content; the small dynamic fallback covers future MRes names and descriptions.
+        // Bake current content. The dynamic fallback covers future device names and descriptions.
         string characters = File.ReadAllText("Assets/Resources/GameContent.json") +
             "装置商店选择装置，为下一回合做好准备当前金币刷新商品完成购买去布置每件限购一次，后可在阶段放置。" +
             "成功已加入背包失败请检查库存容量或状态不足无法已售出普通稀有史诗传奇无限耐久出售·…□" +

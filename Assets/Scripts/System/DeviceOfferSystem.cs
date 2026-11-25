@@ -1,4 +1,3 @@
-using MRes;
 using Unity.Entities;
 using UnityEngine;
 
@@ -7,7 +6,7 @@ namespace MarblesECS
     internal static class DeviceOfferSystem
     {
         private static bool Resolve(SimulationContext c, int offeredId, int targetId,
-            out Entity offered, out Entity target, out MResLuaScript script)
+            out Entity offered, out Entity target, out DeviceLuaScript script)
         {
             offered = target = Entity.Null;
             script = null;
@@ -40,7 +39,7 @@ namespace MarblesECS
                 DeviceScriptSystem.InstanceEvent(c, targetId, "OnOfferAccepted");
                 return true;
             }
-            catch (MResLuaException error) { Debug.LogException(error); return false; }
+            catch (DeviceLuaException error) { Debug.LogException(error); return false; }
             finally { api.Close(); }
         }
     }

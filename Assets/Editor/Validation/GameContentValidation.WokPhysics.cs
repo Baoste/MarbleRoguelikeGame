@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
@@ -15,7 +14,7 @@ namespace MarblesECS.Editor
             var scene = SceneManager.CreateScene("WokPhysics_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             var simulation = new MarbleSimulation(Balance());
             var bridge = new MarblePhysicsBridge(scene, null, null, simulation.EnqueueContact);
-            var board = new GameObject("WokBoard"); SceneManager.MoveGameObjectToScene(board, scene); MResLoadHandle view = null;
+            var board = new GameObject("WokBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
             try
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -23,7 +22,7 @@ namespace MarblesECS.Editor
                 var definition = c.Balance.Devices.Single(d => d.Id == 9029); CampaignStateUtility.CreateDevice(c, definition, definition.Price);
                 int id = c.Campaign.NextDeviceId; MorePlace(c, id, true);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
-                view = MResDeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));
+                view = DeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));
                 view.Root.SetActive(true); Physics.SyncTransforms();
                 var colliders = view.Root.GetComponentsInChildren<Collider>(true).Where(c => c.name != "PlacementVolume").ToArray();
                 Check(colliders.Length == 1 && colliders[0].isTrigger, "wok uses only a non-solid admission sensor");

@@ -1,0 +1,9 @@
+{
+  "name": "加速力场",
+  "description": "在长方形区域内，持续沿箭头方向对弹珠施加恒力。",
+  "value": 120,
+  "type": "device",
+  "purchasePrice": 9,
+  "rarity": "common",
+  "durability": 20
+}

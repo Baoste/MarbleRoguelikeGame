@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
@@ -16,7 +15,7 @@ namespace MarblesECS.Editor
             var simulation = new MarbleSimulation(Balance()); int contacts = 0;
             var bridge = new MarblePhysicsBridge(scene, null, null, contact => { contacts++; simulation.EnqueueContact(contact); });
             var board = new GameObject("StarLampBoard"); SceneManager.MoveGameObjectToScene(board, scene);
-            var views = new MResLoadHandle[3];
+            var views = new DeviceViewHandle[3];
             try
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -29,7 +28,7 @@ namespace MarblesECS.Editor
                 {
                     CampaignStateUtility.CreateDevice(c, def, def.Price); ids[i] = c.Campaign.NextDeviceId;
                     MorePlace(c, ids[i], true); var owned = simulation.GetOwnedDevices().Single(x => x.InstanceId == ids[i]);
-                    views[i] = MResDeviceView.Create(owned, board.transform, c.DeviceScripts.Get(ids[i], def.Id));
+                    views[i] = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(ids[i], def.Id));
                     views[i].Root.transform.localPosition = Vector3.right * (i == 2 ? 0 : (i == 0 ? -2 : 2));
                     views[i].Root.SetActive(true);
                     if (i < 2) LampSet(c, ids[i], 1);
@@ -75,7 +74,7 @@ namespace MarblesECS.Editor
                 Check(bridge.TryMove(key, spawn, Vector3.zero), "park ball while window completes");
                 var script = c.DeviceScripts.Get(ids[2], def.Id);
                 views[2].Dispose();
-                views[2] = MResDeviceView.Create(simulation.GetOwnedDevices().Single(x => x.InstanceId == ids[2]), board.transform, script);
+                views[2] = DeviceView.Create(simulation.GetOwnedDevices().Single(x => x.InstanceId == ids[2]), board.transform, script);
                 views[2].Root.SetActive(true); script.Invoke("Start"); Step();
                 lit = views[2].Root.transform.Find("Lit").GetComponent<MeshRenderer>();
                 Check(lit.enabled, "replacement view restores active lamp appearance");

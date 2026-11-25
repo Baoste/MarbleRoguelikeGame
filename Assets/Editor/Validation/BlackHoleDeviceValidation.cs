@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using Unity.Entities;
@@ -118,7 +117,7 @@ namespace MarblesECS.Editor
             using (var r = new Rig())
             {
                 var second = r.AddDevice(new Vector3(3, 0, 0));
-                int secondId = second.Root.GetComponent<MResDeviceBody>().InstanceId;
+                int secondId = second.Root.GetComponent<DeviceBody>().InstanceId;
                 r.Charge(); r.Simulation.TryActivateDevice(r.Id);
                 Check(r.Simulation.GetDeviceStatus(secondId).Contains("0/10"), "each package instance owns separate charge");
                 Check(r.Simulation.TryActivateDevice(secondId) && r.Simulation.GetDeviceStatus(secondId).Contains("0/10"), "one charged device cannot activate another");
@@ -150,7 +149,7 @@ namespace MarblesECS.Editor
                 Expired(() => { _ = api.Parameter; });
                 r.Simulation.StartSession(r.Bridge);
                 Check(r.Simulation.GetDeviceStatus(r.Id) == string.Empty, "session reset clears published status");
-                Check(r.View.Root.GetComponent<MResDeviceBody>().Script.IsDisposed, "session reset disposes the old device Lua");
+                Check(r.View.Root.GetComponent<DeviceBody>().Script.IsDisposed, "session reset disposes the old device Lua");
             }
         }
 
@@ -241,9 +240,9 @@ namespace MarblesECS.Editor
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly Entity Device;
-            internal readonly MResLoadHandle View;
+            internal readonly DeviceViewHandle View;
             internal readonly int Id;
-            private readonly List<MResLoadHandle> views = new List<MResLoadHandle>();
+            private readonly List<DeviceViewHandle> views = new List<DeviceViewHandle>();
             internal SimulationContext C => Simulation.Context;
             internal string Status => Simulation.GetDeviceStatus(Id);
             internal Rig(float dt = .02f, int durability = -1)
@@ -259,17 +258,17 @@ namespace MarblesECS.Editor
                 Simulation.ApplyGlobalAttribute(980, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                 Board = new GameObject("BlackHoleBoard"); SceneManager.MoveGameObjectToScene(Board, Scene);
                 Board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(50, 37, 13));
-                View = AddDevice(Vector3.zero); Id = View.Root.GetComponent<MResDeviceBody>().InstanceId;
+                View = AddDevice(Vector3.zero); Id = View.Root.GetComponent<DeviceBody>().InstanceId;
                 CampaignStateUtility.FindDevice(C, Id, out Device);
             }
-            internal MResLoadHandle AddDevice(Vector3 offset)
+            internal DeviceViewHandle AddDevice(Vector3 offset)
             {
                 var definition = C.Balance.Devices.Single(d => d.Id == 9005);
                 CampaignStateUtility.CreateDevice(C, definition, definition.Price);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last();
                 CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
-                var view = MResDeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 view.Root.transform.localPosition = offset; views.Add(view); view.Root.SetActive(true); Physics.SyncTransforms(); return view;
             }
             internal Entity Ball(MarbleKey key) => C.Marbles[key];
@@ -279,11 +278,11 @@ namespace MarblesECS.Editor
             internal DeviceContactContext Api(MarbleKey key)
             {
                 Bridge.TryGetDevicePose(Id, out var pose);
-                return new DeviceContactContext(C, Ball(key), Device, View.Root.GetComponent<MResDeviceBody>().Contact(key, Body(key).position), pose);
+                return new DeviceContactContext(C, Ball(key), Device, View.Root.GetComponent<DeviceBody>().Contact(key, Body(key).position), pose);
             }
             internal Vector3 Force(MarbleKey key)
             {
-                var body = View.Root.GetComponent<MResDeviceBody>();
+                var body = View.Root.GetComponent<DeviceBody>();
                 var api = new DeviceFieldContext(body, Marble(key), Dt);
                 try { body.Script.Invoke("OnField", api); return api.Force; } finally { api.Close(); }
             }

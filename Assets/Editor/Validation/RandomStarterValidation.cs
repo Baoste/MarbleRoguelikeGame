@@ -34,7 +34,7 @@ namespace MarblesECS.Editor
                 Check(initial.All(d => !d.Placed && d.PurchasePrice == 0), "starter devices await placement and are free");
                 foreach (uint id in selected)
                 {
-                    Check(DeviceResourceCatalog.Current.Get(id).Package != null, "selected device has an MRes package");
+                    Check(DeviceResourceCatalog.Current.Get(id).Prefab != null, "selected device has a prefab");
                     var pack = initial.Where(d => d.DefinitionId == id).ToArray();
                     if (pack.Length > 1)
                         Check(pack[0].PairId > 0 && pack.All(d => d.PairId == pack[0].PairId),

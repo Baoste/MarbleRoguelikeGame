@@ -392,9 +392,9 @@ namespace MarblesECS.Editor
                 "Actual UI drag/drop places instance #" + id + ": " + rig.Placement.LastFeedback);
             Check(rig.Placement.SelectedInstanceId == 0 && !rig.Placement.IsDraggingInventory,
                 "Placement preview releases input after the drop");
-            var wait = WaitFor(() => UnityEngine.Object.FindObjectsOfType<MResDeviceBody>().Any(
+            var wait = WaitFor(() => UnityEngine.Object.FindObjectsOfType<DeviceBody>().Any(
                 body => body.InstanceId == id && body.isActiveAndEnabled && body.transform.IsChildOf(rig.Placement.BoardRoot)),
-                "Placed instance #" + id + " has its active MRes gameplay component");
+                "Placed instance #" + id + " has its active device gameplay component");
             while (wait.MoveNext()) yield return null;
             rig.RefreshInventory();
         }
@@ -448,7 +448,7 @@ namespace MarblesECS.Editor
             Check(game.Session.Phase == RoundPhase.Playing && !game.Paused,
                 "Empty starting inventory enters unpaused Playing");
             Check(game.Balance.Devices.All(d => d.StartingCount == 0),
-                "The empty-inventory scenario has no fixed MRes starters");
+                "The empty-inventory scenario has no fixed starters");
             Check(game.GetOwnedDevices().Length == 0 && game.LastRandomStarterDeviceIds.Length == 0,
                 "Initial inventory contains no gifted devices");
             ValidateGeometry();
@@ -516,9 +516,9 @@ namespace MarblesECS.Editor
                 {
                     yield return null;
                     resolution.Validate(shop.ShopCanvasGroup.GetComponentInParent<Canvas>());
-                    // Runtime behaviour is supplied by MRes; the legacy Kind field is not its identity.
-                    Report.Add("CATALOG: purchase/placement regression uses current MRes 弹弹 (9002/Reflector).");
-                    Check(shopDevice.PurchaseQuantity == 1, "Regression shop offer supplies one actual MRes device: " + shopDevice.Name);
+                    // Lua supplies runtime behaviour. Kind is a legacy category.
+                    Report.Add("CATALOG: purchase/placement regression uses current 弹弹 (9002/Reflector).");
+                    Check(shopDevice.PurchaseQuantity == 1, "Regression shop offer supplies one actual device: " + shopDevice.Name);
                     var offers = context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);
                     offers.Clear();
                     offers.Add(new ShopOfferData { Kind = ShopItemKind.Device, DefinitionId = shopDevice.Id, Price = shopDevice.Price });
@@ -544,7 +544,7 @@ namespace MarblesECS.Editor
                         "Shop UI displays the current price snapshot: " + displayedOffer.Price);
                     long coins = game.Session.Coins;
                     var priorIds = game.GetOwnedDevices().Select(d => d.InstanceId).ToArray();
-                    Check(buy.IsInteractable(), "Current MRes shop offer is affordable: " + shopDevice.Name);
+                    Check(buy.IsInteractable(), "Current shop offer is affordable: " + shopDevice.Name);
                     ClickVisible(buy.gameObject);
                     var additions = game.GetOwnedDevices().Where(d => !priorIds.Contains(d.InstanceId)).ToArray();
                     Report.Add("PURCHASE coinsBefore=" + coins + " coinsAfter=" + game.Session.Coins +
@@ -554,7 +554,7 @@ namespace MarblesECS.Editor
                     Check(additions.Length == 1, "Actual shop Buy creates exactly one new device instance");
                     purchased = additions[0];
                     Check(purchased.DefinitionId == shopDevice.Id && !purchased.Placed,
-                        "Purchased MRes device starts unplaced: " + shopDevice.Name);
+                        "Purchased device starts unplaced: " + shopDevice.Name);
                     Check(game.Session.Coins == coins - displayedOffer.Price && purchased.PurchasePrice == displayedOffer.Price,
                         "Buy debits the displayed price and records the same purchase cost");
                     Check(game.GetShopOffers().Single(o => o.Index == displayedOffer.Index).Sold,
@@ -575,7 +575,7 @@ namespace MarblesECS.Editor
                 Check(game.Session.Phase == RoundPhase.Playing && !game.Paused,
                     "Physical Continue starts round " + (stage + 1));
                 Check(game.GetOwnedDevices().Single(d => d.InstanceId == purchased.InstanceId).Placed,
-                    "Purchased MRes device survives round start: " + shopDevice.Name);
+                    "Purchased device survives round start: " + shopDevice.Name);
                 Check(game.LastRunRandomSeed == runSeed && game.LastRandomStarterDeviceIds.SequenceEqual(starterIds),
                     "Shop and next round preserve the run seed and do not grant starters");
                 wait = Wait(.4);

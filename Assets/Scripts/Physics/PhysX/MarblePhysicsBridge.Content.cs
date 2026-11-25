@@ -6,7 +6,7 @@ namespace MarblesECS.PhysX
 {
     public sealed partial class MarblePhysicsBridge : IMarblePhysicsCommands, IMarbleDeviceUsageSink, IMarbleDeviceInteractionSink, IMarbleDeviceRotation, IMarbleDeviceEffectSink
     {
-        private readonly List<MResDeviceBody> contentDevices = new List<MResDeviceBody>();
+        private readonly List<DeviceBody> contentDevices = new List<DeviceBody>();
         private RaycastHit[] pinHits = new RaycastHit[64];
         private readonly Dictionary<Collider, Renderer[]> brokenPins = new Dictionary<Collider, Renderer[]>();
         private readonly List<MarbleBody> orderedFieldBodies = new List<MarbleBody>();
@@ -18,7 +18,7 @@ namespace MarblesECS.PhysX
         public bool TrySetDeviceYaw(int instanceId, float degrees)
         {
             if (!MarbleRules.IsFinite(degrees)) return false;
-            foreach (var device in MResDeviceBody.Active)
+            foreach (var device in DeviceBody.Active)
                 if (device != null && device.gameObject.scene == scene && device.InstanceId == instanceId)
                 { device.SetYaw(degrees); return true; }
             return false;
@@ -27,7 +27,7 @@ namespace MarblesECS.PhysX
         { deviceAvailable = available; useDevice = tryUse; RefreshDeviceAvailability(); }
         public void RefreshDeviceAvailability()
         {
-            foreach (var device in MResDeviceBody.Active)
+            foreach (var device in DeviceBody.Active)
                 if (device != null && device.gameObject.scene == scene)
                     device.SetGameplayEnabled(deviceAvailable?.Invoke(device.InstanceId) ?? true);
         }
@@ -35,13 +35,13 @@ namespace MarblesECS.PhysX
         {
             RefreshDeviceAvailability();
             contentDevices.Clear();
-            foreach (var device in MResDeviceBody.Active)
+            foreach (var device in DeviceBody.Active)
                 if (device != null && device.InstanceId > 0 && device.gameObject.scene == scene) contentDevices.Add(device);
             contentDevices.Sort((a,b) => a.InstanceId.CompareTo(b.InstanceId));
         }
         public bool TryGetDevicePose(int instanceId, out DevicePose pose)
         {
-            foreach (var device in MResDeviceBody.Active)
+            foreach (var device in DeviceBody.Active)
                 if (device != null && device.gameObject.scene == scene && device.InstanceId == instanceId)
                 { pose = new DevicePose { Position = device.transform.position, Forward = device.Forward, Up = device.Up, Radius = device.Radius }; return true; }
             pose = default; return false;
@@ -107,7 +107,7 @@ namespace MarblesECS.PhysX
                         return accepted;
                     });
                     try { device.Script.Invoke("OnField", api); }
-                    catch (MRes.MResLuaException error) { Debug.LogException(error); }
+                    catch (DeviceLuaException error) { Debug.LogException(error); }
                     finally { api.Close(); }
                     if (api.Force.sqrMagnitude > 0)
                     {
@@ -159,7 +159,7 @@ namespace MarblesECS.PhysX
             {
                 var collider = pinHits[i].collider;
                 var pin = collider.GetComponentInParent<MarblePin>();
-                if (pin == null || !pin.enabled || pin.ScoreMultiplier != 1 || pin.RushChanceAdd != 0 || collider.GetComponentInParent<MResDeviceBody>() != null) continue;
+                if (pin == null || !pin.enabled || pin.ScoreMultiplier != 1 || pin.RushChanceAdd != 0 || collider.GetComponentInParent<DeviceBody>() != null) continue;
                 int id = collider.GetInstanceID(); nearby.Add(id);
                 if (!view.PierceAttempts.Add(id) || view.IgnoredPins.Contains(collider)) continue;
                 bool useCount = view.Settings.PierceCount > 0;
@@ -174,7 +174,7 @@ namespace MarblesECS.PhysX
             }
             view.PierceAttempts.IntersectWith(nearby);
         }
-        internal void ReportDevice(MarbleBody view, MResDeviceBody device, ContactPoint? impact = null)
+        internal void ReportDevice(MarbleBody view, DeviceBody device, ContactPoint? impact = null)
         {
             // Contact-dependent status lifetimes also need devices without an OnContact Lua handler.
             if (view.Suspended || device == null || !device.isActiveAndEnabled || !device.GameplayEnabled) return;
@@ -222,7 +222,7 @@ namespace MarblesECS.PhysX
             foreach (var root in scene.GetRootGameObjects())
                 foreach (var pin in root.GetComponentsInChildren<MarblePin>())
                 {
-                    if (pin.ScoreMultiplier != 1 || pin.RushChanceAdd != 0 || pin.GetComponentInParent<MResDeviceBody>() != null) continue;
+                    if (pin.ScoreMultiplier != 1 || pin.RushChanceAdd != 0 || pin.GetComponentInParent<DeviceBody>() != null) continue;
                     Vector3 offset = Vector3.ProjectOnPlane(pin.transform.position - pose.Position, pose.Up);
                     float z = Vector3.Dot(offset, pose.Forward), x = Vector3.Dot(offset, Vector3.Cross(pose.Up, pose.Forward));
                     foreach (var collider in pin.GetComponentsInChildren<Collider>())

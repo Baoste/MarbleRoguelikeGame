@@ -45,7 +45,7 @@ namespace MarblesECS.PhysX
         public event Action<float> BloodChanged;
 
         private MarbleSimulation simulation;
-        internal MRes.MResLuaScript DeviceScript(OwnedDeviceSnapshot device) => simulation.Context.DeviceScripts.Get(device.InstanceId, device.DefinitionId);
+        internal DeviceLuaScript DeviceScript(OwnedDeviceSnapshot device) => simulation.Context.DeviceScripts.Get(device.InstanceId, device.DefinitionId);
         private MarblePhysicsBridge bridge;
         private PhysicsScene localPhysics;
         private Scene localScene;

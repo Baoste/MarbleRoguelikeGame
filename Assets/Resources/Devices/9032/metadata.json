@@ -1,0 +1,9 @@
+{
+  "name": "超大杯全冰美式",
+  "description": "弹珠碰撞后，额外增加20点RUSH积累贡献，当前基础价值减半（保留小数）。每次有效碰撞扣1耐久，可重复触发；通用触发的5点贡献照常计入，到底部或得分区才向RUSH条入账。",
+  "value": 120,
+  "type": "device",
+  "purchasePrice": 14,
+  "rarity": "uncommon",
+  "durability": 20
+}

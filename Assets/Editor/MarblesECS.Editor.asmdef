@@ -2,7 +2,7 @@
   "name": "MarblesECS.Editor",
   "rootNamespace": "MarblesECS.Editor",
   "references": [
-    "MRes.Runtime", "MarblesECS.Runtime",
+    "MarblesECS.Runtime",
     "MarblesECS.Rules",
     "Unity.Entities",
     "Unity.Collections",

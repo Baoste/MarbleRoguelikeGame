@@ -14,7 +14,7 @@ namespace MarblesECS.Presentation
         private Transform board;
         private int revision = -1;
         private int roundId = -1;
-        private readonly Dictionary<int, MRes.MResLoadHandle> devices = new Dictionary<int, MRes.MResLoadHandle>();
+        private readonly Dictionary<int, DeviceViewHandle> devices = new Dictionary<int, DeviceViewHandle>();
 
         internal void Initialize(MarbleGameController game, Transform boardRoot, MarbleVisualPalette looks)
         {
@@ -51,7 +51,7 @@ namespace MarblesECS.Presentation
             {
                 if (owned.InstanceId == SelectedDeviceId) selectedExists = true;
                 if (!owned.Placed) continue;
-                var handle = MResDeviceView.Create(owned, board, controller.DeviceScript(owned));
+                var handle = DeviceView.Create(owned, board, controller.DeviceScript(owned));
                 handle.Root.transform.localPosition = new Vector3(owned.X, 0, owned.Z);
                 handle.Root.transform.localRotation = Quaternion.Euler(0, owned.Angle, 0);
                 devices.Add(owned.InstanceId, handle);

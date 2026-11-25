@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using MRes;
 using UnityEngine;
 
 namespace MarblesECS
@@ -25,7 +24,7 @@ namespace MarblesECS
                 if (string.IsNullOrWhiteSpace(json)) throw new ArgumentException("JSON is empty.");
                 if (json[0] == '\uFEFF') json = json.Substring(1);
                 // Use the existing bounded reader so required fields, JSON types and duplicate keys are checked.
-                var input = new MResFields(MResJson.Parse(json, "JSON"), "sequence");
+                var input = new ConfigFields(ConfigJson.Parse(json, "JSON"), "sequence");
                 if (input.Int("schemaVersion") != 1) throw new ArgumentException("schemaVersion: expected 1.");
                 string sequenceId = Id(input.String("sequenceId"), "sequenceId");
                 var plans = ReadIndex(input, "productionPlans", "planId", (entry, id) =>
@@ -64,13 +63,13 @@ namespace MarblesECS
                         throw new ArgumentException($"Day '{ordered[i].DayId}'.order conflicts with '{ordered[i - 1].DayId}'.");
                 return new DayCampaignDefinition(sequenceId, ordered.ToArray(), campaignRules);
             }
-            catch (Exception error) when (error is ArgumentException || error is MResFormatException)
+            catch (ArgumentException error)
             {
                 throw new ArgumentException($"{source}: {error.Message}", error);
             }
         }
 
-        private static ProductionFeature ReadProductionFeatures(MResFields entry)
+        private static ProductionFeature ReadProductionFeatures(ConfigFields entry)
         {
             var features = ProductionFeature.None;
             foreach (var value in entry.Array("productionFeatures", optional: true))
@@ -84,7 +83,7 @@ namespace MarblesECS
             return features;
         }
 
-        private static MorningPrepDefinition[] ReadMorningPrep(MResFields day)
+        private static MorningPrepDefinition[] ReadMorningPrep(ConfigFields day)
         {
             var input = day.Array("morningPrep", optional: true);
             var result = new MorningPrepDefinition[input.Count];
@@ -92,7 +91,7 @@ namespace MarblesECS
             for (int i = 0; i < input.Count; i++)
             {
                 string path = $"{day.Context}.morningPrep[{i}]";
-                var entry = MResFields.From(input[i], path);
+                var entry = ConfigFields.From(input[i], path);
                 string id = Id(entry.String("objectiveId"), path + ".objectiveId");
                 if (!ids.Add(id)) throw new ArgumentException($"{path}: duplicate Morning Prep objective '{id}'.");
                 var interaction = ReadEnum<MorningPrepInteraction>(entry.String("type"), path + ".type");
@@ -104,14 +103,14 @@ namespace MarblesECS
             return result;
         }
 
-        private static uint StageId(MResFields entry, string field)
+        private static uint StageId(ConfigFields entry, string field)
         {
             double value = entry.Number(field);
             if (value <= 0 || value > uint.MaxValue || value != Math.Truncate(value)) throw entry.Error(field);
             return (uint)value;
         }
 
-        private static DayEventDefinition ReadEvent(MResFields entry, string id, DayBehaviorRegistry behaviors)
+        private static DayEventDefinition ReadEvent(ConfigFields entry, string id, DayBehaviorRegistry behaviors)
         {
             string path = entry.Context;
             var trigger = ReadEnum<DayTrigger>(entry.String("trigger"), path + ".trigger");
@@ -128,13 +127,13 @@ namespace MarblesECS
             var actions = new DayAction[input.Count];
             for (int i = 0; i < actions.Length; i++)
             {
-                var action = MResFields.From(input[i], $"{path}.actions[{i}]");
+                var action = ConfigFields.From(input[i], $"{path}.actions[{i}]");
                 actions[i] = behaviors.ReadAction(action.String("type"), action.String("parameters", optional: true), action.Context);
             }
             return new DayEventDefinition(id, trigger, entry.Int("priority", optional: true), policy, condition, actions);
         }
 
-        private static DayRuleDefinition ReadRule(MResFields entry, string id, GameBalance balance, DayBehaviorRegistry behaviors)
+        private static DayRuleDefinition ReadRule(ConfigFields entry, string id, GameBalance balance, DayBehaviorRegistry behaviors)
         {
             string path = entry.Context;
             var scope = ReadEnum<DayRuleScope>(entry.String("scope"), path + ".scope");
@@ -177,7 +176,7 @@ namespace MarblesECS
                     throw new ArgumentException($"{path}: rule '{rule.RuleId}' has incompatible scope {rule.Scope}.");
         }
 
-        private static Dictionary<string, T> ReadIndex<T>(MResFields root, string field, string idField, Func<MResFields, string, T> read,
+        private static Dictionary<string, T> ReadIndex<T>(ConfigFields root, string field, string idField, Func<ConfigFields, string, T> read,
             bool required = false)
         {
             var result = new Dictionary<string, T>(StringComparer.Ordinal);
@@ -185,16 +184,16 @@ namespace MarblesECS
             for (int i = 0; i < input.Count; i++)
             {
                 string path = $"{field}[{i}]";
-                var item = MResFields.From(input[i], path);
+                var item = ConfigFields.From(input[i], path);
                 string id = Id(item.String(idField), path + "." + idField);
                 path += $" ('{id}')";
                 if (result.ContainsKey(id)) throw new ArgumentException($"{path}: duplicate ID '{id}'.");
-                result.Add(id, read(new MResFields(item.Fields, path), id));
+                result.Add(id, read(new ConfigFields(item.Fields, path), id));
             }
             return result;
         }
 
-        private static T[] ReadRefs<T>(MResFields entry, string field, Dictionary<string, T> index)
+        private static T[] ReadRefs<T>(ConfigFields entry, string field, Dictionary<string, T> index)
         {
             var input = entry.Array(field, optional: true);
             var result = new T[input.Count];

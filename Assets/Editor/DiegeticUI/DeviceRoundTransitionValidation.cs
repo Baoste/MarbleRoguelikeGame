@@ -158,7 +158,7 @@ namespace MarblesECS.Editor.Diegetic
             rig.Placement.CancelPlacement();rig.RefreshInventory();
             Check(rig.Controller.GetOwnedDevices().Single(d=>d.InstanceId==id).Placed,"Placement is stored on the purchased instance");
             wait=Wait(.2f);while(wait.MoveNext())yield return null;
-            Check(UnityEngine.Object.FindObjectsOfType<MResDeviceBody>().Any(d=>d.InstanceId==id&&d.enabled),"Purchased magnetic device has its active gameplay component");
+            Check(UnityEngine.Object.FindObjectsOfType<DeviceBody>().Any(d=>d.InstanceId==id&&d.enabled),"Purchased magnetic device has its active gameplay component");
             PressVisible(rig.Continue.gameObject);
             Check(rig.Controller.Session.Phase==RoundPhase.Playing && !rig.Controller.Paused,"Physical Continue starts the next playable round");
             wait=Wait(.8f);while(wait.MoveNext())yield return null;

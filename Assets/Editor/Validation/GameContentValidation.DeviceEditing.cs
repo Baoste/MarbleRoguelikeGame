@@ -147,7 +147,7 @@ namespace MarblesECS.Editor
                 Near(coins + price, f.C.Campaign.Coins, "sale credits the metadata value");
                 Check(!placement.HandleBoardPointerUp(salePoint), "a repeated release cannot sell twice");
                 Near(coins + price, f.C.Campaign.Coins, "repeated release pays nothing");
-                Check(board.GetComponentsInChildren<MResDeviceBody>(true).All(b => b.InstanceId != id || !b.gameObject.activeInHierarchy),
+                Check(board.GetComponentsInChildren<DeviceBody>(true).All(b => b.InstanceId != id || !b.gameObject.activeInHierarchy),
                     "sold view and colliders are inactive immediately, before deferred Unity destruction");
 
                 int stock = Create(9008, -1, 0, false);

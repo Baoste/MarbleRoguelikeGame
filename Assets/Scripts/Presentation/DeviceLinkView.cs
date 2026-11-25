@@ -10,20 +10,16 @@ namespace MarblesECS.Presentation
         private Material material;
         private void LateUpdate()
         {
-            var source = GetComponent<MResDeviceBody>();
+            var source = GetComponent<DeviceBody>();
             int count = 0;
             if (source != null && source.enabled && source.InstanceId > 0)
-                foreach (var other in MResDeviceBody.Active)
+                foreach (var other in DeviceBody.Active)
                 {
                     if (other == null || other.LinkGroup != source.LinkGroup || other.InstanceId <= source.InstanceId ||
                         other.gameObject.scene != gameObject.scene || Vector3.Distance(transform.position, other.transform.position) > source.Range) continue;
                     if (count == lines.Count)
                     {
-                        if (material == null)
-                        {
-                            var shader = DeviceResourceCatalog.Current.Shaders.Resolve("device-link");
-                            material = new Material(shader); material.color = Color.cyan;
-                        }
+                        if (material == null) material = Resources.Load<Material>("DeviceLink");
                         var line = new GameObject("Device connection").AddComponent<LineRenderer>();
                         line.transform.SetParent(transform, false); line.sharedMaterial = material;
                         line.positionCount = 2; line.startWidth = line.endWidth = .015f; lines.Add(line);
@@ -34,6 +30,5 @@ namespace MarblesECS.Presentation
                 }
             for (int i = count; i < lines.Count; i++) lines[i].enabled = false;
         }
-        private void OnDestroy() { if (material != null) Destroy(material); }
     }
 }

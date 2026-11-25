@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using MRes;
 using UnityEngine;
 
 namespace MarblesECS.Editor
@@ -155,7 +154,7 @@ namespace MarblesECS.Editor
             var root = new GameObject("VisibilityProbe"); var child = new GameObject("Face"); child.transform.SetParent(root.transform, false);
             var nested = new GameObject("Nested"); nested.transform.SetParent(child.transform, false);
             var renderer = nested.AddComponent<MeshRenderer>(); var collider = child.AddComponent<BoxCollider>();
-            var api = new MResLuaObject(root, null);
+            var api = new DeviceLuaObject(root, null);
             try
             {
                 Check(api.TrySetRenderersVisible("Face", false) && !renderer.enabled, "subtree renderers hidden");

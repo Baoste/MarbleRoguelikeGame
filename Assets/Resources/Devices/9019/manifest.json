@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "name": "BloodFactory",
+  "metadata": "metadata.json",
+  "device": "device.json",
+  "prefab": "prefab.prefab",
+  "lua": "main.lua"
+}

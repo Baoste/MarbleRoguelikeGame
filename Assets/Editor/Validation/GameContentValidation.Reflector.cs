@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
@@ -113,7 +112,7 @@ namespace MarblesECS.Editor
             var hits = new List<MarbleContact>();
             var bridge = new MarblePhysicsBridge(scene, null, null, contact => { if (contact.HasImpact) hits.Add(contact); simulation.EnqueueContact(contact); });
             var board = new GameObject("ReflectorBoard"); SceneManager.MoveGameObjectToScene(board, scene);
-            MResLoadHandle view = null;
+            DeviceViewHandle view = null;
             try
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -126,7 +125,7 @@ namespace MarblesECS.Editor
                 CampaignStateUtility.FindDevice(c, owned.InstanceId, out var device);
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(device); data.Placed = true; c.Manager.SetComponentData(device, data);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
-                view = MResDeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 view.Root.SetActive(true); Physics.SyncTransforms();
                 var collider = view.Root.GetComponentInChildren<MeshCollider>();
                 Check(collider != null && collider.convex && !collider.isTrigger, "package contains a solid cylindrical collider");

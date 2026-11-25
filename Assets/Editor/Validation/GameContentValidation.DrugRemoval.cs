@@ -12,7 +12,9 @@ namespace MarblesECS.Editor
             var json = Resources.Load<TextAsset>("GameContent").text;
             Check(!json.Contains("\"Drugs\""), "runtime configuration contains no legacy drugs");
             var oldJson = json.Replace("\"Attributes\":", "\"Drugs\":[{\"Id\":1,\"StartingCount\":999}],\"Attributes\":");
-            var content = JsonUtility.FromJson<GameContent>(oldJson); content.Validate();
+            var content = JsonUtility.FromJson<GameContent>(oldJson);
+            content.Devices = DeviceResourceCatalog.Load(oldJson).Definitions();
+            content.Validate();
             Check(!JsonUtility.ToJson(content).Contains("\"Drugs\""), "old JSON cannot restore removed drug definitions");
             using (var f = new Fixture())
             {

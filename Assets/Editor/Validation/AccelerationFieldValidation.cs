@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using Unity.Entities;
@@ -195,11 +194,11 @@ namespace MarblesECS.Editor
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly Entity Device;
-            internal readonly MResLoadHandle View;
+            internal readonly DeviceViewHandle View;
             internal readonly OwnedDeviceSnapshot Owned;
-            private readonly List<MResLoadHandle> views = new List<MResLoadHandle>();
+            private readonly List<DeviceViewHandle> views = new List<DeviceViewHandle>();
             internal SimulationContext C => Simulation.Context;
-            internal MResDeviceBody DeviceBody => View.Root.GetComponent<MResDeviceBody>();
+            internal DeviceBody DeviceBody => View.Root.GetComponent<DeviceBody>();
             internal BoxCollider Box => View.Root.transform.Find("Field").GetComponent<BoxCollider>();
             internal Vector3 Forward => View.Root.transform.rotation * Vector3.back;
             internal DevicePose Pose { get { Bridge.TryGetDevicePose(Owned.InstanceId, out var pose); return pose; } }
@@ -220,14 +219,14 @@ namespace MarblesECS.Editor
                 Check(Box.isTrigger && Box.enabled, "package restores a non-solid box field");
                 VectorNear(new Vector3(.4f, .24f, 1.2f), Box.transform.localScale, "default region has the requested dimensions");
             }
-            internal MResLoadHandle AddDevice()
+            internal DeviceViewHandle AddDevice()
             {
                 var definition = C.Balance.Devices.Single(d => d.Id == 9004);
                 CampaignStateUtility.CreateDevice(C, definition, definition.Price);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last();
                 CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
-                var view = MResDeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 views.Add(view); view.Root.SetActive(true); Physics.SyncTransforms(); return view;
             }
             internal void SetStrength(float strength)

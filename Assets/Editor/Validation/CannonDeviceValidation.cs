@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using Unity.Entities;
@@ -80,7 +77,7 @@ namespace MarblesECS.Editor
                 Check(r.Click(), "stored batch fires on demand");
                 r.Contact(new[] { keys[5] }); Check(r.HeldCount == 1 && r.Uses == 1, "capacity frees after firing and new storage is free");
                 var second = r.Add(new Vector3(4, 0, 0));
-                var key = r.Launch(); r.Contact(new[] { key }, second.Root.GetComponent<MResDeviceBody>());
+                var key = r.Launch(); r.Contact(new[] { key }, second.Root.GetComponent<DeviceBody>());
                 Check(r.HeldCount == 1, "another cannon has independent storage");
                 r.Click(); Check(r.Held(key), "one cannon cannot release another cannon's ball");
             }
@@ -225,28 +222,6 @@ function Verify() assert(completed == 2) end"))
         private static void Expired(Action action)
         { bool rejected = false; try { action(); } catch (InvalidOperationException) { rejected = true; } Check(rejected, "callback API expires"); }
 
-        private static byte[] WithLua(MResPackage package, string lua)
-        {
-            var entries = package.Entries.Values.ToArray(); var offsets = new List<long>(); var lengths = new List<int>();
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream, Encoding.UTF8))
-            {
-                writer.Write(new byte[28]);
-                foreach (var entry in entries)
-                { var bytes = entry.Type == MResEntryType.Lua ? Encoding.UTF8.GetBytes(lua) : package.GetBytes(entry.Path);
-                    offsets.Add(stream.Position); lengths.Add(bytes.Length); writer.Write(bytes); }
-                long toc = stream.Position;
-                for (int i = 0; i < entries.Length; i++)
-                {
-                    var path = Encoding.UTF8.GetBytes(entries[i].Path); writer.Write(path.Length); writer.Write(path);
-                    writer.Write((byte)entries[i].Type); writer.Write((byte)0); writer.Write((ushort)0);
-                    writer.Write((ulong)offsets[i]); writer.Write((ulong)lengths[i]);
-                }
-                long size = stream.Position - toc; stream.Position = 0;
-                writer.Write(Encoding.ASCII.GetBytes("MRES")); writer.Write((ushort)1); writer.Write((ushort)0);
-                writer.Write(entries.Length); writer.Write((ulong)toc); writer.Write((ulong)size); return stream.ToArray();
-            }
-        }
         private sealed class Rig : IDisposable
         {
             internal readonly Scene Scene;
@@ -254,61 +229,54 @@ function Verify() assert(completed == 2) end"))
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly Entity Device;
-            internal readonly MResLoadHandle View;
-            private readonly List<MResLoadHandle> views = new List<MResLoadHandle>();
-            private readonly DeviceResourceCatalog catalog;
-            private readonly DeviceResourceCatalog.Entry[] original;
+            internal readonly DeviceViewHandle View;
+            private readonly List<DeviceViewHandle> views = new List<DeviceViewHandle>();
             private int launches;
             internal SimulationContext C => Simulation.Context;
-            internal int Id => View.Root.GetComponent<MResDeviceBody>().InstanceId;
+            internal int Id => View.Root.GetComponent<DeviceBody>().InstanceId;
             internal DevicePose Pose { get { Bridge.TryGetDevicePose(Id, out var pose); return pose; } }
-            internal MResLuaScript Script => C.DeviceScripts.Get(Id, 9007);
+            internal DeviceLuaScript Script => C.DeviceScripts.Get(Id, 9007);
             internal int HeldCount => HeldMotionSystem.Count(C, Id);
             internal int Uses => C.Manager.GetComponentData<OwnedDeviceData>(Device).UsesThisRound;
             internal Rig(string lua = null)
             {
-                if (lua != null)
-                {
-                    catalog = DeviceResourceCatalog.Current; original = catalog.Entries;
-                    var bytes = WithLua(catalog.Get(9007).Package, lua);
-                    catalog.Entries = original.Select(e => e.File.EndsWith("9007_Cannon.mres", StringComparison.Ordinal) ? new DeviceResourceCatalog.Entry { File = e.File, Bytes = bytes } : e).ToArray();
-                    catalog.Invalidate();
-                }
                 Scene = SceneManager.CreateScene("CannonValidation_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
                 var balance = GameBalanceLoader.Load(); foreach (var d in balance.Devices) d.StartingCount = 0;
                 balance.Marble.InitialBlood = balance.Marble.BloodCapacity = 1000;
                 balance.Marble.FireIntervalSeconds = balance.Marble.MaxFireIntervalSeconds = .01f; // Each scripted Launch must create a distinct ball.
                 balance.Content.Definition(GameAttribute.BALL_LIFETIME).DefaultValue = 120;
                 Simulation = new MarbleSimulation(balance); Bridge = new MarblePhysicsBridge(Scene, null, null, Simulation.EnqueueContact);
+                if (lua != null)
+                    C.DeviceScripts.CreateScript = resource => resource.CreateScript(resource.Definition.Id == 9007 ? lua : null);
                 Simulation.StartSession(Bridge); Simulation.BeginRound();
                 Board = new GameObject("CannonBoard"); SceneManager.MoveGameObjectToScene(Board, Scene);
                 Board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 37, 0));
                 View = Add(Vector3.zero); CampaignStateUtility.FindDevice(C, Id, out Device); Tick();
             }
-            internal MResLoadHandle Add(Vector3 offset)
+            internal DeviceViewHandle Add(Vector3 offset)
             {
                 var definition = C.Balance.Devices.Single(d => d.Id == 9007); CampaignStateUtility.CreateDevice(C, definition, definition.Price);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last(); CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
-                var view = MResDeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 view.Root.transform.localPosition = offset; views.Add(view); view.Root.SetActive(true); Physics.SyncTransforms(); return view;
             }
             internal Entity Ball(MarbleKey key) => C.Marbles[key];
             internal MarbleBody Marble(MarbleKey key) => Scene.GetRootGameObjects().Select(go => go.GetComponent<MarbleBody>()).Single(b => b != null && b.Key.Equals(key));
             internal Rigidbody Body(MarbleKey key) => Marble(key).Body;
             internal bool Held(MarbleKey key) => C.Manager.HasComponent<HeldMotion>(Ball(key));
-            internal DeviceContactContext Api(MarbleKey key) => new DeviceContactContext(C, Ball(key), Device, View.Root.GetComponent<MResDeviceBody>().Contact(key, Body(key).position), Pose);
+            internal DeviceContactContext Api(MarbleKey key) => new DeviceContactContext(C, Ball(key), Device, View.Root.GetComponent<DeviceBody>().Contact(key, Body(key).position), Pose);
             internal MarbleKey Launch()
             {
                 Simulation.FireOnce(); Simulation.BeforePhysics(.1f, Bridge, new Vector3(3 + launches++ * .4f, 5, 0), Quaternion.identity); Simulation.AfterPhysics(Bridge);
                 var key = C.Marbles.Keys.OrderBy(k => k.Sequence).Last(); Body(key).drag = Body(key).angularDrag = 0; return key;
             }
-            internal void Contact(IEnumerable<MarbleKey> keys, MResDeviceBody source = null)
+            internal void Contact(IEnumerable<MarbleKey> keys, DeviceBody source = null)
             {
                 Simulation.BeforePhysics(.1f, Bridge, Vector3.up * 10, Quaternion.identity);
                 foreach (var key in keys)
                 { Bridge.TrySetVelocity(key, new Vector3(3, 0, 4)); Body(key).angularVelocity = new Vector3(1, 2, 3);
-                    Simulation.EnqueueContact((source ?? View.Root.GetComponent<MResDeviceBody>()).Contact(key, Body(key).position)); }
+                    Simulation.EnqueueContact((source ?? View.Root.GetComponent<DeviceBody>()).Contact(key, Body(key).position)); }
                 Simulation.AfterPhysics(Bridge);
             }
             internal bool Click() => Simulation.TryActivateDevice(Id);
@@ -318,8 +286,11 @@ function Verify() assert(completed == 2) end"))
             { Simulation.BeforePhysics(.1f, Bridge, Vector3.up * 10, Quaternion.identity); if (physics) Bridge.Simulate(.1f); Simulation.AfterPhysics(Bridge); }
             public void Dispose()
             {
-                try { foreach (var view in views) view.Dispose(); Simulation.Dispose(); Bridge.Dispose(); UnityEngine.Object.DestroyImmediate(Board); SceneManager.UnloadSceneAsync(Scene); }
-                finally { if (catalog != null) { catalog.Entries = original; catalog.Invalidate(); } }
+                foreach (var view in views) view.Dispose();
+                Simulation.Dispose();
+                Bridge.Dispose();
+                UnityEngine.Object.DestroyImmediate(Board);
+                SceneManager.UnloadSceneAsync(Scene);
             }
         }
     }

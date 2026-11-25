@@ -11,9 +11,9 @@ namespace MarblesECS.Editor
             int start = assertions;
             foreach (var definition in DeviceResourceCatalog.Current.Definitions())
             {
-                var metadata = DeviceResourceCatalog.Current.Get(definition.Id).Package.Metadata;
-                Check(metadata.rarity == definition.Rarity.ToString().ToLowerInvariant(), "catalog rarity follows package metadata");
-                Near(20, metadata.durability, "package default durability"); Near(20, definition.Durability, "catalog durability authority");
+                var metadata = DeviceResourceCatalog.Current.Get(definition.Id).Metadata;
+                Check(metadata.rarity == definition.Rarity.ToString().ToLowerInvariant(), "catalog rarity follows metadata.json");
+                Near(20, metadata.durability, "resource default durability"); Near(20, definition.Durability, "catalog durability authority");
                 Near(metadata.purchasePrice, definition.Price, "catalog buys for purchasePrice"); Near(metadata.value, definition.SellPrice, "catalog sells for value");
             }
             using (var f = new Fixture())

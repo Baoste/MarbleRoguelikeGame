@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "name": "GoldRush",
+  "metadata": "metadata.json",
+  "device": "device.json",
+  "prefab": "prefab.prefab",
+  "lua": "main.lua"
+}

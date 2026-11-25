@@ -1,5 +1,5 @@
+using System;
 using System.Collections.Generic;
-using MRes;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -8,8 +8,9 @@ namespace MarblesECS
 {
     internal sealed class DeviceScriptSystem
     {
-        private readonly Dictionary<int, MResLuaScript> scripts = new Dictionary<int, MResLuaScript>();
+        private readonly Dictionary<int, DeviceLuaScript> scripts = new Dictionary<int, DeviceLuaScript>();
         private readonly Dictionary<int, (int round, string text)> statuses = new Dictionary<int, (int, string)>();
+        internal Func<DeviceResource, DeviceLuaScript> CreateScript { get; set; } = resource => resource.CreateScript();
         private int deviceDispatchDepth;
         internal void SetStatus(int instanceId, int round, string text)
         {
@@ -18,10 +19,13 @@ namespace MarblesECS
         }
         internal string Status(int instanceId, int round) =>
             statuses.TryGetValue(instanceId, out var status) && status.round == round ? status.text : string.Empty;
-        internal MResLuaScript Get(int instanceId, uint definitionId)
+        internal DeviceLuaScript Get(int instanceId, uint definitionId)
         {
             if (!scripts.TryGetValue(instanceId, out var script))
-            { script = new MResLuaScript(DeviceResourceCatalog.Current.Get(definitionId).Package); scripts.Add(instanceId, script); }
+            {
+                script = CreateScript(DeviceResourceCatalog.Current.Get(definitionId));
+                scripts.Add(instanceId, script);
+            }
             return script;
         }
         internal void Clear() { foreach (var script in scripts.Values) script.Dispose(); scripts.Clear(); statuses.Clear(); }
@@ -36,7 +40,7 @@ namespace MarblesECS
             if (!script.HasFunction(callback)) return false;
             var api = new DeviceEventContext(c, entity);
             try { script.Invoke(callback, api); return true; }
-            catch (MResLuaException error) { Debug.LogException(error); return false; }
+            catch (DeviceLuaException error) { Debug.LogException(error); return false; }
             finally { api.Close(); }
         }
         internal static void RoundStart(SimulationContext c)
@@ -73,7 +77,7 @@ namespace MarblesECS
                 else script.Invoke(callback, api);
                 return true;
             }
-            catch (MResLuaException error) { Debug.LogException(error); return false; }
+            catch (DeviceLuaException error) { Debug.LogException(error); return false; }
             finally { api.Close(); }
         }
         internal static int ForEachPlacedDevice(SimulationContext c, int sourceId, uint definitionId, string callback, double value)
@@ -129,7 +133,7 @@ namespace MarblesECS
                 var contact = new MarbleContact { Key = key, Kind = MarbleContactKind.Device, TargetId = checked(100000 + instanceId),
                     Multiplier = 1, RushDisabled = true, Position = c.Manager.GetComponentData<Transform3D>(ball).Position };
                 try { Invoke(c, ball, entity, device, contact, pose, callback); visited++; }
-                catch (MResLuaException error) { Debug.LogException(error); }
+                catch (DeviceLuaException error) { Debug.LogException(error); }
             }
             return visited;
         }
@@ -166,7 +170,7 @@ namespace MarblesECS
                         Position = c.Manager.GetComponentData<Transform3D>(ball).Position,
                         Speed = c.Manager.GetComponentData<Motion3D>(ball).LinearVelocity.magnitude };
                     try { Invoke(c, ball, entity, device, contact, pose, "OnBallUpdate"); }
-                    catch (MResLuaException error) { Debug.LogException(error); }
+                    catch (DeviceLuaException error) { Debug.LogException(error); }
                 }
             }
         }

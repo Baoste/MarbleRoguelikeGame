@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "name": "Malfunction",
+  "metadata": "metadata.json",
+  "device": "device.json",
+  "prefab": "prefab.prefab",
+  "lua": "main.lua"
+}

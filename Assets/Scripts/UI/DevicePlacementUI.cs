@@ -29,7 +29,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
     public string LastFeedback { get; private set; }
 
     private readonly Dictionary<int, PlacedDeviceView> placedObjects = new Dictionary<int, PlacedDeviceView>();
-    private MRes.MResLoadHandle preview;
+    private DeviceViewHandle preview;
     private QuickOutline previewOutline;
     private GameObject previewObject => preview?.Root;
     private int displayedRevision = -1;
@@ -126,7 +126,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         foreach (OwnedDeviceSnapshot device in Controller.GetOwnedDevices())
         {
             if (!device.Placed) continue;
-            var handle = MResDeviceView.Create(device, BoardRoot, Controller.DeviceScript(device));
+            var handle = DeviceView.Create(device, BoardRoot, Controller.DeviceScript(device));
             var item = handle.Root;
             SetDeviceTransform(item.transform, device.X, device.Z);
             item.transform.rotation *= Quaternion.Euler(0, device.Angle, 0);

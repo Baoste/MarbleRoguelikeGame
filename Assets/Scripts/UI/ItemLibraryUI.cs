@@ -246,7 +246,7 @@ public sealed partial class ItemLibraryUI : MonoBehaviour
         {
             var balance = Controller && Controller.Balance != null
                 ? Controller.Balance : GameBalanceLoader.Load(Controller ? Controller.BalanceJson : null);
-            // These definitions come from the same MRes catalog used by gameplay.
+            // Use the same selected device definitions as gameplay.
             foreach (var d in balance.Devices.OrderBy(d => d.Id))
             {
                 string durability = d.Durability == -1 ? "无限" : d.Durability.ToString(CultureInfo.InvariantCulture);

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using Unity.Entities;
@@ -90,7 +89,7 @@ namespace MarblesECS.Editor
                 Check(keys.Count(r.Held) == 1 && r.Held(keys[0]), "simultaneous arrivals accept only the first deterministic ball");
                 var other = r.Add(new Vector3(3, 0, 0));
                 r.Step(); r.Step();
-                r.Contact(new[] { keys[1] }, other.Root.GetComponent<MResDeviceBody>());
+                r.Contact(new[] { keys[1] }, other.Root.GetComponent<DeviceBody>());
                 Check(r.Held(keys[0]) && r.Held(keys[1]) && !r.Held(keys[2]), "each mine has independent capacity and deadline");
                 double coins = r.C.Campaign.Coins;
                 r.Complete(keys[0], 1);
@@ -133,8 +132,8 @@ namespace MarblesECS.Editor
                 renderer.forceRenderingOff = false;
                 r.Contact(key);
                 var other = r.Add(new Vector3(3, 0, 0));
-                CampaignStateUtility.FindDevice(r.C, other.Root.GetComponent<MResDeviceBody>().InstanceId, out var otherEntity);
-                r.Bridge.TryGetDevicePose(other.Root.GetComponent<MResDeviceBody>().InstanceId, out var pose);
+                CampaignStateUtility.FindDevice(r.C, other.Root.GetComponent<DeviceBody>().InstanceId, out var otherEntity);
+                r.Bridge.TryGetDevicePose(other.Root.GetComponent<DeviceBody>().InstanceId, out var pose);
                 var wrongOwner = new DeviceContactContext(r.C, r.Ball(key), otherEntity, default, pose);
                 Check(!wrongOwner.Motion.TrySetHeldVisible(true) && renderer.forceRenderingOff, "another device cannot reveal the source's cargo"); wrongOwner.Close();
             }
@@ -195,11 +194,11 @@ namespace MarblesECS.Editor
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly Entity Device;
-            internal readonly MResLoadHandle View;
-            private readonly List<MResLoadHandle> views = new List<MResLoadHandle>();
+            internal readonly DeviceViewHandle View;
+            private readonly List<DeviceViewHandle> views = new List<DeviceViewHandle>();
             private int launches;
             internal SimulationContext C => Simulation.Context;
-            internal int Id => View.Root.GetComponent<MResDeviceBody>().InstanceId;
+            internal int Id => View.Root.GetComponent<DeviceBody>().InstanceId;
             internal DevicePose Pose { get { Bridge.TryGetDevicePose(Id, out var pose); return pose; } }
             internal Vector3 Down => Vector3.ProjectOnPlane(Vector3.down, Pose.Up).normalized;
             internal int Remaining => DeviceDurabilitySystem.Remaining(C, C.Manager.GetComponentData<OwnedDeviceData>(Device));
@@ -217,31 +216,31 @@ namespace MarblesECS.Editor
                 Board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 37, 0));
                 View = Add(Vector3.zero); CampaignStateUtility.FindDevice(C, Id, out Device); Tick();
             }
-            internal MResLoadHandle Add(Vector3 offset)
+            internal DeviceViewHandle Add(Vector3 offset)
             {
                 var definition = C.Balance.Devices.Single(d => d.Id == 9011); CampaignStateUtility.CreateDevice(C, definition, definition.Price);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last(); CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
-                var view = MResDeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 view.Root.transform.localPosition = offset; views.Add(view); view.Root.SetActive(true); Physics.SyncTransforms(); return view;
             }
             internal Entity Ball(MarbleKey key) => C.Marbles[key];
             internal bool Held(MarbleKey key) => C.Marbles.TryGetValue(key, out var entity) && C.Manager.HasComponent<HeldMotion>(entity);
             internal MarbleBody Marble(MarbleKey key) => Scene.GetRootGameObjects().Select(go => go.GetComponent<MarbleBody>()).Single(b => b != null && b.Key.Equals(key));
             internal Rigidbody Body(MarbleKey key) => Marble(key).Body;
-            internal DeviceContactContext Api(MarbleKey key) => new DeviceContactContext(C, Ball(key), Device, View.Root.GetComponent<MResDeviceBody>().Contact(key, Body(key).position), Pose);
+            internal DeviceContactContext Api(MarbleKey key) => new DeviceContactContext(C, Ball(key), Device, View.Root.GetComponent<DeviceBody>().Contact(key, Body(key).position), Pose);
             internal MarbleKey Launch(Vector3? position = null)
             {
                 Simulation.FireOnce(); Simulation.BeforePhysics(.1f, Bridge, position ?? new Vector3(3 + launches++ * .6f, 5, 0), Quaternion.identity); Simulation.AfterPhysics(Bridge);
                 var key = C.Marbles.Keys.OrderBy(k => k.Sequence).Last(); Body(key).drag = Body(key).angularDrag = 0; return key;
             }
             internal void Contact(MarbleKey key) => Contact(new[] { key });
-            internal void Contact(IEnumerable<MarbleKey> keys, MResDeviceBody source = null)
+            internal void Contact(IEnumerable<MarbleKey> keys, DeviceBody source = null)
             {
                 Simulation.BeforePhysics(.1f, Bridge, Vector3.up * 10, Quaternion.identity);
                 foreach (var key in keys)
                 { Bridge.TrySetVelocity(key, new Vector3(3, 0, 4)); Body(key).angularVelocity = Spin;
-                    Simulation.EnqueueContact((source ?? View.Root.GetComponent<MResDeviceBody>()).Contact(key, Body(key).position)); }
+                    Simulation.EnqueueContact((source ?? View.Root.GetComponent<DeviceBody>()).Contact(key, Body(key).position)); }
                 Simulation.AfterPhysics(Bridge);
             }
             internal void Seed(int outcome)

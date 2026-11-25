@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using MRes;
 
 namespace MarblesECS.Editor
 {
@@ -59,19 +58,18 @@ namespace MarblesECS.Editor
             {
                 var a = AddStarLamp(f); var b = AddStarLamp(f); var inventory = AddStarLamp(f); MorePlace(f.C, inventory.InstanceId, false);
                 int other = MoreCompanion(f.C, true); var key = f.Launch();
-                var scripts = (Dictionary<int, MResLuaScript>)typeof(DeviceScriptSystem).GetField("scripts", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(f.C.DeviceScripts);
+                var scripts = (Dictionary<int, DeviceLuaScript>)typeof(DeviceScriptSystem).GetField("scripts", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(f.C.DeviceScripts);
                 foreach (var owned in new[] { a, b })
                 {
-                    var package = DeviceResourceCatalog.Current.Get(9027).Package;
-                    var probe = (MResLuaScript)Activator.CreateInstance(typeof(MResLuaScript), BindingFlags.NonPublic | BindingFlags.Instance, null,
-                        new object[] { @"local saved
+                    var resource = DeviceResourceCatalog.Current.Get(9027);
+                    var probe = resource.CreateScript(@"local saved
 function Receive(api, value)
  saved = api
  api:SetRoundValue('received', value)
  api:SetRoundValue('order', api:CountPlacedDevicesWithRoundValue(api.DefinitionId, 'received', value))
 end
 function Fail(api, value) if api.InstanceId == " + a.InstanceId + @" then error('EXPECTED_DEVICE_EVENT_FAILURE') end; Receive(api, value) end
-function Verify() assert(not pcall(function() return saved.Time end)) end", package.Metadata, "DeviceEventProbe", null }, null);
+function Verify() assert(not pcall(function() return saved.Time end)) end");
                     f.C.DeviceScripts.Remove(owned.InstanceId); scripts.Add(owned.InstanceId, probe);
                 }
                 var api = CashApi(f, key, a);

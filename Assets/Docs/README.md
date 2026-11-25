@@ -1,6 +1,6 @@
 # 血珠回路 / Blood Marble
 
-Unity **2022.3.62f3c1 + Entities 1.0.11 + URP 14.0.12** 的三维弹珠游戏。参考 `PachinkoECSDesign_3D.xlsx`、更新后的 `Docs/GameplayFlow.md` 和原有代码，实现回合、提现、统一开奖、阶段成长、商店、布置、Rush、MRes 装置的可玩闭环。
+Unity **2022.3.62f3c1 + Entities 1.0.11 + URP 14.0.12** 的三维弹珠游戏。参考 `PachinkoECSDesign_3D.xlsx`、更新后的 `Docs/GameplayFlow.md` 和原有代码，实现回合、提现、统一开奖、阶段成长、商店、布置、Rush、Prefab 与 Lua 装置的可玩闭环。
 
 药物状态：2026-10-22：旧药物系统已移除，后续将用 Lua 重新实现。当前没有药物商品、初始库存、服药入口或药效计时；本次未接入新的 Lua 药物系统。
 
@@ -28,7 +28,7 @@ Unity **2022.3.62f3c1 + Entities 1.0.11 + URP 14.0.12** 的三维弹珠游戏。
 
 `Scenes/TestScene.unity` 的商店使用 1920×1080 参考分辨率缩放。商品卡分别显示名称、稀有度、耐久、出售价格、效果说明和购买价格；较长的效果说明可在卡片内使用滚轮或拖动阅读。购买、刷新、继续按钮统一为中文，已售出和金币不足有独立状态提示。
 
-商店使用 `Art/Fonts/ShopChineseSDF.asset`，预烘焙当前内容的中文字符；`ShopChineseFallback.asset` 使用同一字体和采样设置，按需补充新增 MRes 的字符。原有盘面字体独立保留。维护入口为 **Marbles ECS → UI → 修复商店布局与字体**，会更新现有商店场景、商品 Prefab 和商店字库。
+商店使用 `Art/Fonts/ShopChineseSDF.asset`，预烘焙当前内容的中文字符；`ShopChineseFallback.asset` 使用同一字体和采样设置，按需补充新增装置的字符。原有盘面字体独立保留。维护入口为 **Marbles ECS → UI → 修复商店布局与字体**，会更新现有商店场景、商品 Prefab 和商店字库。
 
 ## 本版规则
 

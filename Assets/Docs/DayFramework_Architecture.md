@@ -20,7 +20,7 @@ flowchart LR
 | --- | --- |
 | `SimulationContext.RoundEntity` | 原 `RoundData` 仍持有内层阶段，`CampaignData` 保存生产分数、Stage 区间与经济数据。开启 Day 后附加 `DayRuntimeData`、事件执行记录 Buffer 和活动规则 Buffer。 |
 | `DayStateMachine`、`DayFlowSystem` | 校验命令与状态，串行提交转换、发送进入和退出通知，并独占 Day Index 写入。 |
-| `GameDaysLoader`、`DayCampaignDefinition` | 复用项目已有的 MRes JSON 读取器检查语法和字段类型。校验日期顺序和引用后发布不可变定义，配置通过后才允许切换正在运行的会话。 |
+| `GameDaysLoader`、`DayCampaignDefinition` | 复用项目的配置 JSON 读取器检查语法和字段类型。校验日期顺序和引用后发布不可变定义，配置通过后才允许切换正在运行的会话。 |
 | `MarbleGameController.Day` | 提供只读进度、三个外层阶段完成命令和启动入口。Controller 在固定步之间轮询待完成的 Action，并在恢复时同步发射器和盘面。 |
 | `DayEventSystem`、`DayRuleSystem` | 监听低频边界、执行类型化事件、管理规则来源和 Feature 生命周期。数值效果由 `AttributeRuntime` 与 `AttributeMath` 计算。 |
 

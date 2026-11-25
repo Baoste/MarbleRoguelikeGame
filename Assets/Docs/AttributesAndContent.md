@@ -4,13 +4,13 @@
 
 ## 配置与使用
 
-- `Resources/GameContent.json` 配置属性和内容规则；装置以 `Resources/Devices/*.mres` 为唯一运行时来源。半径、质量、基础分、弹性、发射速度、寿命、Rush 和赌博等属性不再叠乘旧数值；完整对应关系见 `Balance.md`。
+- `Resources/GameContent.json` 配置属性、内容规则和启用装置的 ID。装置资源位于 `Resources/Devices/<id>/`。半径、质量、基础分、弹性、发射速度、寿命、Rush 和赌博等属性不再叠乘旧数值；完整对应关系见 `Balance.md`。
 - `Resources/GameBalance.json` 只保留血量、抽血档位、发射间隔、容量、阶段及战役参数，不再保存重复属性、`Devices`、`Drugs`、`Board`、`Zones`。
 - 盘面由场景手工搭建，区域在 `MarbleZone` 和 Trigger Collider 中配置；网格和间距在 `MarbleGameController.GridSize/PlacementClearance` 配置，固定钉避让检测 `PlacementObstacleRoots` 下实际启用的非 Trigger Collider。`TestScene` 已绑定 `PhysicsRoot/MarblePins`，完整迁移说明见 `Balance.md`。
-- `Resources/GameContent.json` 保存 34 个属性定义和内容规则；其中 `Devices` 是从当前 `.mres` 完整生成的离线平衡工具快照。新增、修改、删除包及导入 JSON 时自动同步，旧条目不会合并回来；手动同步与离线命令见 `Balance.md`。
-- `GameBalanceLoader` 加载基础配置、属性配置和 MRes 装置目录，装置列表直接引用会话内容目录；运行会话深拷贝后仍共享该会话的一份目录，避免两份数据不同步。
+- `Resources/GameContent.json` 保存 34 个属性定义和内容规则；其中 `Devices` 是游戏加载的数字 ID 列表。添加或停用装置时编辑此列表。
+- `GameBalanceLoader` 加载基础配置、属性配置和 ID 指定的装置目录，装置列表直接引用会话内容目录；运行会话深拷贝后仍共享该会话的一份目录，避免两份数据不同步。
 - 直接编辑 `Resources/GameContent.json` 中的属性和内容规则。装置通过修改制作源并重新打包更新。保存后重新进入 Play 生效。
-- 全部装置位于 `Resources/Devices/*.mres`，当前为 35 种（34 个 MResPacker 成品和 Multi Ding），外观、碰撞体和 Lua 行为随包加载，不再绑定装置 prefab。详见 [MRes 装置目录](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
+- 当前 35 种装置位于 `Resources/Devices/<id>/`。Prefab 提供外观和碰撞体，Lua 文件提供玩法。详见 [装置资源](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
 - 传送门按一对购买，两门分别放置并共享配对 ID；两门都放置后才可传送。
 
 装置基础购买价 `metadata.purchasePrice` 按普通/罕见/稀有/传奇分别为 9/14/23/38，单件出售价格读取 `metadata.value`；普通/罕见/稀有/传奇由 `metadata.rarity` 表示，耐久读取 `metadata.durability`（默认 20，-1 无限）。旧 `Drugs` 配置已删除，装置初始赠送以包内配置为准。
@@ -97,7 +97,7 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 
 菜单 `Marbles ECS/Validate Attribute and Content Runtime` 在 Play 模式运行真实游戏系统和独立 PhysX 场景。
 批处理入口 `MarblesECS.Editor.GameContentValidation.Run` 创建临时空场景，不保存游戏场景。
-覆盖 JSON 属性和 MRes 装置来源、属性运算顺序、上下限、概率档位、批量回滚、旧药物输入不可恢复、装置商店、装置效果、传送配对、分裂守恒、复制继承、返血、经济，以及实际重力、限速、穿钉和磁力。
+覆盖 JSON 属性、装置 ID 列表和 Prefab 来源、属性运算顺序、上下限、概率档位、批量回滚、旧药物输入不可恢复、装置商店、装置效果、传送配对、分裂守恒、复制继承、返血、经济，以及实际重力、限速、穿钉和磁力。
 
 ## 当前 RUSH 规则
 

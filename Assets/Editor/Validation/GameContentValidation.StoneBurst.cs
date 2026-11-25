@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using Unity.Entities;
@@ -169,7 +168,7 @@ namespace MarblesECS.Editor
             var simulation = new MarbleSimulation(Balance()); var hits = new List<MarbleContact>();
             var bridge = new MarblePhysicsBridge(scene, null, null, hit => { if (hit.HasImpact) hits.Add(hit); simulation.EnqueueContact(hit); });
             var board = new GameObject("StoneBurstBoard"); SceneManager.MoveGameObjectToScene(board, scene);
-            MResLoadHandle view = null; GameObject obstacle = null;
+            DeviceViewHandle view = null; GameObject obstacle = null;
             try
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -179,7 +178,7 @@ namespace MarblesECS.Editor
                 CampaignStateUtility.FindDevice(c, owned.InstanceId, out var device);
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(device); data.Placed = true; c.Manager.SetComponentData(device, data);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(50, 77, 0));
-                view = MResDeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, definition.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
+                view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, definition.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
                 Check(!view.Root.GetComponentInChildren<MeshCollider>().isTrigger, "stone cylinder is a solid impact target");
                 var spawn = board.transform.TransformPoint(new Vector3(0, .085f, 1));
                 simulation.FireOnce(); simulation.BeforePhysics(.02f, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge);

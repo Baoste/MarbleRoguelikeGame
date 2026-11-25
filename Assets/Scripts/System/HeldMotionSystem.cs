@@ -110,7 +110,7 @@ namespace MarblesECS
             BallInteractionSystem.SetVelocity(c, ball, hold.OriginalVelocity); MarkMoved(c, ball);
             if (cancelled || !Live(c, ball)) return;
             try { DeviceScriptSystem.HoldEnd(c, ball, hold); }
-            catch (MRes.MResLuaException error) { Debug.LogException(error); }
+            catch (DeviceLuaException error) { Debug.LogException(error); }
         }
 
         private static bool Placed(SimulationContext c, int id) =>

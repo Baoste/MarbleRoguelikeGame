@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
@@ -123,9 +122,8 @@ namespace MarblesECS.Editor
                 bool full = false; try { api.SetRoundValue("overflow", 0); } catch (InvalidOperationException) { full = true; } Check(full, "per-device numeric state is bounded");
                 Near(0, DeviceRoundState.Get(f.C, entity, "k1"), "offer writes are staged");
                 api.Close(); ExpectExpired(() => api.Accept()); ExpectExpired(() => api.GetRoundValue("k1")); ExpectExpired(() => { var ignored = api.OfferedRarity; });
-                var package = DeviceResourceCatalog.Current.Get(9026).Package;
-                var probe = (MResLuaScript)Activator.CreateInstance(typeof(MResLuaScript), BindingFlags.NonPublic | BindingFlags.Instance, null,
-                    new object[] { @"local calls, saved = 0, nil
+                var resource = DeviceResourceCatalog.Current.Get(9026);
+                var probe = resource.CreateScript(@"local calls, saved = 0, nil
 function OnOffer(a)
  calls, saved = calls+1, a
  a:SetRoundValue('bonus', 99); a:SetStatus('should only commit on acceptance')
@@ -134,8 +132,8 @@ function OnOffer(a)
  a:Accept(); a:Accept()
  if calls == 2 then error('EXPECTED_OFFER_FAILURE') end
 end
-function Verify() assert(not pcall(function() return saved.RoundId end)) end", package.Metadata, "OfferProbe", null }, null);
-                var scripts = (Dictionary<int, MResLuaScript>)typeof(DeviceScriptSystem).GetField("scripts", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(f.C.DeviceScripts);
+function Verify() assert(not pcall(function() return saved.RoundId end)) end");
+                var scripts = (Dictionary<int, DeviceLuaScript>)typeof(DeviceScriptSystem).GetField("scripts", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(f.C.DeviceScripts);
                 f.C.DeviceScripts.Remove(d.InstanceId); scripts.Add(d.InstanceId, probe);
                 int revision = f.C.Campaign.LayoutRevision;
                 for (int n = 0; n < 2; n++)
@@ -187,7 +185,7 @@ function Verify() assert(not pcall(function() return saved.RoundId end)) end", p
             var scene = SceneManager.CreateScene("GluttonBagPhysics_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             var simulation = new MarbleSimulation(Balance()); var hits = new List<MarbleContact>();
             var bridge = new MarblePhysicsBridge(scene, null, null, hit => { if (hit.HasImpact) hits.Add(hit); simulation.EnqueueContact(hit); });
-            var board = new GameObject("GluttonBagBoard"); SceneManager.MoveGameObjectToScene(board, scene); MResLoadHandle view = null;
+            var board = new GameObject("GluttonBagBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
             try
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -200,7 +198,7 @@ function Verify() assert(not pcall(function() return saved.RoundId end)) end", p
                 BagBuild(c); Check(simulation.TryOfferDevice(BagFood(c), owned.InstanceId), "prepare physical bag by consuming common inventory");
                 Check(simulation.BeginRound(), "start physical prepared round");
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
-                view = MResDeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
+                view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
                 var collider = view.Root.GetComponentInChildren<MeshCollider>(); Check(collider != null && collider.convex && !collider.isTrigger, "glutton bag has solid cylindrical collision");
                 var spawn = board.transform.TransformPoint(new Vector3(0, .1f, .8f)); var incoming = board.transform.rotation * Vector3.back * 2;
                 simulation.FireOnce(); simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge); var key = c.Marbles.Keys.Single();

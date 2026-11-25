@@ -123,7 +123,7 @@ namespace MarblesECS.Editor
         private static void Rules()
         {
             var b = Balance(); var content = b.Content;
-            Check(content.Attributes.Length == 34 && content.Devices.Length == DeviceResourceCatalog.Current.Entries.Length, "catalog coverage including migrated legacy definitions");
+            Check(content.Attributes.Length == 34 && content.Devices.Length == DeviceResourceCatalog.Current.Definitions().Length, "catalog coverage");
             foreach (var a in content.Attributes) a.Validate();
             var effects = new[] { new AttributeEffect { Attribute = GameAttribute.BLOOD_COST, Operation = AttributeOperation.Add, Value = 1 },
                 new AttributeEffect { Attribute = GameAttribute.BLOOD_COST, Operation = AttributeOperation.Multiply, Value = 2 } };
@@ -153,11 +153,11 @@ namespace MarblesECS.Editor
                     "runtime uses the JSON definition for " + id);
             }
 
-            var packages = DeviceCatalogBuilder.ReadDefinitions();
-            Check(loaded.Devices.Length == packages.Length, "runtime lists every current MRes device");
-            foreach (var definition in packages)
+            var definitions = DeviceResourceCatalog.Load(source.text).Definitions();
+            Check(loaded.Devices.Length == definitions.Length, "runtime lists every selected device");
+            foreach (var definition in definitions)
                 Check(JsonUtility.ToJson(definition) == JsonUtility.ToJson(loaded.Devices.Single(x => x.Id == definition.Id)),
-                    "runtime uses the MRes definition for device " + definition.Id);
+                    "runtime uses the resource definition for device " + definition.Id);
         }
 
         private static void ContentAuthority()
@@ -269,7 +269,7 @@ namespace MarblesECS.Editor
                 var scene = SceneManager.CreateScene($"Bounce authority {isDevice} {ballBounce}", new CreateSceneParameters(LocalPhysicsMode.Physics3D));
                 var surface = new GameObject(isDevice ? "Solid device" : "Wall");
                 SceneManager.MoveGameObjectToScene(surface, scene);
-                if (isDevice) surface.AddComponent<MResDeviceBody>();
+                if (isDevice) surface.AddComponent<DeviceBody>();
                 var collider = surface.AddComponent<BoxCollider>(); collider.size = new Vector3(.2f, 4, 4);
                 var material = new PhysicMaterial { bounciness = surfaceBounce, bounceCombine = PhysicMaterialCombine.Maximum };
                 collider.sharedMaterial = material;
@@ -487,8 +487,8 @@ namespace MarblesECS.Editor
                     f.Step(f.Hit(first, device), f.Hit(second, device));
                     foreach (var key in new[] { first, second })
                     {
-                        Near(definition.ScoreMultiplier, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "MRes pin per-ball score exactly once");
-                        Near(definition.RushChanceAdd, f.C.Manager.GetComponentData<MarbleRush>(f.Ball(key)).RushChanceBonus, "MRes pin per-ball Rush exactly once");
+                        Near(definition.ScoreMultiplier, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "pin per-ball score exactly once");
+                        Near(definition.RushChanceAdd, f.C.Manager.GetComponentData<MarbleRush>(f.Ball(key)).RushChanceBonus, "pin per-ball Rush exactly once");
                     }
                 }
             foreach (float speed in new[] { 0f, 2f, 10f })
@@ -552,8 +552,8 @@ namespace MarblesECS.Editor
                 fieldObject.transform.position=new Vector3(0,2,.15f);
                 var region=new GameObject("Field"); region.transform.SetParent(fieldObject.transform, false);
                 var box=region.AddComponent<BoxCollider>(); box.size=Vector3.one; box.isTrigger=true;
-                var field=fieldObject.AddComponent<MResDeviceBody>();
-                using var fieldScript = new MRes.MResLuaScript(DeviceResourceCatalog.Current.Get(9004).Package);
+                var field=fieldObject.AddComponent<DeviceBody>();
+                using var fieldScript = DeviceResourceCatalog.Current.Get(9004).CreateScript();
                 var fieldDefinition = DeviceResourceCatalog.Current.Get(9004).Definition.Copy(); fieldDefinition.Strength=1;
                 field.Initialize(1, fieldDefinition, fieldScript);
                 settings.PierceCount=0;settings.Magnetic=false;

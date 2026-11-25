@@ -1,6 +1,6 @@
 # 配置来源与调参
 
-`Resources/GameContent.json` 配置属性和内容规则；其中 `Devices` 始终由当前 `Resources/Devices/**/*.mres` 完整生成。运行时装置直接使用 MRes 目录。`Resources/GameBalance.json` 保留血量、抽血档位、发射间隔、库存容量、阶段目标和战役规则；盘面由场景组件配置。
+`Resources/GameContent.json` 配置属性、内容规则和启用装置的数字 ID 列表。装置在 `Resources/Devices/<id>/` 下配置。`Resources/GameBalance.json` 保留血量、抽血档位、发射间隔、库存容量、阶段目标和战役规则。盘面由场景组件配置。
 
 `TestScene` 的 `PhysicsRoot/新盘面_局部X上坡_Z横向/玻璃罩碰撞_不遮挡操作` 限制弹珠飞离盘面。罩面平行盘面，内侧距离盘面 1.5 个世界单位、厚度 0.1，三个子对象补齐左右侧和上沿的碰撞边界，底部得分出口保持开放。罩体仅含静态 BoxCollider，不渲染；使用 Ignore Raycast 层，保留弹珠碰撞和装置操作。可在该对象的 BoxCollider 调整尺寸；若调整罩面高度，同时调整侧面子碰撞体，避免留下空隙。
 
@@ -10,7 +10,7 @@
 
 ## 属性的唯一入口
 
-装置占地由制作 Prefab 根节点下的 `PlacementVolume/SphereCollider` 确定，不再配置 `game/device.json.Radius` 或半径系数。默认球体按当前显示的模型顶点拟合；可在 Prefab 中编辑 SphereCollider 的 `Center`、`Radius` 或子对象缩放，再打包并更新 `Resources/Devices` 对应 MRes。球心偏移随装置朝向旋转，缩放按 SphereCollider 的最大轴规则计算。装置间距使用球体在盘面上的圆形占地，最小球心距离为两半径之和加 `PlacementClearance`（当前 0.15；同 LinkGroup 仍使用 GroupClearance）；固定障碍检测使用球体的实际世界中心，盘面边界也使用占地圆。这个 Collider 不渲染、运行时保持禁用，不参与弹珠物理或 Lua 接触，也不因耐久耗尽而丢失占地。
+装置占地由装置 Prefab 根节点下的 `PlacementVolume/SphereCollider` 确定。默认球体按当前显示的模型顶点拟合；可在 Prefab 中编辑 SphereCollider 的 `Center`、`Radius` 或子对象缩放。球心偏移随装置朝向旋转，缩放按 SphereCollider 的最大轴规则计算。装置间距使用球体在盘面上的圆形占地，最小球心距离为两半径之和加 `PlacementClearance`（当前 0.15；同 LinkGroup 仍使用 GroupClearance）；固定障碍检测使用球体的实际世界中心，盘面边界也使用占地圆。这个 Collider 不渲染、运行时保持禁用，不参与弹珠物理或 Lua 接触，也不因耐久耗尽而丢失占地。
 
 在 `GameContent.json` 的 `Attributes` 中按 `Id` 查找，修改 `DefaultValue`。`MinValue/MaxValue` 是装置等效果结算后的属性上下限。
 
@@ -68,23 +68,22 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 2026-10-22：旧药物系统已移除，后续将用 Lua 重新实现。当前没有药物商品、初始库存、服药入口或药效计时；本次未接入新的 Lua 药物系统。
 
-装置的名称、价格、参数和 `StartingCount` 在 `Resources/Devices/*.mres` 中配置；旧 `Drugs` 已删除。`Devices` 是 MRes 目录自动生成的离线分析快照。`StartingCount = 0` 不赠送，正整数表示开局数量；传送门每份生成一对，容量按两个实体计算。
+装置名称、价格、稀有度和耐久在 `Resources/Devices/<id>/metadata.json` 设置。玩法参数和 `StartingCount` 在同目录的 `device.json` 设置。`StartingCount = 0` 不赠送，正整数表示开局数量。传送门每份生成一对，容量按两个实体计算。
 
-打开项目/脚本重载、导入/删除/移动 MRes、导入 `GameContent.json`、进入 Play 或构建 Player 时都会同步。同步完整替换 `Devices`，移除当前包目录中已不存在的条目。名称、描述、买卖价格、稀有度和耐久取包内 Metadata，其余参数取包内 `game/device.json`。属性和内容规则保留。Play 中不修改当前会话，退出后同步，重新进入 Play 使用新配置。
+游戏启动时读取 `GameContent.json.Devices` 并按 ID 查找各装置的 `manifest.json`。Manifest 指向同目录的配置、Prefab 和 Lua。目录按 ID 排序，重复 ID、缺少文件或无效配置会报告装置路径。
 
-手动同步菜单为 `Tools/MRes/Rebuild Device Catalog`。Unity 未打开时可在项目根目录运行 `python Assets/Editor/Balance/sync_mres_devices.py`；加 `--check` 只检查是否与当前 MRes 一致。脚本仅解析快照所需的 Metadata/业务参数，完整资源、Shader、Lua 校验由 Unity 完成；包损坏或 ID 重复会报错，不使用旧列表兜底。离线数值工具继续读取这份最新快照，历史分析结果和显式选择的旧实验快照不会被重写。
 
-商店当前只出售 MRes 装置，每回合按普通/罕见/稀有/传奇权重 60/30/7/3 选择档位，再在该档剩余装置中等概率、无重复抽取 `Campaign.ShopOfferCount` 个装置（默认 4），不设 RUSH 保底；目录不足时只显示实际可用装置。无货或已抽空的档位不参与，剩余权重归一化；当前无传奇时为 60:30:7。基础购买价分别为 9/14/23/38，分档见 [装置一览](Device_Overview.md)。付费刷新采用同样规则，购买不会重抽其他货位。商店与初始装置、装置 Lua、赌博开奖共用整局唯一随机序列；生成和刷新商品会推进后续玩法的随机状态。目录按 ID 排序，相同种子和调用次序可复现抽取结果。旧药物商品、初始库存、服药和药效代码保持删除，后续药物将改用 Lua。
+商店使用启用的装置目录，每回合按普通/罕见/稀有/传奇权重 60/30/7/3 选择档位，再在该档剩余装置中等概率、无重复抽取 `Campaign.ShopOfferCount` 个装置（默认 4），不设 RUSH 保底；目录不足时只显示实际可用装置。无货或已抽空的档位不参与，剩余权重归一化；当前无传奇时为 60:30:7。基础购买价分别为 9/14/23/38，分档见 [装置一览](Device_Overview.md)。付费刷新采用同样规则，购买不会重抽其他货位。商店与初始装置、装置 Lua、赌博开奖共用整局唯一随机序列；生成和刷新商品会推进后续玩法的随机状态。目录按 ID 排序，相同种子和调用次序可复现抽取结果。旧药物商品、初始库存、服药和药效代码保持删除，后续药物将改用 Lua。
 
-控制器的「开局获得全部装置」（`EnableRandomStartingDevices`）在 `TestScene` 中已开启。每次开新局或重开整局时，背包免费获得当前 MRes 目录中每种装置一套，数量按 `PurchaseQuantity` 发放，传送门为完整的一对。全目录赠送可超过库存购买上限，后续商店购买按 `MaxOwnedDevices` 检查。
+控制器的「开局获得全部装置」（`EnableRandomStartingDevices`）在 `TestScene` 中已开启。每次开新局或重开整局时，背包免费获得ID 列表中每种装置一套，数量按 `PurchaseQuantity` 发放，传送门为完整的一对。全目录赠送可超过库存购买上限，后续商店购买按 `MaxOwnedDevices` 检查。
 
-关闭开关时按包内的 `StartingCount` 发放。当前全部 MRes 的 `StartingCount` 为 `0`，此时空背包直接开始第一回合。全目录赠送在整局初始化时执行一次，直接按目录发放，不抽取随机数。
+关闭开关时按 `device.json` 的 `StartingCount` 发放。当前全部装置的 `StartingCount` 为 `0`，此时空背包直接开始第一回合。全目录赠送在整局初始化时执行一次，直接按目录发放，不抽取随机数。
 
 在场景的 `MarbleGameController` Inspector「随机数」分组中，`每次开新局刷新随机种子`（`RefreshRandomSeedOnNewRun`）默认勾选：每次进入游戏或重新开局生成一个新的非零整局种子；取消勾选时使用 `Resources/GameBalance.json` 的 `Marble.RandomSeed`（当前为 `12345`）。进入下一回合、打开商店或道具库均不重新播种；只在需要随机结果时依次取数。`LastRunRandomSeed` 记录本次实际种子，方便复现。固定种子只保证相同随机调用次序的结果，不保证物理在不同平台完全一致。战役和独立模式均遵守此开关。
 
 `GameBalance` 的装置列表直接引用同一份内容目录；会话复制时深拷贝整个目录。基础 JSON 和基础 Excel 不再保存旧装置、药物列表。
 
-当前共 34 个属性、35 种装置、0 种药物；装置包含 BouncePad、黏黏、弹弹、吸吸、加速力场、传送门、黑洞、反重力、大炮、沙包、大石碎胸口、矿老板、淘金热、猪猪存钱罐、赚赚、摇钱树、分流器、大喷菇、炸弹、复制体、造血工厂、弹珠机关枪、草皮、故障装置、more is more、less is more、雪糕机、大胃袋、星星灯、种植牙、有锅气、降降火、台球、超大杯全冰美式和 Multi Ding。装置数量随实际 MRes 文件变化，全部由 `Resources/Devices/*.mres` 加载，详见 [MRes 装置目录](../Resources/Devices/README.md)。
+当前共 34 个属性、35 种装置、0 种药物；装置包含 BouncePad、黏黏、弹弹、吸吸、加速力场、传送门、黑洞、反重力、大炮、沙包、大石碎胸口、矿老板、淘金热、猪猪存钱罐、赚赚、摇钱树、分流器、大喷菇、炸弹、复制体、造血工厂、弹珠机关枪、草皮、故障装置、more is more、less is more、雪糕机、大胃袋、星星灯、种植牙、有锅气、降降火、台球、超大杯全冰美式和 Multi Ding。装置数量以 `GameContent.json.Devices` 为准，详见 [装置资源](../Resources/Devices/README.md)。
 
 装置每次只累加“倍率 - 1”，到得分区以 `1 + Σ(倍率 - 1)` 统一计算；两次 1.5 得到 2，两次 1.2 得到 1.4，基础 1 只算一次。Lua 使用 `AddScoreMultiplier` 传入完整倍率，通用装置修正和旧倍率钉共用规则；全局和得分区倍率仍按各自结算层处理。
 
@@ -105,7 +104,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 日常直接修改 JSON，保存后退出 Play 并重新进入。运行会话使用深拷贝，重开当前局不重新读取磁盘配置。
 
 - `Config/GameBalance.xlsx` 只保留 `Marble`、`Campaign`、`Stages` 和说明页；保存会自动导入基础 JSON，也可使用 `Marbles ECS/Import Game Balance Excel`。
-- 属性和内容规则直接在 `Resources/GameContent.json` 中编辑。装置以 `Resources/Devices` 下的 MRes 为配置来源，`GameContent.json.Devices` 由目录同步生成。
+- 属性、内容规则和启用装置的 ID 在 `Resources/GameContent.json` 中编辑。装置资源在 `Resources/Devices/<id>/` 中编辑。
 
 基础 Excel 不识别已删除的属性字段、`Devices/Drugs/Board/Zones` 工作表，导入失败时不会发布 JSON。JSON 中遗留的旧属性字段被忽略，不能重新控制内容属性。`GameContent.json` 是场景启动的必需资源，缺失时报错，不再静默切回旧数值。
 
@@ -132,4 +131,4 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 ## 验证
 
-Unity 菜单 `Marbles ECS/Validate Attribute and Content Runtime` 验证 JSON 属性和 MRes 装置来源、旧 JSON 字段忽略、基础 Excel 输出、库存、赌博、提现、放置和物理表现。测试会进入 Play，可在独立临时项目中运行。
+Unity 菜单 `Marbles ECS/Validate Attribute and Content Runtime` 验证 JSON 属性、装置 ID 列表和 Prefab 来源、旧 JSON 字段忽略、基础 Excel 输出、库存、赌博、提现、放置和物理表现。测试会进入 Play，可在独立临时项目中运行。

@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
@@ -17,7 +16,7 @@ namespace MarblesECS.Editor
             var scene = SceneManager.CreateScene("DentalPhysics_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             var simulation = new MarbleSimulation(Balance()); int contacts = 0;
             var bridge = new MarblePhysicsBridge(scene, null, null, hit => { if (hit.HasImpact) contacts++; simulation.EnqueueContact(hit); });
-            var board = new GameObject("DentalBoard"); SceneManager.MoveGameObjectToScene(board, scene); MResLoadHandle view = null;
+            var board = new GameObject("DentalBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
             try
             {
                 simulation.StartSession(bridge); int id = DentalFood(simulation.Context); var c = simulation.Context; MorePlace(c, id, true);
@@ -25,7 +24,7 @@ namespace MarblesECS.Editor
                 var script = c.DeviceScripts.Get(id, 9028);
                 void Rebuild()
                 {
-                    view?.Dispose(); view = MResDeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, script);
+                    view?.Dispose(); view = DeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, script);
                     view.Root.SetActive(true); script.Invoke("Start"); Physics.SyncTransforms();
                 }
                 Rebuild(); Check(simulation.BeginRound(), "begin physical hole round");

@@ -99,7 +99,7 @@ namespace MarblesECS.Editor
         {
             var snapshot = Device(id);
             var root = placement.GetPlacedDeviceRoot(id);
-            Vector2 pointer = rig.ViewCamera.WorldToScreenPoint(root.GetComponent<MResDeviceBody>().PlacementCenter);
+            Vector2 pointer = rig.ViewCamera.WorldToScreenPoint(root.GetComponent<DeviceBody>().PlacementCenter);
             rig.UpdateTooltip(pointer);
             var fill = root.GetComponentsInChildren<MeshRenderer>().Where(renderer => renderer.enabled)
                 .SelectMany(renderer => renderer.sharedMaterials)
@@ -245,7 +245,7 @@ namespace MarblesECS.Editor
                 rig.UpdateTooltip(hoverPoint);
                 rig.UpdateTooltip(new Vector2(-1, -1));
                 Check(!rig.Tooltip.gameObject.activeSelf, "leaving the board hides the device tooltip");
-                Check(placement.HandleBoardPointerDown(Point(old)) && placement.IsMovingPlacedDevice, "left press picks the MRes up through the cover");
+                Check(placement.HandleBoardPointerDown(Point(old)) && placement.IsMovingPlacedDevice, "left press picks the device up through the cover");
                 placement.RotateSelected(45); sale.Refresh();
                 Check(Device(id).X == old.X && Device(id).Angle == old.Angle, "move preview leaves the saved pose unchanged");
                 viewport.Render(); Click(sale.gameObject, PointerEventData.InputButton.Right);
@@ -325,7 +325,7 @@ namespace MarblesECS.Editor
                 yield return null;
                 var originalFood = Device(food);
                 Vector2 pickup = Point(originalFood);
-                Vector2 receiver = rig.ViewCamera.WorldToScreenPoint(placement.GetPlacedDeviceRoot(bag).GetComponent<MResDeviceBody>().PlacementCenter);
+                Vector2 receiver = rig.ViewCamera.WorldToScreenPoint(placement.GetPlacedDeviceRoot(bag).GetComponent<DeviceBody>().PlacementCenter);
                 int offerRevision = game.Session.LayoutRevision;
                 long offerCoins = game.Session.Coins;
                 int receiverDurability = Device(bag).RemainingDurability;

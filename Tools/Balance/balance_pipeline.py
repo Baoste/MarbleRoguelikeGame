@@ -196,6 +196,42 @@ def stable_fingerprint(*paths: Path) -> str:
     return digest.hexdigest()
 
 
+def read_game_content(path: Path, devices_path: Path) -> dict[str, Any]:
+    """Resolve selected device IDs for analysis, while accepting expanded historical snapshots."""
+    content = read_json(path)
+    ids = content["Devices"]
+    if all(isinstance(device, dict) for device in ids):
+        return content
+
+    tiers = {"common": 0, "uncommon": 1, "rare": 2, "legendary": 3}
+    devices = {}
+    for value in ids:
+        if type(value) not in (int, float) or not 1 <= value <= 2**32 - 1 or value != int(value):
+            raise ValueError(f"{path}: invalid device ID {value!r}")
+        device_id = int(value)
+        if device_id in devices:
+            raise ValueError(f"{path}: duplicate device ID {device_id}")
+        folder = devices_path / str(device_id)
+        manifest = read_json(folder / "manifest.json")
+        if manifest["version"] != 1:
+            raise ValueError(f"{folder}: unsupported device manifest version")
+        definition = read_json(folder / manifest["device"])
+        metadata = read_json(folder / manifest["metadata"])
+        if definition["Id"] != device_id or metadata["type"] != "device":
+            raise ValueError(f"{folder}: device ID or type mismatch")
+        devices[device_id] = dict(
+            definition,
+            Name=metadata["name"],
+            Description=metadata["description"],
+            Price=metadata.get("purchasePrice", 9),
+            SellPrice=metadata["value"],
+            Rarity=tiers[metadata.get("rarity", "common")],
+            Durability=metadata.get("durability", 20),
+        )
+    content["Devices"] = [devices[device_id] for device_id in sorted(devices)]
+    return content
+
+
 def load_physics(path: Path) -> tuple[dict[tuple[str, float], RouteProfile], dict[str, Any]]:
     if not path.exists():
         raise SystemExit(
@@ -1777,7 +1813,7 @@ def simulate(root: Path, runs: int, seed: int, balance_source_path: Path | None 
     physical_path = docs / "physical_profile.json"
     proposal_path = root / "Tools/Balance/proposals.json"
     balance_source = read_json(balance_path)
-    content_source = read_json(content_path)
+    content_source = read_game_content(content_path, root / "Assets/Resources/Devices")
     physics, physical_raw = load_physics(physical_path)
     proposals = read_json(proposal_path) if proposal_path.exists() else {}
 
@@ -1854,7 +1890,7 @@ def simulate_prices(root: Path, runs: int, seed: int) -> None:
     docs = root / "Docs/Balance"
     docs.mkdir(parents=True, exist_ok=True)
     balance = read_json(root / "Assets/Resources/GameBalance.json")
-    content = read_json(root / "Assets/Resources/GameContent.json")
+    content = read_game_content(root / "Assets/Resources/GameContent.json", root / "Assets/Resources/Devices")
     physics, _ = load_physics(docs / "physical_profile.json")
     proposals = read_json(root / "Tools/Balance/proposals.json")
     current_physics = copy.deepcopy(physics)
@@ -1892,7 +1928,8 @@ def simulate_items(root: Path, runs: int, seed: int, content_source_path: Path |
     docs = root / "Docs/Balance"
     docs.mkdir(parents=True, exist_ok=True)
     balance = read_json(root / "Assets/Resources/GameBalance.json")
-    content = read_json(content_source_path or (root / "Assets/Resources/GameContent.json"))
+    content = read_game_content(content_source_path or (root / "Assets/Resources/GameContent.json"),
+                                root / "Assets/Resources/Devices")
     physics, _ = load_physics(docs / "physical_profile.json")
     proposals = read_json(root / "Tools/Balance/proposals.json")
     current_physics = copy.deepcopy(physics)

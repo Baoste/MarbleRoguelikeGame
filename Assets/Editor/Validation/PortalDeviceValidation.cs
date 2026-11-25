@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using Unity.Entities;
@@ -140,8 +139,8 @@ namespace MarblesECS.Editor
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly OwnedDeviceSnapshot[] Owned;
-            internal readonly List<MResLoadHandle> Views = new List<MResLoadHandle>();
-            private readonly List<MResLoadHandle> fields = new List<MResLoadHandle>();
+            internal readonly List<DeviceViewHandle> Views = new List<DeviceViewHandle>();
+            private readonly List<DeviceViewHandle> fields = new List<DeviceViewHandle>();
             internal SimulationContext C => Simulation.Context;
             internal Rig(int pairCount = 1)
             {
@@ -165,7 +164,7 @@ namespace MarblesECS.Editor
                 for (int i = 0; i < Owned.Length; i++)
                 {
                     Check(Simulation.PlaceDevice(Owned[i].InstanceId, i * 2, 0, 0), "place each purchased portal independently");
-                    var view = MResDeviceView.Create(Owned[i], Board.transform, C.DeviceScripts.Get(Owned[i].InstanceId, 103)); Views.Add(view);
+                    var view = DeviceView.Create(Owned[i], Board.transform, C.DeviceScripts.Get(Owned[i].InstanceId, 103)); Views.Add(view);
                     view.Root.transform.localPosition = new Vector3(i * 2, 0, 0);
                     view.Root.transform.localRotation = Quaternion.Euler(0, i % 2 == 1 ? 130 : 0, 0);
                     view.Root.SetActive(true);
@@ -192,12 +191,12 @@ namespace MarblesECS.Editor
             internal DeviceContactContext Api(MarbleKey key, int index)
             {
                 CampaignStateUtility.FindDevice(C, Owned[index].InstanceId, out var device); Bridge.TryGetDevicePose(Owned[index].InstanceId, out var pose);
-                return new DeviceContactContext(C, Ball(key), device, Views[index].Root.GetComponent<MResDeviceBody>().Contact(key, Body(key).position), pose);
+                return new DeviceContactContext(C, Ball(key), device, Views[index].Root.GetComponent<DeviceBody>().Contact(key, Body(key).position), pose);
             }
             internal void Contact(MarbleKey key, int index)
             {
                 Simulation.BeforePhysics(Dt, Bridge, Vector3.up * 10, Quaternion.identity);
-                Simulation.EnqueueContact(Views[index].Root.GetComponent<MResDeviceBody>().Contact(key, Body(key).position)); Simulation.AfterPhysics(Bridge);
+                Simulation.EnqueueContact(Views[index].Root.GetComponent<DeviceBody>().Contact(key, Body(key).position)); Simulation.AfterPhysics(Bridge);
             }
             internal MarblePhysicsState Step(MarbleKey key)
             {
@@ -209,7 +208,7 @@ namespace MarblesECS.Editor
                 var definition = C.Balance.Devices.Single(d => d.Id == 9004); CampaignStateUtility.CreateDevice(C, definition, definition.Price);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last(); CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
-                var view = MResDeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id)); fields.Add(view);
+                var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id)); fields.Add(view);
                 view.Root.transform.localPosition = new Vector3(x, 0, 0); view.Root.transform.localRotation = Quaternion.Euler(0, yaw, 0);
                 view.Root.SetActive(true); Physics.SyncTransforms(); return view.Root.transform.rotation * Vector3.back * definition.Strength;
             }

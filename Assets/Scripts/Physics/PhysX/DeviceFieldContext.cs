@@ -7,7 +7,7 @@ namespace MarblesECS.PhysX
     [Preserve]
     public sealed class DeviceFieldContext
     {
-        private MResDeviceBody device;
+        private DeviceBody device;
         private readonly bool magnetic;
         private readonly float response, magneticRadius, range, strength, distance, forwardOffset, radius, deltaTime;
         private readonly Vector3 position;
@@ -28,7 +28,7 @@ namespace MarblesECS.PhysX
         public Vector3 Forward { get { RequireOpen(); return device.Forward; } }
         public Vector3 Up { get { RequireOpen(); return device.Up; } }
         public float DeltaTime { get { RequireOpen(); return deltaTime; } }
-        internal DeviceFieldContext(MResDeviceBody device, MarbleBody ball, float deltaTime, Func<bool> tryUse = null)
+        internal DeviceFieldContext(DeviceBody device, MarbleBody ball, float deltaTime, Func<bool> tryUse = null)
         {
             this.tryUse = tryUse;
             this.device = device; this.deltaTime = deltaTime;

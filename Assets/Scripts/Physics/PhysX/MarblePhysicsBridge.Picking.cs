@@ -22,14 +22,14 @@ namespace MarblesECS.PhysX
             for (int i = 0; i < count; i++)
             {
                 var hit = devicePickHits[i];
-                var device = hit.collider.GetComponentInParent<MResDeviceBody>();
+                var device = hit.collider.GetComponentInParent<DeviceBody>();
                 if (device == null || !device.isActiveAndEnabled || !device.GameplayEnabled || device.Script == null ||
                     !device.Script.HasFunction("OnActivate") || hit.distance >= nearest) continue;
                 nearest = hit.distance; instanceId = device.InstanceId;
             }
             // Exhaustion disables gameplay colliders. A small logical pick volume still lets the player
             // complete previously accepted manual holds without enabling collisions or new effects.
-            foreach (var device in MResDeviceBody.Active)
+            foreach (var device in DeviceBody.Active)
             {
                 if (device == null || device.gameObject.scene != scene || !device.isActiveAndEnabled || device.GameplayEnabled ||
                     device.Script == null || !device.Script.HasFunction("OnActivate") || !(canCompleteDevice?.Invoke(device.InstanceId) ?? false)) continue;

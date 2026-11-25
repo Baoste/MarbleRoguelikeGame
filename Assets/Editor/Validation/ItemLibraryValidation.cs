@@ -98,7 +98,7 @@ namespace MarblesECS.Editor
                 library.Open();
                 check(library.IsOpen && controller.Paused, "opening preserves an existing pause");
                 check(library.LastError.Length == 0, "catalog loads without error");
-                check(library.DeviceEntryCount == controller.Balance.Devices.Length, "every current MRes device is listed");
+                check(library.DeviceEntryCount == controller.Balance.Devices.Length, "every current device is listed");
                 check(library.TotalEntryCount == library.DeviceEntryCount, "catalog total has no extra entries");
                 check(library.Font != null, "Chinese TMP font is assigned");
                 foreach (char character in "道具装置稀有耐久")

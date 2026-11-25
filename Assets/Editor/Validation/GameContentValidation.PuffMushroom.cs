@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
@@ -114,7 +113,7 @@ namespace MarblesECS.Editor
                 var simulation = new MarbleSimulation(Balance());
                 var bridge = new MarblePhysicsBridge(scene, null, null, simulation.EnqueueContact);
                 var board = new GameObject("PuffMushroomBoard"); SceneManager.MoveGameObjectToScene(board, scene);
-                MResLoadHandle view = null; GameObject obstacle = null;
+                DeviceViewHandle view = null; GameObject obstacle = null;
                 try
                 {
                     simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -123,7 +122,7 @@ namespace MarblesECS.Editor
                     var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var e);
                     var data = c.Manager.GetComponentData<OwnedDeviceData>(e); data.Placed = true; c.Manager.SetComponentData(e, data);
                     board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(-63, 121, 0));
-                    view = MResDeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
+                    view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
                     var colliders = view.Root.GetComponentsInChildren<Collider>().Where(c => c.name != "PlacementVolume").ToArray(); Check(colliders.Length == 1 && colliders[0].isTrigger, "mushroom has a single nonsolid entry sensor");
                     Check(view.Root.transform.Find("Stem") != null && view.Root.transform.Find("Cap") != null, "package contains mushroom model");
                     for (int i = 0; i < 8; i++) Check(view.Root.transform.Find("Opening" + i) != null, "model contains eight open mouths");
@@ -138,7 +137,7 @@ namespace MarblesECS.Editor
                     multiplierData.Placed = true;
                     c.Manager.SetComponentData(multiplierEntity, multiplierData);
                     var multiplierSnapshot = simulation.GetOwnedDevices().Single(d => d.InstanceId == multiplierData.InstanceId);
-                    using var multiplierView = MResDeviceView.Create(multiplierSnapshot, board.transform,
+                    using var multiplierView = DeviceView.Create(multiplierSnapshot, board.transform,
                         c.DeviceScripts.Get(multiplierData.InstanceId, multiplier.Id));
                     var target = multiplierView.Root.transform;
                     target.localPosition = new Vector3(2, 0, 0);

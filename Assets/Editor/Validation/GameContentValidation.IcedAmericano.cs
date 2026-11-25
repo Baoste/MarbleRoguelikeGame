@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
@@ -112,7 +111,7 @@ namespace MarblesECS.Editor
                 if (hit.HasImpact) { impacts++; impactNormal = hit.Normal; }
                 simulation.EnqueueContact(hit);
             });
-            var board = new GameObject("IcedAmericanoBoard"); SceneManager.MoveGameObjectToScene(board, scene); MResLoadHandle view = null;
+            var board = new GameObject("IcedAmericanoBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
             try
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -123,7 +122,7 @@ namespace MarblesECS.Editor
                 var surface = board.AddComponent<BoxCollider>();
                 surface.center = new Vector3(0, -.1f, 0);
                 surface.size = new Vector3(3, .2f, 3);
-                view = MResDeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));
+                view = DeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));
                 view.Root.SetActive(true); Physics.SyncTransforms();
                 var colliders = view.Root.GetComponentsInChildren<Collider>(true).Where(c => c.name != "PlacementVolume").ToArray();
                 Check(colliders.Length == 1 && !colliders[0].isTrigger, "coffee cup has one solid collider");

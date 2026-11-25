@@ -112,7 +112,7 @@
 - 已有 Session 相关组件、Campaign 结算/商店系统、弹珠与装置系统、PhysX
   Bridge、快照和配置校验。
 - 现有基础数值配置采用 `GameBalance.json`；内容配置包含
-  `GameContent.json`；场景和 MRes 资源也承担部分配置职责。
+  `GameContent.json`；场景和装置资源也承担部分配置职责。
 - 当前没有完整的跨应用持久化存档流程（请核实最新代码）。
 
 ### 2.1 优先检查的文档和代码

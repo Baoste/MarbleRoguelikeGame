@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
@@ -183,7 +182,7 @@ namespace MarblesECS.Editor
             var scene = SceneManager.CreateScene("PiggyBankPhysics_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             var simulation = new MarbleSimulation(Balance()); var hits = new List<MarbleContact>();
             var bridge = new MarblePhysicsBridge(scene, null, null, contact => { if (contact.HasImpact) hits.Add(contact); simulation.EnqueueContact(contact); });
-            var board = new GameObject("PiggyBankBoard"); SceneManager.MoveGameObjectToScene(board, scene); MResLoadHandle view = null;
+            var board = new GameObject("PiggyBankBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
             try
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -194,7 +193,7 @@ namespace MarblesECS.Editor
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; c.Manager.SetComponentData(entity, data);
                 var campaign = c.Campaign; campaign.Coins = 25; c.Campaign = campaign;
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
-                view = MResDeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 view.Root.SetActive(true); Physics.SyncTransforms();
                 Check(view.Root.GetComponent<CapsuleCollider>() != null && !view.Root.GetComponent<CapsuleCollider>().isTrigger, "pig package supplies a solid collision body");
                 Check(view.Root.transform.Find("Snout") != null && view.Root.transform.Find("CoinSlot") != null, "runtime package includes the pig snout and coin slot");

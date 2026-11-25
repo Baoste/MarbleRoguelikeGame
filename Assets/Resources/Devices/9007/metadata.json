@@ -1,0 +1,9 @@
+{
+  "name": "大炮",
+  "description": "每0.5秒旋转45°，最多存入5颗弹珠；点击后沿当前方向以速度6全数发射。",
+  "value": 120,
+  "type": "device",
+  "purchasePrice": 14,
+  "rarity": "uncommon",
+  "durability": 20
+}

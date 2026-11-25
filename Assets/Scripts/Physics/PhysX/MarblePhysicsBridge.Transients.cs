@@ -9,7 +9,7 @@ namespace MarblesECS.PhysX
         public bool TryCreateTransientVisual(int instanceId, int visualId, string nodePath, Vector3 position)
         {
             if (disposed || visualId <= 0 || transientVisuals.ContainsKey(visualId) || !Finite(position) || string.IsNullOrEmpty(nodePath)) return false;
-            foreach (var device in MResDeviceBody.Active)
+            foreach (var device in DeviceBody.Active)
             {
                 if (device == null || device.InstanceId != instanceId || device.gameObject.scene != scene) continue;
                 var template = device.transform.Find(nodePath);
@@ -37,7 +37,7 @@ namespace MarblesECS.PhysX
         }
         private static void CopyMeshes(Transform source, Transform target)
         {
-            // Copy presentation only. Never clone MRes behaviours, scripts, rigidbodies or colliders.
+            // Copy presentation without attaching device scripts, rigidbodies or colliders.
             var filter = source.GetComponent<MeshFilter>(); var renderer = source.GetComponent<MeshRenderer>();
             if (filter != null && renderer != null)
             {

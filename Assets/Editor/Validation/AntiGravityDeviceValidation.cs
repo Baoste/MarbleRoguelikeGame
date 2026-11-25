@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MRes;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using Unity.Entities;
@@ -174,10 +173,10 @@ namespace MarblesECS.Editor
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly Entity Device;
-            internal readonly MResDeviceBody Source;
+            internal readonly DeviceBody Source;
             internal SimulationContext C => Simulation.Context;
             internal DevicePose Pose { get { Bridge.TryGetDevicePose(Source.InstanceId, out var pose); return pose; } }
-            private readonly List<MResLoadHandle> views = new List<MResLoadHandle>();
+            private readonly List<DeviceViewHandle> views = new List<DeviceViewHandle>();
             private readonly float dt;
             private int launches;
             internal Rig(float dt = .1f)
@@ -199,16 +198,16 @@ namespace MarblesECS.Editor
                 CampaignStateUtility.FindDevice(C, Source.InstanceId, out Device);
                 Check(Source.GetComponentInChildren<MeshCollider>().isTrigger, "package has a cylinder trigger");
             }
-            internal MResDeviceBody Add(uint id, Vector3 position)
+            internal DeviceBody Add(uint id, Vector3 position)
             {
                 var definition = C.Balance.Devices.Single(d => d.Id == id);
                 CampaignStateUtility.CreateDevice(C, definition, definition.Price);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last();
                 CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
-                var view = MResDeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 views.Add(view); view.Root.transform.localPosition = position; view.Root.SetActive(true); Physics.SyncTransforms();
-                return view.Root.GetComponent<MResDeviceBody>();
+                return view.Root.GetComponent<DeviceBody>();
             }
             internal Entity Ball(MarbleKey key) => C.Marbles[key];
             internal bool Active(MarbleKey key) => C.Manager.HasComponent<TimedGravity>(Ball(key));
@@ -230,7 +229,7 @@ namespace MarblesECS.Editor
                 Bridge.TrySetVelocity(key, new Vector3(3, 0, 4).normalized * speed); Body(key).angularVelocity = new Vector3(1, 2, 3);
                 Simulation.EnqueueContact(Source.Contact(key, Body(key).position)); Simulation.AfterPhysics(Bridge);
             }
-            internal void Hit(MarbleKey key, MResDeviceBody other)
+            internal void Hit(MarbleKey key, DeviceBody other)
             {
                 Simulation.BeforePhysics(dt, Bridge, Vector3.up * 10, Quaternion.identity);
                 Simulation.EnqueueContact(other.Contact(key, Body(key).position)); Simulation.AfterPhysics(Bridge);

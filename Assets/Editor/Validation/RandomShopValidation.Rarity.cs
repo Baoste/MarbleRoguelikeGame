@@ -17,9 +17,9 @@ namespace MarblesECS.Editor
                 var expected = uncommon.Contains(definition.Id) ? DeviceRarity.Uncommon : rare.Contains(definition.Id) ? DeviceRarity.Rare : DeviceRarity.Common;
                 Check(definition.Rarity == expected, "catalog matches the requested device tiers: " + definition.Name);
                 Check(definition.Price == DeviceRarityRules.StandardPurchasePrice(expected), "catalog has the tier purchase price: " + definition.Name);
-                var metadata = DeviceResourceCatalog.Current.Get(definition.Id).Package.Metadata;
+                var metadata = DeviceResourceCatalog.Current.Get(definition.Id).Metadata;
                 Check(metadata.rarity == expected.ToString().ToLowerInvariant() && metadata.purchasePrice == definition.Price,
-                    "packaged metadata and shop definitions agree");
+                    "metadata.json and shop definitions agree");
             }
             Check(Presentation.DeviceDisplayText.Rarity(DeviceRarity.Uncommon) == "罕见" &&
                 Presentation.DeviceDisplayText.Rarity(DeviceRarity.Rare) == "稀有", "UI uses the new four-tier vocabulary");

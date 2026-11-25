@@ -1,6 +1,6 @@
 # 装置 Lua API 参考
 
-本文定义游戏装置脚本可使用的事件、上下文、属性和方法。接口以当前 C# 实现为准；制作脚本位于 `MResPacker/Authoring/Lua`，发布脚本包含在 `Resources/Devices/*.mres` 中。
+本文定义游戏装置脚本可使用的事件、上下文、属性和方法。接口以当前 C# 实现为准。装置脚本位于 `Resources/Devices/<id>/main.lua`。
 
 文档采用《异星工厂》官方文档的“事件、类、成员、类型”组织方式，参见 [类参考](https://lua-api.factorio.com/latest/classes/LuaEntity.html)与[事件参考](https://lua-api.factorio.com/latest/events.html)。本项目的函数名称、调用语法和生命周期以本文为准。
 
@@ -15,7 +15,7 @@
 | 运动与快照 | [DeviceMotionApi](#devicemotionapi)、[DeviceEndpoint](#deviceendpoint)、[DeviceHoldInfo](#deviceholdinfo)、[DeviceImpactInfo](#deviceimpactinfo) |
 | 计算与全盘效果 | [DeviceVectorApi](#devicevectorapi)、[DeviceBoardApi](#deviceboardapi) |
 | 生成请求 | [DeviceCopy](#devicecopy)、[DevicePortion](#deviceportion)、[DeviceSplitBatch](#devicesplitbatch)、[DeviceSpawnBatch](#devicespawnbatch) |
-| 表现与配置 | [DeviceTransientInfo](#devicetransientinfo)、[MResLuaObject](#mresluaobject)、[Metadata](#metadata) |
+| 表现与配置 | [DeviceTransientInfo](#devicetransientinfo)、[DeviceLuaObject](#deviceluaobject)、[Metadata](#metadata) |
 | 附录 | [兼容接口](#compatibility)、[规则与生命周期](#lifecycle)、[示例](#examples)、[维护](#maintenance) |
 
 <a id="conventions"></a>
@@ -93,20 +93,20 @@ end
 
 回调名是当前接收实例脚本中的全局函数名。一次回调异常不会阻止列表中的其他接收者；异常前已完成的修改保持有效。
 
-### MRes 表现事件
+### 装置表现事件
 
-这组事件来自 MRes 展示对象，不接收游戏上下文，不应代替固定模拟事件实现游戏计时。
+这组事件来自 装置的 Prefab 展示对象，不接收游戏上下文，不应代替固定模拟事件实现游戏计时。
 
 | 签名 | 参数 | 说明 |
 | --- | --- | --- |
 | `Start()` | 无 | 展示对象启动时，可根据 Lua 普通缓存恢复外观。重建展示对象可能再次调用。 |
 | `Update(deltaTime)` | `number` | Unity 渲染更新秒数。 |
 | `FixedUpdate(deltaTime)` | `number` | Unity FixedUpdate 秒数，不等同于本游戏手动模拟的 `OnTick`。 |
-| `OnCollisionEnter(other)` / `OnCollisionStay(other)` / `OnCollisionExit(other)` | `MResLuaObject` | MRes 原始碰撞通知。 |
-| `OnTriggerEnter(other)` / `OnTriggerStay(other)` / `OnTriggerExit(other)` | `MResLuaObject` | MRes 原始触发器通知。 |
+| `OnCollisionEnter(other)` / `OnCollisionStay(other)` / `OnCollisionExit(other)` | `DeviceLuaObject` | Unity 原始碰撞通知。 |
+| `OnTriggerEnter(other)` / `OnTriggerStay(other)` / `OnTriggerExit(other)` | `DeviceLuaObject` | Unity 原始触发器通知。 |
 | `OnDestroy()` | 无 | Lua 脚本实例被释放时调用；共享脚本的展示对象解绑不等于释放脚本。 |
 
-原始碰撞通知不提供计分、耐久或 ECS 弹珠上下文。装置玩法使用游戏事件；表现事件使用[表现对象](#mresluaobject)。MRes 表现回调抛错时，该展示行为组件会停止后续分发。
+原始碰撞通知不提供计分、耐久或 ECS 弹珠上下文。装置玩法使用游戏事件；表现事件使用[表现对象](#deviceluaobject)。装置表现回调抛错时，该展示行为组件会停止后续分发。
 
 <a id="shared"></a>
 
@@ -121,13 +121,13 @@ end
 | `InstanceId` | `integer` | 只读 | C / E / O | 当前库存实例 ID。 |
 | `DefinitionId` | `integer` | 只读 | C / E / O | 装置定义 ID，同类实例相同。 |
 | `RoundId` | `integer` | 只读 | C / E / O | C / E 为模拟当前回合；O 为 Build 阶段即将开始的回合。 |
-| `Parameter` | `number` | 只读 | C / E / O | `game/device.json.Value`。 |
-| `Strength` | `number` | 只读 | C / E / O | `game/device.json.Strength`，具体用途由脚本决定。 |
+| `Parameter` | `number` | 只读 | C / E / O | `device.json.Value`。 |
+| `Strength` | `number` | 只读 | C / E / O | `device.json.Strength`，具体用途由脚本决定。 |
 | `DurabilityLimit` | `integer` | 只读 | C / E / O | 当前实例有效耐久上限；`-1` 无限，`0` 休眠。 |
 | `RemainingDurability` | `integer` | 只读 | C / E / O | 本回合剩余次数；`-1` 无限。O 可读到本次暂存修改。 |
 | `Time` | `number` | 只读 | C / E | 当前回合模拟秒数。 |
 | `DeltaTime` | `number` | 只读 | C / E | 固定模拟步秒数；E 在尚未运行固定步时可能为 0。 |
-| `Range` | `number` | 只读 | C / E | `game/device.json.Range`，不会自动筛选范围。 |
+| `Range` | `number` | 只读 | C / E | `device.json.Range`，不会自动筛选范围。 |
 | `ScoreMultiplier` | `number` | 只读 | C / E | 当前装置配置倍率，不是球的累计倍率。 |
 | `Coins` | `number` | 只读 | C / E | 实时钱包余额，上限 9,000,000,000,000,000。 |
 | `Blood` / `BloodCapacity` | `number` | 只读 | C / E | 玩家当前血量 / 容量。 |
@@ -594,7 +594,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 | 属性 | 类型 | 访问 | 说明 |
 | --- | --- | --- | --- |
 | `Position` | `Vector3` | 只读 | 当前物理视图的装置中心。 |
-| `Radius` | `number` | 只读 | 从独立占地 SphereCollider 计算出的装置世界半径，含缩放；不再读取 `game/device.json.Radius`。此只读接口继续供出射等效果组合使用。 |
+| `Radius` | `number` | 只读 | 从独立占地 SphereCollider 计算出的装置世界半径，含缩放；不再读取 `device.json.Radius`。此只读接口继续供出射等效果组合使用。 |
 | `Forward` | `Vector3` | 只读 | 本地 -Z 对应的世界单位方向。 |
 | `Up` | `Vector3` | 只读 | 本地 +Y 对应的棋盘法向。 |
 | `Down` | `Vector3` | 只读 | 世界向下方向在棋盘平面上的投影；退化时使用 Forward。 |
@@ -624,7 +624,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 | 参数 | 类型 | 限制 |
 | --- | --- | --- |
-| `nodePath` | `string` | 当前 MRes 根节点下非空模板路径，须存在并包含网格。 |
+| `nodePath` | `string` | 当前 Prefab 根节点下非空模板路径，须存在并包含网格。 |
 | `position` | `Vector3` | 有限世界起点。 |
 | `velocity` | `Vector3` | 有限世界速度，可为零；终点也必须有限。 |
 | `seconds` | `number` | 有限 `(0, 60]`。 |
@@ -670,7 +670,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 ### OverlapsBox(nodePath) → boolean
 
-参数：`nodePath: string`，相对于 MRes 根节点的 BoxCollider 路径；空字符串查根节点。
+参数：`nodePath: string`，相对于 Prefab 根节点的 BoxCollider 路径；空字符串查根节点。
 
 检测当前球体是否与真实盒体相交或接触，包含中心、旋转、缩放及球半径；不是世界轴对齐包围盒检测。缺失、禁用或未激活的 Collider 返回 false。只查询，不施力、不扣耐久。
 
@@ -729,7 +729,7 @@ Build 阶段的一次库存提交上下文。源码：[DeviceOfferContext.cs](..
 
 ### 提交条件
 
-来源和目标均为本会话的装置，目标已放置，不能提交自身。接收方可在 `game/device.json` 中设置 `AcceptsPlacedOffers = true`，允许直接提交盘面上的装置。缺省时只接收未放置的背包装置。暂停、战斗阶段或无 OnOffer 的目标不接受。Build 阶段可以给上回合已耗尽的实例准备下一回合。
+来源和目标均为本会话的装置，目标已放置，不能提交自身。接收方可在 `device.json` 中设置 `AcceptsPlacedOffers = true`，允许直接提交盘面上的装置。缺省时只接收未放置的背包装置。暂停、战斗阶段或无 OnOffer 的目标不接受。Build 阶段可以给上回合已耗尽的实例准备下一回合。
 
 控制器的 CanOfferDevice 只检查资格和函数存在，不执行 Lua，也不保证脚本最终 Accept。
 
@@ -896,7 +896,7 @@ destination.Position
 | --- | --- | --- | --- |
 | `InstanceId` | `integer` | 只读 | 装置库存实例。 |
 | `Position` | `Vector3` | 只读 | 装置世界中心。 |
-| `Radius` | `number` | 只读 | 从独立占地 SphereCollider 计算出的装置世界半径，含缩放；不再读取 `game/device.json.Radius`。此只读接口继续供出射等效果组合使用。 |
+| `Radius` | `number` | 只读 | 从独立占地 SphereCollider 计算出的装置世界半径，含缩放；不再读取 `device.json.Radius`。此只读接口继续供出射等效果组合使用。 |
 | `Forward` | `Vector3` | 只读 | 旋转后的本地 -Z 单位方向。 |
 | `Up` | `Vector3` | 只读 | 旋转后的本地 +Y 单位方向。 |
 | `Down` | `Vector3` | 只读 | 世界向下方向在 Up 所定义平面的投影；退化时为 Forward。 |
@@ -1166,15 +1166,15 @@ Generation 加 1，SpawnSourceId 改为本实例，等分祖先加入本实例�
 | `Velocity` | `Vector3` | 创建时的世界速度。 |
 | `Duration` | `number` | 创建时的请求秒数。 |
 
-<a id="mresluaobject"></a>
+<a id="deviceluaobject"></a>
 
-## MResLuaObject
+## DeviceLuaObject
 
-脚本全局 `self` 指向当前绑定的 MRes 展示对象；没有展示对象时为 nil。源码：[MResLuaObject.cs](../MRes/Runtime/Lua/MResLuaObject.cs)。
+脚本全局 `self` 指向当前绑定的 装置的 Prefab 展示对象；没有展示对象时为 nil。源码：[DeviceLuaObject.cs](../Scripts/DeviceLua/DeviceLuaObject.cs)。
 
 self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通过 Motion 修改弹珠，避免绕过 ECS / PhysX 同步。
 
-<a id="mresluaobject-trysetrenderersvisible"></a>
+<a id="deviceluaobject-trysetrenderersvisible"></a>
 
 ### TrySetRenderersVisible(nodePath, visible) → boolean
 
@@ -1193,12 +1193,12 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 | `GetValue()` | `number` | 单件出售价格，无 metadata 时为 0。 |
 | `GetPurchasePrice()` | `number` | 基础购买价格，无 metadata 时为 9。 |
 | `GetRarity()` | `string` | 稀有度，无 metadata 时为 common。 |
-| `GetDurability()` | `integer` | 包内默认耐久，无 metadata 时为 20；不是剩余耐久。 |
+| `GetDurability()` | `integer` | 配置的默认耐久，无 metadata 时为 20；不是剩余耐久。 |
 | `GetItemType()` | `string?` | 枚举名称 "Device" / "Medicine"，不是 JSON 小写类型值。 |
 
 ### 原始表现操作
 
-以下是 MRes 对象接口，均不提供游戏运动接口的障碍检查、限速和状态同步。
+以下是 展示对象接口，均不提供游戏运动接口的障碍检查、限速和状态同步。
 
 | 签名 | 参数 / 返回值 | 说明 |
 | --- | --- | --- |
@@ -1213,7 +1213,7 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 
 ## Metadata 与参数来源
 
-包内 `metadata/metadata.json` 定义内容身份和交易基础值；脚本全局 `metadata` 是加载后的 MResMetadata 对象，按只读配置使用。
+装置目录的 `metadata.json` 定义内容身份和交易基础值；脚本全局 `metadata` 是加载后的 DeviceMetadata 对象，按只读配置使用。
 
 | JSON 字段 | JSON 类型 | 默认 / 范围 | 含义 |
 | --- | --- | --- | --- |
@@ -1225,9 +1225,9 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 | `durability` | `integer` | 默认 20；-1 或 1–10000 | 每回合默认次数，-1 无限。包内不接受 0。 |
 | `type` | `string` | device / medicine | 包类型；当前装置目录只接受 device。 |
 
-旧包缺少 purchasePrice、rarity、durability 时加载器补默认值。运行时 `metadata.type` 是 C# MResItemType 枚举；需要名称可用 self:GetItemType()，返回首字母大写枚举名。当前游戏尚未提供 Lua 药物玩法接口。
+缺少 purchasePrice、rarity、durability 时，加载器使用 9、common 和 20。运行时 `metadata.type` 是 C# DeviceItemType 枚举；需要名称可用 self:GetItemType()，返回 `Device`。
 
-附加业务文件 `game/device.json` 的参数映射：
+附加业务文件 `device.json` 的参数映射：
 
 | 配置 | Lua 入口 | 说明 |
 | --- | --- | --- |
@@ -1391,11 +1391,11 @@ Field 是该装置制作 Prefab 的节点路径，由脚本选择。
 
 引擎提供职责单一、可独立组合的基础能力；装置条件、方向、数值和多阶段流程由 Lua 决定。通用接口不包含特定装置名称、ID 或后续效果。
 
-本文件是装置效果 API 的统一契约。新增或修改接口时更新所属类型、参数、返回值、失败条件、适用事件、生命周期及示例，并同步制作 Lua、受影响 MRes 和行为验证。
+本文件是装置效果 API 的统一契约。新增或修改接口时更新所属类型、参数、返回值、失败条件、适用事件、生命周期及示例，并同步受影响的装置 Lua 和行为验证。
 
 | 路径 / 入口 | 用途 |
 | --- | --- |
-| [MResPacker](../MResPacker/README.md) | 独立制作工具、打包流程和格式限制。 |
+| [装置资源](../Resources/Devices/README.md) | 装置目录、Prefab、配置和 Lua 的维护方式。 |
 | [DeviceScriptSystem.cs](../Scripts/System/DeviceScriptSystem.cs) | 游戏事件分发。 |
 | [Scripts/link.xml](../Scripts/link.xml) | Player 裁剪所需 Lua 可访问类型。 |
 | [Editor/Validation](../Editor/Validation) | Lua、生命周期、物理及交易行为验证。 |
@@ -1403,4 +1403,4 @@ Field 是该装置制作 Prefab 的节点路径，由脚本选择。
 | [Validation.md](Validation.md) | 验证记录。 |
 | [装置实现参考](Device_Lua_Examples.md) | 现有装置组合方式和制作路径。 |
 
-内置制作资源放在 MResPacker，游戏成品放在 Resources/Devices。GameContent.json.Devices 由当前全部 MRes 完整生成；修改文档不会更新包内脚本。
+在 `Resources/Devices/<id>/` 编辑装置资源，并在 `GameContent.json.Devices` 维护启用的 ID。

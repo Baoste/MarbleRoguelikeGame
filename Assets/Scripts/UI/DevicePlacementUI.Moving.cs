@@ -22,7 +22,7 @@ public sealed partial class DevicePlacementUI
     {
         ClearPlacedDeviceHover();
         SyncPlacedObjects();
-        preview = MResDeviceView.Create(device, BoardRoot, null, true);
+        preview = DeviceView.Create(device, BoardRoot, null, true);
         SelectedInstanceId = device.InstanceId;
         selectionRound = Controller.Snapshot.RoundId;
         previewAngle = device.Angle;
@@ -163,7 +163,7 @@ public sealed partial class DevicePlacementUI
     {
         get
         {
-            // Packaged footprints already include the device's authored scale.
+            // The footprint already includes the prefab's authored scale.
             var scale = BoardRoot.lossyScale;
             return Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
         }
