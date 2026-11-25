@@ -1,17 +1,19 @@
 # 每日挑战运行架构
 
-每日流程和原生产流程共用 `MarbleSimulation` 的 World。`TestScene` 通过 `StartWithDayCampaign` 从 `Resources/GameDays.json` 启动 Day0。勾选 `EnableRandomStartingDevices` 会直接启动完整的弹珠机战役，发放全目录装置并启用全部生产功能。调用者也可显式调用 `TryStartConfiguredDayCampaign` 或 `TryStartDayCampaign`。关闭场景的每日挑战启动选项也可直接使用机台流程，旧场景验证菜单在各自的 PlayMode 会话选择这个流程。
+每日流程和原生产流程共用 `MarbleSimulation` 的 World。`TestScene` 通过 `StartWithDayCampaign` 从 `Resources/GameDays.json` 启动 Day0。勾选 `EnableRandomStartingDevices` 会直接启动弹珠机战役，发放全目录装置并启用装置摆放、RUSH 和赌博转盘。调用者也可显式调用 `TryStartConfiguredDayCampaign` 或 `TryStartDayCampaign`。关闭场景的每日挑战启动选项也可直接使用机台流程，旧场景验证菜单在各自的 PlayMode 会话选择这个流程。
 
 ```mermaid
 flowchart LR
     W["WakeUp · Morning Prep"] -->|"完成前置任务并进入机器"| P["Production"]
+    W -->|"当天启用 Shop，操作终端"| H["Shop Terminal"]
+    H -->|"返回房间"| W
     P -->|"计划中的最后 Stage 达标"| S["DaySettlement"]
     S -->|"提交当天结算"| R["Rest"]
     R -->|"仍有日期"| N["下一天 WakeUp"]
     R -->|"序列结束"| C["Campaign Completed"]
     P -->|"生产失败，恢复检查点"| W
     P --- Q["Build → Playing → Draining → RoundSettled"]
-    Q -->|"仍有生产 Stage"| H["Shop → Build"]
+    Q -->|"仍有生产 Stage"| B["下一轮 Build"]
 ```
 
 ## 权威状态与命令
@@ -30,15 +32,17 @@ flowchart LR
 
 ## 生产计划与结算
 
-`DayProductionPlan` 用首尾 Stage ID 绑定现有 Score 目标的连续区间。Stage 的累计分、越级奖励、提现和商店抽样仍由原生产系统计算。`CampaignSettlementSystem` 按计划上界截断本次结算跨过的 Stage。一个计划可以跑多个生产回合，也可以因越级较早完成。非末段结算为 `Shop`，购买或刷新后仍走 `EnterBuild` 和 `BeginRound`。
+`DayProductionPlan` 用首尾 Stage ID 绑定现有 Score 目标的连续区间。Stage 的累计分、越级奖励和提现仍由原生产系统计算。`CampaignSettlementSystem` 按计划上界截断本次结算跨过的 Stage。一个计划可以跑多个生产回合，也可以因越级较早完成。还剩 Stage 时，结算直接进入下一轮 `Build`。
 
-Day 的 `productionFeatures` 逐项开启 `Shop`、`DevicePlacement`、`Rush` 和 `GamblingWheel`，默认四项都关闭。关闭商店时，非末段结算直接返回 Build。关闭转盘时，其现有分区按普通得分区即时计分。单 Stage 的计划可提供独立 `targetScore`，日程、HUD、提现和结算共享这个目标。Day0 使用 100 分。
+Day 的 `productionFeatures` 逐项开启 `Shop`、`DevicePlacement`、`Rush` 和 `GamblingWheel`，默认四项都关闭。`Shop` 开启 Morning Prep 的商店终端。关闭转盘时，其现有分区按普通得分区即时计分。单 Stage 的计划可提供独立 `targetScore`，日程、HUD、提现和结算共享这个目标。Day0 使用 100 分。
 
-适配器在现有 `BeginRound`、`EnterBuild`、`CashOut` 和完整的 `AfterPhysics` 边界取结果。`SettlementComplete` 首次生效时发布 `RoundSettled`。若同一步进入排空并完成结算，先发 `DrainingEntered`，再发 `RoundSettled`。计划范围内的 `Won` 和 `Lost` 才触发 `ProductionSucceeded` 和 `ProductionFailed`。外层发射和布置命令只在无待处理生命周期的 Production 阶段可用。
+适配器在现有 `BeginRound`、`CashOut` 和完整的 `AfterPhysics` 边界取结果。`SettlementComplete` 首次生效时发布 `RoundSettled`。若同一步进入排空并完成结算，先发 `DrainingEntered`，再发 `RoundSettled`。计划范围内的 `Won` 和 `Lost` 才触发 `ProductionSucceeded` 和 `ProductionFailed`。外层发射和布置命令只在无待处理生命周期的 Production 阶段可用。
 
 ## Morning Prep
 
 Morning Prep 属于 `WakeUp`。ECS 保存当前尝试的目标完成记录，`TryCompleteWakeUp` 在剩余目标为零时才可进入生产。`MorningPrepController` 按配置生成房间物件，等待进入事件结束和自由相机就绪后淡入，淡入结束后才启用行走。玩家用 WASD 行走，按住鼠标右键转视角，靠近纸条按 E 阅读，关闭阅读窗口时提交目标。靠近弹珠机后按 E 提升 `VCamera_Machine` 的 Cinemachine Priority，镜头切换完成后由原生产控制器接手。重试重新实例化房间物件，恢复晨间目标和相机起点。
+
+弹珠机右侧平台放置当天的纸条。当天启用 `Shop` 时，Morning Prep 在同一平台实例化 `Prefabs/ShopTerminal.prefab`。按 E 会选择范围内最近的可用交互点。`TryOpenShop` 在 `WakeUp` 内打开原有商店界面，暂停房间行走并发出 `ShopEntered`。首次打开才从整局随机序列抽取商品。同一次尝试关闭后重开会保留货架和已售记录，付费刷新沿用既有规则。关闭界面即回房间，进入生产仍要求完成前置任务。跳过商店也可开始生产。
 
 ## 事件与规则
 
@@ -61,7 +65,7 @@ Morning Prep 属于 `WakeUp`。ECS 保存当前尝试的目标完成记录，`Tr
 
 恢复时使用新的 Round ID 和表现版本，装置保存的回合编号按偏移重映射，退役球的延迟接触失效。Lua 环境及物理对象的新实例从 ECS 状态和资源重建，持久玩法数据应通过实例 Buffer 保存，表现缓存随重建及正常回合回调刷新。捕获点限定为无活动球的 Build，因此中途刚体姿态、外部场景脚本私有状态和跨应用存档属于后续扩展。PhysX 穿透概率当前由球身份派生，新的 Round ID 与 PhysX 求解均会限制完全复现。回放策略保证共享玩法随机流恢复。
 
-跨日准备集中在 `PrepareDayProduction`。当前技术行为是补血、重新开始计划分数和生产统计、清上一轮商店报价，保留已有钱包和布局，再捕获当日基线。这一接入点留给后续确认的继承策略。失败恢复覆盖当天的购买和刷新结果。选择延续失败 RNG、开始独立子流、开局资源配置、生产与商店编排、Rest 交互、事件选项和跨应用保存仍待策划确认。
+跨日准备集中在 `PrepareDayProduction`。当前技术行为是补血、重新开始计划分数和生产统计、清除上一天的商店报价，保留已有钱包和布局，再捕获当日基线。这一接入点留给后续确认的继承策略。当天生产失败会恢复购买前的钱包、库存和随机流，重试时首次访问重新抽取。选择延续失败 RNG、开始独立子流、开局资源配置、Rest 交互、事件选项和跨应用保存仍待策划确认。
 
 ## 文件索引
 

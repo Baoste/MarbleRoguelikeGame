@@ -6,7 +6,6 @@ namespace MarblesECS.Presentation
     {
         private void DrawShop()
         {
-            DrawSettlement();
             GUILayout.Space(5);
             GUILayout.Label("商店 SHOP · 每个货位本次刷新只能买一次");
             foreach (var offer in Controller.GetShopOffers())
@@ -24,7 +23,8 @@ namespace MarblesECS.Presentation
                 feedback = Controller.RefreshShop() ? "商品已刷新并扣除金币。" : "刷新失败，金币不足。";
             GUI.enabled = true;
             DrawOwnedDevices(false);
-            if (GUILayout.Button("购买完成 → 布置装置")) Controller.EnterBuild();
+            if (GUILayout.Button("返回房间")) Controller.TryCloseShop(Controller.Day.Version);
+            if (!string.IsNullOrEmpty(feedback)) GUILayout.Label(feedback);
         }
 
         private void DrawBuild()

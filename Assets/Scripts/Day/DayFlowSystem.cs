@@ -38,6 +38,8 @@ namespace MarblesECS
             }
         }
         internal DayProgressSnapshot Snapshot => new DayProgressSnapshot(State, Current, definition.Days.Count, context.Round.RandomState, Busy);
+        internal bool ShopOpen => State.ShopOpen;
+        internal bool AllowsShopping => ShopOpen && !Busy;
 
         internal DayFlowSystem(MarbleSimulation simulation, DayCampaignDefinition definition,
             (int first, int end)[] stageRanges, DayRetryRandomPolicy retryRandom, uint runSeed)
@@ -65,6 +67,8 @@ namespace MarblesECS
             var state = State;
             if (state.Version != version) { error = "The Day phase version is stale."; return false; }
             if (Busy) { error = "The Day lifecycle is still processing."; return false; }
+            if (reason == DayTransitionReason.WakeUpCompleted && state.ShopOpen)
+            { error = "Close the shop before using the marble machine."; return false; }
             if (reason == DayTransitionReason.WakeUpCompleted && state.Phase == DayPhase.WakeUp && state.MorningPrepRemaining != 0)
             { error = "Finish Morning Prep before using the marble machine."; return false; }
             if (!DayStateMachine.CanTransition(state, reason))
@@ -106,6 +110,30 @@ namespace MarblesECS
             return false;
         }
 
+        internal bool TryOpenShop(long version)
+        {
+            var state = State;
+            if (state.Version != version || state.Status != DayCampaignStatus.Active || state.Phase != DayPhase.WakeUp ||
+                state.ShopOpen || Busy || !context.HasProductionFeature(ProductionFeature.Shop)) return false;
+
+            if (!state.ShopStockReady) CampaignShopSystem.Generate(context);
+            state.ShopStockReady = true;
+            state.ShopOpen = true;
+            State = state;
+            Publish(DayTrigger.ShopEntered);
+            Pump();
+            return true;
+        }
+
+        internal bool TryCloseShop(long version)
+        {
+            var state = State;
+            if (state.Version != version || !state.ShopOpen) return false;
+            state.ShopOpen = false;
+            State = state;
+            return true;
+        }
+
         internal void ObserveRound(RoundData before, RoundData after, bool stepped, bool cashout = false)
         {
             processing = true;
@@ -136,8 +164,7 @@ namespace MarblesECS
                 state.SettledRounds++;
                 State = state;
                 Publish(DayTrigger.RoundSettled);
-                if (phase == RoundPhase.Shop) Publish(DayTrigger.ShopEntered);
-                else if (phase == RoundPhase.Build) Publish(DayTrigger.BuildEntered);
+                if (phase == RoundPhase.Build) Publish(DayTrigger.BuildEntered);
                 else ReportProductionResult(phase);
             }
             else if (before.Phase != after.Phase)
@@ -309,6 +336,7 @@ namespace MarblesECS
             state.Phase = DayPhase.WakeUp;
             state.Result = DayResult.Pending;
             state.SettlementCommitted = false;
+            state.ShopOpen = state.ShopStockReady = false;
             state.SettledRounds = 0;
             state.ProductionTicks = 0;
             state.AttemptStartRandomState = context.Round.RandomState;

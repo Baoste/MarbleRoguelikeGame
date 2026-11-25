@@ -70,18 +70,6 @@ namespace MarblesECS
             return true;
         }
 
-        public bool EnterBuild()
-        {
-            if (!CanCampaignAct(RoundPhase.Shop) || !context.HasProductionFeature(ProductionFeature.Shop)) return false;
-            var before = context.Round;
-            var round = before;
-            round.Phase = (byte)RoundPhase.Build;
-            round.TargetScore = CampaignStateUtility.TargetScore(context, context.Campaign.StageIndex);
-            context.Round = round;
-            dayFlow?.ObserveRound(before, round, stepped: false);
-            return true;
-        }
-
         public bool CashOut()
         {
             if (!CanCampaignAct(RoundPhase.Playing) || !CampaignStateUtility.CanCashOut(context)) return false;

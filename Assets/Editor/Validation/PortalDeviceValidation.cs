@@ -38,15 +38,15 @@ namespace MarblesECS.Editor
                     var api = r.Api(key, i);
                     Check(api.Motion.FindPartner().InstanceId == owned[i ^ 1].InstanceId, "partner lookup never crosses purchase groups"); api.Close();
                 }
-                r.Shop(); r.Offer();
+                r.Offer();
                 int nextId = r.C.Campaign.NextDeviceId;
                 r.C.Balance.Campaign.MaxOwnedDevices = 5;
-                Check(!r.Simulation.BuyOffer(0), "one remaining inventory slot cannot accept half a pair");
+                Check(!CampaignShopSystem.Buy(r.C, 0), "one remaining inventory slot cannot accept half a pair");
                 Check(r.Simulation.GetOwnedDevices().Length == 4 && r.C.Campaign.NextDeviceId == nextId, "failed pair purchase creates no partial device");
                 Near(1000 - 2 * r.C.Balance.Devices.Single(d => d.Id == 103).Price, r.C.Campaign.Coins, "rejected purchase does not charge coins");
                 r.C.Balance.Campaign.MaxOwnedDevices = 100;
                 var campaign = r.C.Campaign; campaign.Coins = r.C.Balance.Devices.Single(d => d.Id == 103).Price - 1; r.C.Campaign = campaign;
-                Check(!r.Simulation.BuyOffer(0) && r.Simulation.GetOwnedDevices().Length == 4, "insufficient funds cannot create either portal");
+                Check(!CampaignShopSystem.Buy(r.C, 0) && r.Simulation.GetOwnedDevices().Length == 4, "insufficient funds cannot create either portal");
             }
         }
 
@@ -150,11 +150,10 @@ namespace MarblesECS.Editor
                 Simulation = new MarbleSimulation(balance); Bridge = new MarblePhysicsBridge(Scene, null, null, Simulation.EnqueueContact);
                 Simulation.StartSession(Bridge);
                 var campaign = C.Campaign; campaign.Coins = 1000; C.Campaign = campaign;
-                Shop();
                 for (int i = 0; i < pairCount; i++)
                 {
-                    Offer(); Check(Simulation.BuyOffer(0), "shop purchases portal pair");
-                    Check(!Simulation.BuyOffer(0), "a sold offer cannot duplicate its pair");
+                    Offer(); Check(CampaignShopSystem.Buy(C, 0), "shop purchases portal pair");
+                    Check(!CampaignShopSystem.Buy(C, 0), "a sold offer cannot duplicate its pair");
                     Check(Simulation.GetOwnedDevices().Length == (i + 1) * 2, "one purchase adds exactly two devices");
                 }
                 var round = C.Round; round.Phase = (byte)RoundPhase.Build; C.Round = round;
@@ -174,7 +173,6 @@ namespace MarblesECS.Editor
                 Physics.SyncTransforms(); Simulation.BeginRound();
                 Simulation.ApplyGlobalAttribute(974, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
             }
-            internal void Shop() { var round = C.Round; round.Phase = (byte)RoundPhase.Shop; C.Round = round; }
             internal void Offer()
             {
                 var offers = C.Manager.GetBuffer<ShopOfferData>(C.RoundEntity); offers.Clear();

@@ -201,15 +201,15 @@ namespace MarblesECS.Tests
 
             Assert.That(simulation.TryCompleteWakeUp(simulation.Day.Version, out _), Is.True);
             ScoreRound(simulation, physics, balance.Stages[0].TargetScore);
-            Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Shop));
+            Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Build));
             Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.Production));
+            Assert.That(simulation.TryOpenShop(simulation.Day.Version), Is.False);
             Assert.That(simulation.Day.SettledRounds, Is.EqualTo(1));
             Assert.That(seen, Is.EqualTo(new[]
             {
                 (DayTrigger.DrainingEntered, "drain"), (DayTrigger.RoundSettled, "once"), (DayTrigger.RoundSettled, "round")
             }));
             Assert.That(simulation.TryCompleteDaySettlement(simulation.Day.Version, out _), Is.False);
-            Assert.That(simulation.EnterBuild(), Is.True);
             ScoreRound(simulation, physics, balance.Stages[1].TargetScore);
             Assert.That(simulation.Day.SettledRounds, Is.EqualTo(2));
             Assert.That(seen.GetRange(3, 3), Is.EqualTo(new[]

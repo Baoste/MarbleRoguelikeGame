@@ -24,7 +24,7 @@ namespace MarblesECS.Editor
             balance.Campaign.MaxOwnedDevices = 200;
             balance.Campaign.ShopOfferCount = 4;
             Check(balance.Devices.Length >= 4, "full shop catalog exists");
-            Check(balance.Stages.Length >= 3, "two non-final settlement rounds are available");
+            Check(balance.Stages.Length >= 3, "the fixture can run two stages and then start the next day");
             balance.Validate();
 
             SamplingAndSeeds(balance);
@@ -98,14 +98,24 @@ namespace MarblesECS.Editor
 
         private static void PurchaseAndRoundFlow(GameBalance balance)
         {
+            balance = balance.Copy();
+            balance.Campaign.StartingCoins = 1000;
+            string sequence = $@"{{""schemaVersion"":1,""sequenceId"":""shop-validation"",""days"":[
+                {{""dayId"":""first"",""order"":1,""productionPlanId"":""first"",""productionFeatures"":[""Shop""]}},
+                {{""dayId"":""second"",""order"":2,""productionPlanId"":""second"",""productionFeatures"":[""Shop""]}}],
+                ""productionPlans"":[
+                {{""planId"":""first"",""firstStageId"":{balance.Stages[0].Id},""lastStageId"":{balance.Stages[1].Id}}},
+                {{""planId"":""second"",""firstStageId"":{balance.Stages[2].Id},""lastStageId"":{balance.Stages[2].Id}}}]}}";
             using (var simulation = new MarbleSimulation(balance))
             {
-                simulation.StartSession(new EmptyPhysics(), 0, 77031);
-                Check(simulation.Session.Phase == RoundPhase.Build && simulation.GetShopOffers().Length == 0,
-                    "new run starts in Build without stale shop offers");
-                Check(!simulation.BuyOffer(0) && !simulation.RefreshShop(), "shop commands are unavailable before settlement");
-                CompleteRound(simulation);
-                Check(simulation.Session.StageIndex == 1, "first settlement advances one stage");
+                var definition = GameDaysLoader.Parse(sequence, balance);
+                Check(simulation.TryStartDayCampaign(definition, new EmptyPhysics(), out string error, 77031), error);
+                long morning = simulation.Day.Version;
+                Check(simulation.Day.Phase == DayPhase.WakeUp && simulation.GetShopOffers().Length == 0,
+                    "a new morning has no stock until the shop is visited");
+                Check(!simulation.BuyOffer(0) && !simulation.RefreshShop(), "purchase and refresh require an open shop");
+                Check(simulation.TryOpenShop(morning), "first Morning Prep visit opens the shop");
+                Check(simulation.Day.RandomState == Advance(77031, 4), "first opening consumes four draws from the run RNG");
 
                 var offers = CheckOffers(simulation, 4);
                 BuyAndCheck(simulation, offers[0]);
@@ -125,17 +135,30 @@ namespace MarblesECS.Editor
 
                 BuyAndCheck(simulation, simulation.GetShopOffers()[0]);
                 owned = simulation.GetOwnedDevices().Select(d => d.InstanceId).OrderBy(id => id).ToArray();
-                Check(simulation.EnterBuild(), "shop proceeds to next placement round");
-                Check(!simulation.BuyOffer(0) && !simulation.RefreshShop(), "placement cannot purchase or reroll hidden shop offers");
-                CompleteRound(simulation);
-                Check(simulation.Session.StageIndex == 2, "second settlement advances one more stage");
-                Check(CheckOffers(simulation, 4).All(o => !o.Sold), "second settlement automatically replaces sold stock");
+                Check(simulation.TryCloseShop(morning) && simulation.Day.Phase == DayPhase.WakeUp,
+                    "closing the shop returns to the same morning");
+                uint beforeReopen = simulation.Day.RandomState;
+                Check(simulation.TryOpenShop(morning) && simulation.GetShopOffers()[0].Sold && simulation.Day.RandomState == beforeReopen,
+                    "reopening retains sold stock and uses no draws");
+                Check(simulation.TryCloseShop(morning) && simulation.TryCompleteWakeUp(morning, out error), "production starts after closing the shop");
+                Check(!simulation.BuyOffer(0) && !simulation.RefreshShop() && !simulation.TryOpenShop(simulation.Day.Version),
+                    "production cannot access the shop or reroll stock");
+                CompleteRound(simulation, RoundPhase.Build);
+                Check(simulation.Session.StageIndex == 1, "the first settlement advances straight to the next build");
+                CompleteRound(simulation, RoundPhase.Won);
+                Check(simulation.TryCompleteDaySettlement(simulation.Day.Version, out error), error);
+                Check(simulation.TryCompleteRest(simulation.Day.Version, out error), error);
+                Check(simulation.GetShopOffers().Length == 0, "the next day starts with ungenerated stock");
+                uint secondMorning = simulation.Day.RandomState;
+                Check(simulation.TryOpenShop(simulation.Day.Version) && CheckOffers(simulation, 4).All(o => !o.Sold),
+                    "the next morning generates new stock on its first visit");
+                Check(simulation.Day.RandomState == Advance(secondMorning, 4), "new stock continues the run RNG");
                 Check(owned.SequenceEqual(simulation.GetOwnedDevices().Select(d => d.InstanceId).OrderBy(id => id)),
-                    "next-round settlement preserves purchased inventory");
+                    "moving through stages and days preserves purchased inventory");
             }
         }
 
-        private static void CompleteRound(MarbleSimulation simulation)
+        private static void CompleteRound(MarbleSimulation simulation, RoundPhase nextPhase)
         {
             uint before = simulation.Context.Round.RandomState;
             Check(simulation.BeginRound(), "placement starts the round");
@@ -144,12 +167,9 @@ namespace MarblesECS.Editor
             var round = simulation.Context.Round;
             round.Score = Math.Max(0, round.TargetScore - simulation.Context.Campaign.TotalScore);
             simulation.Context.Round = round;
-            uint expected = Advance(simulation.Context.Round.RandomState, 4);
             Check(simulation.CashOut(), "eligible round cashes out");
-            Check(simulation.Session.Phase == RoundPhase.Shop, "settlement opens the shop");
-            Check(simulation.Context.Round.RandomState == expected,
-                "settlement without a gamble consumes only the four shared draws for new stock");
-            CheckOffers(simulation, 4);
+            Check(simulation.Session.Phase == nextPhase, "settlement advances production");
+            Check(simulation.Context.Round.RandomState == before, "settlement without a gamble consumes no random draws");
         }
 
         private static void BuyAndCheck(MarbleSimulation simulation, ShopOfferSnapshot offer)
@@ -218,12 +238,15 @@ namespace MarblesECS.Editor
             if (!condition) throw new Exception("Random shop validation: " + message);
         }
 
-        private sealed class EmptyPhysics : IMarblePhysics
+        private sealed class EmptyPhysics : IMarbleDayPhysics, IMarbleDayPhysicsCheckpoint
         {
             public bool TrySpawn(MarbleSpawnData data) => false;
             public bool TryGetPosition(MarbleKey key, out Vector3 position)
             { position = Vector3.zero; return false; }
             public void Remove(MarbleKey key) { }
+            public void ResetDayPhysics() { }
+            public IMarbleDayPhysicsCheckpoint CaptureDayCheckpoint() => this;
+            public void Restore() { }
         }
     }
 }

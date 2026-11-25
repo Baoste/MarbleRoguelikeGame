@@ -43,7 +43,6 @@ namespace MarblesECS.Presentation
                 case RoundPhase.Build: return "布置";
                 case RoundPhase.Playing: return "发射中";
                 case RoundPhase.Draining: return "结算中";
-                case RoundPhase.Shop: return "商店";
                 case RoundPhase.Won: return "完成";
                 default: return "结束";
             }

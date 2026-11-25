@@ -174,16 +174,19 @@ namespace MarblesECS.Editor
             }
             sale.Refresh(); Check(sale.Group.alpha == 0 && !sale.Group.blocksRaycasts, "sale area is hidden during Playing");
             var round = context.Round; round.Score = Math.Max(0, round.TargetScore - context.Campaign.TotalScore); context.Round = round;
-            Check(game.CashOut(), "real round settlement enters the shop");
-            while (game.Session.Phase != RoundPhase.Shop) yield return null;
+            Check(game.CashOut(), "real round settlement begins");
+            while (game.Session.Phase == RoundPhase.Draining) yield return null;
+            Check(game.Session.Phase == RoundPhase.Build, "settlement returns to placement");
             foreach (var starter in game.GetOwnedDevices())
                 Check(game.SellDevice(starter.InstanceId), "clear starter gear from the test inventory");
             var wallet = context.Campaign; wallet.Coins = 100; context.Campaign = wallet;
             var offers = context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity); offers.Clear();
             offers.Add(new ShopOfferData { Kind = ShopItemKind.Device, DefinitionId = 9002, Price = 5 });
             offers.Add(new ShopOfferData { Kind = ShopItemKind.Device, DefinitionId = 103, Price = 5 });
-            yield return null;
-            var shopCard = UnityEngine.Object.FindObjectsOfType<ShopOfferItemUI>().First(item => item.NameText.text == "弹弹");
+            var shop = UnityEngine.Object.FindObjectsOfType<ShopUI>().Single(item => item.Controller == game);
+            var shopCard = UnityEngine.Object.Instantiate(shop.OfferPrefab, shop.OfferContainer);
+            shopCard.gameObject.SetActive(true);
+            shopCard.Bind(game.GetShopOffers()[0], wallet.Coins, null);
             shopCard.OnPointerEnter(new PointerEventData(EventSystem.current));
             var shopBorder = shopCard.GetComponent<Outline>();
             Check(shopCard.GetComponent<Image>().raycastTarget && shopBorder && shopBorder.enabled &&
@@ -191,8 +194,8 @@ namespace MarblesECS.Editor
                 "hovering the shop card highlights its border next to the description");
             shopCard.OnPointerExit(new PointerEventData(EventSystem.current));
             Check(!shopBorder.enabled, "leaving the shop card restores its border");
-            Check(game.BuyOffer(0) && game.BuyOffer(1), "real purchases supply one reflector and two paired portals");
-            Check(game.EnterBuild(), "enter the real placement phase");
+            Check(CampaignShopSystem.Buy(context, 0) && CampaignShopSystem.Buy(context, 1),
+                "purchase rules supply one reflector and two paired portals");
             while (!rig.IsBoardOpen || !rig.ItemGroup.interactable) yield return null;
             int id = game.GetOwnedDevices().Single(d => d.DefinitionId == 9002).InstanceId;
             int[] portals = game.GetOwnedDevices().Where(d => d.DefinitionId == 103).Select(d => d.InstanceId).ToArray();
@@ -241,6 +244,7 @@ namespace MarblesECS.Editor
                 {
                     shopPanel.alpha = 0;
                     shopPanel.blocksRaycasts = false;
+                    UnityEngine.Object.Destroy(shopCard.gameObject);
                 }
                 rig.UpdateTooltip(hoverPoint);
                 rig.UpdateTooltip(new Vector2(-1, -1));

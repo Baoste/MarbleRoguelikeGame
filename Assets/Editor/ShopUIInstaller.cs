@@ -57,7 +57,7 @@ public static class ShopUIInstaller
         font.fallbackFontAssetTable = new System.Collections.Generic.List<TMP_FontAsset> { fallback };
         // Bake current content. The dynamic fallback covers future device names and descriptions.
         string characters = File.ReadAllText("Assets/Resources/GameContent.json") +
-            "装置商店选择装置，为下一回合做好准备当前金币刷新商品完成购买去布置每件限购一次，后可在阶段放置。" +
+            "装置商店选择装置，为下一回合做好准备当前金币刷新商品返回房间每件限购一次，购买后可在阶段布置。" +
             "成功已加入背包失败请检查库存容量或状态不足无法已售出普通稀有史诗传奇无限耐久出售·…□" +
             new string(Enumerable.Range(32, 95).Select(c => (char)c).ToArray());
         characters = new string(characters.Where(c => !char.IsControl(c)).Distinct().ToArray());
@@ -158,7 +158,7 @@ public static class ShopUIInstaller
         var next = shop.ContinueButton.GetComponentInChildren<TMP_Text>(true);
         Style(next, font, 26, Ink, TextAlignmentOptions.Center);
         Stretch(next.rectTransform, new Vector2(16, 8), new Vector2(-16, -8));
-        next.text = "完成购买 · 去布置";
+        next.text = "返回房间";
         shop.FeedbackText = Label(panel, "ShopFeedback", font, 23, Muted);
         shop.FeedbackText.text = "每件商品限购一次，购买后可在布置阶段放置。";
         var feedback = shop.FeedbackText.rectTransform;

@@ -425,7 +425,8 @@ namespace MarblesECS.Editor
                 api.Close();
 
                 CampaignShopSystem.Generate(f.C);
-                for (int i = 0; i < f.Simulation.GetShopOffers().Length; i++) MarbleRules.NextRandom(ref expected);
+                var stock = f.Simulation.GetShopOffers();
+                for (int i = 0; i < stock.Length; i++) MarbleRules.NextRandom(ref expected);
                 Check(f.C.Round.RandomState == expected, "shop continues after Lua random calls");
                 CampaignStateUtility.FindDevice(f.C, device.InstanceId, out var entity);
                 var tickApi = new DeviceEventContext(f.C, entity);
@@ -444,9 +445,9 @@ namespace MarblesECS.Editor
                 round = f.C.Round; round.Score = round.TargetScore; round.Phase = (byte)RoundPhase.Draining; f.C.Round = round;
                 CampaignSettlementSystem.Execute(f.C);
                 Check(f.C.Round.SettlementComplete, "campaign settles without waiting for presentation");
-                for (int i = 0; i < f.Simulation.GetShopOffers().Length; i++) MarbleRules.NextRandom(ref expected);
-                Check(f.C.Round.RandomState == expected, "settlement stock follows the gambling draw");
-                Check(f.Simulation.EnterBuild() && f.Simulation.BeginRound(), "advance to next round");
+                Check(f.C.Round.RandomState == expected && f.Simulation.GetShopOffers().Select(offer => offer.DefinitionId)
+                    .SequenceEqual(stock.Select(offer => offer.DefinitionId)), "settlement leaves the existing stock and RNG unchanged");
+                Check(f.Simulation.BeginRound(), "advance to next round");
                 Check(f.C.Round.RandomState == expected, "round reset preserves the entire shared sequence");
 
                 f.Simulation.StartSession(f.Physics, 3, seed);

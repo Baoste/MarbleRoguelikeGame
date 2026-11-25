@@ -31,7 +31,7 @@ public sealed class ShopUI : MonoBehaviour
         if (RefreshButton != null)
             RefreshButton.onClick.AddListener(HandleRefreshClicked);
         if (ContinueButton != null)
-            ContinueButton.onClick.AddListener(HandleContinueClicked);
+            ContinueButton.onClick.AddListener(HandleCloseClicked);
         RefreshView(true);
     }
 
@@ -40,7 +40,7 @@ public sealed class ShopUI : MonoBehaviour
         if (RefreshButton != null)
             RefreshButton.onClick.RemoveListener(HandleRefreshClicked);
         if (ContinueButton != null)
-            ContinueButton.onClick.RemoveListener(HandleContinueClicked);
+            ContinueButton.onClick.RemoveListener(HandleCloseClicked);
     }
 
     private void Update()
@@ -50,9 +50,7 @@ public sealed class ShopUI : MonoBehaviour
 
     private void RefreshView(bool forceOffers)
     {
-        bool open = Controller != null && Controller.ProductionCommandsAvailable &&
-            Controller.HasProductionFeature(ProductionFeature.Shop) &&
-            Controller.Session.Phase == RoundPhase.Shop;
+        bool open = Controller != null && Controller.ShopOpen;
         SetShopVisible(open);
 
         if (!open)
@@ -94,7 +92,7 @@ public sealed class ShopUI : MonoBehaviour
     {
         if (ShopCanvasGroup == null) return;
         ShopCanvasGroup.alpha = visible ? 1f : 0f;
-        ShopCanvasGroup.interactable = visible;
+        ShopCanvasGroup.interactable = visible && Controller.ShopCommandsAvailable;
         ShopCanvasGroup.blocksRaycasts = visible;
     }
 
@@ -153,10 +151,10 @@ public sealed class ShopUI : MonoBehaviour
             FeedbackText.text = refreshed ? "商品已刷新。" : "金币不足，无法刷新商品。";
     }
 
-    private void HandleContinueClicked()
+    private void HandleCloseClicked()
     {
         if (Controller != null)
-            Controller.EnterBuild();
+            Controller.TryCloseShop(Controller.Day.Version);
         RefreshView(false);
     }
 }

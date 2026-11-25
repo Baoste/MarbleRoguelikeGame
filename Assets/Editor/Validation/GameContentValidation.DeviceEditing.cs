@@ -189,13 +189,13 @@ namespace MarblesECS.Editor
                 Check(!placement.HandleBoardPointerDown(Point(2, 0)), "playing phase cannot start a board drag");
 
                 var round = f.C.Round;
-                foreach (var phase in new[] { RoundPhase.Playing, RoundPhase.Draining, RoundPhase.Shop })
+                foreach (var phase in new[] { RoundPhase.Playing, RoundPhase.Draining, RoundPhase.Won })
                 {
                     round.Phase = (byte)phase; f.C.Round = round;
                     Check(placement.UpdatePlacedDeviceHover(Point(2, 0), out hovered) && hovered.InstanceId == other &&
                         Highlight(View(other)), phase + " uses the same placed-device hover");
                 }
-                Check(controller.EnterBuild() && controller.Session.Phase == RoundPhase.Build, "shop retains Build when all remaining devices are already placed");
+                round.Phase = (byte)RoundPhase.Build; f.C.Round = round;
                 Near(2, Data(other).X, "entering Build preserves last committed layout");
                 Check(!f.Simulation.PlaceDevice(other, 1, 0, .15f, float.NaN), "invalid rotation cannot partially commit a move");
                 Near(2, Data(other).X, "invalid rotation leaves position unchanged");
@@ -215,8 +215,7 @@ namespace MarblesECS.Editor
                 Near(0, Data(mushroom).Angle, "moving keeps the authored angle");
                 Near(0, Quaternion.Angle(board.transform.rotation, View(mushroom).transform.rotation), "fixed device view follows the board orientation");
                 Check(controller.SellDevice(mushroom), "sell the fixed device");
-                round = f.C.Round; round.Phase = (byte)RoundPhase.Shop; f.C.Round = round;
-                Check(controller.EnterBuild() && controller.Session.Phase == RoundPhase.Playing, "truly empty inventory still skips unnecessary Build");
+                Check(controller.BeginRound() && controller.Session.Phase == RoundPhase.Playing, "empty inventory can start the next round");
             }
             finally
             {

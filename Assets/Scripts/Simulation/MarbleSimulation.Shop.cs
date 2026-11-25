@@ -2,14 +2,23 @@ namespace MarblesECS
 {
     public sealed partial class MarbleSimulation
     {
+        public bool ShopOpen => dayFlow != null && dayFlow.ShopOpen;
+        public bool ShopCommandsAvailable => CanChangeShop && dayFlow.AllowsShopping;
+        private bool CanChangeShop => !insidePhysicsStep && !startingDay && dayFlow != null;
+
+        public bool TryOpenShop(long version) => CanChangeShop && dayFlow.TryOpenShop(version);
+        public bool TryCloseShop(long version) => CanChangeShop && dayFlow.TryCloseShop(version);
+
         public bool BuyOffer(int index)
         {
-            return CanCampaignAct(RoundPhase.Shop) && CampaignShopSystem.Buy(context, index);
+            ThrowIfDisposed();
+            return ShopCommandsAvailable && CampaignShopSystem.Buy(context, index);
         }
 
         public bool RefreshShop()
         {
-            if (!CanCampaignAct(RoundPhase.Shop) || !context.HasProductionFeature(ProductionFeature.Shop)) return false;
+            ThrowIfDisposed();
+            if (!ShopCommandsAvailable) return false;
             var campaign = context.Campaign;
             long price = CampaignShopSystem.Price(context, context.Balance.Campaign.ShopRefreshCost);
             if (campaign.Coins < price) return false;
@@ -22,8 +31,7 @@ namespace MarblesECS
 
         public bool SellDevice(int instanceId)
         {
-            if (!(CanCampaignAct(RoundPhase.Shop) && context.HasProductionFeature(ProductionFeature.Shop)) &&
-                !CanEditDevices) return false;
+            if (!ShopCommandsAvailable && !CanEditDevices) return false;
             if (!CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
             var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
             var campaign = context.Campaign;
@@ -36,7 +44,5 @@ namespace MarblesECS
             context.Campaign = campaign;
             return true;
         }
-
-
     }
 }

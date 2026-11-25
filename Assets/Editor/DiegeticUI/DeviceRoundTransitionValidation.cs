@@ -33,7 +33,7 @@ namespace MarblesECS.Editor.Diegetic
                 {SessionState.SetBool(Key,false);EditorApplication.delayCall+=Start;}
             };
         }
-        [MenuItem("Marbles ECS/实体UI/验证跨回合购买与鼠标点击")]
+        [MenuItem("Marbles ECS/实体UI/验证跨回合布置与鼠标点击")]
         public static void Run()
         {
             Directory.CreateDirectory(Work);
@@ -90,30 +90,27 @@ namespace MarblesECS.Editor.Diegetic
             if(rig.Controller.Session.Phase==RoundPhase.Build)Check(rig.Controller.BeginRound(),"Start first round");
             for(int stage=1;stage<=2;stage++)
             {
-            // Seed an achievable score and non-empty gamble pool, then use the real settlement/shop transitions.
+            // Seed an achievable score and non-empty gamble pool, then use the real settlement transition.
             var round=context.Round;round.Score=Math.Max(0,round.TargetScore-context.Campaign.TotalScore);context.Round=round;GamblingWheelSystem.Deposit(context,0);
             Check(rig.Controller.CashOut(),"Cash out round "+stage+" through controller");
-            while(rig.Controller.Session.Phase!=RoundPhase.Shop)yield return null;
+            while(rig.Controller.Session.Phase==RoundPhase.Draining)yield return null;
+            Check(rig.Controller.Session.Phase==RoundPhase.Build,"Settlement opens Build "+(stage+1));
             var wait=Wait(.4f);while(wait.MoveNext())yield return null;
             Check(rig.Controller.Session.StageIndex==stage,"Real settlement advances to stage "+(stage+1));
             report.Add("Settlement text enabled="+result.ResultText.enabled+" raycastTarget="+result.ResultText.raycastTarget+" rect="+result.ResultText.rectTransform.rect);
             Check(!result.ResultText.raycastTarget,"Result is visible after reveal, without intercepting mouse input");
             var magnet=context.Balance.Devices.Single(d=>d.SourceId=="Reflector");
-            // Deterministic shop stock; purchase still uses the production wallet/inventory path.
-            var offers=context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);offers.Clear();
-            offers.Add(new ShopOfferData{Kind=ShopItemKind.Device,DefinitionId=magnet.Id,Price=1});
-            Check(rig.Controller.BuyOffer(0),"Buy the reported magnetic device in the shop");
+            CampaignStateUtility.CreateDevice(context,magnet,magnet.Price);
             int id=rig.Controller.GetOwnedDevices().First(d=>d.DefinitionId==magnet.Id&&!d.Placed).InstanceId;
-            Check(rig.Controller.EnterBuild(),"Continue from shop to Build "+(stage+1));
             wait=Wait(.85f);while(wait.MoveNext())yield return null;
             Check(rig.IsBoardOpen && rig.ItemGroup.interactable,"Sliding board is open and interactive");
             Check(result.DisplayGroup.alpha==0,"Old result clears before the next Build");
             report.Add("Paused="+rig.Controller.Paused+" selected="+rig.Placement.SelectedInstanceId);
             var card=rig.DeviceButtons.First(b=>b.gameObject.activeSelf && rig.DeviceNames[Array.IndexOf(rig.DeviceButtons,b)].text==magnet.Name);
             PressVisible(card.gameObject);
-            Check(rig.Placement.SelectedInstanceId==0,"Clicking the bought card leaves placement idle");
+            Check(rig.Placement.SelectedInstanceId==0,"Clicking the device card leaves placement idle");
             PressVisible(card.gameObject, true);
-            Check(rig.Placement.SelectedInstanceId==id&&rig.Placement.IsDraggingInventory,"Dragging the bought card captures its real instance");
+            Check(rig.Placement.SelectedInstanceId==id&&rig.Placement.IsDraggingInventory,"Dragging the device card captures its real instance");
             var probe=Hits(rig.ViewCamera.WorldToScreenPoint(rig.Placement.PlacementPlane.position));
             report.Add("Playfield hits: "+string.Join(" > ",probe.Select(h=>DiegeticUIProbe.PathOf(h.gameObject.transform))));
             Check(probe.Count==0,"Playfield is not blocked by an invisible UI surface");

@@ -28,6 +28,7 @@ namespace MarblesECS
         public long Version { get; }
         public bool LifecyclePending { get; }
         public int MorningPrepRemaining { get; }
+        public bool ShopOpen { get; }
         public string ProductionPlanId { get; }
         public int SettledRounds { get; }
         public long ProductionTicks { get; }
@@ -52,6 +53,7 @@ namespace MarblesECS
             Version = state.Version;
             LifecyclePending = pending;
             MorningPrepRemaining = state.MorningPrepRemaining;
+            ShopOpen = state.ShopOpen;
             ProductionPlanId = definition.ProductionPlan.PlanId;
             SettledRounds = state.SettledRounds;
             ProductionTicks = state.ProductionTicks;
@@ -101,6 +103,7 @@ namespace MarblesECS
         internal DayPhase Phase, PreviousPhase;
         internal DayResult Result;
         internal bool SettlementCommitted;
+        internal bool ShopOpen, ShopStockReady;
         internal DayTransitionReason LastTransition;
         internal long Version, ProductionTicks;
         internal int SettledRounds, MorningPrepRemaining;

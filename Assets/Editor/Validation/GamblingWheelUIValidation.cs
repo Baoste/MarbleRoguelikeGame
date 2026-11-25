@@ -166,8 +166,8 @@ namespace MarblesECS.Editor
             Check(game.CashOut(),"Physical controller can end the round with a pending pool");
             while(game.Session.Phase==RoundPhase.Draining)yield return null;
             yield return null;
-            Check(game.Session.Phase==RoundPhase.Shop && game.GamblingWheel.DrawCount==draws+1,"Round end resolves pool before entering shop");
-            Check(view.DisplayGroup.alpha==0 && !view.ModelCamera.enabled,"Shop hides wheel and stops preview rendering");
+            Check(game.Session.Phase==RoundPhase.Build && game.GamblingWheel.DrawCount==draws+1,"Round end resolves pool before the next Build");
+            Check(view.DisplayGroup.alpha==0 && !view.ModelCamera.enabled,"Build hides wheel and stops preview rendering");
             game.RestartRound();yield return null;yield return null;
             Check(game.GamblingWheel.DrawCount==0 && game.GamblingWheel.BallCount==0 && view.TimerBar.value==0,"Restart clears pool, result and timer");
             Check(view.DisplayGroup.alpha==1 && view.ResultText.text.Contains("50"),"New run shows idle wheel");

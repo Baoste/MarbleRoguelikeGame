@@ -34,6 +34,7 @@ namespace MarblesECS.Editor.Diegetic
         [MenuItem("Marbles ECS/实体UI/验证交互与1080p和4K")]
         public static void Run()
         {
+            Directory.CreateDirectory(Path.Combine(DiegeticUIProbe.Work, "previews"));
             if(EditorApplication.isPlaying){Start();return;}
             EditorSceneManager.OpenScene("Assets/Scenes/TestScene.unity",OpenSceneMode.Single);
             SessionState.SetBool(Key,true);LegacyMachineValidationStartup.EnterPlayMode();
@@ -54,7 +55,15 @@ namespace MarblesECS.Editor.Diegetic
                 File.WriteAllLines(DiegeticUIProbe.Work+"/validation_passed.txt",passed);
                 Debug.Log("DIEGETIC_VALIDATION_PASSED "+passed.Count+" assertions");Finish(0);
             }
-            catch(Exception e){Debug.LogException(e);File.WriteAllText(DiegeticUIProbe.Work+"/validation_failure.txt",e+"\n"+string.Join("\n",passed));Finish(1);}
+            catch(Exception e)
+            {
+                try
+                {
+                    Debug.LogException(e);
+                    File.WriteAllText(Path.Combine(DiegeticUIProbe.Work, "validation_failure.txt"), e + "\n" + string.Join("\n", passed));
+                }
+                finally { Finish(1); }
+            }
         }
         static void Finish(int code)
         {EditorApplication.update-=Tick;Application.logMessageReceived-=Log;sequence=null;if(Application.isBatchMode)EditorApplication.Exit(code);}
@@ -109,12 +118,10 @@ namespace MarblesECS.Editor.Diegetic
             rig.Controller.FireOnce();wait=Wait(.12f);while(wait.MoveNext())yield return null;Check(rig.Controller.Snapshot.Blood<blood,"The original launcher still spawns and consumes blood");
             round=context.Round;round.Score=round.TargetScore;context.Round=round;Check(rig.CanCashOut(),"Lever enables at the actual target score");
             Click(Hit(0));Check(rig.Controller.Snapshot.Blood==0&&rig.Controller.Session.Phase!=RoundPhase.Playing,"Lever closes supply and starts real cashout flow");Check(!rig.TryCashOut(),"Double activation cannot settle twice");
-            // A shop purchase is executed by the real shop API; only the test offer and test funds are seeded.
-            context.RemoveAllMarbles();round=context.Round;round.Phase=(byte)RoundPhase.Shop;context.Round=round;
-            var campaign=context.Campaign;campaign.Coins=100000;context.Campaign=campaign;
-            var offers=context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);offers.Clear();offers.Add(new ShopOfferData{Kind=ShopItemKind.Device,DefinitionId=context.Balance.Devices[0].Id,Price=1});
-            Check(rig.Controller.BuyOffer(0),"Existing shop purchase succeeds");rig.RefreshInventory();Check(rig.Controller.GetOwnedDevices().Any(d=>!d.Placed),"Purchased device enters inventory");
-            Check(rig.Controller.EnterBuild(),"Shop Continue still enters Build");
+            context.RemoveAllMarbles();round=context.Round;round.Phase=(byte)RoundPhase.Build;context.Round=round;
+            var device=context.Balance.Devices[0];
+            CampaignStateUtility.CreateDevice(context,device,device.Price);
+            rig.RefreshInventory();Check(rig.Controller.GetOwnedDevices().Any(d=>!d.Placed),"Next Build shows the unplaced device");
             yield return null;Check(rig.ItemGroup.alpha==0,"Board UI waits until slide-out has finished");
             wait=Wait(.75f);while(wait.MoveNext())yield return null;Check(rig.ItemGroup.alpha==1&&rig.IsBoardOpen,"Next Build correctly opens the board again");
             var lever=Hit(0);var drag=new PointerEventData(EventSystem.current){button=PointerEventData.InputButton.Left,position=new Vector2(100,100)};

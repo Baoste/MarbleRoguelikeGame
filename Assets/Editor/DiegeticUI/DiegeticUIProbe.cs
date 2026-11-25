@@ -12,7 +12,7 @@ namespace MarblesECS.Editor.Diegetic
 {
     public static class DiegeticUIProbe
     {
-        public const string Work = "E:/毕设/MarbleRoguelikeGame/.utmp/diegetic_ui_20261008";
+        public static string Work => Path.GetFullPath(Path.Combine(Application.dataPath, "../.utmp/diegetic_ui_20261008"));
         [Serializable] public class Item { public string path, name, parent, mesh; public string[] materials, components; public Vector3 pos, scale, min, max; public Quaternion rot; public bool active; }
         [Serializable] public class ScriptInfo { public string path,type,json; }
         [Serializable] public class Report { public List<Item> objects=new List<Item>(); public List<ScriptInfo> scripts=new List<ScriptInfo>(); public string camera; public float fov; }

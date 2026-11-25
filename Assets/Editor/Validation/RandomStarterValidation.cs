@@ -54,8 +54,7 @@ namespace MarblesECS.Editor
                 round.Score = round.TargetScore;
                 simulation.Context.Round = round;
                 Check(simulation.CashOut(), "first-round cashout works with random starters");
-                Check(simulation.Session.Phase == RoundPhase.Shop, "cashout reaches the shop");
-                Check(simulation.EnterBuild(), "second-round placement is available");
+                Check(simulation.Session.Phase == RoundPhase.Build, "cashout reaches second-round placement");
                 Check(initial.Select(d => d.InstanceId).SequenceEqual(simulation.GetOwnedDevices().Select(d => d.InstanceId)),
                     "entering next-round placement does not redraw inventory");
                 Check(simulation.BeginRound(), "second round starts");

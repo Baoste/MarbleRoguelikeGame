@@ -32,9 +32,13 @@ namespace MarblesECS.Tests
         }
 
         [UnityTest]
-        public IEnumerator TestSceneStillLaunchesScoresShopsAndRestartsTheLegacySession()
+        public IEnumerator TestSceneLaunchesScoresAdvancesAndRestartsTheMachineSession()
         {
-            yield return LoadTestScene(controller => controller.StartWithDayCampaign = false);
+            yield return LoadTestScene(controller =>
+            {
+                controller.StartWithDayCampaign = false;
+                controller.EnableRandomStartingDevices = false;
+            });
             var game = InTestScene<MarbleGameController>();
             yield return Until(() => game.IsReady, "TestScene controller startup");
             localScene = game.PhysicsRoot.gameObject.scene;
@@ -49,11 +53,10 @@ namespace MarblesECS.Tests
             yield return Until(() => game.Session.CanCashOut, "legacy zone contact and score");
             Assert.That(contacts, Is.EqualTo(1));
             Assert.That(game.CashOut(), Is.True);
-            yield return Until(() => game.Session.Phase == RoundPhase.Shop, "legacy round settlement and shop");
-            Assert.That(game.GetShopOffers(), Is.Not.Empty);
-            Assert.That(game.BuyOffer(0), Is.True);
-            Assert.That(game.EnterBuild(), Is.True);
-            Assert.That(game.GetOwnedDevices(), Is.Not.Empty);
+            yield return Until(() => game.Session.Phase == RoundPhase.Build, "the next build follows settlement");
+            Assert.That(game.GetShopOffers(), Is.Empty);
+            Assert.That(game.ShopOpen, Is.False);
+            Assert.That(game.BeginRound(), Is.True);
             game.RestartRound();
             Assert.That(game.GetOwnedDevices(), Is.Empty);
             Assert.That(game.Snapshot.Phase, Is.EqualTo(RoundPhase.Playing));
@@ -99,6 +102,7 @@ namespace MarblesECS.Tests
             Assert.That(game.Day.DayId, Is.EqualTo("day0"));
             Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.WakeUp));
             Assert.That(game.Session.TargetScore, Is.EqualTo(100));
+            Assert.That(game.TryOpenShop(game.Day.Version), Is.False);
             Assert.That(game.BeginRound(), Is.False);
             Assert.That(prep.FadeAlpha, Is.GreaterThan(0), "wake-up starts black");
             Assert.That(prep.TryInteract(), Is.False);
@@ -108,10 +112,24 @@ namespace MarblesECS.Tests
 
             yield return Until(() => walker.CanMove, "fade finished and room camera is active");
             Assert.That(brain.ActiveVirtualCamera.Name, Is.EqualTo("VCamera_Free"));
+            var shopAnchor = prep.transform.Find("Shop Terminal Anchor");
+            Assert.That(shopAnchor.childCount, Is.EqualTo(1), "the disabled shop has only its scene interaction point");
+            var noteAnchor = prep.transform.Find("Platform Note Anchor");
+            Assert.That(noteAnchor.Find("Morning Prep Note"), Is.Not.Null);
+            var notePoint = noteAnchor.Find("Platform Note Interaction").position;
+            var machinePoint = prep.transform.Find("Marble Machine Interaction").position;
+            Assert.That(Vector3.Distance(origin, machinePoint), Is.LessThan(10f));
+            var wakeCamera = brain.GetComponent<Camera>();
+            foreach (var point in new[] { game.LaunchPoint.position, noteAnchor.position })
+            {
+                var viewport = wakeCamera.WorldToViewportPoint(point);
+                Assert.That(viewport.z, Is.Positive);
+                Assert.That(viewport.x, Is.InRange(0f, 1f));
+                Assert.That(viewport.y, Is.InRange(0f, 1f));
+            }
             walker.Move(Vector2.up, .1f);
-            Assert.That(walker.transform.position.x, Is.LessThan(origin.x));
+            Assert.That(walker.transform.position.x, Is.GreaterThan(origin.x));
             Assert.That(walker.transform.position.y, Is.EqualTo(origin.y).Within(.05f));
-            WalkTo(walker, -41, -13);
             WalkTo(walker, -14, -13);
             WalkTo(walker, -14, -2);
             Assert.That(prep.CanUseMachine, Is.False);
@@ -119,9 +137,8 @@ namespace MarblesECS.Tests
             Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.False);
 
             WalkTo(walker, -14, -13);
-            WalkTo(walker, -42, -13);
-            WalkTo(walker, -42, -6);
-            WalkTo(walker, -54, -6);
+            WalkTo(walker, notePoint.x - 5, -13);
+            WalkTo(walker, notePoint.x - 5, notePoint.z);
             Assert.That(prep.TryInteract(), Is.True);
             Assert.That(prep.IsReading, Is.True);
             Assert.That(walker.CanMove, Is.False);
@@ -136,8 +153,7 @@ namespace MarblesECS.Tests
             Assert.That(game.Day.MorningPrepRemaining, Is.Zero);
 
             yield return Until(() => walker.CanMove, "reading unlocks room movement");
-            WalkTo(walker, -42, -6);
-            WalkTo(walker, -42, -13);
+            WalkTo(walker, notePoint.x - 5, -13);
             WalkTo(walker, -14, -13);
             WalkTo(walker, -14, -2);
             Assert.That(prep.CanUseMachine, Is.True);
@@ -175,6 +191,103 @@ namespace MarblesECS.Tests
             Assert.That(prep.TryInteract(), Is.True);
             Assert.That(prep.TryInteract(), Is.True);
             Assert.That(game.Day.Status, Is.EqualTo(DayCampaignStatus.Completed));
+        }
+
+        [UnityTest]
+        public IEnumerator EnabledMorningShopOpensAtTheTerminalAndReturnsToTheRoom()
+        {
+            var balance = GameBalanceLoader.Load();
+            balance.Campaign.StartingCoins = 100;
+            yield return LoadTestScene(controller =>
+            {
+                controller.StartWithDayCampaign = false;
+                controller.EnableRandomStartingDevices = false;
+                controller.ConfigureCampaign(balance);
+            });
+            var game = InTestScene<MarbleGameController>();
+            var prep = InTestScene<MorningPrepController>();
+            var walker = InTestScene<RoomCameraMovement>();
+            var brain = InTestScene<CinemachineBrain>();
+            var shop = InTestScene<ShopUI>();
+            yield return Until(() => game.IsReady, "shop fixture startup");
+            localScene = game.PhysicsRoot.gameObject.scene;
+            var terminalAnchor = prep.transform.Find("Shop Terminal Anchor");
+            Assert.That(terminalAnchor.childCount, Is.EqualTo(1));
+            uint stage = balance.Stages[0].Id;
+            var definition = GameDaysLoader.Parse($@"{{""schemaVersion"":1,""sequenceId"":""shop-test"",""days"":[
+                {{""dayId"":""fixture-shop"",""order"":1,""productionPlanId"":""plan"",""productionFeatures"":[""Shop""],
+                ""morningPrep"":[{{""objectiveId"":""read-note"",""type"":""ReadNote"",""anchorId"":""desk"",""text"":""fixture note""}}]}},
+                {{""dayId"":""fixture-closed"",""order"":2,""productionPlanId"":""plan""}}],
+                ""productionPlans"":[{{""planId"":""plan"",""firstStageId"":{stage},""lastStageId"":{stage}}}]}}", balance);
+            Assert.That(game.TryStartDayCampaign(definition, out string error, 71), Is.True, error);
+            yield return Until(() => walker.CanMove, "room fades in");
+            Assert.That(prep.TryInteract(), Is.False, "the terminal requires proximity");
+            Assert.That(game.GetShopOffers(), Is.Empty);
+            Assert.That(terminalAnchor.childCount, Is.EqualTo(2), "the enabled day spawns one terminal prefab");
+            Assert.That(terminalAnchor.GetComponentInChildren<TextMeshPro>(), Is.Not.Null);
+            var wakePosition = walker.transform.position;
+
+            var terminal = terminalAnchor.Find("Shop Terminal Interaction");
+            var notePoint = prep.transform.Find("Platform Note Anchor/Platform Note Interaction").position;
+            WalkTo(walker, terminal.position.x - 5, -13);
+            WalkTo(walker, terminal.position.x - 5, terminal.position.z);
+            var roomPosition = walker.transform.position;
+            Assert.That(prep.TryInteract(), Is.True);
+            yield return Until(() => shop.ShopCanvasGroup.interactable, "existing shop canvas opens");
+            Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.WakeUp));
+            Assert.That(game.Day.MorningPrepRemaining, Is.EqualTo(1), "the nearer terminal opens while the note is unread");
+            Assert.That(brain.ActiveVirtualCamera.Name, Is.EqualTo("VCamera_Free"));
+            Assert.That(walker.CanMove, Is.False);
+            Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.False);
+            var stock = game.GetShopOffers();
+            Assert.That(stock, Is.Not.Empty);
+            var firstCard = shop.OfferContainer.GetComponentsInChildren<ShopOfferItemUI>().First();
+            Assert.That(firstCard.BuyButton.IsInteractable(), Is.True);
+            long coins = game.Session.Coins;
+            firstCard.BuyButton.onClick.Invoke();
+            Assert.That(game.GetShopOffers()[0].Sold, Is.True);
+            Assert.That(game.GetOwnedDevices().Any(device => device.DefinitionId == stock[0].DefinitionId), Is.True);
+            Assert.That(game.Session.Coins, Is.EqualTo(coins - stock[0].Price));
+            uint afterPurchase = game.Day.RandomState;
+
+            shop.ContinueButton.onClick.Invoke();
+            yield return Until(() => walker.CanMove && !shop.ShopCanvasGroup.blocksRaycasts, "Return to room closes the shop");
+            Assert.That(walker.transform.position, Is.EqualTo(roomPosition));
+            Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.WakeUp));
+            Assert.That(game.BuyOffer(1), Is.False);
+            Assert.That(prep.TryInteract(), Is.True);
+            Assert.That(game.Day.RandomState, Is.EqualTo(afterPurchase));
+            Assert.That(game.GetShopOffers()[0].Sold, Is.True);
+            Assert.That(prep.TryInteract(), Is.True, "E also closes the shop");
+
+            yield return Until(() => walker.CanMove, "walking resumes");
+            WalkTo(walker, notePoint.x - 5, notePoint.z);
+            Assert.That(prep.TryInteract(), Is.True);
+            Assert.That(prep.IsReading, Is.True, "the nearer paper is selected while the terminal is also in range");
+            Assert.That(game.ShopOpen, Is.False);
+            Assert.That(prep.TryInteract(), Is.True);
+            yield return Until(() => walker.CanMove, "closing the note resumes walking");
+            WalkTo(walker, notePoint.x - 5, -13);
+            WalkTo(walker, -14, -13);
+            WalkTo(walker, -14, -2);
+            Assert.That(prep.TryInteract(), Is.True);
+            yield return Until(() => game.Day.Phase == DayPhase.Production && game.Session.Phase == RoundPhase.Playing,
+                "machine blend completes");
+            Assert.That(brain.ActiveVirtualCamera.Name, Is.EqualTo("VCamera_Machine"));
+            Assert.That(game.TryOpenShop(game.Day.Version), Is.False);
+            Assert.That(shop.ShopCanvasGroup.alpha, Is.Zero);
+            game.AutoMoveLauncher = false;
+            var score = AddZone(game.PhysicsRoot, game.LaunchPoint.TransformPoint(game.LaunchOffset), game.Session.TargetScore);
+            score.Priority = int.MaxValue;
+            game.FireOnce();
+            yield return Until(() => game.Session.CanCashOut, "physical score");
+            Assert.That(game.CashOut(), Is.True);
+            yield return Until(() => game.Day.Phase == DayPhase.DaySettlement, "shop day settlement");
+            FinishDay(game);
+            Assert.That(game.Day.DayId, Is.EqualTo("fixture-closed"));
+            yield return Until(() => terminalAnchor.childCount == 1, "next day removes the disabled shop prefab");
+            Assert.That(terminalAnchor.GetComponentInChildren<TextMeshPro>(true), Is.Null);
+            Assert.That(walker.transform.position, Is.EqualTo(wakePosition));
         }
 
         private IEnumerator LoadTestScene(Action<MarbleGameController> configure)
@@ -258,16 +371,19 @@ namespace MarblesECS.Tests
             long savedCoins = game.Session.Coins;
             Assert.That(FindDeviceBody(starterId), Is.Not.Null);
 
-            Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.True);
-            yield return PlayScoringRound(game);
-            Assert.That(game.Session.Phase, Is.EqualTo(RoundPhase.Shop));
-            Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.Production));
-            Assert.That(game.Day.SettledRounds, Is.EqualTo(1));
+            Assert.That(game.TryOpenShop(game.Day.Version), Is.True);
+            Assert.That(log.Single(notice => notice.Trigger == DayTrigger.ShopEntered).Day.Phase, Is.EqualTo(DayPhase.WakeUp));
             var offers = game.GetShopOffers();
             Assert.That(game.RefreshShop(), Is.True);
             Assert.That(game.BuyOffer(0), Is.True);
             Assert.That(game.GetShopOffers()[0].Sold, Is.True);
-            Assert.That(game.EnterBuild(), Is.True);
+            Assert.That(game.TryCloseShop(game.Day.Version), Is.True);
+            Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.True);
+            yield return PlayScoringRound(game);
+            Assert.That(game.Session.Phase, Is.EqualTo(RoundPhase.Build));
+            Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.Production));
+            Assert.That(game.Day.SettledRounds, Is.EqualTo(1));
+            Assert.That(game.ShopOpen || game.RefreshShop(), Is.False);
             Assert.That(game.PlaceDevice(starterId, -3, 2), Is.True);
             Assert.That(game.RotateDevice(starterId, 45), Is.True);
             yield return Until(() => FindDeviceBody(starterId) != null, "moved collision geometry");
@@ -314,11 +430,12 @@ namespace MarblesECS.Tests
             Assert.That(game.Day.Attempt, Is.EqualTo(2));
 
             score.Kind = MarbleContactKind.Score;
-            Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.True);
-            yield return PlayScoringRound(game);
+            Assert.That(game.TryOpenShop(game.Day.Version), Is.True);
             Assert.That(game.GetShopOffers().Select(offer => offer.DefinitionId),
                 Is.EqualTo(offers.Select(offer => offer.DefinitionId)), "retry replays the same shop draws");
-            Assert.That(game.EnterBuild(), Is.True);
+            Assert.That(game.TryCloseShop(game.Day.Version), Is.True);
+            Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.True);
+            yield return PlayScoringRound(game);
             score.FlatScore = balance.Stages[1].TargetScore;
             yield return PlayScoringRound(game);
             Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.DaySettlement));
@@ -468,10 +585,11 @@ namespace MarblesECS.Tests
 
         private const string FixtureJson = "{\"schemaVersion\":1,\"sequenceId\":\"fixture\"," +
             "\"days\":[{\"dayId\":\"fixture-first\",\"order\":1,\"productionPlanId\":\"single\",\"productionFeatures\":[\"Shop\",\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]}," +
-            "{\"dayId\":\"fixture-second\",\"order\":2,\"productionPlanId\":\"multiple\",\"eventIds\":[\"round\",\"retry\"],\"productionFeatures\":[\"Shop\",\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]}]," +
+            "{\"dayId\":\"fixture-second\",\"order\":2,\"productionPlanId\":\"multiple\",\"eventIds\":[\"round\",\"retry\",\"shop\"],\"productionFeatures\":[\"Shop\",\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]}]," +
             "\"productionPlans\":[{\"planId\":\"single\",\"firstStageId\":10,\"lastStageId\":10}," +
             "{\"planId\":\"multiple\",\"firstStageId\":10,\"lastStageId\":20}]," +
             "\"events\":[{\"eventId\":\"round\",\"trigger\":\"RoundSettled\",\"executionPolicy\":\"EveryOccurrence\",\"actions\":[{\"type\":\"record\"}]}," +
-            "{\"eventId\":\"retry\",\"trigger\":\"DayRetried\",\"actions\":[{\"type\":\"record\"}]}]}";
+            "{\"eventId\":\"retry\",\"trigger\":\"DayRetried\",\"actions\":[{\"type\":\"record\"}]}," +
+            "{\"eventId\":\"shop\",\"trigger\":\"ShopEntered\",\"actions\":[{\"type\":\"record\"}]}]}";
     }
 }

@@ -33,13 +33,6 @@ namespace MarblesECS.PhysX
             return true;
         }
 
-        public bool EnterBuild()
-        {
-            if (simulation == null || !simulation.EnterBuild()) return false;
-            // Existing board devices still need a Build phase for moving and selling.
-            return simulation.GetOwnedDevices().Length > 0 || BeginRound();
-        }
-
         private bool HasUnplacedDevices()
         {
             if (simulation == null) return false;
@@ -61,6 +54,10 @@ namespace MarblesECS.PhysX
         }
         public bool BuyOffer(int index) => simulation != null && simulation.BuyOffer(index);
         public bool RefreshShop() => simulation != null && simulation.RefreshShop();
+        public bool ShopOpen => IsReady && simulation.ShopOpen;
+        public bool ShopCommandsAvailable => IsReady && simulation.ShopCommandsAvailable;
+        public bool TryOpenShop(long version) => IsReady && !RequiresRestart && simulation.TryOpenShop(version);
+        public bool TryCloseShop(long version) => IsReady && simulation.TryCloseShop(version);
         public bool SellDevice(int id) => simulation != null && simulation.SellDevice(id);
         public bool CanOfferDevice(int offeredId, int targetId) => IsReady && !Paused && simulation.CanOfferDevice(offeredId, targetId);
         public bool TryOfferDevice(int offeredId, int targetId) => IsReady && !Paused && simulation.TryOfferDevice(offeredId, targetId);

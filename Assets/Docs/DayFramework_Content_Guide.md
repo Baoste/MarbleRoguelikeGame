@@ -14,17 +14,17 @@ IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白�
 
 场景逻辑在 Controller 就绪后调用 `TryStartConfiguredDayCampaign`。调用者也能用 `TryStartDayCampaign` 安装已校验的定义。显示当前状态时读取 `Controller.Day`，以展示时读取的 `Version` 提交起床、结算和休息完成命令。清空日期后，配置仍可校验，显式启动会报告未配置。
 
-`productionFeatures` 是功能开关列表，允许 `Shop`、`DevicePlacement`、`Rush` 和 `GamblingWheel`。省略或留空会以基础生产开始。
+`productionFeatures` 是功能开关列表，允许 `Shop`、`DevicePlacement`、`Rush` 和 `GamblingWheel`。省略或留空会以基础生产开始。加入 `Shop` 后，当天可在 Morning Prep 靠近机台旁平台上的 `Shop Terminal` 按 E 开店。购物是可选互动。
 
 ### Morning Prep
 
-每项 `morningPrep` 需要唯一 `objectiveId`、`type` 和 `anchorId`。`ReadNote` 额外需要显示的 `text`。在 TestScene 的 Morning Prep 对象上，把 Anchor ID 绑定到摆放物件的场景 Transform。Day0 的纸条使用 `desk`。所有目标完成且玩家到达机器交互点后，场景允许按 E 开始生产。
+每项 `morningPrep` 需要唯一 `objectiveId`、`type` 和 `anchorId`。`ReadNote` 额外需要显示的 `text`。在 TestScene 的 Morning Prep 对象上，`Surface` 指定物件摆放位置，`Interaction` 可指定玩家靠近的独立交互点。Day0 的 `desk` 绑定到弹珠机右侧平台。所有目标完成且玩家到达机器交互点后，场景允许按 E 开始生产。
 
 ## 增加 Event 和 Action
 
 在 `events[]` 声明 `eventId`、`trigger` 和非空的有序 `actions`。可用 `priority` 提高执行顺序。事件策略为 `OncePerAttempt` 或 `EveryOccurrence`，省略时采用 `OncePerAttempt`。可选的 `condition` 对象用 `type` 和 `parameters` 引用已注册条件。Action 条目也需要 `type`，`parameters` 是由该类型定义和校验的可选字符串。
 
-可用的 Trigger 是四个外层阶段各自的 `Entered` 和 `Exited`，以及 `BuildEntered`、`PlayingEntered`、`DrainingEntered`、`ShopEntered`、`RoundSettled`、`ProductionSucceeded`、`ProductionFailed`、`DayRetried`、`DayCompleted`。成功从生产进入当天结算时用 `DaySettlementEntered`。需要处理发射到排空这一回合的结果时，用 `RoundSettled`。完成休息的通知在当天作用域结束前派发。
+可用的 Trigger 是四个外层阶段各自的 `Entered` 和 `Exited`，以及 `BuildEntered`、`PlayingEntered`、`DrainingEntered`、`ShopEntered`、`RoundSettled`、`ProductionSucceeded`、`ProductionFailed`、`DayRetried`、`DayCompleted`。`ShopEntered` 在玩家于 Morning Prep 打开商店时触发。成功从生产进入当天结算时用 `DaySettlementEntered`。需要处理发射到排空这一回合的结果时，用 `RoundSettled`。完成休息的通知在当天作用域结束前派发。
 
 编写行为时，在 `DayBehaviorRegistry` 以稳定的类型键注册 `RegisterAction<T>` 或 `RegisterCondition<T>`。类型注册负责把参数字符串转换为不可变的参数值，并在加载时报告非法参数。将同一套注册传入运行入口和验证脚本。新增正式类型时，可在 `GameDaysLoader` 的默认注册创建处加入项目的公共注册。Action 可从 `DayActionContext.Notice` 读取阶段和尝试信息，并通过 `RemoveRules(sourceId, scope)` 移除准确来源的规则。同步动作返回 `Task.CompletedTask`，异步动作返回真实的完成任务并响应取消令牌。Unity 与玩法调用保持在模拟主线程。
 

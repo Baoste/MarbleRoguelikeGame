@@ -479,11 +479,10 @@ namespace MarblesECS.Editor
                 wait = WaitFor(() => !rig.ItemGroup.blocksRaycasts && rig.ItemGroup.alpha == 0,
                     "Playing releases item-board UI input");
                 while (wait.MoveNext()) yield return null;
-                // Only deterministic test inputs are injected: sufficient score and a single shop offer.
-                // Settlement, purchase, inventory, UI selection and placement still run through production paths.
+                // Seed the score; the real settlement and placement inputs drive the next stage.
                 int previousStage = context.Campaign.StageIndex;
                 Check(previousStage + 1 < game.Balance.Stages.Length,
-                    "Settlement has a following shop stage for cycle " + stage);
+                    "Settlement has a following stage for cycle " + stage);
                 var round = context.Round;
                 round.Score = Math.Max(0, round.TargetScore - context.Campaign.TotalScore);
                 // Zero-value entry forces a real draw without changing the target/stage.
@@ -496,8 +495,8 @@ namespace MarblesECS.Editor
                 Check(rig.CanCashOut(), "Physical lever permits settlement " + stage);
                 var lever = rig.LeverAnchor.GetComponentsInChildren<DiegeticUIHit>(true).First(h => h.Kind == 0);
                 ClickVisible(lever.gameObject);
-                wait = WaitFor(() => game.Session.Phase == RoundPhase.Shop,
-                    "Real settlement reaches Shop " + stage, 25);
+                wait = WaitFor(() => game.Session.Phase == RoundPhase.Build,
+                    "Real settlement reaches Build " + stage, 25);
                 while (wait.MoveNext()) yield return null;
                 Check(game.Session.StageIndex == previousStage + 1 && game.Session.LastSkippedStages == 0,
                     "Settlement advances exactly one campaign stage: " + previousStage + " -> " + game.Session.StageIndex);
@@ -508,76 +507,30 @@ namespace MarblesECS.Editor
                     "CashOut rotates the physical lever back to its OFF position");
                 Check(result.ResultText && !result.ResultText.raycastTarget,
                     "Settlement result cannot intercept card clicks");
-                OwnedDeviceSnapshot purchased;
-                var shopDevice = game.Balance.Devices.Single(d => d.Id == 9002 && d.SourceId == "Reflector");
-                // Each cycle performs real Buy and Continue pointer events at one requested
-                // resolution. A 640x480 batch window is below the authored shop's supported size.
-                using (var resolution = new TargetResolutionScope(rig.ViewCamera, stage == 1 ? 1920 : 3840))
-                {
-                    yield return null;
-                    resolution.Validate(shop.ShopCanvasGroup.GetComponentInParent<Canvas>());
-                    // Lua supplies runtime behaviour. Kind is a legacy category.
-                    Report.Add("CATALOG: purchase/placement regression uses current 弹弹 (9002/Reflector).");
-                    Check(shopDevice.PurchaseQuantity == 1, "Regression shop offer supplies one actual device: " + shopDevice.Name);
-                    var offers = context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);
-                    offers.Clear();
-                    offers.Add(new ShopOfferData { Kind = ShopItemKind.Device, DefinitionId = shopDevice.Id, Price = shopDevice.Price });
-                    // Both the displayed snapshot and Buy recompute the current price from the definition
-                    // and SHOP_PRICE_MOD. Injecting an arbitrary offer.Price does not override that contract.
-                    var displayedOffer = game.GetShopOffers().Single(o => o.DefinitionId == shopDevice.Id);
-                    if (game.Session.Coins < displayedOffer.Price)
-                    {
-                        var wallet = context.Campaign;
-                        Report.Add("TEST_WALLET_TOPUP before=" + wallet.Coins + " after=" + displayedOffer.Price);
-                        wallet.Coins = displayedOffer.Price;
-                        context.Campaign = wallet;
-                    }
-                    // Refresh via its existing enable path, without changing stock/assets or restarting a game.
-                    shop.enabled = false;
-                    shop.enabled = true;
-                    yield return null;
-                    var offerView = shop.OfferContainer.GetComponentsInChildren<ShopOfferItemUI>()
-                        .Single(o => o.NameText.text == shopDevice.Name);
-                    var buy = offerView.BuyButton;
-                    displayedOffer = game.GetShopOffers().Single(o => o.DefinitionId == shopDevice.Id);
-                    Check(offerView.PriceText && offerView.PriceText.text == displayedOffer.Price + " 金币",
-                        "Shop UI displays the current price snapshot: " + displayedOffer.Price);
-                    long coins = game.Session.Coins;
-                    var priorIds = game.GetOwnedDevices().Select(d => d.InstanceId).ToArray();
-                    Check(buy.IsInteractable(), "Current shop offer is affordable: " + shopDevice.Name);
-                    ClickVisible(buy.gameObject);
-                    var additions = game.GetOwnedDevices().Where(d => !priorIds.Contains(d.InstanceId)).ToArray();
-                    Report.Add("PURCHASE coinsBefore=" + coins + " coinsAfter=" + game.Session.Coins +
-                        " currentDisplayedOfferPrice=" + displayedOffer.Price + " uiPrice=" + offerView.PriceText.text +
-                        " definitionBasePrice=" + shopDevice.Price + " additions=" + string.Join("; ", additions.Select(d =>
-                            "instance=" + d.InstanceId + ",definition=" + d.DefinitionId + ",placed=" + d.Placed + ",purchasePrice=" + d.PurchasePrice)));
-                    Check(additions.Length == 1, "Actual shop Buy creates exactly one new device instance");
-                    purchased = additions[0];
-                    Check(purchased.DefinitionId == shopDevice.Id && !purchased.Placed,
-                        "Purchased device starts unplaced: " + shopDevice.Name);
-                    Check(game.Session.Coins == coins - displayedOffer.Price && purchased.PurchasePrice == displayedOffer.Price,
-                        "Buy debits the displayed price and records the same purchase cost");
-                    Check(game.GetShopOffers().Single(o => o.Index == displayedOffer.Index).Sold,
-                        "Purchased offer is marked sold");
-                    ClickVisible(shop.ContinueButton.gameObject);
-                }
-                Check(game.Session.Phase == RoundPhase.Build, "Actual Shop Continue enters Build " + (stage + 1));
+                var device = game.Balance.Devices.Single(d => d.Id == 9002 && d.SourceId == "Reflector");
+                int instanceId = context.Campaign.NextDeviceId + 1;
+                CampaignStateUtility.CreateDevice(context, device, device.Price);
                 Check(game.Session.StageIndex == previousStage + 1 &&
                     game.Session.TargetScore == game.Balance.Stages[previousStage + 1].TargetScore,
                     "Entering Build preserves the settled stage and loads its target");
                 wait = WaitFor(() => rig.IsBoardOpen && rig.ItemGroup.interactable &&
-                    !shop.ShopCanvasGroup.blocksRaycasts, "Shop closes and physical item board is interactive");
+                    !shop.ShopCanvasGroup.blocksRaycasts, "Physical item board is interactive after settlement");
                 while (wait.MoveNext()) yield return null;
                 Check(result.DisplayGroup.alpha == 0, "Wheel is hidden during new-round placement");
-                var placement = PlaceFromCard(purchased.InstanceId);
-                while (placement.MoveNext()) yield return null;
-                ClickVisible(rig.Continue.gameObject);
+                using (var resolution = new TargetResolutionScope(rig.ViewCamera, stage == 1 ? 1920 : 3840))
+                {
+                    yield return null;
+                    resolution.Validate(shop.ShopCanvasGroup.GetComponentInParent<Canvas>());
+                    var placement = PlaceFromCard(instanceId);
+                    while (placement.MoveNext()) yield return null;
+                    ClickVisible(rig.Continue.gameObject);
+                }
                 Check(game.Session.Phase == RoundPhase.Playing && !game.Paused,
                     "Physical Continue starts round " + (stage + 1));
-                Check(game.GetOwnedDevices().Single(d => d.InstanceId == purchased.InstanceId).Placed,
-                    "Purchased device survives round start: " + shopDevice.Name);
+                Check(game.GetOwnedDevices().Single(d => d.InstanceId == instanceId).Placed,
+                    "Placed device survives round start: " + device.Name);
                 Check(game.LastRunRandomSeed == runSeed && game.LastRandomStarterDeviceIds.SequenceEqual(starterIds),
-                    "Shop and next round preserve the run seed and do not grant starters");
+                    "Next round preserves the run seed and does not grant starters");
                 wait = Wait(.4);
                 while (wait.MoveNext()) yield return null;
                 Check(Quaternion.Angle(buildLeverRotation, rig.LeverPivot.localRotation) > 1f &&
@@ -590,7 +543,7 @@ namespace MarblesECS.Editor
             while (wait.MoveNext()) yield return null;
             game.RestartRound();
             Check(game.GetOwnedDevices().Length == 0 && game.Session.Phase == RoundPhase.Playing,
-                "Restart clears previously purchased and placed devices and starts empty");
+                "Restart clears placed devices and starts empty");
         }
     }
 }

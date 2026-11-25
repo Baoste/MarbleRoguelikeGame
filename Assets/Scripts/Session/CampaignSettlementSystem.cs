@@ -23,7 +23,6 @@ namespace MarblesECS
                 AdvanceStages(context, ref campaign, ref round);
             context.Campaign = campaign;
             context.Round = round;
-            if (round.Phase == (byte)RoundPhase.Shop) CampaignShopSystem.Generate(context);
         }
 
         private static void AdvanceStages(SimulationContext context, ref CampaignData campaign, ref RoundData round)
@@ -54,8 +53,7 @@ namespace MarblesECS
             }
             campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastRewardCoins, CampaignStateUtility.MaxCoins);
             campaign.StageIndex = Math.Min(next, end - 1);
-            round.Phase = (byte)(next == end ? RoundPhase.Won :
-                context.HasProductionFeature(ProductionFeature.Shop) ? RoundPhase.Shop : RoundPhase.Build);
+            round.Phase = (byte)(next == end ? RoundPhase.Won : RoundPhase.Build);
             if (round.Phase == (byte)RoundPhase.Build) round.TargetScore = CampaignStateUtility.TargetScore(context, next);
         }
     }

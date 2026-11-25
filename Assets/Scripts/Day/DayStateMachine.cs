@@ -9,7 +9,7 @@ namespace MarblesECS
             switch (reason)
             {
                 case DayTransitionReason.WakeUpCompleted:
-                    return state.Phase == DayPhase.WakeUp && state.MorningPrepRemaining == 0;
+                    return state.Phase == DayPhase.WakeUp && state.MorningPrepRemaining == 0 && !state.ShopOpen;
                 case DayTransitionReason.ProductionSucceeded:
                     return state.Phase == DayPhase.Production && state.Result == DayResult.Succeeded && !state.SettlementCommitted;
                 case DayTransitionReason.ProductionFailed:

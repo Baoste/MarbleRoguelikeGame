@@ -15,7 +15,7 @@ namespace MarblesECS.Editor.Diegetic
 {
     public static class DiegeticSceneInstaller
     {
-        const string W=DiegeticUIProbe.Work;
+        static string W => DiegeticUIProbe.Work;
         const string Art="Assets/Art/DiegeticUI";
         const string SourceData="Tools/DiegeticUI/SourceExport";
         [Serializable] public class Piece {public string name,group,file,material;public float[] center,sourceCenter;public bool hidden;}

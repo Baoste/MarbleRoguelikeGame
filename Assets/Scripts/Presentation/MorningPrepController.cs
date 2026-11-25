@@ -16,20 +16,27 @@ namespace MarblesECS.Presentation
         {
             public string Id;
             public Transform Surface;
+            public Transform Interaction;
         }
+
+        private enum RoomInteraction { None, Note, Shop, Machine }
 
         [SerializeField] private MarbleGameController controller;
         [SerializeField] private RoomCameraMovement roomCamera;
         [SerializeField] private CinemachineVirtualCamera machineCamera;
         [SerializeField] private CinemachineBrain brain;
         [SerializeField] private Transform machineInteraction;
+        [SerializeField] private GameObject shopTerminalPrefab;
+        [SerializeField] private Transform shopTerminalAnchor;
+        [SerializeField] private Transform shopInteraction;
         [SerializeField] private TMP_FontAsset font;
         [SerializeField] private Anchor[] roomAnchors;
         [SerializeField, Min(.01f)] private float fadeSeconds = .85f;
         [SerializeField, Min(.1f)] private float interactionRange = 7f;
 
-        private readonly List<(MorningPrepDefinition definition, Transform view)> notes =
-            new List<(MorningPrepDefinition definition, Transform view)>();
+        private readonly List<(MorningPrepDefinition definition, Transform paper, Transform interaction)> notes =
+            new List<(MorningPrepDefinition definition, Transform paper, Transform interaction)>();
+        private GameObject shopTerminal;
         private MorningPrepView view;
         private MorningPrepDefinition reading;
         private long wakeVersion = -1;
@@ -72,7 +79,7 @@ namespace MarblesECS.Presentation
                 UpdateAfterWakeUp(day);
 
 #if ENABLE_LEGACY_INPUT_MANAGER
-            if (Input.GetKeyDown(KeyCode.E) || (IsReading && Input.GetKeyDown(KeyCode.Escape))) TryInteract();
+            if (Input.GetKeyDown(KeyCode.E) || ((IsReading || day.ShopOpen) && Input.GetKeyDown(KeyCode.Escape))) TryInteract();
 #endif
         }
 
@@ -88,13 +95,17 @@ namespace MarblesECS.Presentation
             if (!day.LifecyclePending && CameraReady(roomCamera.Camera))
                 view.Fade(Mathf.MoveTowards(view.FadeAlpha, 0, Time.unscaledDeltaTime / Mathf.Max(.01f, fadeSeconds)));
 
-            roomCamera.CanMove = view.FadeAlpha == 0 && !IsReading && !day.LifecyclePending;
+            roomCamera.CanMove = view.FadeAlpha == 0 && !IsReading && !day.ShopOpen && !day.LifecyclePending;
             if (!roomCamera.CanMove) { view.ShowPrompt(null); return; }
-            if (NearbyNote() != null) view.ShowPrompt("E  Read note");
-            else if (CanUseMachineFrom(day)) view.ShowPrompt("E  Use marble machine");
-            else view.ShowPrompt(day.MorningPrepRemaining > 0
-                ? "Morning Prep   ·   Read the desk note   ·   WASD / RMB"
-                : "Morning Prep   ·   Go to the marble machine");
+            view.ShowPrompt(FindNearbyInteraction(day, out _) switch
+            {
+                RoomInteraction.Note => "E  Read note",
+                RoomInteraction.Shop => "E  Open shop",
+                RoomInteraction.Machine => "E  Use marble machine",
+                _ => day.MorningPrepRemaining > 0
+                    ? "Morning Prep   ·   Read the note by the machine"
+                    : "Morning Prep   ·   Go to the marble machine"
+            });
         }
 
         private void BeginWakeUp(DayProgressSnapshot day)
@@ -107,19 +118,23 @@ namespace MarblesECS.Presentation
             machineCamera.Priority = authoredMachinePriority;
             view.Fade(1);
             view.ShowNote(null);
+            ShowShopTerminal(controller.HasProductionFeature(ProductionFeature.Shop));
             foreach (var objective in controller.CurrentDayDefinition.MorningPrep)
             {
                 var anchor = FindAnchor(objective.AnchorId);
                 if (objective.Interaction == MorningPrepInteraction.ReadNote)
-                    notes.Add((objective, view.PlaceNote(anchor, objective.Text)));
+                {
+                    var paper = view.PlaceNote(anchor.Surface, objective.Text);
+                    notes.Add((objective, paper, anchor.Interaction ? anchor.Interaction : paper));
+                }
             }
         }
 
-        private Transform FindAnchor(string id)
+        private Anchor FindAnchor(string id)
         {
             if (roomAnchors != null)
                 foreach (var anchor in roomAnchors)
-                    if (anchor.Id == id && anchor.Surface) return anchor.Surface;
+                    if (anchor.Id == id && anchor.Surface) return anchor;
             throw new InvalidOperationException($"Morning Prep anchor '{id}' is missing from the scene.");
         }
 
@@ -135,7 +150,12 @@ namespace MarblesECS.Presentation
                 view.ShowNote(null);
                 view.Fade(0);
             }
-            if (day.Status == DayCampaignStatus.Completed) { view.ShowPrompt("Day complete"); return; }
+            if (day.Status == DayCampaignStatus.Completed)
+            {
+                ShowShopTerminal(false);
+                view.ShowPrompt("Day complete");
+                return;
+            }
             if (day.Phase == DayPhase.DaySettlement)
                 view.ShowPrompt(day.LifecyclePending ? null : "E  Continue to rest");
             else if (day.Phase == DayPhase.Rest)
@@ -152,6 +172,7 @@ namespace MarblesECS.Presentation
         {
             if (view == null || !controller.IsReady || controller.RequiresRestart) return false;
             var day = controller.Day;
+            if (day.ShopOpen) return controller.TryCloseShop(day.Version);
             if (day.Status != DayCampaignStatus.Active || day.LifecyclePending) return false;
             if (day.Phase == DayPhase.DaySettlement) return controller.TryCompleteDaySettlement(day.Version, out _);
             if (day.Phase == DayPhase.Rest) return controller.TryCompleteRest(day.Version, out _);
@@ -165,41 +186,77 @@ namespace MarblesECS.Presentation
                 view.ShowNote(null);
                 return true;
             }
-            var objective = NearbyNote();
-            if (objective != null)
+            switch (FindNearbyInteraction(day, out var objective))
             {
-                reading = objective;
-                roomCamera.CanMove = false;
-                view.ShowPrompt(null);
-                view.ShowNote(objective.Text);
-                return true;
+                case RoomInteraction.Note:
+                    reading = objective;
+                    view.ShowNote(objective.Text);
+                    break;
+                case RoomInteraction.Shop:
+                    if (!controller.TryOpenShop(day.Version)) return false;
+                    break;
+                case RoomInteraction.Machine:
+                    enteringMachine = true;
+                    machineCamera.Priority = roomPriority + 1;
+                    break;
+                default:
+                    return false;
             }
-            if (!CanUseMachineFrom(day)) return false;
 
-            enteringMachine = true;
             roomCamera.CanMove = false;
             view.ShowPrompt(null);
-            machineCamera.Priority = roomPriority + 1;
             return true;
         }
 
         private bool CanUseMachineFrom(DayProgressSnapshot day) =>
             day.Status == DayCampaignStatus.Active && day.Phase == DayPhase.WakeUp && day.Version == wakeVersion &&
-            day.MorningPrepRemaining == 0 && !day.LifecyclePending && !enteringMachine && !IsReading &&
+            day.MorningPrepRemaining == 0 && !day.ShopOpen && !day.LifecyclePending && !enteringMachine && !IsReading &&
             FadeAlpha == 0 && HorizontalDistanceSquared(machineInteraction.position) <= interactionRange * interactionRange;
 
-        private MorningPrepDefinition NearbyNote()
+        private RoomInteraction FindNearbyInteraction(DayProgressSnapshot day, out MorningPrepDefinition objective)
         {
-            MorningPrepDefinition nearest = null;
+            objective = null;
+            var nearest = RoomInteraction.None;
             float shortest = interactionRange * interactionRange;
+            if (CanUseMachineFrom(day))
+            {
+                nearest = RoomInteraction.Machine;
+                shortest = HorizontalDistanceSquared(machineInteraction.position);
+            }
+            if (shopTerminal && shopTerminal.activeInHierarchy && shopInteraction)
+            {
+                float distance = HorizontalDistanceSquared(shopInteraction.position);
+                if (distance <= shortest)
+                {
+                    nearest = RoomInteraction.Shop;
+                    shortest = distance;
+                }
+            }
+
             foreach (var note in notes)
             {
-                float distance = HorizontalDistanceSquared(note.view.position);
+                float distance = HorizontalDistanceSquared(note.interaction.position);
                 if (distance > shortest || controller.IsMorningPrepComplete(note.definition.ObjectiveId)) continue;
-                nearest = note.definition;
+                nearest = RoomInteraction.Note;
+                objective = note.definition;
                 shortest = distance;
             }
             return nearest;
+        }
+
+        private void ShowShopTerminal(bool visible)
+        {
+            if (visible)
+            {
+                if (!shopTerminal && shopTerminalPrefab && shopTerminalAnchor)
+                    shopTerminal = Instantiate(shopTerminalPrefab, shopTerminalAnchor, false);
+            }
+            else if (shopTerminal)
+            {
+                shopTerminal.SetActive(false);
+                Destroy(shopTerminal);
+                shopTerminal = null;
+            }
         }
 
         private float HorizontalDistanceSquared(Vector3 position)
@@ -214,8 +271,8 @@ namespace MarblesECS.Presentation
         {
             foreach (var item in notes)
             {
-                item.view.gameObject.SetActive(false);
-                Destroy(item.view.gameObject);
+                item.paper.gameObject.SetActive(false);
+                Destroy(item.paper.gameObject);
             }
             notes.Clear();
         }
@@ -223,6 +280,7 @@ namespace MarblesECS.Presentation
         private void OnDisable()
         {
             ClearNotes();
+            ShowShopTerminal(false);
             if (view == null) return;
             view.Dispose();
             view = null;

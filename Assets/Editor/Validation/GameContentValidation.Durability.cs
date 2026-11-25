@@ -50,12 +50,12 @@ namespace MarblesECS.Editor
             using (var f = new Fixture())
             {
                 var definition = f.C.Balance.Devices.Single(d => d.Id == 113);
-                var round = f.C.Round; round.Phase = (byte)RoundPhase.Shop; f.C.Round = round;
+                var round = f.C.Round; round.Phase = (byte)RoundPhase.Build; f.C.Round = round;
                 var campaign = f.C.Campaign; campaign.Coins = 1000; f.C.Campaign = campaign;
                 var offers = f.C.Manager.GetBuffer<ShopOfferData>(f.C.RoundEntity); offers.Clear();
                 offers.Add(new ShopOfferData { Kind = ShopItemKind.Device, DefinitionId = definition.Id, Price = 999 });
                 Near(definition.Price, f.Simulation.GetShopOffers()[0].Price, "display replaces stale price with metadata purchase price");
-                Check(f.Simulation.BuyOffer(0), "real shop buys the device"); Near(1000 - definition.Price, f.C.Campaign.Coins, "real purchase deducts its rarity price");
+                Check(CampaignShopSystem.Buy(f.C, 0), "real shop buys the device"); Near(1000 - definition.Price, f.C.Campaign.Coins, "real purchase deducts its rarity price");
                 var owned = f.Simulation.GetOwnedDevices().Single();
                 Near(definition.SellPrice, owned.SellPrice, "inventory displays metadata sale price");
                 f.C.Balance.Campaign.SellRatio = 0;

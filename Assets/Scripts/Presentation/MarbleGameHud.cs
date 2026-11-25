@@ -68,12 +68,16 @@ namespace MarblesECS.Presentation
         private void DrawReady()
         {
             DrawStatus();
+            if (Controller.ShopOpen)
+            {
+                DrawShop();
+                return;
+            }
             if (!Controller.ProductionCommandsAvailable) return;
             RoundPhase phase = Controller.Snapshot.Phase;
             if (phase == RoundPhase.Playing) DrawLaunch();
             else if (phase == RoundPhase.Draining)
                 GUILayout.Label("结算中：停止发射，等待场内血珠排空后统一开奖。\n剩余 " + Controller.Snapshot.ActiveMarbles + " 颗");
-            else if (phase == RoundPhase.Shop) DrawShop();
             else if (phase == RoundPhase.Build) DrawBuild();
             else DrawResult();
             if (!string.IsNullOrEmpty(feedback)) GUILayout.Label(feedback);
