@@ -5,7 +5,7 @@ namespace MarblesECS
     /// <summary>One shared pool. All clocks and draws belong to the simulation, never the UI.</summary>
     internal static class GamblingWheelSystem
     {
-        internal static void Deposit(SimulationContext context, double value)
+        internal static void Deposit(SimulationContext context, double value, MarbleContact? contact = null)
         {
             if (!context.IsRunning || !context.HasProductionFeature(ProductionFeature.GamblingWheel) ||
                 !MarbleRules.IsFinite(value) || value < 0) return;
@@ -20,6 +20,7 @@ namespace MarblesECS
             round.WheelWindowSeconds = GamblingWheelRules.WindowSeconds(round.WheelBallCount);
             round.WheelExpiresAt = round.Time + round.WheelWindowSeconds;
             context.Round = round;
+            if (contact.HasValue && context.FloatingText != null) context.FloatingText.WheelAnchor = contact;
         }
 
         internal static void Tick(SimulationContext context)
@@ -49,6 +50,13 @@ namespace MarblesECS
             round.WheelBallCount = 0;
             round.WheelExpiresAt = round.WheelWindowSeconds = 0;
             context.Round = round;
+            var text = context.FloatingText;
+            if (text != null && text.WheelAnchor is MarbleContact anchor)
+            {
+                text.WheelAnchor = null;
+                text.Enqueue(FloatingTextEvent.FromInteger(anchor.Position, FloatingTextSource.Zone, anchor.TargetId,
+                    FloatingTextType.Score, round.WheelLastScoreChange, anchor.Key));
+            }
             return true;
         }
     }

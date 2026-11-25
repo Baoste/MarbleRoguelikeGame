@@ -33,7 +33,7 @@ flowchart LR
 
 每次尝试运行一个生产回合。目标分和基础通关奖励直接读取当天的 `targetScore` 和 `rewardCoins`。`CampaignSettlementSystem` 用该回合的最终分数判定达标，达标后发放受 `COIN_GAIN_RATE` 修正的基础与超额奖励。主动提现使用剩余血量、`BLOOD_DIVIDEND_RATE` 和 `COIN_GAIN_RATE`。直接启动机台时，每回合采用 `Marble.TargetScore`，达标后回到 `Build` 开始下一回合。
 
-Day 的 `productionFeatures` 逐项开启 `Shop`、`DevicePlacement`、`Rush` 和 `GamblingWheel`，默认四项都关闭。`Shop` 开启 Morning Prep 的商店终端。关闭转盘时，其现有分区按普通得分区即时计分。HUD、提现和结算共享当天目标。Day0 使用 50 分。Day1 使用 200 分并开启商店与装置布置。
+`defaultProductionFeatures` 启用整段序列共用的功能，各日可以通过 `productionFeatures` 增设功能。当前序列从 Day0 起启用 RUSH。`Shop` 开启 Morning Prep 的商店终端。关闭转盘时，其现有分区按普通得分区即时计分。HUD、提现和结算共享当天目标。Day0 使用 50 分。Day1 使用 200 分并开启商店与装置布置。
 
 适配器在现有 `BeginRound`、`CashOut` 和完整的 `AfterPhysics` 边界取结果。`SettlementComplete` 首次生效时发布 `RoundSettled`。若同一步进入排空并完成结算，先发 `DrainingEntered`，再发 `RoundSettled`。`Won` 和 `Lost` 分别触发 `ProductionSucceeded` 和 `ProductionFailed`。外层发射和布置命令只在无待处理生命周期的 Production 阶段可用。
 

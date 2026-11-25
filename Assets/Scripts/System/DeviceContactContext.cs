@@ -13,6 +13,7 @@ namespace MarblesECS
         private readonly Entity ball, deviceEntity;
         private readonly MarbleContact contact;
         private readonly DevicePose pose;
+        private readonly int sourceId;
         private readonly DeviceDefinition definition;
         private readonly DeviceHoldInfo hold;
         private readonly DeviceImpactInfo impact;
@@ -24,10 +25,12 @@ namespace MarblesECS
         {
             this.c = c; this.ball = ball; deviceEntity = device; this.contact = contact; this.pose = pose;
             this.allowRushContribution = allowRushContribution && !completedHold.HasValue;
-            definition = CampaignStateUtility.Device(c, c.Manager.GetComponentData<OwnedDeviceData>(device).DefinitionId);
-            Motion = new DeviceMotionApi(this, ball, device, Device.InstanceId, pose);
+            var owned = c.Manager.GetComponentData<OwnedDeviceData>(device);
+            definition = CampaignStateUtility.Device(c, owned.DefinitionId);
+            sourceId = owned.InstanceId;
+            Motion = new DeviceMotionApi(this, ball, device, sourceId, pose);
             Vectors = new DeviceVectorApi(this);
-            Board = new DeviceBoardApi(() => C, Device.InstanceId);
+            Board = new DeviceBoardApi(() => C, sourceId);
             if (completedHold.HasValue) hold = new DeviceHoldInfo(this, completedHold.Value, c.Round.Time);
             else if (contact.HasImpact) impact = new DeviceImpactInfo(this, contact);
         }
@@ -75,6 +78,8 @@ namespace MarblesECS
             score.SetDeviceMultiplier(amount);
             context.Manager.SetComponentData(ball, score);
             if (score.DeviceMultiplierBonus != before) MarkTriggered();
+            if (context.FloatingText != null && FloatingTextFeedback.MultiplierChange(before, score.DeviceMultiplierBonus) != 0)
+                EmitNumber(context, FloatingTextType.Multiplier, amount);
         }
         /// <summary>Successful effects from any other placed device instance during this ball's lifetime.</summary>
         public bool HasTriggeredOtherDevice
@@ -104,7 +109,11 @@ namespace MarblesECS
         public double RestoreBlood(double amount)
         {
             double restored = PlayerBloodSystem.Restore(C, amount);
-            if (restored > 0) MarkTriggered();
+            if (restored > 0)
+            {
+                MarkTriggered();
+                EmitNumber(C, FloatingTextType.Blood, restored);
+            }
             return restored;
         }
         public double Parameter => definition.Value;
@@ -197,9 +206,12 @@ namespace MarblesECS
         public double Global(string attribute) => AttributeRuntime.Global(C, Parse(attribute));
         public void Set(string attribute, double value)
         {
-            var id = Parse(attribute); double before = AttributeRuntime.Get(C, ball, id);
-            AttributeRuntime.SetBase(C, ball, id, value);
-            if (AttributeRuntime.Get(C, ball, id) != before) MarkTriggered();
+            var context = C;
+            var id = Parse(attribute); double before = AttributeRuntime.Get(context, ball, id);
+            AttributeRuntime.SetBase(context, ball, id, value);
+            double after = AttributeRuntime.Get(context, ball, id);
+            if (after != before) MarkTriggered();
+            EmitAttributeChange(context, id, before, after);
         }
         /// <summary>Adds to the stored base attribute, then evaluates current modifiers once.</summary>
         public void AddBase(string attribute, double amount)
@@ -210,7 +222,9 @@ namespace MarblesECS
             if (!MarbleRules.IsFinite(amount) || !MarbleRules.IsFinite(value)) throw new ArgumentOutOfRangeException(nameof(amount));
             double before = AttributeRuntime.Get(context, ball, id);
             AttributeRuntime.SetBase(context, ball, id, value);
-            if (AttributeRuntime.Get(context, ball, id) != before) MarkTriggered();
+            double after = AttributeRuntime.Get(context, ball, id);
+            if (after != before) MarkTriggered();
+            EmitAttributeChange(context, id, before, after);
         }
         private static GameAttribute Parse(string name) => (GameAttribute)Enum.Parse(typeof(GameAttribute), name, false);
         /// <summary>Replace this attribute's current value and basis, removing its existing per-ball modifiers.</summary>
@@ -226,6 +240,14 @@ namespace MarblesECS
                 if (effects[i].Effect.Attribute == id) { effects.RemoveAt(i); removed = true; }
             AttributeRuntime.SetBase(context, ball, id, replacement);
             if (removed || replacement != before) MarkTriggered();
+            EmitAttributeChange(context, id, before, replacement);
+        }
+
+        private void EmitAttributeChange(SimulationContext context, GameAttribute id, double before, double after)
+        {
+            if (context.FloatingText == null || before == after) return;
+            if (id == GameAttribute.BALL_BASE_VALUE) EmitNumber(context, FloatingTextType.Additive, after - before);
+            else if (id == GameAttribute.MACHINE_MULT) EmitNumber(context, FloatingTextType.Multiplier, after);
         }
         /// <summary>Per-ball visit tracking without a device-wide cooldown.</summary>
         public bool Visit(long visitKey, int maximum) => Visit(visitKey, maximum, false);
@@ -283,9 +305,13 @@ namespace MarblesECS
         public void AddCoins(double value)
         {
             var state = C.Campaign;
+            long before = state.Coins;
             state.Coins = MarbleRules.AddScore(state.Coins, MarbleRules.RoundScore(value, CampaignStateUtility.MaxCoins), CampaignStateUtility.MaxCoins);
             C.Campaign = state;
             if (value >= 1) MarkTriggered();
+            if (state.Coins != before)
+                C.FloatingText?.Enqueue(FloatingTextEvent.FromInteger(TextPosition, FloatingTextSource.Device, sourceId,
+                    FloatingTextType.Currency, state.Coins - before, contact.Key));
         }
         // Compatibility aliases for previously authored packages. New Lua uses Motion directly.
         public bool ScaleVelocity(float scale) => Motion.TryScaleSpeed(scale);
@@ -320,10 +346,30 @@ namespace MarblesECS
         {
             var context = C;
             var score = context.Manager.GetComponentData<MarbleScore>(ball);
+            double before = score.DeviceMultiplierBonus;
             score.AddDeviceMultiplier(amount);
             context.Manager.SetComponentData(ball, score);
             if (amount != 1) MarkTriggered();
+            if (context.FloatingText == null) return;
+            double change = FloatingTextFeedback.MultiplierChange(before, score.DeviceMultiplierBonus);
+            if (change != 0) EmitNumber(context, FloatingTextType.Multiplier, 1 + change);
         }
+
+        /// <summary>Emits optional visual feedback after a Lua-composed effect succeeds.</summary>
+        [Preserve]
+        public void EmitFloatingText(string kind, double value, int styleId = 0)
+        {
+            var context = C;
+            if (context.FloatingText != null && FloatingTextFeedback.TryParseDeviceType(kind, out var type))
+                EmitNumber(context, type, value, styleId);
+        }
+
+        private Vector3 TextPosition => hold == null ? contact.Position : pose.Position;
+
+        private void EmitNumber(SimulationContext context, FloatingTextType type, double value, int styleId = 0) =>
+            context.FloatingText?.Enqueue(new FloatingTextEvent(TextPosition, FloatingTextSource.Device, sourceId,
+                type, value, contact.Key, styleId));
+
         /// <summary>Legacy package name; now uses the same additive rule as AddScoreMultiplier.</summary>
         public void MultiplyScore(double factor) => AddScoreMultiplier(factor);
         public void AddRushChance(double amount)

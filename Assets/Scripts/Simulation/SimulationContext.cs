@@ -19,6 +19,7 @@ namespace MarblesECS
         internal readonly Dictionary<MarbleKey, Entity> Marbles = new Dictionary<MarbleKey, Entity>();
         internal readonly List<MarbleContact> Contacts = new List<MarbleContact>();
         internal readonly Queue<MarbleScoreEvent> ScoreEvents = new Queue<MarbleScoreEvent>();
+        internal FloatingTextEventBuffer FloatingText;
         internal IMarblePhysics Physics;
         internal ulong NextSpawnSequence;
         internal ulong NextStableId;
@@ -60,6 +61,16 @@ namespace MarblesECS
         internal CampaignData Campaign { get => Manager.GetComponentData<CampaignData>(RoundEntity); set => Manager.SetComponentData(RoundEntity, value); }
         internal bool IsRunning => Round.Phase == (byte)RoundPhase.Playing || Round.Phase == (byte)RoundPhase.Draining;
         internal bool HasProductionFeature(ProductionFeature feature) => (Campaign.DisabledFeatures & feature) == 0;
+
+        internal void PublishScore(MarbleScoreEvent score, long creditedScore, MarbleContact contact)
+        {
+            ScoreEvents.Enqueue(score);
+            if (score.IsPending || FloatingText == null) return;
+            bool fromDevice = contact.Kind == MarbleContactKind.Device;
+            FloatingText.Enqueue(FloatingTextEvent.FromInteger(score.Position,
+                fromDevice ? FloatingTextSource.Device : FloatingTextSource.Zone,
+                fromDevice ? score.ZoneId - 100000 : score.ZoneId, FloatingTextType.Score, creditedScore, score.Key));
+        }
 
         internal void ClearFireInput()
         {

@@ -111,6 +111,7 @@ namespace MarblesECS.Tests
             Assert.That(pins.All(pin => pin.ScoreMultiplier == 2 && pin.RushChanceAdd == 0), Is.True);
             Assert.That(pins[0].gameObject.scene, Is.EqualTo(localScene));
             Assert.That(scoreZone.Kind, Is.EqualTo(MarbleContactKind.Score));
+            Assert.That(scoreZone.RushEnabled, Is.True);
             Assert.That(scoreZone.GetComponent<BoxCollider>().isTrigger, Is.True);
             Assert.That(scoreZone.transform.parent, Is.EqualTo(pins[0].transform.parent));
             Assert.That(pins[0].transform.localPosition.z, Is.GreaterThan(0), "the first pin is left of center");
@@ -182,7 +183,7 @@ namespace MarblesECS.Tests
             Assert.That(walker.CanMove, Is.False);
             Assert.That(game.HasProductionFeature(ProductionFeature.Shop), Is.False);
             Assert.That(game.HasProductionFeature(ProductionFeature.DevicePlacement), Is.False);
-            Assert.That(game.HasProductionFeature(ProductionFeature.Rush), Is.False);
+            Assert.That(game.HasProductionFeature(ProductionFeature.Rush), Is.True);
             Assert.That(game.HasProductionFeature(ProductionFeature.GamblingWheel), Is.False);
             Assert.That(game.GetShopOffers(), Is.Empty);
             Assert.That(InTestScene<DiegeticMachineUI>().IsBoardOpen, Is.False);
@@ -190,20 +191,22 @@ namespace MarblesECS.Tests
             library.Open();
             Assert.That(library.IsOpen, Is.False);
             var status = InTestScene<ScoreListener>();
-            Assert.That(status.RushText.enabled, Is.False);
-            Assert.That(status.RushSlider.gameObject.activeSelf, Is.False);
+            yield return Until(() => status.RushText.enabled && status.RushSlider.gameObject.activeSelf, "Day0 shows the RUSH meter");
             Assert.That(InTestScene<GamblingWheelDisplay>().DisplayGroup.alpha, Is.Zero);
 
             game.AutoMoveLauncher = false;
             game.SetLauncherPosition(game.LauncherCenterZ);
-            game.SetFlow(1f);
+            game.SetFlow(0f);
             int zoneHits = 0;
             game.Scored += item => { if (item.ZoneId == scoreZone.TargetId && !item.IsPending) zoneHits++; };
             game.SetFireHeld(true);
-            float deadline = Time.realtimeSinceStartup + 15;
-            while (!game.Session.CanCashOut && Time.realtimeSinceStartup < deadline) yield return null;
+            float deadline = Time.realtimeSinceStartup + 20;
+            while (game.Snapshot.RushSecondsRemaining == 0 && game.Day.Attempt == 1 && Time.realtimeSinceStartup < deadline)
+                yield return null;
             game.SetFireHeld(false);
             Assert.That(zoneHits, Is.GreaterThan(0));
+            Assert.That(game.Snapshot.RushSecondsRemaining, Is.Positive,
+                $"Day0 RUSH after {zoneHits} Score zone hits, with {game.Snapshot.Blood} blood and meter at {game.Snapshot.RushMeter}");
             Assert.That(game.Session.CanCashOut, Is.True,
                 $"Day0 target after {zoneHits} Score zone hits, with {game.Snapshot.Blood} blood and {game.Snapshot.ActiveMarbles} marbles remaining");
             Assert.That(game.GamblingWheel.BallCount, Is.Zero);
@@ -213,7 +216,7 @@ namespace MarblesECS.Tests
             Assert.That(prep.TryInteract(), Is.True);
             Assert.That(game.Day.DayId, Is.EqualTo("day1"));
             Assert.That(game.Session.TargetScore, Is.EqualTo(200));
-            Assert.That(game.HasProductionFeature(ProductionFeature.Shop | ProductionFeature.DevicePlacement), Is.True);
+            Assert.That(game.HasProductionFeature(ProductionFeature.Shop | ProductionFeature.DevicePlacement | ProductionFeature.Rush), Is.True);
             yield return Until(() => walker.CanMove, "Day1 Morning Prep begins");
             Assert.That(shopAnchor.childCount, Is.EqualTo(2), "Day1 spawns the shop terminal");
             Assert.That(game.Day.MorningPrepRemaining, Is.EqualTo(1));

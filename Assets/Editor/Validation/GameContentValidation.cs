@@ -55,6 +55,7 @@ namespace MarblesECS.Editor
                 LegacyContent();
                 Devices();
                 DeviceLuaApi();
+                FloatingTextFeedbackValidation();
                 StickyDeviceValidation.Validate();
                 ReflectorLuaApi();
                 CollectorDeviceValidation.Validate();

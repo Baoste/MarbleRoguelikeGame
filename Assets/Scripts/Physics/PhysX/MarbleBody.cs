@@ -25,7 +25,6 @@ namespace MarblesECS.PhysX
         internal readonly System.Collections.Generic.HashSet<int> StepFields = new System.Collections.Generic.HashSet<int>();
         internal readonly System.Collections.Generic.HashSet<int> PierceAttempts = new System.Collections.Generic.HashSet<int>();
         internal readonly System.Collections.Generic.List<Collider> IgnoredPins = new System.Collections.Generic.List<Collider>();
-        private MarblePinHitText pinHitText;
 
         private void OnTriggerEnter(Collider other) { Report(other); }
         // 覆盖出生时已经重叠的区域；ECS 按球和区域去重，Stay 不会重复计分。
@@ -41,9 +40,6 @@ namespace MarblesECS.PhysX
             IgnoredPins.Clear(); PierceAttempts.Clear(); InsideDevices.Clear(); StepDevices.Clear();
             ActiveFields.Clear(); StepFields.Clear();
             PhysicsRandom = unchecked((uint)Key.Sequence * 747796405u + (uint)Key.RoundId);
-            if (pinHitText == null)
-                pinHitText = GetComponentInChildren<MarblePinHitText>(true);
-            pinHitText?.ResetForSpawn();
         }
 
         private void ReportPin(Collision collision)
@@ -78,7 +74,6 @@ namespace MarblesECS.PhysX
                 Bridge.Report(pin.CreateContact(Key, position));
                 if (HasSettings && pin.ScoreMultiplier == 1 && pin.RushChanceAdd == 0)
                     Bridge.Report(new MarbleContact { Key = Key, Kind = MarbleContactKind.Pin, TargetId = pin.TargetId, Multiplier = 1, Position = position, Speed = Body.velocity.magnitude });
-                pinHitText?.Play(pin, position);
             }
         }
 

@@ -6,7 +6,7 @@
 
 | 位置 | 字段与含义 |
 | --- | --- |
-| 根对象 | `schemaVersion` 为 2，`sequenceId` 是固定序列 ID，`days` 是按 `order` 排序的条目。可包含 `events`、`rules` 和 `campaignRuleIds`。 |
+| 根对象 | `schemaVersion` 为 2，`sequenceId` 是固定序列 ID，`days` 是按 `order` 排序的条目。可用 `defaultProductionFeatures` 设置整段序列的生产功能，可包含 `events`、`rules` 和 `campaignRuleIds`。 |
 | `days[]` | `dayId` 唯一，`order` 为唯一正整数，`targetScore` 为当天回合的目标分，范围为 1 到 `Marble.MaxRoundScore`。`rewardCoins` 为非负整数，指定当天通关基础奖励。`boardLayout` 指定盘面 JSON。可用 `eventIds`、`ruleIds` 引用当天行为和规则，`morningPrep` 定义房间前置目标。 |
 
 IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白。菜单 `Marbles ECS → Validate Day Configuration` 检查配置字段、重复 ID、冲突顺序、事件、规则与行为类型。可用 `GameDaysLoader.Parse` 在测试中从字符串加载同一 Schema。
@@ -15,7 +15,7 @@ IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白�
 
 场景逻辑在 Controller 就绪后调用 `TryStartConfiguredDayCampaign`。调用者也能用 `TryStartDayCampaign` 安装已校验的定义。显示当前状态时读取 `Controller.Day`，以展示时读取的 `Version` 提交起床、结算和休息完成命令。清空日期后，配置仍可校验，显式启动会报告未配置。
 
-`productionFeatures` 是功能开关列表，允许 `Shop`、`DevicePlacement`、`Rush` 和 `GamblingWheel`。省略或留空会以基础生产开始。加入 `Shop` 后，当天可在 Morning Prep 靠近机台旁平台上的 `Shop Terminal` 按 E 开店。购物是可选互动。
+`defaultProductionFeatures` 和各日的 `productionFeatures` 可填写 `Shop`、`DevicePlacement`、`Rush` 和 `GamblingWheel`。当天的功能取两处设置的并集。当前序列默认从 Day0 起启用 `Rush`。得分区用 `rushEnabled` 控制进球是否为 RUSH 充能。开启 `Shop` 的日期可在 Morning Prep 靠近机台旁平台上的 `Shop Terminal` 按 E 开店。购物是可选互动。
 
 ### Board Layout
 

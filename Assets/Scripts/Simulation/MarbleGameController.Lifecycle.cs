@@ -76,6 +76,7 @@ namespace MarblesECS.PhysX
                 Paused = !AutoStart;
                 Physics.SyncTransforms();
                 RegisterQuitHandler();
+                InitializeFloatingText();
             }
             catch (Exception error)
             {
@@ -116,6 +117,7 @@ namespace MarblesECS.PhysX
 
         private void Cleanup()
         {
+            ReleaseFloatingText();
             var releasedBridge = bridge;
             var releasedSimulation = simulation;
             bridge = null;

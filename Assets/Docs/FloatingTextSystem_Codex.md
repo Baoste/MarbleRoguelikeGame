@@ -562,3 +562,62 @@ ClearAll();
 - 实际执行了哪些测试，以及哪些性能指标尚未经过验证。
 
 如果上述建议与当前项目架构存在冲突，请优先遵循现有架构，并说明调整原因。
+
+## 18. 实际接入与使用
+
+`MarbleSimulation` 在主线程驱动自己的 Entities World，PhysX 回调传入接触数据。接触去重、Lua 效果和结算提交后，才把原始数值写入该 World 的有界表现队列。`MarbleGameController` 在 `LateUpdate` 消费队列，使用一套槽位、一个动态 Mesh、一个 MeshRenderer 和共享材质绘制。默认相机为 `MainCamera`。控制器 Inspector 的 `Floating Text` 栏可以指定配置与相机，现有场景会自动使用默认资源。配置沿用项目的 Resources JSON 和 `ConfigJson`，在控制器启动时读取。
+
+现有实体钉的数值字段是固定倍率和旧 RUSH 概率，普通钉的倍率为 `1`。倍率文字取自装置倍率实际接受的变化，沿用 `1 + Σ(amount − 1)`。钉子的无数值接触默认静默，可用 `showNeutralPins` 开启。装置 Lua 的基础价值、倍率、金币和血量反馈在 API 实际修改数值时产生。结算按回合整数账本的实际入账差额显示，包含回合封顶。赌博区在开奖后显示带符号的差额，位置沿用最后一个入池接触点。
+
+开新回合、重开和恢复日程检查点都会清空队列并使上一批飘字失效。离开生产阶段时移除装置和钉子提示，已产生的得分继续自然淡出。控制器禁用时清空，场景卸载时销毁批量 Mesh 与渲染节点。动画用非缩放时间，沿相机朝上的方向移动，机器俯视镜头下仍可见上浮。
+
+### 装置调用
+
+`AddScoreMultiplier`、`AddBase("BALL_BASE_VALUE", amount)`、`TrySettleAmount` 等现有接口直接产生反馈。自定义效果可在成功分支调用 `api:EmitFloatingText("critical", amount, styleId)`。C# 发布侧可调用 `MarbleGameController.EmitFloatingText`，传入 `FloatingTextEvent`。整数金额使用 `FloatingTextEvent.FromInteger`，保留源值精度。[装置 Lua API](Device_Lua_API.md#emitfloatingtext)
+
+### 配置样式
+
+- 编辑配置的 `styles`，给新样式分配唯一正整数 `id`。在 `defaultStyles` 指定默认样式，或在自定义事件中传入 `styleId`。`HighMultiplier` 使用 `highMultiplierThreshold` 阈值，显式 `styleId` 优先。`priority` 越大越晚绘制，且可替换最低优先级中最旧的条目。默认优先级依次为得分、高倍率、普通装置、钉子。[Config.json](../Resources/FloatingText/Config.json)
+- `height` 用世界单位。`offset` 的三个数依次是沿相机向右、向上和朝相机的距离。`riseSpeed` 与 `horizontalSpeed` 用世界单位每秒。`spacing` 是相对于字高的间距，`monospace` 用图集中最宽字的宽度作为步进。
+- `scaleCurve`、`alphaCurve` 是 `[归一化时间, 值]` 的有序关键点，首尾时间固定为 `0` 和 `1`。缩放值 `-1`、`0`、`1` 分别表示 `initialScale`、正常大小和 `peakScale`。透明度范围为 `0–1`。`color` 使用十六进制颜色。
+- `decimals` 和 `compactDecimals` 分别控制普通和缩写格式的最大小数位，`abbreviateAt` 控制主动缩写阈值。设为 `0` 时优先尝试完整数字。字符预算不足时依次使用可容纳的精度、`K/M/B/T` 或科学计数法。`prefix` 和 `suffix` 可以引用图集字符。`showValue: false` 仅绘制此前后缀。
+- 合并由 `mergeEnabled`、`mergeTypes`、`mergeSeconds`、`unmergedSources` 和样式的 `merge` 共同控制。`Target` 将稳定球 ID 纳入合并键，`Source` 可用于共享钱包等同单位增量，`None` 独立显示。`unmergedSources` 的条目可写成 `{"source":"Device","id":42}`，装置用 `api.InstanceId`，钉子用 `TargetId`。倍率、得分和自定义类型各自保留。首次事件当帧显示，后续合并更新数字并沿用原动画寿命。`enabled: false` 关闭整个系统。
+
+### 替换图集
+
+默认图集以项目已有的 Liberation Sans 栅格化，覆盖 `0–9 + - × . % ! K M B T e`。纹理 R 通道是字面覆盖率，G 通道是包含描边的覆盖率。保留线性采样、Bilinear、Clamp、关闭 Mipmap 和无压缩导入设置。`Glyphs.json` 的 `x`、`y` 以贴图左上角为原点，`width`、`height` 用像素。推荐所有字形统一基线和矩形高度，每格在描边外留至少 3 像素空白。修改贴图尺寸时同步修改元数据和导入的 `Max Size`，为新字符增加对应条目，并在 `Numbers.mat` 绑定贴图和调整描边颜色。[图集](../Resources/FloatingText/Atlas.png) · [字形定义](../Resources/FloatingText/Glyphs.json) · [共享材质](../Resources/FloatingText/Numbers.mat)
+
+### 压力测试
+
+1. 进入 Play Mode，打开 **Marbles ECS → Floating Text → Pressure Test**。空场景会自动建测试相机，也可以选择现有相机。
+2. 点击 **100 / 500 / 1000 / 2000** 预设。预设会把临时容量提高到至少对应数量。勾选 **Freeze batch** 后点预设，可保留一批同屏文字供检查。取消勾选以观察动画和回收。
+3. 用 **Start continuous** 按设定速率持续注入。**Repeat mergeable events** 生成重复的加算键。窗口显示存活、字符 Quad、池占用、收取、生成、合并、丢弃速率及 CPU、上传、分配和渲染计数。帧级计数包含当前 Editor 场景及其他渲染工作。[压力测试窗口](../Editor/FloatingText/FloatingTextStressWindow.cs)
+4. 在 Profiler 的 CPU 模块查看 `FloatingText.ProcessEvents`、`FloatingText.BuildMesh`、`FloatingText.UploadMesh`，在 Rendering 模块比较 Draw Calls 与 Batches。Frame Debugger 中定位 `Floating Text Batch` 的透明绘制。运行时网格每帧只上传活动顶点区域，索引在初始化时一次上传，容量较大时自动使用 `UInt32`。GPU 动画留有独立的曲线采样、池和网格构建边界。[Rendering Profiler](https://docs.unity3d.com/2022.3/Documentation/Manual/ProfilerRendering.html) · [Frame Debugger](https://docs.unity3d.com/2022.3/Documentation/Manual/frame-debugger-window.html)
+
+`FloatingTextTests` 验证格式化、事件合并、过载、生命周期、网格和连续压力。`GameContentValidation` 中的飘字验证覆盖现有 Lua 装置、记分去重、账本封顶与赌博区开奖。[自动化测试](../Tests/Day/EditMode/FloatingTextTests.cs) · [玩法验证](../Editor/Validation/GameContentValidation.FloatingText.cs)
+
+### 实现文件
+
+| 作用 | 文件 |
+| --- | --- |
+| 数值事件、队列、池、格式化和批量绘制 | `Scripts/Marbles/Contracts/FloatingTextEvent.cs`、`Scripts/Presentation/FloatingText/` |
+| 钉子和装置生效点 | `MarbleContact.cs`、`MarblePin.cs`、`MarbleBody.cs`、`ContactResolutionSystem.cs`、`DeviceContactContext.cs`、`DeviceEventContext.cs`、`DeviceBoardApi.cs`、`FloatingTextFeedback.cs` |
+| 得分和流程接入 | `SettlementSystem.cs`、`ContentSettlementSystem.cs`、`GamblingWheelSystem.cs`、`SimulationContext.cs`、`MarbleSimulation.cs`、`MarbleGameController` 的飘字及生命周期分部、`DayCheckpoint.cs` |
+| 渲染和配置资源 | `Rendering/FloatingText.shader`、`Resources/FloatingText/` |
+| 旧表现迁移 | `Scenes/TestScene.unity`、`Prefabs/Marble.prefab` 移除旧组件引用。移除 `MarblePinHitText.cs`、`WorldTextEffectPool.cs`、`MultiplierText.prefab` |
+| 工具和回归 | `Editor/FloatingText/FloatingTextStressWindow.cs`、`Editor/Validation/GameContentValidation*.cs`、`Tests/Day/EditMode/FloatingTextTests.cs` |
+
+### 本次验证结果
+
+Unity `2022.3.62f3c1` 的 EditMode **24/24**、PlayMode **7/7** 通过，现有 Lua/内容验证通过 **11,772** 条断言。D3D11 离屏读回验证了文字覆盖前方不透明几何体、淡出及到期回收。连续压力按 60 Hz 模拟每帧 160 条，预热后采样 600 帧共 96,000 条，注入与更新合计平均 **3.35 ms/帧**，该段主线程托管分配为 **0 B**。
+
+隔离 Win64 Development Player 使用 i5-14600KF、RTX 4070 SUPER、D3D11、1280 × 720。每档预热后采样 120 帧，CPU 更新包含事件消费、顶点构建和提交，上传列来自 `FloatingText.UploadMesh`。
+
+| 同屏条数 | 字符 Quad | CPU 更新均值 | Mesh 上传均值 |
+| ---: | ---: | ---: | ---: |
+| 100 | 500 | 0.219 ms | 0.013 ms |
+| 500 | 2,500 | 0.860 ms | 0.020 ms |
+| 1,000 | 5,000 | 1.407 ms | 0.029 ms |
+| 2,000 | 10,000 | 2.013 ms | 0.042 ms |
+
+四档采样的飘字更新托管分配均为 **0 B**，同一个预分配 Mesh 在该轮采样中的报告内存大小为 2,881,144 B。已验证每批一个子网格、一个材质和一个 Shader Pass。后台验证环境的 Frame Debugger、整帧 Draw Calls、Batches 和 GPU 时间没有有效样本，长期内存趋势也有待实测。当前由 CPU 更新动画。日志及测试报告保存在项目根目录的 `.utmp/floating-text/`。

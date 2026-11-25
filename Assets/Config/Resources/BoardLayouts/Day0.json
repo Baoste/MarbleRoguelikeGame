@@ -16,7 +16,7 @@
       "multiplier": 1,
       "flatScore": 0,
       "priority": 0,
-      "rushEnabled": false,
+      "rushEnabled": true,
       "scoreStackEnabled": false
     }
   ]

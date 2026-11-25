@@ -75,8 +75,6 @@ namespace MarblesECS.PhysX
             accumulator = 0;
             externalFireHeld = submittedFireHeld = false;
             DayBoardResetting?.Invoke();
-            var text = WorldTextEffectPool.Instance;
-            if (text != null && (text.gameObject.scene == originalScene || text.gameObject.scene == localScene)) text.ClearActive();
         }
 
         private void AfterDayBoardRestore()

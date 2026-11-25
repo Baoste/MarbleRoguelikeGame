@@ -1,6 +1,7 @@
 {
   "schemaVersion": 2,
   "sequenceId": "campaign",
+  "defaultProductionFeatures": ["Rush"],
   "days": [
     {
       "dayId": "day0",

@@ -59,6 +59,7 @@ namespace MarblesECS
             context.Physics = physics;
             context.Contacts.Clear();
             context.ScoreEvents.Clear();
+            context.FloatingText?.Reset();
             context.CloverFamilies.Clear();
             context.RefundedFamilies.Clear();
             if (AttributeRuntime.Enabled(context))
@@ -161,6 +162,7 @@ namespace MarblesECS
         {
             ThrowIfDisposed();
             context.Contacts.Clear();
+            context.FloatingText?.Reset();
             context.ClearFireInput();
             insidePhysicsStep = false;
         }
@@ -178,6 +180,8 @@ namespace MarblesECS
         {
             if (disposed) return;
             disposed = true;
+            context.FloatingText?.Reset();
+            context.FloatingText = null;
             dayFlow?.Dispose();
             context.Transients.Clear(context);
             context.DeviceScripts.Clear();

@@ -18,7 +18,7 @@ namespace MarblesECS.PhysX
         {
             Key = key, TargetId = TargetId, Position = position,
             Kind = ScoreMultiplier == 1 ? MarbleContactKind.RushPin : MarbleContactKind.Multiplier,
-            Multiplier = ScoreMultiplier, RushChanceAdd = RushChanceAdd, RushDisabled = true
+            Multiplier = ScoreMultiplier, RushChanceAdd = RushChanceAdd, RushDisabled = true, IsPin = true
         };
 
         private void Reset()

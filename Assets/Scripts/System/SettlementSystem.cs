@@ -16,6 +16,7 @@ namespace MarblesECS
 
             double zoneMultiplier = ScoreStackSystem.RegisterScore(context, contact);
             var round = context.Round;
+            long previousScore = round.Score;
             var marble = manager.GetComponentData<MarbleScore>(entity);
             var modifiers = MarbleModifierSystem.Aggregate(context, entity);
             double rush = 1d;
@@ -23,12 +24,12 @@ namespace MarblesECS
                 marble.ScoreMultiplier, modifiers.ScoreMul,
                 zoneMultiplier, contact.FlatScore, rush, context.Tuning.MaxPerMarbleScore);
             bool isPending = contact.Kind == MarbleContactKind.RandomScore;
-            if (isPending) { GamblingWheelSystem.Deposit(context, score); round = context.Round; }
+            if (isPending) { GamblingWheelSystem.Deposit(context, score, contact); round = context.Round; }
             else round.Score = MarbleRules.AddScore(round.Score, score, context.Tuning.MaxRoundScore);
 
             context.Round = round;
             RushSystem.Settle(context, entity, contact);
-            context.ScoreEvents.Enqueue(new MarbleScoreEvent
+            context.PublishScore(new MarbleScoreEvent
             {
                 Key = contact.Key, ZoneId = contact.TargetId, Position = contact.Position,
                 BaseValue = marble.BaseScore, ScoreBonus = marble.ScoreBonus, ScoreAdd = modifiers.ScoreAdd,
@@ -38,7 +39,7 @@ namespace MarblesECS
                 ScoreStackBonus = zoneMultiplier - contact.Multiplier,
                 LauncherMultiplier = 1, RushMultiplier = rush, Score = score, RoundScore = round.Score,
                 IsPending = isPending, PendingScore = round.PendingScore
-            });
+            }, round.Score - previousScore, contact);
         }
 
     }

@@ -64,6 +64,7 @@ namespace MarblesECS
             context.RemoveAllMarbles();
             context.Contacts.Clear();
             context.ScoreEvents.Clear();
+            context.FloatingText?.Reset();
             context.CloverFamilies.Clear();
             context.RefundedFamilies.Clear();
             physics.Restore();

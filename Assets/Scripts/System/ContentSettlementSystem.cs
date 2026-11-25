@@ -14,15 +14,16 @@ namespace MarblesECS
             BallInteractionSystem.Consume(c, ball, true);
             c.Manager.SetComponentData(ball, new DespawnState { PendingDespawn = true, Reason = MarbleDespawnReason.Scored });
             var round = c.Round;
+            long previousScore = round.Score;
             double total = Math.Min(c.Tuning.MaxPerMarbleScore, amount) + round.FractionalScore;
             long score = MarbleRules.RoundScore(total, c.Tuning.MaxPerMarbleScore);
             round.FractionalScore = total - Math.Floor(total);
             round.Score = MarbleRules.AddScore(round.Score, score, c.Tuning.MaxRoundScore);
             c.Round = round;
-            c.ScoreEvents.Enqueue(new MarbleScoreEvent { Key = contact.Key, ZoneId = contact.TargetId, Position = contact.Position,
+            c.PublishScore(new MarbleScoreEvent { Key = contact.Key, ZoneId = contact.TargetId, Position = contact.Position,
                 BaseValue = amount, DeviceMultiplier = 1, PermanentMultiplier = 1,
                 ModifierMultiplier = 1, ZoneMultiplier = 1, LauncherMultiplier = 1, RushMultiplier = 1,
-                Score = score, RoundScore = round.Score, PendingScore = round.PendingScore });
+                Score = score, RoundScore = round.Score, PendingScore = round.PendingScore }, round.Score - previousScore, contact);
             return true;
         }
         internal static void Settle(SimulationContext c, Entity ball, MarbleContact contact)
@@ -31,6 +32,7 @@ namespace MarblesECS
             if (contact.Kind == MarbleContactKind.Drain) { RushSystem.Settle(c, ball, contact); return; }
             double zoneMultiplier = ScoreStackSystem.RegisterScore(c, contact);
             var round = c.Round;
+            long previousScore = round.Score;
             var scoreData = c.Manager.GetComponentData<MarbleScore>(ball);
             var modifiers = MarbleModifierSystem.Aggregate(c, ball);
             double value = Math.Max(0, RushSystem.BallValue(c, ball) + scoreData.ScoreBonus + modifiers.ScoreAdd);
@@ -47,7 +49,7 @@ namespace MarblesECS
             long score;
             if (pending)
             {
-                GamblingWheelSystem.Deposit(c, raw);
+                GamblingWheelSystem.Deposit(c, raw, contact);
                 round = c.Round;
                 score = MarbleRules.RoundScore(raw, c.Tuning.MaxPerMarbleScore);
             }
@@ -60,11 +62,11 @@ namespace MarblesECS
             }
             c.Round = round;
             RushSystem.Settle(c, ball, contact);
-            c.ScoreEvents.Enqueue(new MarbleScoreEvent { Key = contact.Key, ZoneId = contact.TargetId, Position = contact.Position,
+            c.PublishScore(new MarbleScoreEvent { Key = contact.Key, ZoneId = contact.TargetId, Position = contact.Position,
                 BaseValue = value, DeviceMultiplier = machine, PermanentMultiplier = machine, ZoneMultiplier = zoneMultiplier,
                 ScoreStackBonus = zoneMultiplier - contact.Multiplier, FlatScore = contact.FlatScore,
                 ModifierMultiplier = modifiers.ScoreMul, RushMultiplier = rush,
-                Score = score, RoundScore = round.Score, IsPending = pending, PendingScore = round.PendingScore });
+                Score = score, RoundScore = round.Score, IsPending = pending, PendingScore = round.PendingScore }, round.Score - previousScore, contact);
         }
     }
 }

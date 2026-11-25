@@ -28,6 +28,7 @@ namespace MarblesECS
                 if (input.Int("schemaVersion") != DayCampaignDefinition.CurrentSchemaVersion)
                     throw new ArgumentException($"schemaVersion: expected {DayCampaignDefinition.CurrentSchemaVersion} with targetScore and rewardCoins on each Day.");
                 string sequenceId = Id(input.String("sequenceId"), "sequenceId");
+                var defaultFeatures = ReadProductionFeatures(input, "defaultProductionFeatures");
                 var events = ReadIndex(input, "events", "eventId", (entry, id) => ReadEvent(entry, id, behaviors));
                 var rules = ReadIndex(input, "rules", "ruleId", (entry, id) => ReadRule(entry, id, balance, behaviors));
                 var campaignRules = ReadRefs(input, "campaignRuleIds", rules);
@@ -48,7 +49,8 @@ namespace MarblesECS
                         try { boardLayout = BoardLayoutLoader.Load(boardLayoutFile); }
                         catch (ArgumentException error) { throw new ArgumentException($"{path}.boardLayout: {error.Message}", error); }
                     }
-                    return new DayDefinition(id, order, targetScore, rewardCoins, ReadProductionFeatures(entry), boardLayoutFile,
+                    var features = defaultFeatures | ReadProductionFeatures(entry, "productionFeatures");
+                    return new DayDefinition(id, order, targetScore, rewardCoins, features, boardLayoutFile,
                         boardLayout, ReadMorningPrep(entry), ReadRefs(entry, "eventIds", events), dayRules);
                 }, required: true);
                 var ordered = new List<DayDefinition>(days.Values);
@@ -64,12 +66,12 @@ namespace MarblesECS
             }
         }
 
-        private static ProductionFeature ReadProductionFeatures(ConfigFields entry)
+        private static ProductionFeature ReadProductionFeatures(ConfigFields entry, string field)
         {
             var features = ProductionFeature.None;
-            foreach (var value in entry.Array("productionFeatures", optional: true))
+            string path = entry.Context + "." + field;
+            foreach (var value in entry.Array(field, optional: true))
             {
-                string path = entry.Context + ".productionFeatures";
                 var flag = ReadEnum<ProductionFeature>(value as string, path);
                 if (flag == ProductionFeature.None || flag == ProductionFeature.All || (features & flag) != 0)
                     throw new ArgumentException($"{path}: expected unique individual features, got '{value}'.");

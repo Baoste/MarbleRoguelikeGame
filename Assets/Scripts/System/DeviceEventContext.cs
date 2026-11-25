@@ -66,7 +66,24 @@ namespace MarblesECS
         public double Coins => C.Campaign.Coins;
         public double Blood => C.Player.Blood;
         public double BloodCapacity => C.Tuning.BloodCapacity;
-        public double RestoreBlood(double amount) => PlayerBloodSystem.Restore(C, amount);
+        public double RestoreBlood(double amount)
+        {
+            var context = C;
+            double restored = PlayerBloodSystem.Restore(context, amount);
+            if (restored > 0) FloatingTextFeedback.DeviceAtPose(context, instanceId, FloatingTextType.Blood, restored);
+            return restored;
+        }
+
+        /// <summary>Emits optional visual feedback at the placed device or the completed transient.</summary>
+        [Preserve]
+        public void EmitFloatingText(string kind, double value, int styleId = 0)
+        {
+            var context = C;
+            if (context.FloatingText == null || !FloatingTextFeedback.TryParseDeviceType(kind, out var type)) return;
+            if (transient == null) FloatingTextFeedback.DeviceAtPose(context, instanceId, type, value, styleId);
+            else context.FloatingText.Enqueue(new FloatingTextEvent(transient.Position, FloatingTextSource.Device,
+                instanceId, type, value, styleId: styleId));
+        }
         public double Time => C.Round.Time;
         public float DeltaTime => C.StepSeconds;
         public double Parameter { get { _ = C; return definition.Value; } }

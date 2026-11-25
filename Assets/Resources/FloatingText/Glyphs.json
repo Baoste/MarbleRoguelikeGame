@@ -1,0 +1,27 @@
+{
+  "width": 512,
+  "height": 512,
+  "glyphs": [
+    {"character": "0", "x": 3, "y": 0, "width": 43, "height": 62},
+    {"character": "1", "x": 67, "y": 0, "width": 43, "height": 62},
+    {"character": "2", "x": 131, "y": 0, "width": 43, "height": 62},
+    {"character": "3", "x": 195, "y": 0, "width": 43, "height": 62},
+    {"character": "4", "x": 259, "y": 0, "width": 43, "height": 62},
+    {"character": "5", "x": 323, "y": 0, "width": 43, "height": 62},
+    {"character": "6", "x": 387, "y": 0, "width": 43, "height": 62},
+    {"character": "7", "x": 451, "y": 0, "width": 43, "height": 62},
+    {"character": "8", "x": 3, "y": 64, "width": 43, "height": 62},
+    {"character": "9", "x": 67, "y": 64, "width": 43, "height": 62},
+    {"character": "+", "x": 131, "y": 64, "width": 45, "height": 62},
+    {"character": "-", "x": 195, "y": 64, "width": 32, "height": 62},
+    {"character": "\u00d7", "x": 259, "y": 64, "width": 45, "height": 62},
+    {"character": ".", "x": 323, "y": 64, "width": 29, "height": 62},
+    {"character": "%", "x": 387, "y": 64, "width": 60, "height": 62},
+    {"character": "!", "x": 451, "y": 64, "width": 29, "height": 62},
+    {"character": "K", "x": 3, "y": 128, "width": 49, "height": 62},
+    {"character": "M", "x": 67, "y": 128, "width": 57, "height": 62},
+    {"character": "B", "x": 131, "y": 128, "width": 49, "height": 62},
+    {"character": "T", "x": 195, "y": 128, "width": 46, "height": 62},
+    {"character": "e", "x": 259, "y": 128, "width": 43, "height": 62}
+  ]
+}

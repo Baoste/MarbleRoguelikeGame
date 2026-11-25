@@ -150,12 +150,23 @@ end
 | [CanUseOnce(key)](#canuseonce) / [TryUseOnce(key)](#tryuseonce) | `boolean` | C / E |
 | [TryKeepActive(seconds)](#trykeepactive) | `boolean` | C / E |
 | [RestoreBlood(amount)](#restoreblood) | `number` | C / E |
+| [EmitFloatingText(kind, value, styleId = 0)](#emitfloatingtext) | `void` | C / E |
 | [CountPlacedDevices(excludedInstanceId = 0)](#countplaceddevices) | `integer` | C / E |
 | [CountPlacedDevicesOfDefinition(definitionId)](#countplaceddevicesofdefinition) | `integer` | C / E |
 | [CountPlacedDevicesWithRoundValue(definitionId, key, value)](#countplaceddeviceswithroundvalue) | `integer` | C / E |
 | [ForEachPlacedDevice(definitionId, callback, value)](#foreachplaceddevice) | `integer` | C / E |
 | [RandomRange(minimum, maximum)](#randomrange) | `number` | C / E |
 | [CreateSpawnBatch()](#createspawnbatch) | `DeviceSpawnBatch` | C / E |
+
+<a id="emitfloatingtext"></a>
+
+### EmitFloatingText(kind, value, styleId = 0) → void
+
+在装置的自定义效果成功后提交数值反馈。`kind` 支持 `additive`、`multiplier`、`critical` 和 `custom`。`value` 为有限数值，`styleId` 为飘字配置的样式 ID，`0` 使用类型的默认样式。无法识别的类型或非有限数值会被忽略。
+
+C 使用世界坐标接触点，滞留完成使用装置的新位置。E 使用已放置装置的位置，瞬态完成回调使用瞬态终点。接口仅提交视觉事件，耐久、随机数和得分由原玩法 API 管理。
+
+`AddScoreMultiplier`、`SetDeviceScoreMultiplier`、`Board:AddScoreMultiplier`、基础价值修改、`AddCoins`、`RestoreBlood` 和 `TrySettleAmount` 已在有效执行时提供默认反馈。自定义复合效果可以在确认生效的分支调用 `api:EmitFloatingText("critical", amount)`。[样式和图集使用说明](FloatingTextSystem_Codex.md#18-实际接入与使用)
 
 <a id="getroundvalue"></a>
 

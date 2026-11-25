@@ -141,6 +141,7 @@ namespace MarblesECS.PhysX
 
         private void OnDisable()
         {
+            SuspendFloatingText();
             accumulator = 0;
             externalFireHeld = false;
             submittedFireHeld = false;

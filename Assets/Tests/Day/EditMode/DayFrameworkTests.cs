@@ -54,7 +54,7 @@ namespace MarblesECS.Tests
             Assert.That(day0.BoardLayout.Pins, Has.Count.EqualTo(3));
             Assert.That(day0.BoardLayout.Zones, Has.Count.EqualTo(1));
             Assert.That(day0.RewardCoins, Is.EqualTo(22));
-            Assert.That(day0.ProductionFeatures, Is.EqualTo(ProductionFeature.None));
+            Assert.That(day0.ProductionFeatures, Is.EqualTo(ProductionFeature.Rush));
             Assert.That(day0.MorningPrep, Has.Count.EqualTo(1));
             var note = day0.MorningPrep[0];
             Assert.That(note.Text, Does.StartWith("欢迎入职"));
@@ -112,7 +112,7 @@ namespace MarblesECS.Tests
             Assert.That(simulation.Day.DayId, Is.EqualTo("day1"));
             Assert.That(simulation.Session.TargetScore, Is.EqualTo(200));
             Assert.That(simulation.CurrentDayDefinition.ProductionFeatures,
-                Is.EqualTo(ProductionFeature.Shop | ProductionFeature.DevicePlacement));
+                Is.EqualTo(ProductionFeature.Shop | ProductionFeature.DevicePlacement | ProductionFeature.Rush));
         }
 
         [Test]

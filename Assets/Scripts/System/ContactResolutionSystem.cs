@@ -25,6 +25,7 @@ namespace MarblesECS
                     if (visits[i].DeviceId == contact.TargetId) { visited = true; break; }
                 if (visited) continue;
                 var score = context.Manager.GetComponentData<MarbleScore>(entity);
+                double before = score.DeviceMultiplierBonus;
                 if (contact.Kind == MarbleContactKind.Multiplier) score.AddDeviceMultiplier(contact.Multiplier);
                 context.Manager.SetComponentData(entity, score);
                 var rush = context.Manager.GetComponentData<MarbleRush>(entity);
@@ -32,6 +33,15 @@ namespace MarblesECS
                 context.Manager.SetComponentData(entity, rush);
                 visits.Add(new VisitedDeviceData { DeviceId = contact.TargetId });
                 RushSystem.RecordTrigger(context, entity, contact.TargetId);
+                if (context.FloatingText == null) continue;
+                var source = contact.IsPin ? FloatingTextSource.Pin : FloatingTextSource.Zone;
+                double change = FloatingTextFeedback.MultiplierChange(before, score.DeviceMultiplierBonus);
+                if (change != 0)
+                    context.FloatingText.Enqueue(new FloatingTextEvent(contact.Position, source, contact.TargetId,
+                        FloatingTextType.Multiplier, 1 + change, contact.Key));
+                else if (contact.IsPin)
+                    context.FloatingText.Enqueue(new FloatingTextEvent(contact.Position, source, contact.TargetId,
+                        FloatingTextType.PinContact, 0, contact.Key));
             }
             foreach (var contact in context.Contacts)
             {
