@@ -1,5 +1,7 @@
 # 弹珠机玩法流程设计
 
+> 本文记录早期玩法设计。当前每日目标与通关奖励见 [每日内容制作指南](DayFramework_Content_Guide.md)。
+
 > 首版代码已经按下方第 12 节的最新确认落实；仍标注待定的边界、数值和架构取舍见 [Implementation.md](Implementation.md)，策划配置见 [Balance.md](Balance.md)。
 
 > 文档状态：玩法概念整理稿  

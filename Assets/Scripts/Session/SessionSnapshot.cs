@@ -5,9 +5,6 @@ namespace MarblesECS
     {
         public bool IsCampaign;
         public RoundPhase Phase;
-        public int StageIndex;
-        public uint StageId;
-        public int StageCount;
         public long TotalScore;
         public long ConfirmedScore;
         public long RoundScore;
@@ -15,8 +12,6 @@ namespace MarblesECS
         public long Coins;
         public long LastRewardCoins;
         public long LastCashoutCoins;
-        public int StagesCleared;
-        public int LastSkippedStages;
         public int ShopRefreshCount;
         public int LayoutRevision;
         public bool CanCashOut;

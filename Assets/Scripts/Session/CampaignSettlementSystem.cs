@@ -1,5 +1,3 @@
-using System;
-
 namespace MarblesECS
 {
     internal static class CampaignSettlementSystem
@@ -16,45 +14,26 @@ namespace MarblesECS
             round.SettlementComplete = true;
             campaign.TotalScore = MarbleRules.AddScore(campaign.TotalScore, round.Score, rules.MaxTotalScore);
             campaign.LastRewardCoins = 0;
-            campaign.LastSkippedStages = 0;
-            if (campaign.TotalScore < round.TargetScore)
+            if (round.Score < round.TargetScore)
                 round.Phase = (byte)RoundPhase.Lost;
             else
-                AdvanceStages(context, ref campaign, ref round);
+            {
+                campaign.LastRewardCoins = Reward(context, campaign.RewardCoins, round.Score - round.TargetScore);
+                campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastRewardCoins, CampaignStateUtility.MaxCoins);
+                round.Phase = (byte)(campaign.RepeatRounds ? RoundPhase.Build : RoundPhase.Won);
+            }
             context.Campaign = campaign;
             context.Round = round;
         }
 
-        private static void AdvanceStages(SimulationContext context, ref CampaignData campaign, ref RoundData round)
+        private static long Reward(SimulationContext context, long reward, long excess)
         {
-            var stages = context.Balance.Stages;
-            int end = campaign.StageEndExclusive == 0 ? stages.Length : campaign.StageEndExclusive;
-            int first = campaign.StageIndex;
-            int next = first;
-            while (next < end && campaign.TotalScore >= CampaignStateUtility.TargetScore(context, next))
-            {
-                var stage = stages[next];
-                long reward = stage.RewardCoins;
-                if (next > first)
-                    reward = MarbleRules.AddScore(reward, stage.SkipRewardCoins, CampaignStateUtility.MaxCoins);
-                campaign.LastRewardCoins = MarbleRules.AddScore(campaign.LastRewardCoins, reward, CampaignStateUtility.MaxCoins);
-                next++;
-            }
-            campaign.LastSkippedStages = Math.Max(0, next - first - 1);
-            campaign.StagesCleared = next - campaign.StageStartIndex;
-            if (AttributeRuntime.Enabled(context))
-            {
-                long oldTotal = campaign.TotalScore - round.Score;
-                long excess = Math.Max(0, campaign.TotalScore - Math.Max(oldTotal, round.TargetScore));
-                long overkill = MarbleRules.RoundScore(excess * context.Content.OverkillCoinsPerScore *
-                    AttributeRuntime.Global(context, GameAttribute.SCORE_OVERKILL_RATE), CampaignStateUtility.MaxCoins);
-                campaign.LastRewardCoins = MarbleRules.AddScore(campaign.LastRewardCoins, overkill, CampaignStateUtility.MaxCoins);
-                campaign.LastRewardCoins = MarbleRules.RoundScore(campaign.LastRewardCoins * AttributeRuntime.Global(context, GameAttribute.COIN_GAIN_RATE), CampaignStateUtility.MaxCoins);
-            }
-            campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastRewardCoins, CampaignStateUtility.MaxCoins);
-            campaign.StageIndex = Math.Min(next, end - 1);
-            round.Phase = (byte)(next == end ? RoundPhase.Won : RoundPhase.Build);
-            if (round.Phase == (byte)RoundPhase.Build) round.TargetScore = CampaignStateUtility.TargetScore(context, next);
+            if (!AttributeRuntime.Enabled(context)) return reward;
+            long overkill = MarbleRules.RoundScore(excess * context.Content.OverkillCoinsPerScore *
+                AttributeRuntime.Global(context, GameAttribute.SCORE_OVERKILL_RATE), CampaignStateUtility.MaxCoins);
+            long combined = MarbleRules.AddScore(reward, overkill, CampaignStateUtility.MaxCoins);
+            return MarbleRules.RoundScore(combined * AttributeRuntime.Global(context, GameAttribute.COIN_GAIN_RATE),
+                CampaignStateUtility.MaxCoins);
         }
     }
 }

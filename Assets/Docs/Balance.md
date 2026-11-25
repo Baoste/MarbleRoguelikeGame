@@ -1,6 +1,6 @@
 # 配置来源与调参
 
-`Resources/GameContent.json` 配置属性、内容规则和启用装置的数字 ID 列表。装置在 `Resources/Devices/<id>/` 下配置。`Resources/GameBalance.json` 保留血量、抽血档位、发射间隔、库存容量、阶段目标和战役规则。盘面由场景组件配置。
+`Resources/GameContent.json` 配置属性、内容规则和启用装置的数字 ID 列表。装置在 `Resources/Devices/<id>/` 下配置。`Resources/GameBalance.json` 配置血量、抽血档位、发射间隔、库存容量和战役规则。每日目标分、通关奖励和盘面引用配置在 `Resources/GameDays.json`。
 
 `TestScene` 的 `PhysicsRoot/新盘面_局部X上坡_Z横向/玻璃罩碰撞_不遮挡操作` 限制弹珠飞离盘面。罩面平行盘面，内侧距离盘面 1.5 个世界单位、厚度 0.1，三个子对象补齐左右侧和上沿的碰撞边界，底部得分出口保持开放。罩体仅含静态 BoxCollider，不渲染；使用 Ignore Raycast 层，保留弹珠碰撞和装置操作。可在该对象的 BoxCollider 调整尺寸；若调整罩面高度，同时调整侧面子碰撞体，避免留下空隙。
 
@@ -36,7 +36,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 发射速度直接采用 `BALL_LAUNCH_SPEED`，单位为 m/s，最终仍受 `BALL_MAX_SPEED` 限制。静态或运动学棋盘障碍按 `BALL_BOUNCE` 校正反弹，实体装置取该值与自身物理材质弹性中的较大值。超过 `1` 的属性值提供额外反弹增益。各装置的材质弹性见 [装置一览](Device_Overview.md)。
 
-抽血档位仍在 `MinInvestment/MaxInvestment` 间选择投入量。基础耗血为「投入量 × BLOOD_COST」，随后应用属性 ADD/MUL/SET 和上下限；批量发射按球数收费。低档位用于增加携带 RUSH 贡献的球数，高档位用于 Rush 窗口内快速兑现价值。提现为「剩余血量 × BLOOD_DIVIDEND_RATE × 当前阶段 CashoutRate × COIN_GAIN_RATE」，金币向下取整。
+抽血档位仍在 `MinInvestment/MaxInvestment` 间选择投入量。基础耗血为「投入量 × BLOOD_COST」，随后应用属性 ADD/MUL/SET 和上下限。批量发射按球数收费。低档位用于增加携带 RUSH 贡献的球数，高档位用于 Rush 窗口内快速兑现价值。提现为「剩余血量 × BLOOD_DIVIDEND_RATE × COIN_GAIN_RATE」，金币向下取整。
 
 发射频率跟随空格操作：点按一次最多发射一次，按得越快出球越快；超过上限的请求直接丢弃。按下时请求第一发，继续长按则让自动连发频率从 0 线性增加，`Marble.HoldAccelerationSeconds` 默认 **2 秒**达到极速。松开立即取消未消费请求和连发进度，再按重新加速；暂停、回合结束和重开也会清空输入。每个模拟步最多消费一次发射请求，冷却、满球、血量不足或生成失败均不排队补发。
 
@@ -103,7 +103,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 日常直接修改 JSON，保存后退出 Play 并重新进入。运行会话使用深拷贝，重开当前局不重新读取磁盘配置。
 
-- `Config/GameBalance.xlsx` 只保留 `Marble`、`Campaign`、`Stages` 和说明页；保存会自动导入基础 JSON，也可使用 `Marbles ECS/Import Game Balance Excel`。
+- `Config/GameBalance.xlsx` 包含 `Marble`、`Campaign` 和说明页。保存会自动导入基础 JSON，也可使用 `Marbles ECS/Import Game Balance Excel`。
 - 属性、内容规则和启用装置的 ID 在 `Resources/GameContent.json` 中编辑。装置资源在 `Resources/Devices/<id>/` 中编辑。
 
 基础 Excel 不识别已删除的属性字段、`Devices/Drugs/Board/Zones` 工作表，导入失败时不会发布 JSON。JSON 中遗留的旧属性字段被忽略，不能重新控制内容属性。`GameContent.json` 是场景启动的必需资源，缺失时报错，不再静默切回旧数值。

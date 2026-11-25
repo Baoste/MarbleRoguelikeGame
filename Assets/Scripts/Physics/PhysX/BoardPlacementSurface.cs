@@ -5,12 +5,17 @@ namespace MarblesECS.PhysX
     /// <summary>Unit-scale board frame: local X points uphill, local Y is the surface normal.</summary>
     public sealed class BoardPlacementSurface : MonoBehaviour
     {
-        [Min(.1f)] public float Length = 7.979034f;
-        [Min(.1f)] public float TopWidth = 5.784827f;
-        [Min(.1f)] public float BottomWidth = 8.779388f;
+        private const float DefaultLength = 7.979034f, DefaultTopWidth = 5.784827f, DefaultBottomWidth = 8.779388f;
+        [Min(.1f)] public float Length = DefaultLength;
+        [Min(.1f)] public float TopWidth = DefaultTopWidth;
+        [Min(.1f)] public float BottomWidth = DefaultBottomWidth;
         [Min(0)] public float EdgeMargin = .12f;
         [Min(0)] public float TopClearance = .65f;
         [Min(0)] public float BottomClearance = .70f;
+
+        internal BoardLayoutProjection LayoutProjection => new BoardLayoutProjection(Length, TopWidth, BottomWidth);
+        internal static BoardLayoutProjection DefaultLayoutProjection =>
+            new BoardLayoutProjection(DefaultLength, DefaultTopWidth, DefaultBottomWidth);
 
         public bool ContainsWorldPoint(Vector3 worldPoint, float radius)
         {

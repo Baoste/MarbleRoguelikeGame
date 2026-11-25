@@ -7,36 +7,35 @@ flowchart LR
     W["WakeUp · Morning Prep"] -->|"完成前置任务并进入机器"| P["Production"]
     W -->|"当天启用 Shop，操作终端"| H["Shop Terminal"]
     H -->|"返回房间"| W
-    P -->|"计划中的最后 Stage 达标"| S["DaySettlement"]
+    P -->|"回合结算后达标"| S["DaySettlement"]
     S -->|"提交当天结算"| R["Rest"]
     R -->|"仍有日期"| N["下一天 WakeUp"]
     R -->|"序列结束"| C["Campaign Completed"]
     P -->|"生产失败，恢复检查点"| W
     P --- Q["Build → Playing → Draining → RoundSettled"]
-    Q -->|"仍有生产 Stage"| B["下一轮 Build"]
 ```
 
 ## 权威状态与命令
 
 | 所在位置 | 职责 |
 | --- | --- |
-| `SimulationContext.RoundEntity` | 原 `RoundData` 仍持有内层阶段，`CampaignData` 保存生产分数、Stage 区间与经济数据。开启 Day 后附加 `DayRuntimeData`、事件执行记录 Buffer 和活动规则 Buffer。 |
+| `SimulationContext.RoundEntity` | `RoundData` 持有内层阶段和本回合指标，`CampaignData` 保存已结算分数、当前通关奖励与钱包。开启 Day 后附加 `DayRuntimeData`、事件执行记录 Buffer 和活动规则 Buffer。 |
 | `DayStateMachine`、`DayFlowSystem` | 校验命令与状态，串行提交转换、发送进入和退出通知，并独占 Day Index 写入。 |
 | `GameDaysLoader`、`DayCampaignDefinition` | 复用项目的配置 JSON 读取器检查语法和字段类型。校验日期顺序和引用后发布不可变定义，配置通过后才允许切换正在运行的会话。 |
 | `MarbleGameController.Day` | 提供只读进度、三个外层阶段完成命令和启动入口。Controller 在固定步之间轮询待完成的 Action，并在恢复时同步发射器和盘面。 |
 | `DayEventSystem`、`DayRuleSystem` | 监听低频边界、执行类型化事件、管理规则来源和 Feature 生命周期。数值效果由 `AttributeRuntime` 与 `AttributeMath` 计算。 |
 
-`DayProgressSnapshot` 给出当前 Sequence/Day ID、进度、Attempt、上一阶段、转换原因、结算标记、生产计划 ID、已结算回合数、生产 Tick 和随机状态。外层 UI 从快照取得 `Version` 并传给 `TryCompleteWakeUp`、`TryCompleteDaySettlement` 或 `TryCompleteRest`。版本过期、阶段不匹配和生命周期尚未结束时，命令返回具体原因。有效命令可以等待异步退出 Action，期间重复提交仍会被拒绝。退出通知完成后清理阶段规则，提交状态，再应用进入规则和通知。
+`DayProgressSnapshot` 给出当前 Sequence/Day ID、进度、Attempt、上一阶段、转换原因、结算标记、已结算回合数、生产 Tick 和随机状态。外层 UI 从快照取得 `Version` 并传给 `TryCompleteWakeUp`、`TryCompleteDaySettlement` 或 `TryCompleteRest`。版本过期、阶段不匹配和生命周期尚未结束时，命令返回具体原因。有效命令可以等待异步退出 Action，期间重复提交仍会被拒绝。退出通知完成后清理阶段规则，提交状态，再应用进入规则和通知。
 
-启动 Day 时重用整局初始化。激活后，生产失利会自动恢复到当日检查点，旧重开按钮仅供原流程使用。本期的推进 UI 接入点为只读快照和上述命令。当天提交由 `TryCompleteDaySettlement` 对应的转换记录一次，已有 Stage 结算依旧在内层完成。完成 Rest 后才增加 `CompletedDays`，且只有这一个转换能更改日期。最后一天完成后，Campaign 进入 `Completed`，供诊断读取的 Day 阶段保留为 `Rest`。
+启动 Day 时重用整局初始化。生产失利会自动恢复到当日检查点。当天通关奖励在内层回合排空后发放。`TryCompleteDaySettlement` 推进到 Rest。完成 Rest 后增加 `CompletedDays` 并推进日期。最后一天完成后，Campaign 进入 `Completed`，供诊断读取的 Day 阶段保留为 `Rest`。
 
-## 生产计划与结算
+## 生产与结算
 
-`DayProductionPlan` 用首尾 Stage ID 绑定现有 Score 目标的连续区间。Stage 的累计分、越级奖励和提现仍由原生产系统计算。`CampaignSettlementSystem` 按计划上界截断本次结算跨过的 Stage。一个计划可以跑多个生产回合，也可以因越级较早完成。还剩 Stage 时，结算直接进入下一轮 `Build`。
+每次尝试运行一个生产回合。目标分和基础通关奖励直接读取当天的 `targetScore` 和 `rewardCoins`。`CampaignSettlementSystem` 用该回合的最终分数判定达标，达标后发放受 `COIN_GAIN_RATE` 修正的基础与超额奖励。主动提现使用剩余血量、`BLOOD_DIVIDEND_RATE` 和 `COIN_GAIN_RATE`。直接启动机台时，每回合采用 `Marble.TargetScore`，达标后回到 `Build` 开始下一回合。
 
-Day 的 `productionFeatures` 逐项开启 `Shop`、`DevicePlacement`、`Rush` 和 `GamblingWheel`，默认四项都关闭。`Shop` 开启 Morning Prep 的商店终端。关闭转盘时，其现有分区按普通得分区即时计分。单 Stage 的计划可提供独立 `targetScore`，日程、HUD、提现和结算共享这个目标。Day0 使用 100 分。
+Day 的 `productionFeatures` 逐项开启 `Shop`、`DevicePlacement`、`Rush` 和 `GamblingWheel`，默认四项都关闭。`Shop` 开启 Morning Prep 的商店终端。关闭转盘时，其现有分区按普通得分区即时计分。HUD、提现和结算共享当天目标。Day0 使用 50 分。Day1 使用 200 分并开启商店与装置布置。
 
-适配器在现有 `BeginRound`、`CashOut` 和完整的 `AfterPhysics` 边界取结果。`SettlementComplete` 首次生效时发布 `RoundSettled`。若同一步进入排空并完成结算，先发 `DrainingEntered`，再发 `RoundSettled`。计划范围内的 `Won` 和 `Lost` 才触发 `ProductionSucceeded` 和 `ProductionFailed`。外层发射和布置命令只在无待处理生命周期的 Production 阶段可用。
+适配器在现有 `BeginRound`、`CashOut` 和完整的 `AfterPhysics` 边界取结果。`SettlementComplete` 首次生效时发布 `RoundSettled`。若同一步进入排空并完成结算，先发 `DrainingEntered`，再发 `RoundSettled`。`Won` 和 `Lost` 分别触发 `ProductionSucceeded` 和 `ProductionFailed`。外层发射和布置命令只在无待处理生命周期的 Production 阶段可用。
 
 ## Morning Prep
 
@@ -65,7 +64,7 @@ Morning Prep 属于 `WakeUp`。ECS 保存当前尝试的目标完成记录，`Tr
 
 恢复时使用新的 Round ID 和表现版本，装置保存的回合编号按偏移重映射，退役球的延迟接触失效。Lua 环境及物理对象的新实例从 ECS 状态和资源重建，持久玩法数据应通过实例 Buffer 保存，表现缓存随重建及正常回合回调刷新。捕获点限定为无活动球的 Build，因此中途刚体姿态、外部场景脚本私有状态和跨应用存档属于后续扩展。PhysX 穿透概率当前由球身份派生，新的 Round ID 与 PhysX 求解均会限制完全复现。回放策略保证共享玩法随机流恢复。
 
-跨日准备集中在 `PrepareDayProduction`。当前技术行为是补血、重新开始计划分数和生产统计、清除上一天的商店报价，保留已有钱包和布局，再捕获当日基线。这一接入点留给后续确认的继承策略。当天生产失败会恢复购买前的钱包、库存和随机流，重试时首次访问重新抽取。选择延续失败 RNG、开始独立子流、开局资源配置、Rest 交互、事件选项和跨应用保存仍待策划确认。
+每天完成 Rest 时，`DevicePlacementSystem` 将盘面上的装置收回背包。跨日准备集中在 `PrepareDayProduction`。该入口补血、设置当天的目标分和奖励、重置生产统计和商店报价，并保留已有钱包和库存。`IMarbleBoardLayoutPhysics` 在捕获当日基线前把 `boardLayout` 投影到 `BoardPlacementSurface` 所在的局部物理场景。生成的钉子使用原有碰撞和得分接点。生成的区使用原有得分结算。重试复用当天的盘面对象并通过物理检查点恢复破钉状态。当天生产失败会恢复购买前的钱包、库存和随机流，重试时首次访问重新抽取。选择延续失败 RNG、开始独立子流、开局资源配置、Rest 交互、事件选项和跨应用保存仍待策划确认。
 
 ## 文件索引
 
@@ -73,7 +72,7 @@ Morning Prep 属于 `WakeUp`。ECS 保存当前尝试的目标完成记录，`Tr
 | --- | --- |
 | `Scripts/Day/` | `DayDefinitions` 与 `DayBehaviorRegistry` 定义内容和代码注册，`DayRuntime`、`DayStateMachine`、`DayFlowSystem` 驱动流程，`DayEventSystem`、`DayRuleSystem` 管理生命周期，`DayCheckpoint` 保存恢复数据。 |
 | `Scripts/Simulation/` | `MarbleSimulation.Day.cs`、`MarbleGameController.Day.cs` 对接现有固定步、外部命令、生产结果和场景投影。 |
-| `Scripts/Session/`、`Scripts/Marbles/` | Campaign 结算增加 Stage 区间，库存创建和检查点重建共享装置实体构建入口。属性 Modifier 记录规则句柄，`IMarbleDayPhysics` 定义物理检查点边界。 |
+| `Scripts/Session/`、`Scripts/Marbles/` | 生产回合结算发放当日奖励，库存创建和检查点重建共享装置实体构建入口。属性 Modifier 记录规则句柄，`IMarbleDayPhysics` 定义物理检查点边界。 |
 | `Scripts/Physics/PhysX/`、`Scripts/UI/`、`Scripts/Presentation/` | Bridge 与盘面投影实现物理清理和重建，现有按钮遵循生产命令可用性。 |
 | `Resources/`、`Scripts/Configuration/`、`Editor/Validation/` | `GameDays.json`、`GameDaysLoader.cs` 和 `GameDaysValidation.cs` 提供制作、加载和校验入口。 |
 | `Tests/Day/` | `DayFrameworkTests.cs` 和 `DaySceneTests.cs` 覆盖配置、ECS 流程、实际物理和旧场景。 |

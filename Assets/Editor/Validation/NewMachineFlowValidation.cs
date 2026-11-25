@@ -474,32 +474,27 @@ namespace MarblesECS.Editor
             context = simulation.Context;
             var result = UnityEngine.Object.FindObjectsOfType<GamblingWheelDisplay>().Single(r => r.Controller == game);
             var shop = UnityEngine.Object.FindObjectsOfType<ShopUI>().Single(s => s.Controller == game);
-            for (int stage = 1; stage <= 2; stage++)
+            for (int cycle = 1; cycle <= 2; cycle++)
             {
                 wait = WaitFor(() => !rig.ItemGroup.blocksRaycasts && rig.ItemGroup.alpha == 0,
                     "Playing releases item-board UI input");
                 while (wait.MoveNext()) yield return null;
-                // Seed the score; the real settlement and placement inputs drive the next stage.
-                int previousStage = context.Campaign.StageIndex;
-                Check(previousStage + 1 < game.Balance.Stages.Length,
-                    "Settlement has a following stage for cycle " + stage);
                 var round = context.Round;
-                round.Score = Math.Max(0, round.TargetScore - context.Campaign.TotalScore);
-                // Zero-value entry forces a real draw without changing the target/stage.
+                long target = round.TargetScore;
+                round.Score = target;
+                // A zero-value entry exercises the draw while keeping the confirmed score unchanged.
                 context.Round = round;
                 GamblingWheelSystem.Deposit(context, 0);
                 round = context.Round;
-                context.Round = round;
-                Report.Add("SETTLEMENT_INPUT stage=" + previousStage + " total=" + context.Campaign.TotalScore +
+                Report.Add("SETTLEMENT_INPUT cycle=" + cycle + " total=" + context.Campaign.TotalScore +
                     " confirmed=" + round.Score + " pending=" + round.PendingScore + " target=" + round.TargetScore);
-                Check(rig.CanCashOut(), "Physical lever permits settlement " + stage);
+                Check(rig.CanCashOut(), "Physical lever permits settlement " + cycle);
                 var lever = rig.LeverAnchor.GetComponentsInChildren<DiegeticUIHit>(true).First(h => h.Kind == 0);
                 ClickVisible(lever.gameObject);
                 wait = WaitFor(() => game.Session.Phase == RoundPhase.Build,
-                    "Real settlement reaches Build " + stage, 25);
+                    "Real settlement reaches Build " + cycle, 25);
                 while (wait.MoveNext()) yield return null;
-                Check(game.Session.StageIndex == previousStage + 1 && game.Session.LastSkippedStages == 0,
-                    "Settlement advances exactly one campaign stage: " + previousStage + " -> " + game.Session.StageIndex);
+                Check(game.Session.TargetScore == target, "The next machine round uses the same target");
                 wait = Wait(.4);
                 while (wait.MoveNext()) yield return null;
                 Quaternion buildLeverRotation = rig.LeverPivot.localRotation;
@@ -510,14 +505,11 @@ namespace MarblesECS.Editor
                 var device = game.Balance.Devices.Single(d => d.Id == 9002 && d.SourceId == "Reflector");
                 int instanceId = context.Campaign.NextDeviceId + 1;
                 CampaignStateUtility.CreateDevice(context, device, device.Price);
-                Check(game.Session.StageIndex == previousStage + 1 &&
-                    game.Session.TargetScore == game.Balance.Stages[previousStage + 1].TargetScore,
-                    "Entering Build preserves the settled stage and loads its target");
                 wait = WaitFor(() => rig.IsBoardOpen && rig.ItemGroup.interactable &&
                     !shop.ShopCanvasGroup.blocksRaycasts, "Physical item board is interactive after settlement");
                 while (wait.MoveNext()) yield return null;
                 Check(result.DisplayGroup.alpha == 0, "Wheel is hidden during new-round placement");
-                using (var resolution = new TargetResolutionScope(rig.ViewCamera, stage == 1 ? 1920 : 3840))
+                using (var resolution = new TargetResolutionScope(rig.ViewCamera, cycle == 1 ? 1920 : 3840))
                 {
                     yield return null;
                     resolution.Validate(shop.ShopCanvasGroup.GetComponentInParent<Canvas>());
@@ -526,7 +518,7 @@ namespace MarblesECS.Editor
                     ClickVisible(rig.Continue.gameObject);
                 }
                 Check(game.Session.Phase == RoundPhase.Playing && !game.Paused,
-                    "Physical Continue starts round " + (stage + 1));
+                    "Physical Continue starts round " + (cycle + 1));
                 Check(game.GetOwnedDevices().Single(d => d.InstanceId == instanceId).Placed,
                     "Placed device survives round start: " + device.Name);
                 Check(game.LastRunRandomSeed == runSeed && game.LastRandomStarterDeviceIds.SequenceEqual(starterIds),

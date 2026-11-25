@@ -82,6 +82,7 @@ namespace MarblesECS.PhysX
             ClearTransientVisuals();
             RestorePins();
             RetireBodies();
+            if (hiddenBoardObjects.Count > 0 || boardLayoutRoot != null) RemoveBoardLayout();
             disposed = true;
         }
 

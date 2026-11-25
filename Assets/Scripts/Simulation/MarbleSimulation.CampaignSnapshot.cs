@@ -12,27 +12,16 @@ namespace MarblesECS
                 ThrowIfDisposed();
                 var round = context.Round;
                 var campaign = context.Campaign;
-                var result = new SessionSnapshot
+                return new SessionSnapshot
                 {
                     IsCampaign = context.Balance != null, Phase = (RoundPhase)round.Phase,
-                    StageIndex = campaign.StageIndex, TotalScore = campaign.TotalScore,
+                    TotalScore = campaign.TotalScore, ConfirmedScore = round.Score,
                     RoundScore = round.Score, TargetScore = round.TargetScore, Coins = campaign.Coins,
                     LastRewardCoins = campaign.LastRewardCoins,
-                    LastCashoutCoins = campaign.LastCashoutCoins, StagesCleared = campaign.StagesCleared,
-                    LastSkippedStages = campaign.LastSkippedStages, ShopRefreshCount = campaign.ShopRefreshCount,
+                    LastCashoutCoins = campaign.LastCashoutCoins, ShopRefreshCount = campaign.ShopRefreshCount,
                     LayoutRevision = campaign.LayoutRevision,
                     CanCashOut = ProductionCommandsAvailable && CampaignStateUtility.CanCashOut(context)
                 };
-                if (context.Balance != null)
-                {
-                    var stage = context.Balance.Stages[campaign.StageIndex];
-                    result.StageId = stage.Id;
-                    result.StageCount = context.Balance.Stages.Length;
-                    result.TargetScore = CampaignStateUtility.TargetScore(context, campaign.StageIndex);
-                    result.ConfirmedScore = round.SettlementComplete ? campaign.TotalScore :
-                        MarbleRules.AddScore(campaign.TotalScore, round.Score, context.Balance.Campaign.MaxTotalScore);
-                }
-                return result;
             }
         }
 

@@ -33,15 +33,18 @@ namespace MarblesECS
             if (!(physics is IMarbleDayPhysics dayPhysics) || (started && !ReferenceEquals(physics, context.Physics)))
             { error = "Use the current physics adapter with Day checkpoint support."; return false; }
 
-            var ranges = new (int first, int end)[definition.Days.Count];
             try
             {
                 ValidateRuleAttributes(definition.CampaignRules);
-                for (int i = 0; i < ranges.Length; i++)
+                foreach (var day in definition.Days)
                 {
-                    var day = definition.Days[i];
-                    ranges[i] = day.ProductionPlan.Resolve(context.Balance);
+                    if (day.TargetScore > context.Tuning.MaxRoundScore)
+                        throw new ArgumentException($"Day '{day.DayId}' targetScore exceeds this session's MaxRoundScore.");
                     ValidateRuleAttributes(day.Rules);
+                    if (day.BoardLayout == null) continue;
+                    if (!(physics is IMarbleBoardLayoutPhysics boardPhysics))
+                        throw new ArgumentException($"Day '{day.DayId}' requires board layout physics support.");
+                    boardPhysics.ValidateBoardLayout(day.BoardLayout);
                 }
             }
             catch (ArgumentException validationError) { error = validationError.Message; return false; }
@@ -53,7 +56,7 @@ namespace MarblesECS
                 BeforeDayBoardRestore();
                 StartSessionCore(physics, 0, runSeed, grantAllStartingDevices, definition.Days[0].ProductionFeatures);
                 dayPhysics.ResetDayPhysics();
-                dayFlow = new DayFlowSystem(this, definition, ranges, retryRandom, runSeed);
+                dayFlow = new DayFlowSystem(this, definition, retryRandom, runSeed);
                 dayFlow.Start();
                 error = null;
                 return true;
@@ -103,24 +106,22 @@ namespace MarblesECS
         internal void BeforeDayBoardRestore() => DayBoardResetting?.Invoke();
         internal void AfterDayBoardRestore() => DayBoardRestored?.Invoke();
 
-        internal void PrepareDayProduction(DayDefinition day, int firstStage, int stageEnd, bool firstDay)
+        internal void PrepareDayProduction(DayDefinition day, bool firstDay)
         {
             if (!firstDay) ResetRound(context.Physics, resetRandom: false);
+            if (context.Physics is IMarbleBoardLayoutPhysics boardPhysics) boardPhysics.ApplyBoardLayout(day.BoardLayout);
             var campaign = context.Campaign;
-            campaign.StageIndex = firstStage;
-            campaign.StageStartIndex = firstStage;
-            campaign.StageEndExclusive = stageEnd;
-            campaign.StageTargetOverride = day.ProductionPlan.TargetScore ?? 0;
+            campaign.RewardCoins = day.RewardCoins;
+            campaign.RepeatRounds = false;
             campaign.DisabledFeatures = ProductionFeature.All & ~day.ProductionFeatures;
-            campaign.StagesCleared = 0;
             campaign.TotalScore = 0;
             campaign.LastRewardCoins = campaign.LastCashoutCoins = 0;
-            campaign.LastSkippedStages = campaign.ShopRefreshCount = 0;
+            campaign.ShopRefreshCount = 0;
             context.Campaign = campaign;
             context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity).Clear();
             var round = context.Round;
             round.Phase = (byte)RoundPhase.Build;
-            round.TargetScore = CampaignStateUtility.TargetScore(context, firstStage);
+            round.TargetScore = day.TargetScore;
             context.Round = round;
             FillBlood();
             if (AttributeRuntime.Enabled(context)) AttributeRuntime.Recompute(context, context.PlayerEntity);

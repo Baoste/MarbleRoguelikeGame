@@ -29,14 +29,13 @@ namespace MarblesECS
         public bool LifecyclePending { get; }
         public int MorningPrepRemaining { get; }
         public bool ShopOpen { get; }
-        public string ProductionPlanId { get; }
         public int SettledRounds { get; }
         public long ProductionTicks { get; }
         public uint RunSeed { get; }
         public uint AttemptStartRandomState { get; }
         public uint RandomState { get; }
 
-        internal DayProgressSnapshot(DayRuntimeData state, DayDefinition definition, int count, uint randomState, bool pending)
+        internal DayProgressSnapshot(DayRuntimeData state, int count, uint randomState, bool pending)
         {
             Status = state.Status;
             SequenceId = state.SequenceId.ToString();
@@ -54,7 +53,6 @@ namespace MarblesECS
             LifecyclePending = pending;
             MorningPrepRemaining = state.MorningPrepRemaining;
             ShopOpen = state.ShopOpen;
-            ProductionPlanId = definition.ProductionPlan.PlanId;
             SettledRounds = state.SettledRounds;
             ProductionTicks = state.ProductionTicks;
             RunSeed = state.RunSeed;

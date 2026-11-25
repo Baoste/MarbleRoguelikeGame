@@ -16,19 +16,8 @@ namespace MarblesECS
             return CanEditDevices && DevicePlacementSystem.Place(context, instanceId, x, z, clearance, angle);
         }
 
-        public bool RemoveDevicePlacement(int instanceId)
-        {
-            if (!CanEditDevices ||
-                !CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
-            var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
-            if (!device.Placed) return false;
-            device.Placed = false;
-            context.Manager.SetComponentData(entity, device);
-            var campaign = context.Campaign;
-            campaign.LayoutRevision++;
-            context.Campaign = campaign;
-            return true;
-        }
+        public bool RemoveDevicePlacement(int instanceId) =>
+            CanEditDevices && DevicePlacementSystem.ReturnToInventory(context, instanceId);
         public bool RotateDevice(int instanceId, float degrees)
         {
             if (!CanEditDevices || !MarbleRules.IsFinite(degrees) ||

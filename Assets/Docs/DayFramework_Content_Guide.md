@@ -1,20 +1,36 @@
 # 每日内容制作指南
 
-`Assets/Resources/GameDays.json` 是每日内容的运行来源。基础生产门槛、奖励和发射数值仍从 `GameBalance.xlsx` 导入。测试用日期、分数和行为保存在 `Assets/Tests/Day` 的夹具中。
+`Assets/Resources/GameDays.json` 配置每日目标分、通关奖励和每日内容。基础发射和战役参数从 `GameBalance.xlsx` 导入。测试用日期、分数和行为保存在 `Assets/Tests/Day` 的夹具中。
 
-## 增加 Day 和生产计划
+## 增加 Day
 
 | 位置 | 字段与含义 |
 | --- | --- |
-| 根对象 | `schemaVersion` 为 1，`sequenceId` 是固定序列 ID，`days` 是按 `order` 排序的条目。可包含 `productionPlans`、`events`、`rules` 和 `campaignRuleIds`。 |
-| `days[]` | `dayId` 唯一，`order` 为唯一正整数，`productionPlanId` 指向计划。可用 `eventIds`、`ruleIds` 引用当天行为和规则，`morningPrep` 定义房间前置目标。 |
-| `productionPlans[]` | `planId`，以及 `firstStageId`、`lastStageId`。两端都是现有 Balance Stage ID，且首端位于末端之前或相同。单 Stage 计划可填正整数 `targetScore` 作为当天分数。 |
+| 根对象 | `schemaVersion` 为 2，`sequenceId` 是固定序列 ID，`days` 是按 `order` 排序的条目。可包含 `events`、`rules` 和 `campaignRuleIds`。 |
+| `days[]` | `dayId` 唯一，`order` 为唯一正整数，`targetScore` 为当天回合的目标分，范围为 1 到 `Marble.MaxRoundScore`。`rewardCoins` 为非负整数，指定当天通关基础奖励。`boardLayout` 指定盘面 JSON。可用 `eventIds`、`ruleIds` 引用当天行为和规则，`morningPrep` 定义房间前置目标。 |
 
-IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白。菜单 `Marbles ECS → Validate Day Configuration` 检查重复 ID、冲突顺序、Stage 范围、事件、规则与行为类型。可用 `GameDaysLoader.Parse` 在测试中从字符串加载同一 Schema。
+IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白。菜单 `Marbles ECS → Validate Day Configuration` 检查配置字段、重复 ID、冲突顺序、事件、规则与行为类型。可用 `GameDaysLoader.Parse` 在测试中从字符串加载同一 Schema。
+
+每次尝试结算一个生产回合。弹珠排空且当日达标后，系统将 `rewardCoins` 与超额得分奖励相加，再乘 `COIN_GAIN_RATE` 并向下取整。主动提现的剩余血量在拨动结算开关时单独兑换。
 
 场景逻辑在 Controller 就绪后调用 `TryStartConfiguredDayCampaign`。调用者也能用 `TryStartDayCampaign` 安装已校验的定义。显示当前状态时读取 `Controller.Day`，以展示时读取的 `Version` 提交起床、结算和休息完成命令。清空日期后，配置仍可校验，显式启动会报告未配置。
 
 `productionFeatures` 是功能开关列表，允许 `Shop`、`DevicePlacement`、`Rush` 和 `GamblingWheel`。省略或留空会以基础生产开始。加入 `Shop` 后，当天可在 Morning Prep 靠近机台旁平台上的 `Shop Terminal` 按 E 开店。购物是可选互动。
+
+### Board Layout
+
+在 Unity 打开 **Marbles ECS → Board Layout Editor**。选 `Pin`、`Score Zone` 或 `Random Zone` 后在 2D 盘面上点击放置。用 `Select` 点击或拖动对象，在右侧面板修改属性或删除。`Board Surface` 可引用待使用的 `BoardPlacementSurface`。未选择时预览采用 TestScene 的默认尺寸。
+
+`Save` 或 `Save As` 将 `.json` 存到 `Assets/Config/Resources/BoardLayouts/`。在 `GameDays.json` 的日期条目填写例如 `"boardLayout": "Day0.json"`。子目录可用相对路径。重新进入 Play 时会加载新配置。省略 `boardLayout` 的日期使用场景自带的盘面。
+
+`(0, 0)` 是左上角，`(1, 1)` 是右下角。`y` 沿斜面向下，`x` 是该行从左至右的宽度比例。`radius`、`width`、`depth` 和 `triggerHeight` 用 Unity 单位，触发区从盘面沿法线向上延伸。保存和每日启动时会检查对象的整个轮廓是否位于盘面内。
+
+| JSON 条目 | 属性 |
+| --- | --- |
+| `pins[]` | `x`、`y`、`radius`、`scoreMultiplier`、`rushChanceAdd`。RUSH 概率加值用 `0` 到 `1`，例如 `0.1` 对应 10 个百分点。 |
+| `zones[]` | `type` 为 `Score` 或 `RandomScore`，另有 `x`、`y`、`width`、`depth`、`triggerHeight`、`multiplier`、`flatScore`、`priority`、`rushEnabled`、`scoreStackEnabled`。开启 Gambling Wheel 时，`RandomScore` 把分数存入转盘。关闭时直接结算。 |
+
+每份布局的 `schemaVersion` 为 `1`，`pins` 和 `zones` 可为空数组。Day0 示例包含三枚钉子和底部一个普通得分区。配置布局会替换场景原有钉子与得分区，使用原有斜面、边墙和排球区。
 
 ### Morning Prep
 

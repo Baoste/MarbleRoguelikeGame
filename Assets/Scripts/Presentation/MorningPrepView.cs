@@ -45,6 +45,10 @@ namespace MarblesECS.Presentation
             card.sizeDelta = new Vector2(650, 230);
             Image(card, Paper);
             noteText = Text("Note Text", card, Ink, 46);
+            noteText.enableWordWrapping = true;
+            noteText.enableAutoSizing = true;
+            noteText.fontSizeMin = 22;
+            noteText.fontSizeMax = 46;
             Stretch(noteText.rectTransform, new Vector2(37, 25));
             var close = Text("Close Hint", card, LightText, 25);
             var hint = close.rectTransform;
@@ -103,7 +107,8 @@ namespace MarblesECS.Presentation
             label.enableAutoSizing = true;
             label.fontSizeMin = 9;
             label.fontSizeMax = 16;
-            label.enableWordWrapping = false;
+            label.enableWordWrapping = true;
+            label.overflowMode = TextOverflowModes.Ellipsis;
             Stretch(label.rectTransform, new Vector2(8, 18));
             label.text = content;
             return note;

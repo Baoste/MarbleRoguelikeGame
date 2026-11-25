@@ -10,7 +10,6 @@ namespace MarblesECS
         private readonly MarbleSimulation simulation;
         private readonly SimulationContext context;
         private readonly DayCampaignDefinition definition;
-        private readonly (int first, int end)[] stageRanges;
         private readonly DayRetryRandomPolicy retryRandom;
         private readonly DayRuleSystem rules;
         private readonly DayEventSystem events;
@@ -37,17 +36,16 @@ namespace MarblesECS
                 return state.Phase == DayPhase.Production && state.Result == DayResult.InProgress;
             }
         }
-        internal DayProgressSnapshot Snapshot => new DayProgressSnapshot(State, Current, definition.Days.Count, context.Round.RandomState, Busy);
+        internal DayProgressSnapshot Snapshot => new DayProgressSnapshot(State, definition.Days.Count, context.Round.RandomState, Busy);
         internal bool ShopOpen => State.ShopOpen;
         internal bool AllowsShopping => ShopOpen && !Busy;
 
         internal DayFlowSystem(MarbleSimulation simulation, DayCampaignDefinition definition,
-            (int first, int end)[] stageRanges, DayRetryRandomPolicy retryRandom, uint runSeed)
+            DayRetryRandomPolicy retryRandom, uint runSeed)
         {
             this.simulation = simulation;
             context = simulation.Context;
             this.definition = definition;
-            this.stageRanges = stageRanges;
             this.retryRandom = retryRandom;
             context.Manager.AddComponentData(context.RoundEntity,
                 new DayRuntimeData { SequenceId = new FixedString128Bytes(definition.SequenceId), RunSeed = runSeed });
@@ -267,6 +265,7 @@ namespace MarblesECS
                     break;
                 case DayTransitionReason.RestCompleted:
                     rules.ClearAttempt(Snapshot);
+                    DevicePlacementSystem.ReturnAllToInventory(context);
                     state.CompletedDays++;
                     if (state.CompletedDays == definition.Days.Count)
                     {
@@ -289,9 +288,8 @@ namespace MarblesECS
         private void EnterNewDay(DayRuntimeData state, bool first)
         {
             var day = definition.Days[state.DayIndex];
-            var range = stageRanges[state.DayIndex];
             if (!first) simulation.BeforeDayBoardRestore();
-            simulation.PrepareDayProduction(day, range.first, range.end, first);
+            simulation.PrepareDayProduction(day, first);
             state.DayId = new FixedString128Bytes(day.DayId);
             state.Attempt = 1;
             InitializeWakeUp(ref state, day);

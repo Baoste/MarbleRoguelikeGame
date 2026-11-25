@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "pins": [
+    { "x": 0.43, "y": 0.43, "radius": 0.1, "scoreMultiplier": 2, "rushChanceAdd": 0 },
+    { "x": 0.57, "y": 0.43, "radius": 0.1, "scoreMultiplier": 2, "rushChanceAdd": 0 },
+    { "x": 0.51, "y": 0.62, "radius": 0.1, "scoreMultiplier": 2, "rushChanceAdd": 0 }
+  ],
+  "zones": [
+    {
+      "type": "Score",
+      "x": 0.5,
+      "y": 0.96,
+      "width": 8.3,
+      "depth": 0.55,
+      "triggerHeight": 2.2,
+      "multiplier": 1,
+      "flatScore": 0,
+      "priority": 0,
+      "rushEnabled": false,
+      "scoreStackEnabled": false
+    }
+  ]
+}

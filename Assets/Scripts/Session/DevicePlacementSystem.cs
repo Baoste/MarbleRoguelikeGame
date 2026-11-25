@@ -15,10 +15,41 @@ namespace MarblesECS
             device.Z = z;
             device.Placed = true;
             context.Manager.SetComponentData(entity, device);
+            MarkLayoutChanged(context);
+            return true;
+        }
+
+        internal static bool ReturnToInventory(SimulationContext context, int instanceId)
+        {
+            if (!CampaignStateUtility.FindDevice(context, instanceId, out var entity) ||
+                !ClearPlacement(context, entity)) return false;
+            MarkLayoutChanged(context);
+            return true;
+        }
+
+        internal static void ReturnAllToInventory(SimulationContext context)
+        {
+            bool layoutChanged = false;
+            using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
+                foreach (var entity in entities)
+                    layoutChanged |= ClearPlacement(context, entity);
+            if (layoutChanged) MarkLayoutChanged(context);
+        }
+
+        private static bool ClearPlacement(SimulationContext context, Entity entity)
+        {
+            var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+            if (!device.Placed) return false;
+            device.Placed = false;
+            context.Manager.SetComponentData(entity, device);
+            return true;
+        }
+
+        private static void MarkLayoutChanged(SimulationContext context)
+        {
             var campaign = context.Campaign;
             campaign.LayoutRevision++;
             context.Campaign = campaign;
-            return true;
         }
 
         private static bool TryValidatePlacement(SimulationContext context, int instanceId, float x, float z, float clearance,

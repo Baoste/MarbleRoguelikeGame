@@ -135,7 +135,7 @@ class RoundResult:
 
 @dataclass(frozen=True)
 class ShopAffordabilitySnapshot:
-    stage: int
+    day_order: int
     coins_before_shop: int
     required_purchases: int
     required_refreshes: int
@@ -150,15 +150,15 @@ class RunResult:
     run_index: int
     seed: int
     won: bool
-    failed_stage: int
+    failed_day: int
     rounds_played: int
-    stages_cleared: int
+    days_cleared: int
     total_score: int
     score_variance: float
     coins_income: int
     cashout_income: int
     bank_income: int
-    stage_reward_income: int
+    day_reward_income: int
     overkill_income: int
     coins_spent: int
     purchase_spend: int
@@ -199,6 +199,8 @@ def stable_fingerprint(*paths: Path) -> str:
 def read_game_content(path: Path, devices_path: Path) -> dict[str, Any]:
     """Resolve selected device IDs for analysis, while accepting expanded historical snapshots."""
     content = read_json(path)
+    if "Drugs" not in content:
+        raise SystemExit(f"{path}: this probability-based analyzer requires archived game content with a Drugs catalog.")
     ids = content["Devices"]
     if all(isinstance(device, dict) for device in ids):
         return content
@@ -230,6 +232,15 @@ def read_game_content(path: Path, devices_path: Path) -> dict[str, Any]:
         )
     content["Devices"] = [devices[device_id] for device_id in sorted(devices)]
     return content
+
+
+def load_days(root: Path) -> list[dict[str, Any]]:
+    path = root / "Assets/Resources/GameDays.json"
+    config = read_json(path)
+    days = config.get("days")
+    if config.get("schemaVersion") != 2 or not isinstance(days, list) or not days:
+        raise SystemExit(f"{path}: analysis requires a configured Day sequence with schemaVersion 2.")
+    return sorted(days, key=lambda day: day["order"])
 
 
 def load_physics(path: Path) -> tuple[dict[tuple[str, float], RouteProfile], dict[str, Any]]:
@@ -291,12 +302,6 @@ def apply_overrides(balance: dict[str, Any], content: dict[str, Any], proposal: 
         balance["Marble"][field_name] = value
     for field_name, value in proposal.get("Campaign", {}).items():
         balance["Campaign"][field_name] = value
-    stage_fields = proposal.get("Stages", {})
-    for field_name, values in stage_fields.items():
-        if len(values) != len(balance["Stages"]):
-            raise ValueError(f"Proposal Stages.{field_name} length must match runtime stages")
-        for stage, value in zip(balance["Stages"], values):
-            stage[field_name] = value
     attributes = {row["Id"]: row for row in content["Attributes"]}
     for attribute, values in proposal.get("Attributes", {}).items():
         if attribute not in attributes:
@@ -349,8 +354,10 @@ def apply_physics_overrides(physics: dict[tuple[str, float], RouteProfile], prop
 
 
 class CampaignModel:
-    def __init__(self, balance: dict[str, Any], content: dict[str, Any], physics: dict[tuple[str, float], RouteProfile]):
+    def __init__(self, balance: dict[str, Any], content: dict[str, Any], days: list[dict[str, Any]],
+                 physics: dict[tuple[str, float], RouteProfile]):
         self.balance = balance
+        self.days = days
         self.content = content
         self.physics = physics
         self.attrs = {row["Id"]: row for row in content["Attributes"]}
@@ -425,12 +432,12 @@ class CampaignModel:
         build = self.new_build()
         coins = int(self.balance["Campaign"]["StartingCoins"])
         total_score = 0
-        stages_cleared = 0
+        days_cleared = 0
         rounds = 0
         income = 0
         cashout_income = 0
         bank_income = 0
-        stage_reward_income = 0
+        day_reward_income = 0
         overkill_income = 0
         total_balls = 0
         total_duration = 0.0
@@ -440,79 +447,62 @@ class CampaignModel:
         round_scores: list[int] = []
         build_snapshots: list[tuple[int, float, int, int]] = []
         shop_affordability_snapshots: list[ShopAffordabilitySnapshot] = []
-        failed_stage = 0
-        won = False
-        stages = self.balance["Stages"]
-
-        while rounds < len(stages):
-            stage_index = stages_cleared
-            if stage_index >= len(stages):
-                won = True
-                break
-            stage = stages[stage_index]
+        failed_day = 0
+        for day in self.days:
+            if "Shop" in day.get("productionFeatures", ()):
+                coins = self.shop(rng, strategy, build, coins)
+            day_order = day["order"]
+            target = day["targetScore"]
             rounds += 1
             build_snapshots.append((
-                int(stage["Id"]), self.build_strength_index(strategy, build),
+                day_order, self.build_strength_index(strategy, build),
                 sum(build.devices.values()), sum(build.drugs.values()),
             ))
-            result = self.simulate_round(rng, strategy, build, total_score, stage)
+            result = self.simulate_round(rng, strategy, build, target)
             total_balls += result.balls
             total_duration += result.duration
             total_blood += result.blood_remaining
             cashouts += int(result.cashout)
             dead |= result.dead_run
             round_scores.append(result.score)
-            before = total_score
             total_score += result.score
             round_income = result.cashout_coins + result.bank_coins
             cashout_income += result.cashout_coins
             bank_income += result.bank_coins
-            if total_score < int(stage["TargetScore"]):
-                failed_stage = int(stage["Id"])
+            if result.score < target:
+                failed_day = day_order
                 coins += round_income
                 income += round_income
                 break
 
-            first = stage_index
-            next_stage = first
-            stage_reward_raw = 0
-            while next_stage < len(stages) and total_score >= int(stages[next_stage]["TargetScore"]):
-                crossed = stages[next_stage]
-                stage_reward = int(crossed["RewardCoins"])
-                if next_stage > first:
-                    stage_reward += int(crossed["SkipRewardCoins"])
-                stage_reward_raw += stage_reward
-                next_stage += 1
-            excess = max(0, total_score - max(before, int(stage["TargetScore"])))
+            day_reward_raw = day["rewardCoins"]
+            excess = result.score - target
             overkill_raw = math.floor(
                 excess * float(self.content.get("OverkillCoinsPerScore", 0.01)) *
                 float(self.attrs["SCORE_OVERKILL_RATE"]["DefaultValue"])
             )
             coin_gain = float(self.attrs["COIN_GAIN_RATE"]["DefaultValue"])
-            reward = math.floor((stage_reward_raw + overkill_raw) * coin_gain)
-            stage_reward = math.floor(stage_reward_raw * coin_gain)
-            overkill_reward = reward - stage_reward
-            stage_reward_income += stage_reward
+            reward = math.floor((day_reward_raw + overkill_raw) * coin_gain)
+            day_reward = math.floor(day_reward_raw * coin_gain)
+            overkill_reward = reward - day_reward
+            day_reward_income += day_reward
             overkill_income += overkill_reward
             round_income += reward
             coins += round_income
             income += round_income
-            stages_cleared = next_stage
+            days_cleared += 1
             shop_affordability_snapshots.append(self.shop_affordability_snapshot(
-                seed, rounds, stages_cleared, strategy, build, coins,
+                seed, rounds, day_order, strategy, build, coins,
             ))
-            if stages_cleared >= len(stages):
-                won = True
-                break
-            coins = self.shop(rng, strategy, build, coins)
 
+        won = days_cleared == len(self.days)
         variance = statistics.pvariance(round_scores) if len(round_scores) > 1 else 0.0
         return RunResult(
             config=config, strategy=strategy.name, run_index=run_index, seed=seed, won=won,
-            failed_stage=failed_stage, rounds_played=rounds, stages_cleared=stages_cleared,
+            failed_day=failed_day, rounds_played=rounds, days_cleared=days_cleared,
             total_score=total_score, score_variance=variance, coins_income=income,
             cashout_income=cashout_income, bank_income=bank_income,
-            stage_reward_income=stage_reward_income, overkill_income=overkill_income,
+            day_reward_income=day_reward_income, overkill_income=overkill_income,
             coins_spent=build.coins_spent, purchase_spend=build.purchase_spend,
             refresh_spend=build.refresh_spend, ending_coins=coins, balls_launched=total_balls,
             duration=total_duration, blood_remaining=total_blood / max(1, rounds), cashouts=cashouts,
@@ -524,7 +514,7 @@ class CampaignModel:
         )
 
     def simulate_round(self, rng: random.Random, strategy: Strategy, build: BuildState,
-                       total_score: int, stage: dict[str, Any]) -> RoundResult:
+                       target: int) -> RoundResult:
         blood_capacity = float(self.balance["Marble"]["BloodCapacity"])
         min_invest = float(self.balance["Marble"]["MinInvestment"])
         max_invest = float(self.balance["Marble"]["MaxInvestment"])
@@ -551,7 +541,6 @@ class CampaignModel:
         settled_balls = 0
         projected_points = 0.0
         lane = self.route_lane[strategy.name]
-        target = int(stage["TargetScore"])
         gamble_weights = [
             float(self.attrs["GAMBLE_LOSS_CHANCE"]["DefaultValue"]),
             float(self.attrs["GAMBLE_RETURN_CHANCE"]["DefaultValue"]),
@@ -675,7 +664,7 @@ class CampaignModel:
                             max(rush_remaining, ball.rush_duration),
                         )
 
-            confirmed = total_score + score
+            confirmed = score
             if not cashout and confirmed >= target and blood > 0:
                 should_cash = blood / blood_capacity <= strategy.cashout_blood_fraction or confirmed >= target * strategy.score_margin
                 if should_cash:
@@ -683,7 +672,7 @@ class CampaignModel:
                     settlement_blood = blood
                     dividend = float(self.attrs["BLOOD_DIVIDEND_RATE"]["DefaultValue"])
                     dividend *= float(self.attrs["COIN_GAIN_RATE"]["DefaultValue"])
-                    cashout_coins = math.floor(blood * float(stage["CashoutRate"]) * dividend)
+                    cashout_coins = math.floor(blood * dividend)
                     blood = 0.0
 
             if dead_at_ball is None and balls >= 12 and confirmed < target and blood > blood_capacity * 0.2:
@@ -731,7 +720,7 @@ class CampaignModel:
         dead_run = (
             dead_at_ball is not None and
             balls - dead_at_ball >= 15 and
-            total_score + score < target
+            score < target
         )
         return RoundResult(
             score=score, pending_score=pending, gambling_multiplier=multiplier, balls=balls,
@@ -846,7 +835,7 @@ class CampaignModel:
         return benefit / price
 
     def build_strength_index(self, strategy: Strategy, build: BuildState) -> float:
-        """Normalized modeled benefit available at the start of a stage; 1.0 is the naked build."""
+        """Normalized modeled benefit available at the start of a day; 1.0 is the naked build."""
         strength = 1.0
         for category, item_id in self.all_items:
             definition = self.devices[item_id] if category == "Device" else self.drugs[item_id]
@@ -901,11 +890,11 @@ class CampaignModel:
             build.refreshes += 1
             refreshes += 1
 
-    def shop_affordability_snapshot(self, run_seed: int, round_number: int, stage: int,
+    def shop_affordability_snapshot(self, run_seed: int, round_number: int, day_order: int,
                                     strategy: Strategy, build: BuildState,
                                     coins: int) -> ShopAffordabilitySnapshot:
-        required_purchases, required_refreshes = ((2, 1) if stage <= 4 else (3, 3))
-        probe_seed = run_seed ^ (round_number * 0x9E3779B1) ^ (stage * 0x85EBCA77) ^ 0xC2B2AE3D
+        required_purchases, required_refreshes = ((2, 1) if round_number <= 4 else (3, 3))
+        probe_seed = run_seed ^ (round_number * 0x9E3779B1) ^ (day_order * 0x85EBCA77) ^ 0xC2B2AE3D
         probe_rng = random.Random(probe_seed)
         offered: list[tuple[str, int]] = []
         for _ in range(required_refreshes + 1):
@@ -926,7 +915,7 @@ class CampaignModel:
         refresh_cost = max(1, math.floor(int(self.balance["Campaign"]["ShopRefreshCost"]) * price_mod))
         bundle_cost = item_cost + required_refreshes * refresh_cost
         return ShopAffordabilitySnapshot(
-            stage=stage,
+            day_order=day_order,
             coins_before_shop=coins,
             required_purchases=required_purchases,
             required_refreshes=required_refreshes,
@@ -946,8 +935,9 @@ class CampaignModel:
 
 
 def run_config(config_name: str, balance: dict[str, Any], content: dict[str, Any],
-               physics: dict[tuple[str, float], RouteProfile], runs: int, seed: int) -> list[RunResult]:
-    model = CampaignModel(balance, content, physics)
+               days: list[dict[str, Any]], physics: dict[tuple[str, float], RouteProfile],
+               runs: int, seed: int) -> list[RunResult]:
+    model = CampaignModel(balance, content, days, physics)
     rows: list[RunResult] = []
     for strategy_index, strategy_name in enumerate(STRATEGY_NAMES):
         strategy = STRATEGIES[strategy_name]
@@ -980,7 +970,7 @@ def summarize(rows: list[RunResult], model: CampaignModel) -> dict[str, Any]:
     for strategy_name in STRATEGY_NAMES:
         selected = [row for row in rows if row.strategy == strategy_name]
         total_rounds = sum(row.rounds_played for row in selected)
-        total_clears = sum(row.stages_cleared for row in selected)
+        total_clears = sum(row.days_cleared for row in selected)
         devices = Counter()
         drugs = Counter()
         device_runs = Counter()
@@ -1008,14 +998,14 @@ def summarize(rows: list[RunResult], model: CampaignModel) -> dict[str, Any]:
         pick_rows.sort(key=lambda row: row[2], reverse=True)
         build_curve = []
         affordability_curve = []
-        for stage in model.balance["Stages"]:
-            stage_id = int(stage["Id"])
+        for day_index, day in enumerate(model.days, start=1):
+            day_order = day["order"]
             snapshots = [
                 snapshot for row in selected for snapshot in row.build_snapshots
-                if snapshot[0] == stage_id
+                if snapshot[0] == day_order
             ]
             build_curve.append({
-                "stage": stage_id,
+                "day_order": day_order,
                 "runs_reaching": len(snapshots),
                 "average_strength_index": statistics.fmean(value[1] for value in snapshots) if snapshots else None,
                 "average_devices": statistics.fmean(value[2] for value in snapshots) if snapshots else None,
@@ -1023,13 +1013,13 @@ def summarize(rows: list[RunResult], model: CampaignModel) -> dict[str, Any]:
             })
             affordability = [
                 snapshot for row in selected for snapshot in row.shop_affordability_snapshots
-                if snapshot.stage == stage_id
+                if snapshot.day_order == day_order
             ]
             affordability_curve.append({
-                "stage": stage_id,
+                "day_order": day_order,
                 "observations": len(affordability),
-                "required_purchases": 2 if stage_id <= 4 else 3,
-                "required_refreshes": 1 if stage_id <= 4 else 3,
+                "required_purchases": 2 if day_index <= 4 else 3,
+                "required_refreshes": 1 if day_index <= 4 else 3,
                 "affordability_rate": (
                     sum(snapshot.affordable for snapshot in affordability) / len(affordability)
                     if affordability else None
@@ -1051,7 +1041,7 @@ def summarize(rows: list[RunResult], model: CampaignModel) -> dict[str, Any]:
             "runs": len(selected),
             "win_rate": sum(row.won for row in selected) / max(1, len(selected)),
             "round_clear_rate": (
-                sum(row.rounds_played - (1 if row.failed_stage else 0) for row in selected) /
+                sum(row.rounds_played - (1 if row.failed_day else 0) for row in selected) /
                 max(1, total_rounds)
             ),
             "round_failure_rate": sum(not row.won for row in selected) / max(1, total_rounds),
@@ -1063,7 +1053,7 @@ def summarize(rows: list[RunResult], model: CampaignModel) -> dict[str, Any]:
             "average_gold_income": mean(selected, "coins_income"),
             "average_cashout_income": mean(selected, "cashout_income"),
             "average_bank_income": mean(selected, "bank_income"),
-            "average_stage_reward_income": mean(selected, "stage_reward_income"),
+            "average_day_reward_income": mean(selected, "day_reward_income"),
             "average_overkill_income": mean(selected, "overkill_income"),
             "average_gold_spend": mean(selected, "coins_spent"),
             "average_purchase_spend": mean(selected, "purchase_spend"),
@@ -1078,13 +1068,13 @@ def summarize(rows: list[RunResult], model: CampaignModel) -> dict[str, Any]:
             "gold_variance": variance(selected, "ending_coins"),
             "run_variance": variance(selected, "duration"),
             "dead_run_rate": sum(row.dead_run for row in selected) / max(1, len(selected)),
-            "failure_stage_counts": dict(sorted(Counter(row.failed_stage for row in selected if row.failed_stage).items())),
-            "stage_clear_rates": [
+            "failure_day_counts": dict(sorted(Counter(row.failed_day for row in selected if row.failed_day).items())),
+            "day_clear_rates": [
                 {
-                    "stage": int(stage["Id"]),
-                    "clear_rate": sum(row.stages_cleared >= index for row in selected) / max(1, len(selected)),
+                    "day_order": day["order"],
+                    "clear_rate": sum(row.days_cleared >= index for row in selected) / max(1, len(selected)),
                 }
-                for index, stage in enumerate(model.balance["Stages"], start=1)
+                for index, day in enumerate(model.days, start=1)
             ],
             "build_strength_curve": build_curve,
             "shop_affordability_curve": affordability_curve,
@@ -1102,9 +1092,9 @@ def summarize(rows: list[RunResult], model: CampaignModel) -> dict[str, Any]:
 def write_run_csv(path: Path, rows: list[RunResult]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fields = [
-        "config", "strategy", "run_index", "seed", "won", "failed_stage", "rounds_played",
-        "stages_cleared", "total_score", "score_variance", "coins_income", "cashout_income",
-        "bank_income", "stage_reward_income", "overkill_income", "coins_spent",
+        "config", "strategy", "run_index", "seed", "won", "failed_day", "rounds_played",
+        "days_cleared", "total_score", "score_variance", "coins_income", "cashout_income",
+        "bank_income", "day_reward_income", "overkill_income", "coins_spent",
         "purchase_spend", "refresh_spend",
         "ending_coins", "balls_launched", "duration", "blood_remaining", "cashouts",
         "purchases", "refreshes", "device_count", "drug_count", "special_ball_count", "dead_run",
@@ -1117,11 +1107,11 @@ def write_run_csv(path: Path, rows: list[RunResult]) -> None:
         for row in rows:
             writer.writerow({
                 "config": row.config, "strategy": row.strategy, "run_index": row.run_index, "seed": row.seed,
-                "won": int(row.won), "failed_stage": row.failed_stage, "rounds_played": row.rounds_played,
-                "stages_cleared": row.stages_cleared, "total_score": row.total_score,
+                "won": int(row.won), "failed_day": row.failed_day, "rounds_played": row.rounds_played,
+                "days_cleared": row.days_cleared, "total_score": row.total_score,
                 "score_variance": f"{row.score_variance:.6f}", "coins_income": row.coins_income,
                 "cashout_income": row.cashout_income, "bank_income": row.bank_income,
-                "stage_reward_income": row.stage_reward_income, "overkill_income": row.overkill_income,
+                "day_reward_income": row.day_reward_income, "overkill_income": row.overkill_income,
                 "coins_spent": row.coins_spent, "purchase_spend": row.purchase_spend,
                 "refresh_spend": row.refresh_spend, "ending_coins": row.ending_coins,
                 "balls_launched": row.balls_launched, "duration": f"{row.duration:.6f}",
@@ -1131,12 +1121,12 @@ def write_run_csv(path: Path, rows: list[RunResult]) -> None:
                 "purchased_devices": json.dumps(dict(row.purchase_devices), ensure_ascii=False, sort_keys=True),
                 "purchased_medicines": json.dumps(dict(row.purchase_drugs), ensure_ascii=False, sort_keys=True),
                 "build_snapshots": json.dumps([
-                    {"stage": stage, "strength_index": strength, "devices": devices, "medicines": medicines}
-                    for stage, strength, devices, medicines in row.build_snapshots
+                    {"day_order": day_order, "strength_index": strength, "devices": devices, "medicines": medicines}
+                    for day_order, strength, devices, medicines in row.build_snapshots
                 ], ensure_ascii=False, separators=(",", ":")),
                 "shop_affordability_snapshots": json.dumps([
                     {
-                        "stage": snapshot.stage,
+                        "day_order": snapshot.day_order,
                         "coins_before_shop": snapshot.coins_before_shop,
                         "required_purchases": snapshot.required_purchases,
                         "required_refreshes": snapshot.required_refreshes,
@@ -1151,7 +1141,7 @@ def write_run_csv(path: Path, rows: list[RunResult]) -> None:
 def write_shop_affordability_csv(path: Path, summaries: dict[str, dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fields = [
-        "config", "strategy", "stage", "observations", "required_purchases",
+        "config", "strategy", "day_order", "observations", "required_purchases",
         "required_refreshes", "affordability_rate", "coins_p25", "coins_p50",
         "bundle_cost_p50", "bundle_cost_p75",
     ]
@@ -1234,12 +1224,12 @@ def affordability_table(summary: dict[str, Any]) -> str:
         "| 阶段 | 目标购买力 | Conservative | Balanced | Aggressive |",
         "| ---: | --- | ---: | ---: | ---: |",
     ]
-    for stage_index in range(len(summary[STRATEGY_NAMES[0]]["shop_affordability_curve"])):
-        first = summary[STRATEGY_NAMES[0]]["shop_affordability_curve"][stage_index]
+    for day_index in range(len(summary[STRATEGY_NAMES[0]]["shop_affordability_curve"])):
+        first = summary[STRATEGY_NAMES[0]]["shop_affordability_curve"][day_index]
         target = f"{first['required_purchases']} 件 + {first['required_refreshes']} 刷"
         cells = []
         for strategy in STRATEGY_NAMES:
-            row = summary[strategy]["shop_affordability_curve"][stage_index]
+            row = summary[strategy]["shop_affordability_curve"][day_index]
             if row["affordability_rate"] is None:
                 cells.append("N/A")
             else:
@@ -1247,7 +1237,7 @@ def affordability_table(summary: dict[str, Any]) -> str:
                     f"{percent(row['affordability_rate'])} "
                     f"(金币P50 {row['coins_p50']:.0f} / 成本P50 {row['bundle_cost_p50']:.0f})"
                 )
-        lines.append(f"| {first['stage']} | {target} | " + " | ".join(cells) + " |")
+        lines.append(f"| {first['day_order']} | {target} | " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
 
@@ -1273,14 +1263,15 @@ def build_item_rows(model: CampaignModel, summary: dict[str, Any]) -> list[dict[
     return sorted(rows, key=lambda row: row["ev_ratio"], reverse=True)
 
 
-def baseline_report(root: Path, balance: dict[str, Any], content: dict[str, Any], physical_raw: dict[str, Any],
+def baseline_report(root: Path, balance: dict[str, Any], content: dict[str, Any], days: list[dict[str, Any]],
+                    physical_raw: dict[str, Any],
                     summary: dict[str, Any], item_rows: list[dict[str, Any]], runs: int, seed: int) -> None:
     docs = root / "Docs/Balance"
     top = [row for row in item_rows if row["modeled"]][:5]
     low = [row for row in reversed(item_rows) if row["modeled"]][:5]
     failure_lines = []
     for strategy in STRATEGY_NAMES:
-        failure_lines.append(f"- {strategy}: {summary[strategy]['failure_stage_counts'] or '无失败'}")
+        failure_lines.append(f"- {strategy}: {summary[strategy]['failure_day_counts'] or '无失败'}")
     pick_lines = []
     for strategy in STRATEGY_NAMES:
         picks = summary[strategy]["item_pick_rates"][:5]
@@ -1289,7 +1280,7 @@ def baseline_report(root: Path, balance: dict[str, Any], content: dict[str, Any]
     for label, key in (
         ("提现收入", "average_cashout_income"),
         ("银行收入", "average_bank_income"),
-        ("阶段奖励", "average_stage_reward_income"),
+        ("每日奖励", "average_day_reward_income"),
         ("超额分奖励", "average_overkill_income"),
         ("商品购买支出", "average_purchase_spend"),
         ("刷新支出", "average_refresh_spend"),
@@ -1318,22 +1309,22 @@ def baseline_report(root: Path, balance: dict[str, Any], content: dict[str, Any]
             f"| {profile.get('Lane')} | {float(profile.get('Flow', 0)):.1f} | {terminal_ev:.2f} | "
             f"{percent(void_rate)} | {percent(random_rate)} | {percent(target_two_rate)} |"
         )
-    stage_lines = []
-    for stage_index, stage in enumerate(balance["Stages"]):
+    day_lines = []
+    for day_index, day in enumerate(days):
         rates = []
         for strategy in STRATEGY_NAMES:
-            rate = summary[strategy]["stage_clear_rates"][stage_index]["clear_rate"]
+            rate = summary[strategy]["day_clear_rates"][day_index]["clear_rate"]
             rates.append(percent(rate))
-        stage_lines.append(f"| {stage['Id']} | " + " | ".join(rates) + " |")
+        day_lines.append(f"| {day['dayId']} | " + " | ".join(rates) + " |")
     strength_lines = []
-    for stage_index, stage in enumerate(balance["Stages"]):
+    for day_index, day in enumerate(days):
         values = []
         for strategy in STRATEGY_NAMES:
-            point = summary[strategy]["build_strength_curve"][stage_index]
+            point = summary[strategy]["build_strength_curve"][day_index]
             strength = point["average_strength_index"]
             devices = point["average_devices"]
             values.append("N/A" if strength is None else f"{strength:.2f} ({devices:.2f}D)")
-        strength_lines.append(f"| {stage['Id']} | " + " | ".join(values) + " |")
+        strength_lines.append(f"| {day['dayId']} | " + " | ".join(values) + " |")
     report = f"""# Baseline Report
 
 ## 口径
@@ -1360,17 +1351,17 @@ def baseline_report(root: Path, balance: dict[str, Any], content: dict[str, Any]
 | --- | ---: | ---: | ---: | ---: | ---: |
 {chr(10).join(route_lines)}
 
-## 各阶段到达率
+## 各日期达标率
 
-| Stage | Conservative | Balanced | Aggressive |
+| Day | Conservative | Balanced | Aggressive |
 | ---: | ---: | ---: | ---: |
-{chr(10).join(stage_lines)}
+{chr(10).join(day_lines)}
 
 ## Build 强度增长曲线
 
-`Strength Index` 是已建模 Device/Medicine 在阶段开始时的标准化期望效用，裸构筑为 `1.00`；括号为平均 Device 数。它用于比较成长斜率，不等同于分数倍率，未采样的路线型内容不会被伪装成确定收益。
+`Strength Index` 是已建模 Device/Medicine 在当天生产开始时的标准化期望效用，裸构筑为 `1.00`；括号为平均 Device 数。它用于比较成长斜率，不等同于分数倍率，未采样的路线型内容不会被伪装成确定收益。
 
-| Stage | Conservative | Balanced | Aggressive |
+| Day | Conservative | Balanced | Aggressive |
 | ---: | ---: | ---: | ---: |
 {chr(10).join(strength_lines)}
 
@@ -1380,13 +1371,13 @@ def baseline_report(root: Path, balance: dict[str, Any], content: dict[str, Any]
 
 ## 经济与构筑
 
-金币收入包括阶段奖励、提现、银行和超额分奖励；支出包括购买与刷新。
+金币收入包括每日奖励、提现、银行和超额分奖励；支出包括购买与刷新。
 
 | 每 Run 平均金币来源/去向 | Conservative | Balanced | Aggressive |
 | --- | ---: | ---: | ---: |
 {chr(10).join(gold_lines)}
 
-Baseline 的主要收入来自提现与阶段奖励，商店支出远低于收入；因此现金库存持续膨胀。完整逐 Run 来源字段保存在 CSV，可重放异常局。
+Baseline 的主要收入来自提现与每日奖励，商店支出远低于收入；因此现金库存持续膨胀。完整逐 Run 来源字段保存在 CSV，可重放异常局。
 
 购买率最高项目：
 
@@ -1394,7 +1385,7 @@ Baseline 的主要收入来自提现与阶段奖励，商店支出远低于收�
 
 ## Cashout 行为
 
-Baseline 每回合 Cashout Rate 为 {percent(summary['Conservative']['cashout_rate'])} / {percent(summary['Balanced']['cashout_rate'])} / {percent(summary['Aggressive']['cashout_rate'])}。在当前线性兑换与高金币产出下，“达到目标后尽快提现”几乎支配三种启发式策略。模拟器没有用动态规划求全局最优阶段，因此不能把该结果解释为精确的唯一最优 Round；它能确认的是继续消耗剩余血量通常没有足够的边际经济回报。
+Baseline 每回合 Cashout Rate 为 {percent(summary['Conservative']['cashout_rate'])} / {percent(summary['Balanced']['cashout_rate'])} / {percent(summary['Aggressive']['cashout_rate'])}。在当前线性兑换与高金币产出下，“达到目标后尽快提现”几乎支配三种启发式策略。模拟器没有用动态规划求全局最优阶段，因此不能把该结果解释为精确的唯一最优回合；它能确认的是继续消耗剩余血量通常没有足够的边际经济回报。
 
 ## 标准化 Item EV 排名
 
@@ -1412,6 +1403,14 @@ EV Ratio 是“模型效用 / 金币价格”的筛选指标，用于同类相�
 4. Dead Run 定义为：在仍有至少 20% 血量时，按已结算球的在线收益、实测路线均值/方差与单侧 `mean + 1.645σ` 近似后，翻盘概率仍低于约 5%；之后继续至少发射 15 球并最终失败。该指标是回溯分类，不声称是精确动态规划胜率。
 """
     (docs / "baseline_report.md").write_text(report, encoding="utf-8")
+
+
+def highest_item_pick(summary: dict[str, Any]) -> tuple[float, str, str] | None:
+    return max((
+        (item["pick_rate"], item["name"], strategy)
+        for strategy in STRATEGY_NAMES
+        for item in summary[strategy]["item_pick_rates"]
+    ), default=None)
 
 
 def proposal_report(root: Path, summaries: dict[str, dict[str, Any]], proposals: dict[str, Any]) -> None:
@@ -1442,7 +1441,7 @@ def proposal_report(root: Path, summaries: dict[str, dict[str, Any]], proposals:
             lines.extend(["参数覆盖：", "", "```json", json.dumps(proposals.get(config, {}), ensure_ascii=False, indent=2), "```", ""])
     lines.extend([
         "## Build Growth 对比", "",
-        "数值为达到对应阶段的 Run 在 Stage 1 → Stage 6 的 `Strength Index`（括号为变化量）。它是条件均值；低存活方案的 Stage 6 只代表幸存构筑。", "",
+        "各日期显示到达当天的 Run 的 `Strength Index`（括号为变化量）。它是条件均值；最后一天统计到达当天的构筑。", "",
         "| Config | Conservative | Balanced | Aggressive |",
         "| --- | ---: | ---: | ---: |",
     ])
@@ -1463,28 +1462,27 @@ def proposal_report(root: Path, summaries: dict[str, dict[str, Any]], proposals:
     recommended = summaries.get("Recommended")
     if recommended:
         affordability_nodes = [
-            (point["affordability_rate"], strategy, point["stage"])
+            (point["affordability_rate"], strategy, point["day_order"])
             for strategy in STRATEGY_NAMES
             for point in recommended[strategy]["shop_affordability_curve"]
             if point["affordability_rate"] is not None
         ]
         passing_nodes = sum(rate >= 0.75 for rate, _, _ in affordability_nodes)
-        minimum_rate, minimum_strategy, minimum_stage = min(affordability_nodes)
-        item_pick_nodes = [
-            (item["pick_rate"], item["name"], strategy)
-            for strategy in STRATEGY_NAMES
-            for item in recommended[strategy]["item_pick_rates"]
-        ]
-        highest_pick_rate, highest_pick_item, highest_pick_strategy = max(item_pick_nodes)
+        if affordability_nodes:
+            minimum_rate, minimum_strategy, minimum_day = min(affordability_nodes)
+            affordability_conclusion = (
+                f"- Recommended 的 {passing_nodes}/{len(affordability_nodes)} 个每日购买力节点达到 75%。"
+                f"最低为 {minimum_strategy} 的日期序号 {minimum_day}，达标率为 {percent(minimum_rate)}。"
+            )
+        else:
+            affordability_conclusion = "- 本次没有通关样本可用于购买力分析。"
+        highest_pick = highest_item_pick(recommended)
+        if highest_pick:
+            rate, item, strategy = highest_pick
+            pick_conclusion = f"- 最高单项购买率为 {item}（{strategy}）的 {percent(rate)}。"
+        else:
+            pick_conclusion = "- 本次没有商品购买样本。"
         balanced_win = recommended["Balanced"]["win_rate"]
-        affordability_conclusion = (
-            f"- Recommended 的 {passing_nodes}/{len(affordability_nodes)} 个策略×阶段购买力节点达到 75% 护栏；"
-            f"最低为 {minimum_strategy} Stage {minimum_stage} 的 {percent(minimum_rate)}。"
-        )
-        pick_conclusion = (
-            f"- 最高单项 Pick Rate 为 {highest_pick_item}（{highest_pick_strategy}）的 "
-            f"{percent(highest_pick_rate)}；90% 以上视为支配策略预警。"
-        )
         win_conclusion = (
             f"- Recommended 的 Balanced Win Rate 为 {percent(balanced_win)}。"
             "本轮主动降低整条目标曲线，因此高于原护栏时应优先通过真人测试确认节奏，而不是立即反向抬高目标。"
@@ -1496,7 +1494,7 @@ def proposal_report(root: Path, summaries: dict[str, dict[str, Any]], proposals:
     lines.extend([
         "## 选择结论", "",
         "- Conservative 只做小幅调整，仍接近 Baseline 的高胜率与金币冗余，用作低风险回退方案。",
-        "- Recommended 同时约束高倍区、阶段曲线、Rush/赌博 EV 与金币产出，并用价格 V3 保障商店购买力；当前正式目标曲线按最新提案生成。",
+        "- Recommended 同时约束高倍区、阶段曲线、Rush/赌博 EV 与金币产出，并用价格 V3 保障商店购买力；各方案共用每日配置中的目标和基础奖励。",
         affordability_conclusion,
         pick_conclusion,
         win_conclusion,
@@ -1515,7 +1513,7 @@ def price_tuning_report(root: Path, summaries: dict[str, dict[str, Any]], propos
         "- Round 1–4：进入对应商店时，金币可覆盖策略最想买的 2 件商品与 1 次刷新。",
         "- Round 5+：金币可覆盖策略最想买的 3 件商品与 3 次刷新。",
         "- `大概率` 的验收线为每种策略、每个有样本节点达标率至少 75%。",
-        "- Offer 探针使用独立派生 Seed，不改变正式购买或 Run 结果；Stage 6 已无下一商店，只做终局假想购买力检查。", "",
+        "- Offer 探针使用独立派生 Seed，不改变正式购买或 Run 结果；最后一天无后续商店，只做终局假想购买力检查。", "",
     ]
     for config in PRICE_CONFIG_NAMES:
         if config not in summaries:
@@ -1575,16 +1573,14 @@ def item_tuning_report(root: Path, summaries: dict[str, dict[str, Any]],
         modeled = [row for row in item_tables[config] if row["modeled"]]
         top_ev = modeled[0]
         low_ev = modeled[-1]
-        max_pick = max(
-            (item["pick_rate"], item["name"], strategy)
-            for strategy in STRATEGY_NAMES
-            for item in summaries[config][strategy]["item_pick_rates"]
-        )
+        max_pick = highest_item_pick(summaries[config])
+        pick_line = (f"- 最高单策略购买率为 {max_pick[1]}（{max_pick[2]}）的 {percent(max_pick[0])}。"
+                     if max_pick else "- 本次没有商品购买样本。")
         viable = sum(row["pick_rate"] >= 0.05 for row in modeled)
         lines.extend([
             f"## {config}", "",
             metric_table(summaries[config]), "",
-            f"- 最高单策略 Pick Rate：{max_pick[1]} / {max_pick[2]} = {percent(max_pick[0])}。",
+            pick_line,
             f"- 已建模且平均 Pick Rate ≥5%：{viable}/{len(modeled)}。",
             f"- 最高/最低建模 EV÷价格：{top_ev['name']} {top_ev['ev_ratio']:.4f} / {low_ev['name']} {low_ev['ev_ratio']:.4f}。", "",
         ])
@@ -1692,24 +1688,25 @@ def combo_report(root: Path, content: dict[str, Any]) -> None:
     (root / "Docs/Balance/combo_risk_report.md").write_text(text, encoding="utf-8")
 
 
-def overview_report(root: Path, balance: dict[str, Any], content: dict[str, Any], physical_raw: dict[str, Any]) -> None:
+def overview_report(root: Path, balance: dict[str, Any], content: dict[str, Any], days: list[dict[str, Any]],
+                    physical_raw: dict[str, Any]) -> None:
     attrs = {row["Id"]: row for row in content["Attributes"]}
-    stages = "\n".join(
-        f"| {stage['Id']} | {stage['TargetScore']} | {stage['RewardCoins']} | {stage['SkipRewardCoins']} | {stage['CashoutRate']} |"
-        for stage in balance["Stages"]
+    day_rows = "\n".join(
+        f"| {day['dayId']} | {day['targetScore']} | {day['rewardCoins']} |"
+        for day in days
     )
     text = f"""# Balance Overview
 
 ## Source of Truth
 
-1. `Assets/Config/GameBalance.xlsx` → 自动导入 `Assets/Resources/GameBalance.json`：血量、发射、容量、战役和阶段。
+1. `Assets/Config/GameBalance.xlsx` → 自动导入 `Assets/Resources/GameBalance.json`：血量、发射、容量和战役参数。每日目标和奖励来自 `GameDays.json`。
 2. `Assets/Resources/GameContent.json`：34 个属性、15 个装置、12 个药物的运行时唯一目录。
 3. `Assets/Scenes/TestScene.unity`：盘面几何、Collider、PhysicMaterial、Launcher、Zone Inspector 值。
 4. 代码：结算顺序、叠加、上限、商店保底、Cashout 条件和失败条件。
 
 ## 实际 Gameplay Loop
 
-`Build（必须放完未布置装置） → Playing（每回合补满 BloodCapacity） → Draining → Shop → Build`。确认总分达到当前累计目标且仍有血量时可 Cashout；提现把剩余血量清零并换金币，场上球继续结算。未达到目标则 Lost，跨过最后阶段则 Won。
+`Morning Prep → Build → Playing → Draining → Day Settlement`。本回合确认分达标且还有剩余血量时可提现，场上球继续结算。历史模拟器将首次未达标记为失败。
 
 当前没有独立 SpecialBall 目录。药物只影响生效窗口内新发射的球；装置、库存、金币、累计分和布局跨回合保留。
 
@@ -1726,9 +1723,9 @@ def overview_report(root: Path, balance: dict[str, Any], content: dict[str, Any]
 
 ## Round Progression
 
-| Round | 累计目标 | 基础奖励 | 越级奖励 | Cashout Rate |
-| ---: | ---: | ---: | ---: | ---: |
-{stages}
+| Day | 回合目标 | 基础奖励 |
+| --- | ---: | ---: |
+{day_rows}
 
 ## Hard-coded / 分散参数
 
@@ -1749,9 +1746,9 @@ def methodology_report(root: Path, physical_raw: dict[str, Any], runs: int, seed
 
 每个样本记录 Seed、发射位置、流量、终点、倍率、Rush 概率、飞行时间、Pin/Device 接触。原始结果见 `physical_samples.csv`，汇总见 `physical_profile.json`。
 
-第二层从经验终点分布有放回抽样，执行战役、Rush、共享赌博池、累计阶段目标、Cashout、金币、商店保底、购买和刷新。每个策略 {runs:,} Runs，主 Seed={seed}。
+第二层从经验终点分布有放回抽样，执行战役、Rush、共享赌博池、每日目标、Cashout、金币、商店保底、购买和刷新。每个策略 {runs:,} Runs，主 Seed={seed}。
 
-商店购买力探针使用独立派生 Seed，不改变主模拟的 Offer 或购买 RNG。Round 1–4 检查“策略最想买的 2 件 + 1 次刷新”，Round 5+ 检查“策略最想买的 3 件 + 3 次刷新”；达标率目标为每种策略、每个有样本节点至少 75%。Stage 6 已无后续商店，仅作为终局假想购买力检查。
+商店购买力探针使用独立派生 Seed，不改变主模拟的 Offer 或购买 RNG。Round 1–4 检查“策略最想买的 2 件 + 1 次刷新”，Round 5+ 检查“策略最想买的 3 件 + 3 次刷新”；达标率目标为每种策略、每个有样本节点至少 75%。最后一天无后续商店，仅作为终局假想购买力检查。
 
 ## 策略
 
@@ -1813,6 +1810,7 @@ def simulate(root: Path, runs: int, seed: int, balance_source_path: Path | None 
     physical_path = docs / "physical_profile.json"
     proposal_path = root / "Tools/Balance/proposals.json"
     balance_source = read_json(balance_path)
+    days = load_days(root)
     content_source = read_game_content(content_path, root / "Assets/Resources/Devices")
     physics, physical_raw = load_physics(physical_path)
     proposals = read_json(proposal_path) if proposal_path.exists() else {}
@@ -1822,7 +1820,7 @@ def simulate(root: Path, runs: int, seed: int, balance_source_path: Path | None 
     write_json(snapshots / "baseline_GameBalance.json", balance_source)
     write_json(snapshots / "baseline_GameContent.json", content_source)
     write_json(snapshots / "baseline_manifest.json", {
-        "fingerprint": stable_fingerprint(balance_path, content_path, physical_path),
+        "fingerprint": stable_fingerprint(balance_path, content_path, root / "Assets/Resources/GameDays.json", physical_path),
         "seed": seed, "runs_per_strategy": runs,
         "physical_profile": physical_raw.get("PhysicsFingerprint"),
     })
@@ -1849,20 +1847,20 @@ def simulate(root: Path, runs: int, seed: int, balance_source_path: Path | None 
         write_json(snapshots / f"{slug}_GameBalance.json", balance)
         write_json(snapshots / f"{slug}_GameContent.json", content)
         write_json(snapshots / f"{slug}_manifest.json", {
-            "fingerprint": stable_fingerprint(balance_path, content_path, physical_path),
+            "fingerprint": stable_fingerprint(balance_path, content_path, root / "Assets/Resources/GameDays.json", physical_path),
             "seed": seed,
             "runs_per_strategy": runs,
             "physical_profile": physical_raw.get("PhysicsFingerprint"),
             "zone_multipliers": proposals.get(config_name, {}).get("ZoneMultipliers", {}),
         })
-        model = CampaignModel(balance, content, physics_config)
-        rows = run_config(config_name, balance, content, physics_config, runs, seed)
+        model = CampaignModel(balance, content, days, physics_config)
+        rows = run_config(config_name, balance, content, days, physics_config, runs, seed)
         all_rows.extend(rows)
         summaries[config_name] = summarize(rows, model)
         item_tables[config_name] = build_item_rows(model, summaries[config_name])
         if config_name == "Baseline":
             write_run_csv(docs / "baseline_results.csv", rows)
-            baseline_report(root, balance, content, physical_raw, summaries[config_name], item_tables[config_name], runs, seed)
+            baseline_report(root, balance, content, days, physical_raw, summaries[config_name], item_tables[config_name], runs, seed)
 
     write_run_csv(docs / "proposal_results.csv", all_rows)
     write_item_csv(docs / "item_ev.csv", item_tables)
@@ -1870,7 +1868,7 @@ def simulate(root: Path, runs: int, seed: int, balance_source_path: Path | None 
     write_json(docs / "simulation_summary.json", summaries)
     proposal_report(root, summaries, proposals)
     combo_report(root, overview_content)
-    overview_report(root, overview_balance, overview_content, physical_raw)
+    overview_report(root, overview_balance, overview_content, days, physical_raw)
     methodology_report(root, physical_raw, runs, seed)
     latest = "Recommended" if "Recommended" in summaries else "Baseline"
     write_json(docs / "latest_summary.json", dashboard_summary(latest, summaries[latest], item_tables[latest], runs))
@@ -1890,6 +1888,7 @@ def simulate_prices(root: Path, runs: int, seed: int) -> None:
     docs = root / "Docs/Balance"
     docs.mkdir(parents=True, exist_ok=True)
     balance = read_json(root / "Assets/Resources/GameBalance.json")
+    days = load_days(root)
     content = read_game_content(root / "Assets/Resources/GameContent.json", root / "Assets/Resources/Devices")
     physics, _ = load_physics(docs / "physical_profile.json")
     proposals = read_json(root / "Tools/Balance/proposals.json")
@@ -1904,8 +1903,8 @@ def simulate_prices(root: Path, runs: int, seed: int) -> None:
             if config not in proposals:
                 raise SystemExit(f"Missing price proposal: {config}")
             apply_overrides(candidate_balance, candidate_content, proposals[config])
-        rows = run_config(config, candidate_balance, candidate_content, current_physics, runs, seed)
-        model = CampaignModel(candidate_balance, candidate_content, current_physics)
+        rows = run_config(config, candidate_balance, candidate_content, days, current_physics, runs, seed)
+        model = CampaignModel(candidate_balance, candidate_content, days, current_physics)
         summaries[config] = summarize(rows, model)
         all_rows.extend(rows)
     write_run_csv(docs / "price_tuning_results.csv", all_rows)
@@ -1921,13 +1920,15 @@ def simulate_prices(root: Path, runs: int, seed: int) -> None:
             if row["affordability_rate"] is not None
         ]
         passes = sum(value >= 0.75 for value in rates)
-        print(f"{config}: affordability={passes}/{len(rates)}, minimum={percent(min(rates))}")
+        minimum = percent(min(rates)) if rates else "N/A"
+        print(f"{config}: affordability={passes}/{len(rates)}, minimum={minimum}")
 
 
 def simulate_items(root: Path, runs: int, seed: int, content_source_path: Path | None = None) -> None:
     docs = root / "Docs/Balance"
     docs.mkdir(parents=True, exist_ok=True)
     balance = read_json(root / "Assets/Resources/GameBalance.json")
+    days = load_days(root)
     content = read_game_content(content_source_path or (root / "Assets/Resources/GameContent.json"),
                                 root / "Assets/Resources/Devices")
     physics, _ = load_physics(docs / "physical_profile.json")
@@ -1944,8 +1945,8 @@ def simulate_items(root: Path, runs: int, seed: int, content_source_path: Path |
             if config not in proposals:
                 raise SystemExit(f"Missing item proposal: {config}")
             apply_overrides(candidate_balance, candidate_content, proposals[config])
-        rows = run_config(config, candidate_balance, candidate_content, current_physics, runs, seed)
-        model = CampaignModel(candidate_balance, candidate_content, current_physics)
+        rows = run_config(config, candidate_balance, candidate_content, days, current_physics, runs, seed)
+        model = CampaignModel(candidate_balance, candidate_content, days, current_physics)
         summaries[config] = summarize(rows, model)
         item_tables[config] = build_item_rows(model, summaries[config])
         all_rows.extend(rows)
@@ -1956,12 +1957,9 @@ def simulate_items(root: Path, runs: int, seed: int, content_source_path: Path |
     print(f"Completed {len(all_rows):,} item-tuning simulations across {len(summaries)} config(s).")
     for config in ITEM_CONFIG_NAMES:
         summary = summaries[config]
-        max_pick = max(
-            (item["pick_rate"], item["name"], strategy)
-            for strategy in STRATEGY_NAMES
-            for item in summary[strategy]["item_pick_rates"]
-        )
-        print(f"{config}: max_pick={max_pick[1]}/{max_pick[2]} {percent(max_pick[0])}")
+        max_pick = highest_item_pick(summary)
+        label = f"{max_pick[1]}/{max_pick[2]} {percent(max_pick[0])}" if max_pick else "N/A"
+        print(f"{config}: max_pick={label}")
 
 
 def main() -> None:

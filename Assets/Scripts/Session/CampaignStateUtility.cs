@@ -7,12 +7,6 @@ namespace MarblesECS
     {
         internal const long MaxCoins = 9000000000000000L;
 
-        internal static long TargetScore(SimulationContext context, int stageIndex)
-        {
-            long target = context.Campaign.StageTargetOverride;
-            return target > 0 ? target : context.Balance.Stages[stageIndex].TargetScore;
-        }
-
         internal static DeviceDefinition Device(SimulationContext context, uint id)
         {
             foreach (var definition in context.Balance.Devices)
@@ -97,9 +91,7 @@ namespace MarblesECS
         {
             if (context.Balance == null || context.Round.Phase != (byte)RoundPhase.Playing || context.Player.Blood <= 0)
                 return false;
-            long confirmed = MarbleRules.AddScore(context.Campaign.TotalScore, context.Round.Score,
-                context.Balance.Campaign.MaxTotalScore);
-            return confirmed >= context.Round.TargetScore;
+            return context.Round.Score >= context.Round.TargetScore;
         }
     }
 }

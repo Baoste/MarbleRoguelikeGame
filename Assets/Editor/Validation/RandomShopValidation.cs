@@ -24,7 +24,6 @@ namespace MarblesECS.Editor
             balance.Campaign.MaxOwnedDevices = 200;
             balance.Campaign.ShopOfferCount = 4;
             Check(balance.Devices.Length >= 4, "full shop catalog exists");
-            Check(balance.Stages.Length >= 3, "the fixture can run two stages and then start the next day");
             balance.Validate();
 
             SamplingAndSeeds(balance);
@@ -33,7 +32,7 @@ namespace MarblesECS.Editor
             WeightedRarities(balance);
             Debug.Log("RANDOM_SHOP_VALIDATION_PASSED: " + assertions + " assertions; " +
                 balance.Devices.Length + " devices reachable; 4 device offers, shared run seed, exact draw counts, " +
-                "purchases, sold-out protection, refresh inventory and two settlements.");
+                "purchases, sold-out protection, refresh inventory and stock across days.");
         }
 
         private static void SamplingAndSeeds(GameBalance balance)
@@ -100,12 +99,9 @@ namespace MarblesECS.Editor
         {
             balance = balance.Copy();
             balance.Campaign.StartingCoins = 1000;
-            string sequence = $@"{{""schemaVersion"":1,""sequenceId"":""shop-validation"",""days"":[
-                {{""dayId"":""first"",""order"":1,""productionPlanId"":""first"",""productionFeatures"":[""Shop""]}},
-                {{""dayId"":""second"",""order"":2,""productionPlanId"":""second"",""productionFeatures"":[""Shop""]}}],
-                ""productionPlans"":[
-                {{""planId"":""first"",""firstStageId"":{balance.Stages[0].Id},""lastStageId"":{balance.Stages[1].Id}}},
-                {{""planId"":""second"",""firstStageId"":{balance.Stages[2].Id},""lastStageId"":{balance.Stages[2].Id}}}]}}";
+            const string sequence = @"{""schemaVersion"":2,""sequenceId"":""shop-validation"",""days"":[
+                {""dayId"":""first"",""order"":1,""targetScore"":50,""rewardCoins"":22,""productionFeatures"":[""Shop""]},
+                {""dayId"":""second"",""order"":2,""targetScore"":80,""rewardCoins"":28,""productionFeatures"":[""Shop""]}]}";
             using (var simulation = new MarbleSimulation(balance))
             {
                 var definition = GameDaysLoader.Parse(sequence, balance);
@@ -143,9 +139,7 @@ namespace MarblesECS.Editor
                 Check(simulation.TryCloseShop(morning) && simulation.TryCompleteWakeUp(morning, out error), "production starts after closing the shop");
                 Check(!simulation.BuyOffer(0) && !simulation.RefreshShop() && !simulation.TryOpenShop(simulation.Day.Version),
                     "production cannot access the shop or reroll stock");
-                CompleteRound(simulation, RoundPhase.Build);
-                Check(simulation.Session.StageIndex == 1, "the first settlement advances straight to the next build");
-                CompleteRound(simulation, RoundPhase.Won);
+                CompleteDayProduction(simulation);
                 Check(simulation.TryCompleteDaySettlement(simulation.Day.Version, out error), error);
                 Check(simulation.TryCompleteRest(simulation.Day.Version, out error), error);
                 Check(simulation.GetShopOffers().Length == 0, "the next day starts with ungenerated stock");
@@ -154,21 +148,21 @@ namespace MarblesECS.Editor
                     "the next morning generates new stock on its first visit");
                 Check(simulation.Day.RandomState == Advance(secondMorning, 4), "new stock continues the run RNG");
                 Check(owned.SequenceEqual(simulation.GetOwnedDevices().Select(d => d.InstanceId).OrderBy(id => id)),
-                    "moving through stages and days preserves purchased inventory");
+                    "moving to the next day preserves purchased inventory");
             }
         }
 
-        private static void CompleteRound(MarbleSimulation simulation, RoundPhase nextPhase)
+        private static void CompleteDayProduction(MarbleSimulation simulation)
         {
             uint before = simulation.Context.Round.RandomState;
             Check(simulation.BeginRound(), "placement starts the round");
             Check(simulation.Context.Round.RandomState == before, "next round continues the shared stream without rewinding");
             // Supply only the score required to pass; the real CashOut/settlement code handles phase changes.
             var round = simulation.Context.Round;
-            round.Score = Math.Max(0, round.TargetScore - simulation.Context.Campaign.TotalScore);
+            round.Score = round.TargetScore;
             simulation.Context.Round = round;
             Check(simulation.CashOut(), "eligible round cashes out");
-            Check(simulation.Session.Phase == nextPhase, "settlement advances production");
+            Check(simulation.Session.Phase == RoundPhase.Won, "settlement completes the day's production");
             Check(simulation.Context.Round.RandomState == before, "settlement without a gamble consumes no random draws");
         }
 

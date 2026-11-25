@@ -179,7 +179,6 @@ namespace MarblesECS.Editor
             balance.Marble.BloodCostMultiplier = 4; balance.Marble.LaunchSpeed = 8;
             balance.Marble.LauncherScoreMultiplier = 6; balance.Marble.BaseRestitution = .9f;
             balance.Marble.MaxLifeSeconds = 70; balance.Campaign.CashoutCoinsPerBlood = 3.5;
-            balance.Stages[0].CashoutRate = 1.2;
             var copied = balance.Copy();
             Check(ReferenceEquals(copied.Devices, copied.Content.Devices), "catalogs share the copied content source");
             Check(!ReferenceEquals(copied.Content.Devices, balance.Content.Devices), "session catalog remains isolated from authoring");
@@ -204,7 +203,7 @@ namespace MarblesECS.Editor
                 var c = simulation.Context; var player = c.Player; player.Blood = 100; c.Player = player;
                 var round = c.Round; round.Score = round.TargetScore; c.Round = round;
                 Check(simulation.CashOut(), "content cashout accepted");
-                Near(165, c.Campaign.LastCashoutCoins, "cashout uses content dividend, stage rate and coin gain exactly once");
+                Near(137, c.Campaign.LastCashoutCoins, "cashout uses content dividend and coin gain exactly once");
             }
             using (var standalone = new MarbleSimulation(balance.Marble, balance.Content))
             {
@@ -216,7 +215,7 @@ namespace MarblesECS.Editor
             string output = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "MarbleBalanceAuthority.json");
             GameBalanceImporter.Import(GameBalanceImporter.WorkbookPath, output);
             string exported = System.IO.File.ReadAllText(output);
-            foreach (string field in new[] { "MinRadius", "MaxRadius", "MassPerBlood", "BaseScore", "BloodCostMultiplier", "LaunchSpeed", "LauncherScoreMultiplier", "MaxLifeSeconds", "BaseRestitution", "RushDurationSeconds", "CashoutCoinsPerBlood", "GamblingWinChance", "GamblingWinMultiplier", "Devices", "Drugs", "Board", "Zones" })
+            foreach (string field in new[] { "MinRadius", "MaxRadius", "MassPerBlood", "BaseScore", "BloodCostMultiplier", "LaunchSpeed", "LauncherScoreMultiplier", "MaxLifeSeconds", "BaseRestitution", "RushDurationSeconds", "CashoutCoinsPerBlood", "GamblingWinChance", "GamblingWinMultiplier", "Devices", "Drugs", "Board", "Zones", "Stages", "RewardCoins", "SkipRewardCoins", "CashoutRate" })
                 Check(!exported.Contains("\"" + field + "\""), "base import cannot restore " + field);
             var legacyJson = new TextAsset(exported.Replace("\"Marble\": {", "\"Marble\": {\"MinRadius\":9,\"BaseScore\":999,"));
             try

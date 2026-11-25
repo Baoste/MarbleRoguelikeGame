@@ -9,12 +9,12 @@ namespace MarblesECS.Presentation
             var session = Controller.Session;
             var marble = Controller.Snapshot;
             GUILayout.Space(6);
-            GUILayout.Label("阶段 " + Mathf.Min(session.StageIndex + 1, session.StageCount) + " / " + session.StageCount +
-                "　" + PhaseName(session.Phase) + "　金币 " + session.Coins);
+            var day = Controller.Day;
+            string dayLabel = day.Status == DayCampaignStatus.NotStarted ? string.Empty : day.DayId + "　";
+            GUILayout.Label(dayLabel + PhaseName(session.Phase) + "　金币 " + session.Coins);
             GUILayout.Label("血量 Blood  " + marble.Blood.ToString("0.0") + " / " + Controller.Balance.Marble.BloodCapacity.ToString("0") +
                 "　场内 " + marble.ActiveMarbles);
-            GUILayout.Label("累计已结算 " + session.TotalScore + "　目标 " + session.TargetScore);
-            GUILayout.Label("本回合得分 " + session.RoundScore);
+            GUILayout.Label("累计已结算 " + session.TotalScore);
             GUILayout.Label("当前确认分 " + session.ConfirmedScore + " / " + session.TargetScore + "（奖池未开奖不计入提现门槛）");
             GUILayout.Label("Rush " + marble.RushSecondsRemaining.ToString("0.0") + "s");
             GUILayout.Label("下一颗碰撞系数 e = " + marble.NextMarbleRestitution.ToString("0.00"));
@@ -24,7 +24,7 @@ namespace MarblesECS.Presentation
         private void DrawResult()
         {
             bool won = Controller.Snapshot.Phase == RoundPhase.Won;
-            GUILayout.Label(won ? "全部阶段通过！" : "未达到当前累计目标，挑战结束。");
+            GUILayout.Label(won ? "已达到目标！" : "挑战结束，未达到目标。");
             DrawSettlement();
         }
 
@@ -33,7 +33,6 @@ namespace MarblesECS.Presentation
             var session = Controller.Session;
             GUILayout.Label("本轮结算 " + session.RoundScore + "　累计 " + session.TotalScore);
             GUILayout.Label("通关奖励 +" + session.LastRewardCoins + " 金币　提现 +" + session.LastCashoutCoins);
-            if (session.LastSkippedStages > 0) GUILayout.Label("越级跳过 " + session.LastSkippedStages + " 个阶段，已计入奖励。");
         }
 
         private static string PhaseName(RoundPhase phase)

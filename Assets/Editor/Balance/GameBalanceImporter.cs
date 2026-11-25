@@ -11,13 +11,12 @@ namespace MarblesECS.Editor
         public const string JsonPath = "Assets/Resources/GameBalance.json";
 
         // Attributes are authored in GameContent.json. Device assets live under Resources/Devices.
-        // Board geometry, placement settings and zones are authored in the scene.
+        // Day targets and rewards are authored in GameDays.json.
         [Serializable]
         private sealed class BaseBalanceJson
         {
             public MarbleTuning Marble;
             public CampaignTuning Campaign;
-            public StageDefinition[] Stages;
         }
 
         [MenuItem("Marbles ECS/Import Game Balance Excel")]
@@ -40,7 +39,7 @@ namespace MarblesECS.Editor
             var balance = GameBalanceExcel.Read(workbookPath);
             var exported = new BaseBalanceJson
             {
-                Marble = balance.Marble, Campaign = balance.Campaign, Stages = balance.Stages
+                Marble = balance.Marble, Campaign = balance.Campaign
             };
             string json = JsonUtility.ToJson(exported, true) + "\n";
             if (File.Exists(jsonPath) && File.ReadAllText(jsonPath) == json) return;

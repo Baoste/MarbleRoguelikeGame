@@ -8,7 +8,7 @@ namespace MarblesECS.Editor
         public static GameBalance Read(string path)
         {
             var sheets = XlsxWorkbookReader.Read(path);
-            var expected = new HashSet<string> { "Marble", "Campaign", "Stages" };
+            var expected = new HashSet<string> { "Marble", "Campaign" };
             foreach (var name in sheets.Keys)
                 if (!expected.Contains(name)) throw new InvalidDataException("Unknown balance worksheet: " + name);
             foreach (var name in expected)
@@ -16,8 +16,7 @@ namespace MarblesECS.Editor
             var result = new GameBalance
             {
                 Marble = BalanceTableParser.Singleton<MarbleTuning>(sheets["Marble"], "Marble"),
-                Campaign = BalanceTableParser.Singleton<CampaignTuning>(sheets["Campaign"], "Campaign"),
-                Stages = BalanceTableParser.Table<StageDefinition>(sheets["Stages"], "Stages")
+                Campaign = BalanceTableParser.Singleton<CampaignTuning>(sheets["Campaign"], "Campaign")
             };
             result.Validate();
             return result;

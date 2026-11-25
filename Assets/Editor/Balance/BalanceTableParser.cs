@@ -28,37 +28,6 @@ namespace MarblesECS.Editor
             return result;
         }
 
-        internal static T[] Table<T>(List<string[]> rows, string sheet) where T : new()
-        {
-            if (rows.Count < 2) throw new InvalidDataException(sheet + ": header and data are required.");
-            var fields = Fields<T>();
-            var seen = new HashSet<string>();
-            var columns = new FieldInfo[rows[0].Length];
-            for (int column = 0; column < columns.Length; column++)
-            {
-                string key = rows[0][column];
-                if (key == null || !fields.TryGetValue(key, out columns[column]) || !seen.Add(key))
-                    throw new InvalidDataException(sheet + ": unknown or repeated column '" + key + "'.");
-            }
-            RequireAll(fields, seen, sheet);
-            var output = new T[rows.Count - 1];
-            for (int index = 1; index < rows.Count; index++) output[index - 1] = ReadRow<T>(rows[index], columns, sheet + " row " + (index + 1));
-            return output;
-        }
-
-        private static T ReadRow<T>(string[] row, FieldInfo[] columns, string address) where T : new()
-        {
-            if (row.Length > columns.Length && row.Skip(columns.Length).Any(x => !string.IsNullOrWhiteSpace(x)))
-                throw new InvalidDataException(address + ": unexpected extra cell.");
-            var result = new T();
-            for (int index = 0; index < columns.Length; index++)
-            {
-                var field = columns[index];
-                field.SetValue(result, BalanceValueParser.Parse(index < row.Length ? row[index] : null, field.FieldType, address + "." + field.Name));
-            }
-            return result;
-        }
-
         private static Dictionary<string, FieldInfo> Fields<T>()
         {
             return typeof(T).GetFields(BindingFlags.Public | BindingFlags.Instance)

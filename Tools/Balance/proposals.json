@@ -1,12 +1,6 @@
 {
   "Conservative": {
     "ZoneMultipliers": { "2": 7.0 },
-    "Stages": {
-      "TargetScore": [175, 520, 1100, 1900, 2950, 4300],
-      "RewardCoins": [30, 40, 50, 65, 85, 110],
-      "SkipRewardCoins": [15, 20, 25, 35, 45, 60],
-      "CashoutRate": [0.90, 0.95, 1.00, 1.05, 1.15, 1.25]
-    },
     "Attributes": {
       "COIN_GAIN_RATE": 0.75,
       "BLOOD_DIVIDEND_RATE": 0.80,
@@ -27,12 +21,6 @@
   "Recommended": {
     "ZoneMultipliers": { "2": 6.0 },
     "Campaign": { "ShopRefreshCost": 2 },
-    "Stages": {
-      "TargetScore": [120, 380, 815, 1410, 2200, 3145],
-      "RewardCoins": [22, 28, 36, 46, 58, 75],
-      "SkipRewardCoins": [12, 15, 20, 25, 32, 40],
-      "CashoutRate": [0.70, 0.75, 0.80, 0.90, 1.00, 1.10]
-    },
     "Attributes": {
       "COIN_GAIN_RATE": 0.60,
       "BLOOD_DIVIDEND_RATE": 0.65,
@@ -71,12 +59,6 @@
   },
   "Experimental": {
     "ZoneMultipliers": { "2": 4.0 },
-    "Stages": {
-      "TargetScore": [160, 460, 980, 1750, 2800, 4300],
-      "RewardCoins": [18, 24, 30, 38, 48, 62],
-      "SkipRewardCoins": [10, 12, 15, 20, 25, 32],
-      "CashoutRate": [0.60, 0.65, 0.75, 0.85, 0.95, 1.10]
-    },
     "Attributes": {
       "COIN_GAIN_RATE": 0.50,
       "BLOOD_DIVIDEND_RATE": 0.50,

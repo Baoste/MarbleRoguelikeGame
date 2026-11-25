@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using MarblesECS.PhysX;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -12,10 +13,9 @@ namespace MarblesECS.Tests
     public sealed class DayFrameworkTests
     {
         private const string Features = ",\"productionFeatures\":[\"Shop\",\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]";
-        private const string First = "{\"dayId\":\"fixture-first\",\"order\":1,\"productionPlanId\":\"single\"" + Features + "}";
-        private const string Second = "{\"dayId\":\"fixture-second\",\"order\":2,\"productionPlanId\":\"multiple\"" + Features + "}";
-        private const string Plans = "[{\"planId\":\"single\",\"firstStageId\":1,\"lastStageId\":1}," +
-            "{\"planId\":\"multiple\",\"firstStageId\":1,\"lastStageId\":2}]";
+        private const int FirstTarget = 150, SecondTarget = 450;
+        private const string First = "{\"dayId\":\"fixture-first\",\"order\":1,\"targetScore\":150,\"rewardCoins\":35" + Features + "}";
+        private const string Second = "{\"dayId\":\"fixture-second\",\"order\":2,\"targetScore\":450,\"rewardCoins\":45" + Features + "}";
 
         [Test]
         public void SequenceLoadsInOrderAndEmptyResourcePreservesLegacySession()
@@ -25,7 +25,8 @@ namespace MarblesECS.Tests
             Assert.That(definition.IsConfigured, Is.True);
             Assert.That(definition.Days[0].DayId, Is.EqualTo("fixture-first"));
             Assert.That(definition.Days[1].DayId, Is.EqualTo("fixture-second"));
-            Assert.That(definition.Days[1].ProductionPlan.LastStageId, Is.EqualTo(2));
+            Assert.That(definition.Days[1].TargetScore, Is.EqualTo(SecondTarget));
+            Assert.That(definition.Days[1].RewardCoins, Is.EqualTo(45));
             Assert.Throws<NotSupportedException>(() => ((IList<DayDefinition>)definition.Days)[0] = null);
 
             var empty = GameDaysLoader.Parse(Json(string.Empty), balance);
@@ -43,19 +44,25 @@ namespace MarblesECS.Tests
         }
 
         [Test]
-        public void DayZeroRequiresReadingItsNoteAndUsesItsOwnProductionTarget()
+        public void DayZeroRequiresItsNoteAndPaysItsOwnRewardAndBloodDividend()
         {
-            var balance = GameBalance.Default();
+            var balance = GameBalanceLoader.Load();
             var definition = GameDaysLoader.Load(balance);
             var day0 = definition.Days[0];
             Assert.That(day0.DayId, Is.EqualTo("day0"));
+            Assert.That(day0.BoardLayoutFile, Is.EqualTo("Day0.json"));
+            Assert.That(day0.BoardLayout.Pins, Has.Count.EqualTo(3));
+            Assert.That(day0.BoardLayout.Zones, Has.Count.EqualTo(1));
+            Assert.That(day0.RewardCoins, Is.EqualTo(22));
             Assert.That(day0.ProductionFeatures, Is.EqualTo(ProductionFeature.None));
             Assert.That(day0.MorningPrep, Has.Count.EqualTo(1));
             var note = day0.MorningPrep[0];
-            Assert.That(note.Text, Is.EqualTo("hello，今日指标100"));
+            Assert.That(note.Text, Does.StartWith("欢迎入职"));
+            Assert.That(note.Text, Does.Contain($"今日生产指标为 {day0.TargetScore} 分"));
             using var simulation = new MarbleSimulation(balance);
             var physics = new PhysicsStub();
             Start(simulation, definition, physics);
+            Assert.That(physics.CurrentLayout, Is.SameAs(day0.BoardLayout));
             long wake = simulation.Day.Version;
             Assert.That(simulation.Day.MorningPrepRemaining, Is.EqualTo(1));
             Assert.That(simulation.TryCompleteWakeUp(wake, out string error), Is.False);
@@ -66,13 +73,14 @@ namespace MarblesECS.Tests
             Assert.That(simulation.TryCompleteMorningPrep(note.ObjectiveId, wake), Is.False);
             Assert.That(simulation.TryCompleteWakeUp(wake, out _), Is.True);
             Assert.That(simulation.BeginRound(), Is.True);
-            Assert.That(simulation.Session.TargetScore, Is.EqualTo(100));
+            Assert.That(simulation.Session.TargetScore, Is.EqualTo(50));
 
             var player = simulation.Context.Player;
             player.Blood = 0;
             simulation.Context.Player = player;
             Step(simulation, physics);
             Assert.That(simulation.Day.Attempt, Is.EqualTo(2));
+            Assert.That(physics.LayoutChanges, Is.EqualTo(1), "retry keeps the generated geometry");
             Assert.That(simulation.Day.MorningPrepRemaining, Is.EqualTo(1));
             Assert.That(simulation.IsMorningPrepComplete(note.ObjectiveId), Is.False);
             Assert.That(simulation.TryCompleteWakeUp(simulation.Day.Version, out _), Is.False);
@@ -80,14 +88,64 @@ namespace MarblesECS.Tests
             Assert.That(simulation.TryCompleteWakeUp(simulation.Day.Version, out _), Is.True);
             Assert.That(simulation.BeginRound(), Is.True);
             var round = simulation.Context.Round;
-            round.Score = 99;
+            round.Score = 49;
             simulation.Context.Round = round;
             Assert.That(simulation.CashOut(), Is.False);
-            round.Score = 100;
+            round.Score = 50;
             simulation.Context.Round = round;
+            player = simulation.Context.Player;
+            player.Blood = 40;
+            simulation.Context.Player = player;
+            double coinRate = balance.Content.Definition(GameAttribute.COIN_GAIN_RATE).DefaultValue;
+            double dividendRate = balance.Content.Definition(GameAttribute.BLOOD_DIVIDEND_RATE).DefaultValue;
+            long reward = (long)Math.Floor(day0.RewardCoins * coinRate);
+            long cashout = (long)Math.Floor(40 * (dividendRate * coinRate));
+            long wallet = balance.Campaign.StartingCoins + reward + cashout;
             Assert.That(simulation.CashOut(), Is.True);
             Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.DaySettlement));
-            Assert.That(balance.Stages[0].TargetScore, Is.EqualTo(150));
+            Assert.That(simulation.Session.LastCashoutCoins, Is.EqualTo(cashout));
+            Assert.That(simulation.Session.LastRewardCoins, Is.EqualTo(reward));
+            Assert.That(simulation.Session.Coins, Is.EqualTo(wallet));
+            Assert.That(simulation.CashOut(), Is.False);
+            Assert.That(simulation.TryCompleteRest(CompleteSettlement(simulation), out _), Is.True);
+            Assert.That(simulation.Session.Coins, Is.EqualTo(wallet));
+            Assert.That(simulation.Day.DayId, Is.EqualTo("day1"));
+            Assert.That(simulation.Session.TargetScore, Is.EqualTo(200));
+            Assert.That(simulation.CurrentDayDefinition.ProductionFeatures,
+                Is.EqualTo(ProductionFeature.Shop | ProductionFeature.DevicePlacement));
+        }
+
+        [Test]
+        public void BoardLayoutJsonRoundTripsBothZoneTypesAndProjectsFromTopLeft()
+        {
+            var layout = BoardLayoutLoader.Load("Day0.json");
+            var pins = new List<BoardLayoutPin>(layout.Pins);
+            var zones = new List<BoardLayoutZone>(layout.Zones);
+            zones.Add(new BoardLayoutZone
+            {
+                type = "RandomScore", x = .2f, y = .7f, width = .6f, depth = .8f, triggerHeight = .75f,
+                multiplier = 2.5f, flatScore = 3, priority = -1, rushEnabled = true, scoreStackEnabled = false
+            });
+            var pin = pins[0];
+            pin.rushChanceAdd = .25f;
+            pins[0] = pin;
+            var saved = BoardLayoutLoader.Parse(BoardLayoutLoader.ToJson(pins, zones));
+            Assert.That(saved.Pins, Is.EqualTo(pins));
+            Assert.That(saved.Zones, Is.EqualTo(zones));
+            Assert.That(saved.Zones[0].Kind, Is.EqualTo(MarbleContactKind.Score));
+            Assert.That(saved.Zones[1].Kind, Is.EqualTo(MarbleContactKind.RandomScore));
+            var projection = new BoardLayoutProjection(8, 6, 10);
+            projection.Validate(saved);
+            Assert.That(projection.ToSurfaceLocal(0, 0, 0), Is.EqualTo(new Vector3(4, 0, 3)));
+            Assert.That(projection.ToSurfaceLocal(1, 1, 0), Is.EqualTo(new Vector3(-4, 0, -5)));
+            var position = projection.ToNormalized(projection.ToPlane(.25f, .75f));
+            Assert.That(position.x, Is.EqualTo(.25f).Within(.00001f));
+            Assert.That(position.y, Is.EqualTo(.75f).Within(.00001f));
+
+            pin.x = 0;
+            pins[0] = pin;
+            var outside = BoardLayoutLoader.Parse(BoardLayoutLoader.ToJson(pins, zones));
+            StringAssert.Contains("pins[0]", Assert.Throws<ArgumentException>(() => projection.Validate(outside)).Message);
         }
 
         [Test]
@@ -111,7 +169,7 @@ namespace MarblesECS.Tests
             simulation.EnqueueContact(new MarbleContact
             {
                 Key = physics.Last, TargetId = 1, Kind = MarbleContactKind.RandomScore,
-                FlatScore = balance.Stages[0].TargetScore, Multiplier = 1
+                FlatScore = definition.Days[0].TargetScore, Multiplier = 1
             });
             simulation.AfterPhysics(physics);
             Assert.That(simulation.TryDequeueScore(out var score), Is.True);
@@ -121,13 +179,12 @@ namespace MarblesECS.Tests
             Assert.That(simulation.Snapshot.RushMeter, Is.Zero);
             Assert.That(simulation.CashOut(), Is.True);
             Assert.That(simulation.Day.RandomState, Is.EqualTo(random));
-            Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.Production));
-            Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Build));
+            Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.DaySettlement));
+            Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Won));
             Assert.That(simulation.GetShopOffers(), Is.Empty);
             Assert.That(simulation.BuyOffer(0), Is.False);
             Assert.That(simulation.RefreshShop(), Is.False);
-            Assert.That(simulation.BeginRound(), Is.True);
-            Assert.That(simulation.Snapshot.TargetScore, Is.EqualTo(balance.Stages[1].TargetScore));
+            Assert.That(simulation.BeginRound(), Is.False);
         }
 
         [Test]
@@ -144,14 +201,20 @@ namespace MarblesECS.Tests
             ExpectInvalid(Json(First, rules: "[" + rule + "," + rule + "]"), balance, behaviors, "duplicate ID 'fixture-rule'");
             ExpectInvalid(Json(Refs(First, "eventIds", "missing")), balance, behaviors, "fixture-first').eventIds[0]: unknown reference 'missing'");
             ExpectInvalid(Json(Refs(First, "ruleIds", "missing")), balance, behaviors, "fixture-first').ruleIds[0]: unknown reference 'missing'");
-            ExpectInvalid(Json(First.Replace("single", "missing")), balance, behaviors, ".productionPlanId: unknown reference");
-            ExpectInvalid(Json(First, plans: Plans.Replace("\"lastStageId\":2", "\"lastStageId\":99")), balance, behaviors, "lastStageId: unknown stage 99");
+            ExpectInvalid(Json(First.Replace("\"targetScore\":150,", "")), balance, behaviors, "invalid/missing targetScore");
+            ExpectInvalid(Json(First.Replace("\"rewardCoins\":35", "\"rewardCoins\":-1")), balance, behaviors, "invalid/missing rewardCoins");
+            ExpectInvalid(Json(First.Replace("\"rewardCoins\":35", "\"rewardCoins\":0.5")), balance, behaviors, "invalid/missing rewardCoins");
+            ExpectInvalid(Json(First.Insert(First.Length - 1, ",\"boardLayout\":\"missing.json\"")),
+                balance, behaviors, "boardLayout: Board layout 'missing.json' was not found");
+            ExpectInvalid(Json(First.Insert(First.Length - 1, ",\"boardLayout\":\"../Day0.json\"")),
+                balance, behaviors, "Invalid board layout file '../Day0.json'");
             ExpectInvalid(Json(First, "[" + evt.Replace("record", "missing") + "]"), balance, behaviors, "actions[0].type: unknown type 'missing'");
             ExpectInvalid(Json(First, rules: "[" + rule.Replace("fixture-feature", "missing") + "]"), balance, behaviors, "fixture-rule').type: unknown type 'missing'");
             ExpectInvalid(Json(First, "[" + evt.Replace("WakeUpEntered", "42") + "]"), balance, behaviors, ".trigger: unknown DayTrigger '42'");
-            ExpectInvalid("{\"schemaVersion\":1,\"sequenceId\":\"fixture\"}", balance, behaviors, "invalid/missing days");
+            ExpectInvalid("{\"schemaVersion\":2,\"sequenceId\":\"fixture\"}", balance, behaviors, "invalid/missing days");
             ExpectInvalid(Json(First) + "garbage", balance, behaviors, "Invalid JSON");
-            ExpectInvalid(Json(First).Replace("\"schemaVersion\":1", "\"schemaVersion\":1,\"schemaVersion\":1"), balance, behaviors, "Duplicate JSON field");
+            ExpectInvalid(Json(First).Replace("\"schemaVersion\":2", "\"schemaVersion\":2,\"schemaVersion\":2"), balance, behaviors, "Duplicate JSON field");
+            ExpectInvalid(Json(First).Replace("\"schemaVersion\":2", "\"schemaVersion\":1"), balance, behaviors, "schemaVersion: expected 2");
             ExpectInvalid("this is not JSON", balance, behaviors, "GameDays.json");
             var contentBalance = GameBalanceLoader.Load();
             string attribute = AttributeRule("typed", "Day", "Add", 2);
@@ -162,7 +225,7 @@ namespace MarblesECS.Tests
         }
 
         [Test]
-        public void ProductionRoundsAndDayTransitionsAdvanceIndependentlyAndRejectStaleCommands()
+        public void EachDayEndsAfterOneProductionRoundAndRejectsStaleCommands()
         {
             var balance = GameBalance.Default();
             var seen = new List<(DayTrigger trigger, string name)>();
@@ -187,9 +250,9 @@ namespace MarblesECS.Tests
             Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.Production));
             Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Build));
             Assert.Throws<InvalidOperationException>(() => simulation.StartSession(physics));
-            ScoreRound(simulation, physics, balance.Stages[1].TargetScore);
+            ScoreRound(simulation, physics, FirstTarget);
             Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Won));
-            Assert.That(simulation.Session.StagesCleared, Is.EqualTo(1));
+            Assert.That(simulation.Session.LastRewardCoins, Is.EqualTo(35));
             Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.DaySettlement));
             Assert.That(simulation.Day.CompletedDays, Is.Zero);
             Assert.That(simulation.Day.SettlementCommitted, Is.False);
@@ -200,21 +263,17 @@ namespace MarblesECS.Tests
             Assert.That(simulation.TryCompleteRest(firstRest, out _), Is.False);
 
             Assert.That(simulation.TryCompleteWakeUp(simulation.Day.Version, out _), Is.True);
-            ScoreRound(simulation, physics, balance.Stages[0].TargetScore);
-            Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Build));
-            Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.Production));
+            Assert.That(simulation.Snapshot.TargetScore, Is.EqualTo(SecondTarget));
+            ScoreRound(simulation, physics, SecondTarget);
+            Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Won));
+            Assert.That(simulation.Session.LastRewardCoins, Is.EqualTo(45));
+            Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.DaySettlement));
             Assert.That(simulation.TryOpenShop(simulation.Day.Version), Is.False);
             Assert.That(simulation.Day.SettledRounds, Is.EqualTo(1));
             Assert.That(seen, Is.EqualTo(new[]
             {
-                (DayTrigger.DrainingEntered, "drain"), (DayTrigger.RoundSettled, "once"), (DayTrigger.RoundSettled, "round")
-            }));
-            Assert.That(simulation.TryCompleteDaySettlement(simulation.Day.Version, out _), Is.False);
-            ScoreRound(simulation, physics, balance.Stages[1].TargetScore);
-            Assert.That(simulation.Day.SettledRounds, Is.EqualTo(2));
-            Assert.That(seen.GetRange(3, 3), Is.EqualTo(new[]
-            {
-                (DayTrigger.DrainingEntered, "drain"), (DayTrigger.RoundSettled, "round"), (DayTrigger.DaySettlementEntered, "day")
+                (DayTrigger.DrainingEntered, "drain"), (DayTrigger.RoundSettled, "once"),
+                (DayTrigger.RoundSettled, "round"), (DayTrigger.DaySettlementEntered, "day")
             }));
 
             long secondRest = CompleteSettlement(simulation);
@@ -245,7 +304,7 @@ namespace MarblesECS.Tests
             using var simulation = new MarbleSimulation(balance);
             Start(simulation, config, physics, policy);
             Assert.That(simulation.TryCompleteWakeUp(simulation.Day.Version, out _), Is.True);
-            ScoreRound(simulation, physics, balance.Stages[0].TargetScore);
+            ScoreRound(simulation, physics, FirstTarget);
             Assert.That(simulation.TryCompleteRest(CompleteSettlement(simulation), out _), Is.True);
             var baseline = simulation.Day;
             long coins = simulation.Session.Coins;
@@ -291,27 +350,31 @@ namespace MarblesECS.Tests
         {
             var balance = GameBalanceLoader.Load();
             foreach (var device in balance.Devices) device.StartingCount = 0;
-            Array.Find(balance.Devices, device => device.PurchaseQuantity == 1 && device.PlacementRadius > 0).StartingCount = 1;
+            Array.Find(balance.Devices, device => device.PurchaseQuantity == 1 && device.PlacementRadius > 0).StartingCount = 2;
             var definition = GameDaysLoader.Parse(Json(First + "," + Second), balance);
             using var simulation = new MarbleSimulation(balance);
             var physics = new PhysicsStub();
             Start(simulation, definition, physics);
             var context = simulation.Context;
-            int id = simulation.GetOwnedDevices()[0].InstanceId;
+            var inventory = simulation.GetOwnedDevices();
+            int id = inventory[0].InstanceId;
             Assert.That(simulation.TryCompleteWakeUp(simulation.Day.Version, out _), Is.True);
             Assert.That(simulation.PlaceDevice(id, 2, 3, clearance: 0), Is.True);
+            Assert.That(simulation.PlaceDevice(inventory[1].InstanceId, -2, -3, clearance: 0), Is.True);
             Assert.That(CampaignStateUtility.FindDevice(context, id, out var original), Is.True);
             ulong stableId = context.Manager.GetComponentData<StableIdentity>(original).StableId;
             DeviceInstanceState.Set(context, original, "fixture", 42);
             DeviceDurabilitySystem.SetLimit(context, original, 7);
             Assert.That(simulation.ApplyDeviceAttribute(id, 3, GameAttribute.MACHINE_MULT, AttributeOperation.Set, 10), Is.True);
             Assert.That(simulation.ApplyGlobalAttribute(4, GameAttribute.GLOBAL_MULT, AttributeOperation.Add, 1), Is.True);
-            ScoreRound(simulation, physics, balance.Stages[0].TargetScore);
+            ScoreRound(simulation, physics, FirstTarget);
             int firstProductionRoundOfNextDay = context.Round.RoundId + 2;
             DeviceRoundState.Write(context, original, firstProductionRoundOfNextDay,
                 new Dictionary<string, double> { { "fixture-upcoming", 27 } });
             context.DeviceScripts.SetStatus(id, firstProductionRoundOfNextDay, "fixture status");
             Assert.That(simulation.TryCompleteRest(CompleteSettlement(simulation), out _), Is.True);
+            Assert.That(simulation.GetOwnedDevices(), Has.Length.EqualTo(2));
+            Assert.That(Array.TrueForAll(simulation.GetOwnedDevices(), device => !device.Placed), Is.True);
             Assert.That(simulation.TryCompleteWakeUp(simulation.Day.Version, out _), Is.True);
             DeviceDurabilitySystem.SetLimit(context, original, 1);
             Assert.That(simulation.SellDevice(id), Is.True);
@@ -332,8 +395,9 @@ namespace MarblesECS.Tests
                 Is.EqualTo(context.Manager.GetComponentData<OwnedDeviceData>(rebuilt).DefinitionId));
             Assert.That(DeviceInstanceState.Get(context, rebuilt, "fixture"), Is.EqualTo(42));
             Assert.That(DeviceRoundState.Get(context, rebuilt, "fixture-upcoming"), Is.EqualTo(27));
-            Assert.That(simulation.GetDeviceStatus(id), Is.EqualTo("fixture status"));
+            Assert.That(context.DeviceScripts.Status(id, DeviceRoundState.Round(context)), Is.EqualTo("fixture status"));
             Assert.That(simulation.GetOwnedDevices()[0].Durability, Is.EqualTo(7));
+            Assert.That(simulation.GetOwnedDevices()[0].Placed, Is.False);
             Assert.That(AttributeRuntime.Device(context, rebuilt, GameAttribute.MACHINE_MULT), Is.EqualTo(10));
             Assert.That(simulation.GetGlobalAttribute(GameAttribute.GLOBAL_MULT), Is.EqualTo(2));
         }
@@ -481,8 +545,8 @@ namespace MarblesECS.Tests
             StringAssert.Contains(expected, Assert.Throws<ArgumentException>(() => GameDaysLoader.Parse(json, balance, behaviors)).Message);
         }
 
-        private static string Json(string days, string events = "[]", string rules = "[]", string campaignRules = "[]", string plans = Plans) =>
-            $"{{\"schemaVersion\":1,\"sequenceId\":\"fixture\",\"days\":[{days}],\"productionPlans\":{plans}," +
+        private static string Json(string days, string events = "[]", string rules = "[]", string campaignRules = "[]") =>
+            $"{{\"schemaVersion\":2,\"sequenceId\":\"fixture\",\"days\":[{days}]," +
             $"\"events\":{events},\"rules\":{rules},\"campaignRuleIds\":{campaignRules}}}";
 
         private static string Refs(string day, string field, params string[] ids) =>
@@ -542,10 +606,14 @@ namespace MarblesECS.Tests
             simulation.AfterPhysics(physics);
         }
 
-        private sealed class PhysicsStub : IMarbleDayPhysics, IMarbleDayPhysicsCheckpoint
+        private sealed class PhysicsStub : IMarbleDayPhysics, IMarbleDayPhysicsCheckpoint, IMarbleBoardLayoutPhysics
         {
             private readonly Dictionary<MarbleKey, Vector3> live = new Dictionary<MarbleKey, Vector3>();
             internal MarbleKey Last { get; private set; }
+            internal BoardLayoutDefinition CurrentLayout { get; private set; }
+            internal int LayoutChanges { get; private set; }
+            public void ValidateBoardLayout(BoardLayoutDefinition layout) => BoardPlacementSurface.DefaultLayoutProjection.Validate(layout);
+            public void ApplyBoardLayout(BoardLayoutDefinition layout) { CurrentLayout = layout; LayoutChanges++; }
             public bool TrySpawn(MarbleSpawnData data) { Last = data.Key; live.Add(data.Key, data.Position); return true; }
             public bool TryGetPosition(MarbleKey key, out Vector3 position) => live.TryGetValue(key, out position);
             public void Remove(MarbleKey key) => live.Remove(key);

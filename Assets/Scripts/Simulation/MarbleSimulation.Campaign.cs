@@ -40,6 +40,7 @@ namespace MarblesECS
             context.Campaign = new CampaignData
             {
                 Coins = context.Balance.Campaign.StartingCoins,
+                RepeatRounds = true,
                 DisabledFeatures = ProductionFeature.All & ~features
             };
             context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity).Clear();
@@ -48,7 +49,6 @@ namespace MarblesECS
                 CreateStartingDevices(randomStarterTypeCount, grantAllStartingDevices);
             var round = context.Round;
             round.Phase = (byte)RoundPhase.Build;
-            round.TargetScore = context.Balance.Stages[0].TargetScore;
             context.Round = round;
             FillBlood();
         }
@@ -59,7 +59,7 @@ namespace MarblesECS
             var before = context.Round;
             ResetRound(context.Physics, resetRandom: false);
             var round = context.Round;
-            round.TargetScore = CampaignStateUtility.TargetScore(context, context.Campaign.StageIndex);
+            round.TargetScore = before.TargetScore;
             context.Round = round;
             FillBlood();
             var campaign = context.Campaign;
@@ -75,11 +75,10 @@ namespace MarblesECS
             if (!CanCampaignAct(RoundPhase.Playing) || !CampaignStateUtility.CanCashOut(context)) return false;
             var before = context.Round;
             var campaign = context.Campaign;
-            var stage = context.Balance.Stages[campaign.StageIndex];
             double dividend = AttributeRuntime.Enabled(context)
                 ? AttributeRuntime.Global(context, GameAttribute.BLOOD_DIVIDEND_RATE) * AttributeRuntime.Global(context, GameAttribute.COIN_GAIN_RATE)
                 : context.Balance.Campaign.CashoutCoinsPerBlood;
-            campaign.LastCashoutCoins = MarbleRules.RoundScore(context.Player.Blood * stage.CashoutRate * dividend,
+            campaign.LastCashoutCoins = MarbleRules.RoundScore(context.Player.Blood * dividend,
                 CampaignStateUtility.MaxCoins);
             campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastCashoutCoins, CampaignStateUtility.MaxCoins);
             context.Campaign = campaign;

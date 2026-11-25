@@ -88,15 +88,15 @@ namespace MarblesECS.Editor.Diegetic
             var result=UnityEngine.Object.FindObjectOfType<GamblingWheelDisplay>();
             Check(result && result.ResultText,"Actual settlement UI is present");
             if(rig.Controller.Session.Phase==RoundPhase.Build)Check(rig.Controller.BeginRound(),"Start first round");
-            for(int stage=1;stage<=2;stage++)
+            for(int cycle=1;cycle<=2;cycle++)
             {
             // Seed an achievable score and non-empty gamble pool, then use the real settlement transition.
-            var round=context.Round;round.Score=Math.Max(0,round.TargetScore-context.Campaign.TotalScore);context.Round=round;GamblingWheelSystem.Deposit(context,0);
-            Check(rig.Controller.CashOut(),"Cash out round "+stage+" through controller");
+            var round=context.Round;round.Score=round.TargetScore;context.Round=round;GamblingWheelSystem.Deposit(context,0);
+            Check(rig.Controller.CashOut(),"Cash out round "+cycle+" through controller");
             while(rig.Controller.Session.Phase==RoundPhase.Draining)yield return null;
-            Check(rig.Controller.Session.Phase==RoundPhase.Build,"Settlement opens Build "+(stage+1));
+            Check(rig.Controller.Session.Phase==RoundPhase.Build,"Settlement opens Build "+(cycle+1));
             var wait=Wait(.4f);while(wait.MoveNext())yield return null;
-            Check(rig.Controller.Session.StageIndex==stage,"Real settlement advances to stage "+(stage+1));
+            Check(rig.Controller.Session.TargetScore==round.TargetScore,"The next machine round uses the same target");
             report.Add("Settlement text enabled="+result.ResultText.enabled+" raycastTarget="+result.ResultText.raycastTarget+" rect="+result.ResultText.rectTransform.rect);
             Check(!result.ResultText.raycastTarget,"Result is visible after reveal, without intercepting mouse input");
             var magnet=context.Balance.Devices.Single(d=>d.SourceId=="Reflector");
@@ -131,7 +131,7 @@ namespace MarblesECS.Editor.Diegetic
                     Check(Hits(cam.WorldToScreenPoint(rig.Placement.PlacementPlane.position)).Count==0,$"{width}x{height} placement area receives mouse input");
                     result.DisplayGroup.alpha=0;
                     Canvas.ForceUpdateCanvases();
-                    DiegeticUIProbe.Capture(cam,Work+$"/Build_{stage+1}_{width}.png",width,height);
+                    DiegeticUIProbe.Capture(cam,Work+$"/Build_{cycle+1}_{width}.png",width,height);
                 }
                 finally
                 {

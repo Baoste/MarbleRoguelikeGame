@@ -25,22 +25,9 @@ namespace MarblesECS
                 if (json[0] == '\uFEFF') json = json.Substring(1);
                 // Use the existing bounded reader so required fields, JSON types and duplicate keys are checked.
                 var input = new ConfigFields(ConfigJson.Parse(json, "JSON"), "sequence");
-                if (input.Int("schemaVersion") != 1) throw new ArgumentException("schemaVersion: expected 1.");
+                if (input.Int("schemaVersion") != DayCampaignDefinition.CurrentSchemaVersion)
+                    throw new ArgumentException($"schemaVersion: expected {DayCampaignDefinition.CurrentSchemaVersion} with targetScore and rewardCoins on each Day.");
                 string sequenceId = Id(input.String("sequenceId"), "sequenceId");
-                var plans = ReadIndex(input, "productionPlans", "planId", (entry, id) =>
-                {
-                    long? targetScore = null;
-                    if (entry.Has("targetScore"))
-                    {
-                        double target = entry.Number("targetScore");
-                        if (target < 1 || target > balance.Campaign.MaxTotalScore || target != Math.Truncate(target))
-                            throw entry.Error("targetScore");
-                        targetScore = (long)target;
-                    }
-                    var plan = new DayProductionPlan(id, StageId(entry, "firstStageId"), StageId(entry, "lastStageId"), targetScore);
-                    plan.Resolve(balance);
-                    return plan;
-                });
                 var events = ReadIndex(input, "events", "eventId", (entry, id) => ReadEvent(entry, id, behaviors));
                 var rules = ReadIndex(input, "rules", "ruleId", (entry, id) => ReadRule(entry, id, balance, behaviors));
                 var campaignRules = ReadRefs(input, "campaignRuleIds", rules);
@@ -50,11 +37,19 @@ namespace MarblesECS
                     string path = entry.Context;
                     int order = entry.Int("order");
                     if (order <= 0) throw new ArgumentException($"{path}.order: expected a positive integer.");
-                    var plan = Find(plans, entry.String("productionPlanId"), path + ".productionPlanId");
+                    long targetScore = ReadInteger(entry, "targetScore", 1, balance.Marble.MaxRoundScore);
+                    long rewardCoins = ReadInteger(entry, "rewardCoins", 0, CampaignStateUtility.MaxCoins);
                     var dayRules = ReadRefs(entry, "ruleIds", rules);
                     CheckRuleScope(dayRules, false, path + ".ruleIds");
-                    return new DayDefinition(id, order, plan, ReadProductionFeatures(entry), ReadMorningPrep(entry),
-                        ReadRefs(entry, "eventIds", events), dayRules);
+                    string boardLayoutFile = entry.Has("boardLayout") ? entry.String("boardLayout") : null;
+                    BoardLayoutDefinition boardLayout = null;
+                    if (boardLayoutFile != null)
+                    {
+                        try { boardLayout = BoardLayoutLoader.Load(boardLayoutFile); }
+                        catch (ArgumentException error) { throw new ArgumentException($"{path}.boardLayout: {error.Message}", error); }
+                    }
+                    return new DayDefinition(id, order, targetScore, rewardCoins, ReadProductionFeatures(entry), boardLayoutFile,
+                        boardLayout, ReadMorningPrep(entry), ReadRefs(entry, "eventIds", events), dayRules);
                 }, required: true);
                 var ordered = new List<DayDefinition>(days.Values);
                 ordered.Sort((a, b) => a.Order.CompareTo(b.Order));
@@ -103,11 +98,11 @@ namespace MarblesECS
             return result;
         }
 
-        private static uint StageId(ConfigFields entry, string field)
+        private static long ReadInteger(ConfigFields entry, string field, long min, long max)
         {
             double value = entry.Number(field);
-            if (value <= 0 || value > uint.MaxValue || value != Math.Truncate(value)) throw entry.Error(field);
-            return (uint)value;
+            if (value < min || value > max || value != Math.Truncate(value)) throw entry.Error(field);
+            return (long)value;
         }
 
         private static DayEventDefinition ReadEvent(ConfigFields entry, string id, DayBehaviorRegistry behaviors)

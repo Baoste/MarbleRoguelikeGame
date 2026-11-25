@@ -173,7 +173,7 @@ namespace MarblesECS.Editor
                 yield return null;
             }
             sale.Refresh(); Check(sale.Group.alpha == 0 && !sale.Group.blocksRaycasts, "sale area is hidden during Playing");
-            var round = context.Round; round.Score = Math.Max(0, round.TargetScore - context.Campaign.TotalScore); context.Round = round;
+            var round = context.Round; round.Score = round.TargetScore; context.Round = round;
             Check(game.CashOut(), "real round settlement begins");
             while (game.Session.Phase == RoundPhase.Draining) yield return null;
             Check(game.Session.Phase == RoundPhase.Build, "settlement returns to placement");

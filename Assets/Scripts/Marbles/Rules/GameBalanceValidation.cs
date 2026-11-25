@@ -10,21 +10,9 @@ namespace MarblesECS
             if (b.Marble == null || b.Campaign == null)
                 throw new ArgumentException("Marble and Campaign configurations are required.");
             b.Marble.Validate(); b.Campaign.Validate();
-            CheckRows(b.Stages, 1, 100, x => x.Id, x => x.Validate(), "Stages");
             b.Content?.Validate();
             CheckRows(b.Devices, b.Content == null ? 0 : 1, 200, x => x.Id, x => x.Validate(), "Devices");
-            ValidateStages(b); ValidateInventory(b);
-        }
-
-        private static void ValidateStages(GameBalance b)
-        {
-            long previous = 0;
-            foreach (var stage in b.Stages)
-            {
-                if (stage.TargetScore <= previous || stage.TargetScore > b.Campaign.MaxTotalScore)
-                    throw new ArgumentException("Stage targets must strictly increase within MaxTotalScore.");
-                previous = stage.TargetScore;
-            }
+            ValidateInventory(b);
         }
 
         private static void ValidateInventory(GameBalance b)

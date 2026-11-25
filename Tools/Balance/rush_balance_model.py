@@ -19,6 +19,8 @@ import statistics
 from dataclasses import dataclass
 from pathlib import Path
 
+from balance_pipeline import load_days
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -341,32 +343,28 @@ def main() -> None:
         results[build.name] = result
         print(build.name, json.dumps({key: round(value, 3) for key, value in result.items()}, ensure_ascii=False))
 
-    stages = balance["Stages"]
+    days = load_days(ROOT)
     intended = ["开局+肾上腺素", "Rush起步-延长", "Rush强化", "Rush成型", "Rush豪华", "Rush超载"]
     print("MILESTONE_PRESSURE")
-    expected_total = 0.0
-    pressures = []
-    for index, stage in enumerate(stages):
+    for index, day in enumerate(days):
         profile = intended[min(index, len(intended) - 1)]
         median = results[profile]["p50"]
-        required = max(0.0, stage["TargetScore"] - expected_total)
-        expected_total += median
-        pressure = required / median if median else math.inf
-        pressures.append(pressure)
+        target = day["targetScore"]
+        pressure = target / median if median else math.inf
         print(json.dumps({
-            "stage": stage["Id"],
-            "target": stage["TargetScore"],
-            "required_from_expected_start": round(required, 1),
+            "day": day["dayId"],
+            "target": target,
             "profile": profile,
             "median": round(median, 1),
             "pressure": round(pressure, 3) if median else None,
-            "expected_margin": round(expected_total - stage["TargetScore"], 1),
+            "expected_margin": round(median - target, 1),
         }, ensure_ascii=False))
 
     raw_content = content["raw"]
     rush_devices = [row for row in raw_content["Devices"] if row["Kind"] == 5 or row["RushChanceAdd"] > 0]
     rush_drugs = [row for row in raw_content["Drugs"] if row["Kind"] in (1, 2, 3)]
-    first_shop_budget = balance["Campaign"]["StartingCoins"] + stages[0]["RewardCoins"]
+    coin_gain = float(content["attributes"]["COIN_GAIN_RATE"]["DefaultValue"])
+    first_shop_budget = balance["Campaign"]["StartingCoins"] + math.floor(days[0]["rewardCoins"] * coin_gain)
     gates = {
         "内容目录完整且ID唯一": len(raw_content["Attributes"]) == 34 and len(raw_content["Devices"]) == 15 and
             len(raw_content["Drugs"]) == 12 and len({row["Id"] for row in raw_content["Devices"]}) == 15 and
@@ -375,13 +373,11 @@ def main() -> None:
             max(row["Price"] for row in rush_drugs) <= first_shop_budget,
         "延长药剂不会立刻撞时长上限": float(content["attributes"]["RUSH_DURATION"]["DefaultValue"]) *
             effect_multiplier(content["drugs"][3], 22) <= float(content["attributes"]["RUSH_DURATION"]["MaxValue"]),
-        "开局中等难度": results["开局Multi"]["p10"] < stages[0]["TargetScore"] < results["开局Multi"]["p50"],
+        "开局中等难度": results["开局Multi"]["p10"] < days[0]["targetScore"] < results["开局Multi"]["p50"],
         "看准时机提高均值": results["Rush核心"]["mean"] >= results["Rush核心-开局乱吃"]["mean"] * 1.08,
         "看准时机提高爆发上限": results["Rush核心"]["p90"] >= results["Rush核心-开局乱吃"]["p90"] * 1.15,
         "核心构筑明显增益": results["Rush核心"]["p50"] >= results["开局Multi"]["p50"] * 1.60,
         "成型构筑产生爽感": results["Rush成型"]["p50"] >= results["开局Multi"]["p50"] * 4.0,
-        "构筑期形成难度峰值": pressures[1] > pressures[0] and pressures[2] >= pressures[1] * 0.95,
-        "成型后压力连续下降": pressures[3] < pressures[2] and pressures[4] < pressures[3] and pressures[5] < pressures[4],
     }
     failed = [name for name, passed in gates.items() if not passed]
     print("BALANCE_GATES", json.dumps(gates, ensure_ascii=False))

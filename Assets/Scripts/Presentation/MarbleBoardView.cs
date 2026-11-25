@@ -133,7 +133,7 @@ namespace MarblesECS.Presentation
             Vector3 scale = board.lossyScale;
             Feedback = controller.PlaceDevice(SelectedDeviceId, point.x, point.z,
                 board.TransformPoint(point), Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z)))
-                ? "布置成功。继续点击可移动；下一回合保留布局。"
+                ? "布置成功。继续点击可移动。"
                 : "此处不能放置：请避开普通钉、其他装置、发射口和终点区域。";
         }
     }

@@ -8,10 +8,10 @@ namespace MarblesECS.PhysX
     {
         private Collider[] overlaps = new Collider[32];
 
-        internal bool IsClear(PhysicsScene scene, Transform[] roots, Vector3 position, float radius)
+        internal bool IsClear(PhysicsScene scene, Transform[] roots, Vector3 position, float radius, Transform layoutRoot = null)
         {
             if (!scene.IsValid()) return false;
-            if (roots == null || roots.Length == 0) return true;
+            if (layoutRoot == null && (roots == null || roots.Length == 0)) return true;
             Physics.SyncTransforms();
             int count;
             do
@@ -21,8 +21,13 @@ namespace MarblesECS.PhysX
                 Array.Resize(ref overlaps, checked(overlaps.Length * 2));
             } while (true);
             for (int i = 0; i < count; i++)
+            {
+                var hit = overlaps[i].transform;
+                if (layoutRoot != null && hit.IsChildOf(layoutRoot)) return false;
+                if (roots == null) continue;
                 foreach (Transform root in roots)
-                    if (root != null && overlaps[i].transform.IsChildOf(root)) return false;
+                    if (root != null && hit.IsChildOf(root)) return false;
+            }
             return true;
         }
     }

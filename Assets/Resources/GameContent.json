@@ -391,7 +391,7 @@
             "Operators": "ADD,MUL,SET",
             "StackRule": "ADD→MUL→CLAMP",
             "AppliesTo": "Item,Global",
-            "DefaultValue": 0.6,
+            "DefaultValue": 1.0,
             "MinValue": 0.0,
             "MaxValue": 10.0,
             "StackOrder": 30

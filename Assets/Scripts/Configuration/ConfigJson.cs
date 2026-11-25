@@ -157,6 +157,12 @@ namespace MarblesECS
             if (n < int.MinValue || n > int.MaxValue || n != Math.Truncate(n)) throw Error(key);
             return (int)n;
         }
+        internal bool Bool(string key, bool fallback)
+        {
+            if (!Fields.TryGetValue(key, out var value)) return fallback;
+            if (!(value is bool flag)) throw Error(key);
+            return flag;
+        }
         internal List<object> Array(string key, bool optional = false)
         {
             if (!Fields.TryGetValue(key, out object v) && optional) return new List<object>();

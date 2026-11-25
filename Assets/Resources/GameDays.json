@@ -1,28 +1,38 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "sequenceId": "campaign",
   "days": [
     {
       "dayId": "day0",
       "order": 1,
-      "productionPlanId": "day0-production",
+      "targetScore": 50,
+      "rewardCoins": 22,
+      "boardLayout": "Day0.json",
       "productionFeatures": [],
       "morningPrep": [
         {
           "objectiveId": "read-daily-note",
           "type": "ReadNote",
           "anchorId": "desk",
-          "text": "hello，今日指标100"
+          "text": "欢迎入职！这里是您的生产工位。机台消耗血量发射弹珠，弹珠落入得分区即可计入产出。请到机台正面按 E 开工，按空格发射。\n\n今日生产指标为 50 分。达标后，请拨动结算开关。"
         }
       ]
-    }
-  ],
-  "productionPlans": [
+    },
     {
-      "planId": "day0-production",
-      "firstStageId": 1,
-      "lastStageId": 1,
-      "targetScore": 100
+      "dayId": "day1",
+      "order": 2,
+      "targetScore": 200,
+      "rewardCoins": 22,
+      "boardLayout": "Day0.json",
+      "productionFeatures": ["Shop", "DevicePlacement"],
+      "morningPrep": [
+        {
+          "objectiveId": "read-shop-announcement",
+          "type": "ReadNote",
+          "anchorId": "desk",
+          "text": "为提升单位血量产出，公司即日起在机台旁开设物资商店。请使用账户金币采购装置，并在开工前完成布置。设备投入由各工位自行承担，产能指标由总部统一核定。\n\n今日指标为 200 分。感谢您持续为股东创造价值。"
+        }
+      ]
     }
   ],
   "events": [],

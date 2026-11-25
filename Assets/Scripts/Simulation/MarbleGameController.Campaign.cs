@@ -97,7 +97,7 @@ namespace MarblesECS.PhysX
             Vector3 center = worldPosition + rotation * (offset * radiusScale);
             return SimulationContext.IsFinite(center) &&
                 (PlacementSurface == null || PlacementSurface.ContainsWorldPoint(center, radius)) &&
-                placementObstacles.IsClear(localPhysics, PlacementObstacleRoots, center, radius);
+                placementObstacles.IsClear(localPhysics, PlacementObstacleRoots, center, radius, bridge?.GeneratedBoardLayout);
         }
         public bool RemoveDevicePlacement(int id) => simulation != null && simulation.RemoveDevicePlacement(id);
         public bool RotateDevice(int id, float degrees) => simulation != null && simulation.RotateDevice(id, degrees);

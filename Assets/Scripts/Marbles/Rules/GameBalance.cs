@@ -7,7 +7,6 @@ namespace MarblesECS
     {
         public MarbleTuning Marble;
         public CampaignTuning Campaign;
-        public StageDefinition[] Stages;
         public GameContent Content;
         // Catalogs are views of GameContent, never a second serialized copy.
         public DeviceDefinition[] Devices
@@ -27,7 +26,6 @@ namespace MarblesECS
             var copy = new GameBalance
             {
                 Marble = Marble.Copy(), Campaign = Campaign.Copy(),
-                Stages = Array.ConvertAll(Stages, value => value.Copy()),
                 Content = Content?.Copy()
             };
             if (Content == null)
