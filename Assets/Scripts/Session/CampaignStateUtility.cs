@@ -34,6 +34,42 @@ namespace MarblesECS
                 CreateSingleDevice(context, definition, price / quantity + (i < price % quantity ? 1 : 0), pair);
         }
 
+        internal static void DestroyDevice(SimulationContext context, Entity entity)
+        {
+            var manager = context.Manager;
+            if (!manager.Exists(entity)) return;
+            var device = manager.GetComponentData<OwnedDeviceData>(entity);
+            using var removed = new NativeList<int>(2, Allocator.Temp);
+            if (device.PairId == 0)
+            {
+                removed.Add(device.InstanceId);
+                manager.DestroyEntity(entity);
+            }
+            else
+            {
+                using var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp);
+                foreach (var member in entities)
+                {
+                    var data = manager.GetComponentData<OwnedDeviceData>(member);
+                    if (data.PairId != device.PairId) continue;
+                    removed.Add(data.InstanceId);
+                    manager.DestroyEntity(member);
+                }
+                removed.AsArray().Sort();
+            }
+
+            var campaign = context.Campaign;
+            campaign.LayoutRevision++;
+            context.Campaign = campaign;
+            DeviceDurabilitySystem.Refresh(context);
+            // The whole pair is gone before its Lua teardown callbacks can observe the inventory.
+            foreach (int id in removed)
+            {
+                context.Transients.RemoveSource(context, id);
+                context.DeviceScripts.Remove(id);
+            }
+        }
+
         internal static int CountPlacedDevices(SimulationContext context, int excludedInstanceId)
         {
             if (excludedInstanceId < 0) throw new System.ArgumentOutOfRangeException(nameof(excludedInstanceId));

@@ -1,5 +1,6 @@
 {
   "Id": 113,
+  "Bounce": 0.6,
   "Name": "Multi Ding",
   "Price": 9,
   "ScoreMultiplier": 1.85,

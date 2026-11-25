@@ -237,7 +237,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         {
             var device = unplacedDevices.Find(x => x.InstanceId == deviceIds[hoverIndex]);
             if (device.InstanceId != 0)
-                text = $"<b>{device.Name}</b>\n{DeviceDisplayText.Details(device)}\n{device.Description}\n按住左键拖到盘面，松开放置。F1 可查完整道具库。";
+                text = $"<b>{device.Name}</b>\n{DeviceDisplayText.Details(device)}\n{device.Description}\n";
         }
 
         if (string.IsNullOrEmpty(text))

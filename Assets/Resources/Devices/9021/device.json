@@ -1,5 +1,6 @@
 {
   "Id": 9021,
+  "Bounce": 0.6,
   "ScoreMultiplier": 1.0,
   "StartingCount": 0,
   "PurchaseQuantity": 1,

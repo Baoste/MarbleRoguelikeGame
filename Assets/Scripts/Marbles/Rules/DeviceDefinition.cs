@@ -12,6 +12,7 @@ namespace MarblesECS
         [OptionalBalanceField] public long SellPrice;
         [OptionalBalanceField] public DeviceRarity Rarity;
         [OptionalBalanceField] public int Durability = 20;
+        [OptionalBalanceField] public float Bounce;
         public double ScoreMultiplier = 1;
         public double RushChanceAdd;
         // Runtime-only geometry from the package's placement SphereCollider; never serialized as business data.
@@ -66,6 +67,7 @@ namespace MarblesECS
             BalanceGuard.Range(StartingCount, 0, 200, nameof(StartingCount));
             BalanceGuard.Range(PurchaseQuantity, 1, 20, nameof(PurchaseQuantity));
             BalanceGuard.Range(GroupClearance, 0, 1, nameof(GroupClearance));
+            BalanceGuard.Range(Bounce, 0, 1, nameof(Bounce));
             BalanceGuard.Range(RushChanceAdd, 0, 1, nameof(RushChanceAdd));
             BalanceGuard.Range(Cooldown, 0, 60, nameof(Cooldown));
             BalanceGuard.Range(Range, 0.01, 100, nameof(Range));

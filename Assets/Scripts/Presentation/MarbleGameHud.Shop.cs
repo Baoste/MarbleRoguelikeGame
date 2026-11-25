@@ -59,7 +59,7 @@ namespace MarblesECS.Presentation
                     Board.Select(device.InstanceId);
                 if (editable && device.Placed && GUILayout.Button("收回"))
                     feedback = Controller.RemoveDevicePlacement(device.InstanceId) ? "已收回库存。" : "收回失败。";
-                if (GUILayout.Button("出售 " + device.SellPrice + " 金"))
+                if (GUILayout.Button((device.PairId != 0 ? "出售整对 " : "出售 ") + device.SellPrice + " 金"))
                     feedback = Controller.SellDevice(device.InstanceId) ? "已出售并获得金币。" : "当前不能出售。";
                 GUILayout.EndHorizontal();
                 GUILayout.EndVertical();

@@ -55,9 +55,7 @@ namespace MarblesECS.PhysX
                 float incoming = Mathf.Max(0, -Vector3.Dot(BeforeVelocity - surfaceVelocity, normal));
                 if (incoming > 0)
                 {
-                    // Board geometry uses the ball's elasticity. Device materials can add their own.
-                    var surface = device != null ? collision.collider.sharedMaterial : null;
-                    float bounce = surface != null ? Mathf.Max(Settings.Bounce, surface.bounciness) : Settings.Bounce;
+                    float bounce = device != null ? Mathf.Max(Settings.Bounce, device.Bounce) : Settings.Bounce;
                     float outgoing = Vector3.Dot(Body.velocity - surfaceVelocity, normal);
                     Body.velocity = Vector3.ClampMagnitude(Body.velocity + normal * (incoming * bounce - outgoing), Settings.MaxSpeed);
                 }

@@ -18,5 +18,8 @@ namespace MarblesECS.Presentation
         public static string Details(OwnedDeviceSnapshot device) => Rarity(device.Rarity) + " · " + Durability(device) + " · 出售 " + device.SellPrice;
         public static string Details(ShopOfferSnapshot offer) => Rarity(offer.Rarity) + " · " +
             (offer.Durability == -1 ? "无限耐久" : "耐久 " + offer.Durability) + " · 出售 " + offer.SellPrice;
+
+        internal static string SaleTarget(OwnedDeviceSnapshot device) =>
+            (device.PairId != 0 ? "整对" : string.Empty) + "「" + device.Name + "」";
     }
 }

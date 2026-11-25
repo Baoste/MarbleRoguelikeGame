@@ -10,8 +10,9 @@ namespace MarblesECS
     {
         private readonly Dictionary<int, DeviceLuaScript> scripts = new Dictionary<int, DeviceLuaScript>();
         private readonly Dictionary<int, (int round, string text)> statuses = new Dictionary<int, (int, string)>();
+        private readonly List<DeviceLuaScript> deferredDisposals = new List<DeviceLuaScript>();
         internal Func<DeviceResource, DeviceLuaScript> CreateScript { get; set; } = resource => resource.CreateScript();
-        private int deviceDispatchDepth;
+        private int deviceDispatchDepth, callbackDepth;
         internal void SetStatus(int instanceId, int round, string text)
         {
             text = text ?? string.Empty;
@@ -28,9 +29,46 @@ namespace MarblesECS
             }
             return script;
         }
-        internal void Clear() { foreach (var script in scripts.Values) script.Dispose(); scripts.Clear(); statuses.Clear(); }
+        internal void Clear()
+        {
+            foreach (var script in scripts.Values) ReleaseScript(script);
+            scripts.Clear();
+            statuses.Clear();
+        }
+
         internal void Remove(int instanceId)
-        { if (scripts.TryGetValue(instanceId, out var script)) { script.Dispose(); scripts.Remove(instanceId); } statuses.Remove(instanceId); }
+        {
+            statuses.Remove(instanceId);
+            if (scripts.Remove(instanceId, out var script)) ReleaseScript(script);
+        }
+
+        private void ReleaseScript(DeviceLuaScript script)
+        {
+            if (callbackDepth == 0) script.Dispose();
+            else deferredDisposals.Add(script);
+        }
+
+        internal CallbackScope BeginCallback() => new CallbackScope(this);
+
+        internal readonly struct CallbackScope : IDisposable
+        {
+            private readonly DeviceScriptSystem owner;
+            internal CallbackScope(DeviceScriptSystem owner) { this.owner = owner; owner.callbackDepth++; }
+            public void Dispose() => owner.EndCallback();
+        }
+
+        private void EndCallback()
+        {
+            try
+            {
+                if (callbackDepth != 1 || deferredDisposals.Count == 0) return;
+                // The last gameplay context has closed. Keep any teardown-triggered removals in the same queue.
+                for (int i = 0; i < deferredDisposals.Count; i++) deferredDisposals[i].Dispose();
+                deferredDisposals.Clear();
+            }
+            finally { callbackDepth--; }
+        }
+
         // Lifecycle callbacks also reach inventory and dormant instances; they do not imply a gameplay trigger.
         internal static bool InstanceEvent(SimulationContext c, int instanceId, string callback)
         {
@@ -39,6 +77,7 @@ namespace MarblesECS
             var script = c.DeviceScripts.Get(instanceId, device.DefinitionId);
             if (!script.HasFunction(callback)) return false;
             var api = new DeviceEventContext(c, entity);
+            using var scope = c.DeviceScripts.BeginCallback();
             try { script.Invoke(callback, api); return true; }
             catch (DeviceLuaException error) { Debug.LogException(error); return false; }
             finally { api.Close(); }
@@ -71,6 +110,7 @@ namespace MarblesECS
             var script = c.DeviceScripts.Get(instanceId, device.DefinitionId);
             if (!script.HasFunction(callback)) return false;
             var api = new DeviceEventContext(c, entity, ended);
+            using var scope = c.DeviceScripts.BeginCallback();
             try
             {
                 if (value.HasValue) script.Invoke(callback, api, value.Value);
@@ -196,12 +236,9 @@ namespace MarblesECS
             MarbleContact contact, DevicePose pose, string callback, HeldMotion? hold = null)
         {
             var api = new DeviceContactContext(c, ball, entity, contact, pose, hold, callback != "OnBallUpdate");
+            using var scope = c.DeviceScripts.BeginCallback();
             try { c.DeviceScripts.Get(device.InstanceId, device.DefinitionId).Invoke(callback, api); }
-            finally
-            {
-                api.Close();
-                if (!c.Manager.Exists(entity)) c.DeviceScripts.Remove(device.InstanceId);
-            }
+            finally { api.Close(); }
         }
     }
 }

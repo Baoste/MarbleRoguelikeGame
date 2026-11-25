@@ -260,22 +260,34 @@ namespace MarblesECS.Editor
 
         private static void BounceAuthority()
         {
-            foreach (var (ballBounce, surfaceBounce, isDevice, expectedBounce) in new[]
+            foreach (var (ballBounce, surfaceBounce, deviceBounce, expectedBounce) in new (float, float?, float?, float)[]
             {
-                (0f, 1f, false, 0f), (.5f, 1f, false, .5f), (1.5f, 1f, false, 1.5f),
-                (0f, .4f, true, .4f), (.5f, .4f, true, .5f), (1.5f, .4f, true, 1.5f)
+                (0f, 1f, null, 0f), (.5f, 1f, null, .5f), (1.5f, 1f, null, 1.5f),
+                (0f, .4f, .6f, .6f), (.5f, .9f, .6f, .6f), (1.5f, .4f, .6f, 1.5f),
+                (0f, 1f, 0f, 0f), (0f, null, .6f, .6f)
             })
             {
-                var scene = SceneManager.CreateScene($"Bounce authority {isDevice} {ballBounce}", new CreateSceneParameters(LocalPhysicsMode.Physics3D));
+                bool isDevice = deviceBounce.HasValue;
+                var scene = SceneManager.CreateScene($"Bounce authority {ballBounce} {surfaceBounce} {deviceBounce}",
+                    new CreateSceneParameters(LocalPhysicsMode.Physics3D));
                 var surface = new GameObject(isDevice ? "Solid device" : "Wall");
                 SceneManager.MoveGameObjectToScene(surface, scene);
-                if (isDevice) surface.AddComponent<DeviceBody>();
                 var collider = surface.AddComponent<BoxCollider>(); collider.size = new Vector3(.2f, 4, 4);
-                var material = new PhysicMaterial { bounciness = surfaceBounce, bounceCombine = PhysicMaterialCombine.Maximum };
+                var material = surfaceBounce.HasValue
+                    ? new PhysicMaterial { bounciness = surfaceBounce.Value, bounceCombine = PhysicMaterialCombine.Maximum }
+                    : null;
                 collider.sharedMaterial = material;
                 var bridge = new MarblePhysicsBridge(scene, null, material, _ => { });
                 try
                 {
+                    if (isDevice)
+                    {
+                        var definition = new DeviceDefinition { Bounce = deviceBounce.Value };
+                        surface.AddComponent<DeviceBody>().Initialize(1, definition, null);
+                        Check(collider.sharedMaterial != null && collider.sharedMaterial != material, "device owns its physics material");
+                        Near(deviceBounce.Value, collider.sharedMaterial.bounciness, "configured bounce reaches the PhysX solver");
+                        if (material != null) Near(surfaceBounce.Value, material.bounciness, "shared material is preserved");
+                    }
                     var key = new MarbleKey(1, 1);
                     Check(bridge.TrySpawn(new MarbleSpawnData { Key = key, Position = Vector3.left, Rotation = Quaternion.identity,
                         Quote = new ShotQuote(1, 1, .08f, 1, 10, 1), LinearVelocity = Vector3.right * 3,
@@ -284,7 +296,7 @@ namespace MarblesECS.Editor
                     for (int i = 0; i < 25; i++) bridge.Simulate(.02f);
                     bridge.TryGetState(key, out var state);
                     Check(Math.Abs(state.LinearVelocity.x + 3 * expectedBounce) < .2,
-                        $"{surface.name} rebound with ball elasticity {ballBounce} and surface elasticity {surfaceBounce}");
+                        $"{surface.name} rebound with ball bounce {ballBounce}, material bounce {surfaceBounce} and configured bounce {deviceBounce}");
                 }
                 finally
                 {

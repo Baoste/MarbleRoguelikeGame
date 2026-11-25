@@ -34,7 +34,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 半径按现有单位转换：**实际世界半径 = 最终 BALL_RADIUS × 0.16**。最低档默认属性值 `0.5` 对应半径 `0.08`、直径 `0.16`。高档位以 `Investment / MinInvestment` 为投入倍率：半径按立方根增长，质量线性增长，基础价值按 `FlowValueExponent` 次方增长；当前指数为 `1.15`。通用体积缩放按体积倍率的立方根换算半径。旧药物不再影响发射参数。
 
-发射速度直接采用 `BALL_LAUNCH_SPEED`，单位为 m/s，最终仍受 `BALL_MAX_SPEED` 限制。静态或运动学棋盘障碍按 `BALL_BOUNCE` 校正反弹，实体装置取该值与自身物理材质弹性中的较大值。超过 `1` 的属性值提供额外反弹增益。各装置的材质弹性见 [装置一览](Device_Overview.md)。
+发射速度直接采用 `BALL_LAUNCH_SPEED`，单位为 m/s，最终仍受 `BALL_MAX_SPEED` 限制。静态或运动学棋盘障碍按 `BALL_BOUNCE` 校正反弹，实体装置取该值与自身 `device.json.Bounce` 的较大值。超过 `1` 的弹珠属性值提供额外反弹增益。各装置的 `Bounce` 见 [装置一览](Device_Overview.md)。
 
 抽血档位仍在 `MinInvestment/MaxInvestment` 间选择投入量。基础耗血为「投入量 × BLOOD_COST」，随后应用属性 ADD/MUL/SET 和上下限。批量发射按球数收费。低档位用于增加携带 RUSH 贡献的球数，高档位用于 Rush 窗口内快速兑现价值。提现为「剩余血量 × BLOOD_DIVIDEND_RATE × COIN_GAIN_RATE」，金币向下取整。
 

@@ -1,6 +1,7 @@
 {
   "name": "Multi Ding",
-  "description": "每颗弹珠对本装置生效一次，提供1.85倍率，只累加0.85增量；最终倍率为1+累计增量，到得分区统一计算。",
+  "description": "每球首次撞击时提高得分倍率。",
+  "_descriptionDetail": "每颗弹珠对本装置生效一次，提供1.85倍率，只累加0.85增量；最终倍率为1+累计增量，到得分区统一计算。",
   "value": 27,
   "type": "device",
   "rarity": "common",

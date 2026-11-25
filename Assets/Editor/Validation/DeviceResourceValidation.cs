@@ -49,6 +49,9 @@ namespace MarblesECS.Editor
                             Check(view.Root.scene == scene && !view.Root.activeSelf, "device joins the correct physics scene before activation");
                             view.Root.SetActive(true);
                             Check(view.Root.GetComponent<DeviceBody>().Script == script, "view and gameplay share the same Lua instance");
+                            Check(view.Root.GetComponentsInChildren<Collider>().Where(c => c.enabled && !c.isTrigger)
+                                .All(c => c.sharedMaterial != null && Mathf.Approximately(c.sharedMaterial.bounciness, definition.Bounce)),
+                                $"device {definition.Id} applies its configured bounce to solid colliders");
                             Check(script.HasFunction("OnContact") || script.HasFunction("OnField") || script.HasFunction("OnBallUpdate") ||
                                 script.HasFunction("OnTick") || script.HasFunction("OnActivate"), "Lua asset handles gameplay");
                         }

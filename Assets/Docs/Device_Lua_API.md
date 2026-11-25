@@ -590,7 +590,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 ### RemoveDevice() → void
 
-无参数。删除当前装置的库存实体并更新布局版本；不是出售操作，不发放金币。之后不要继续访问该实例。其来源效果由生命周期系统清理。
+无参数。销毁当前装置，有配对 ID 时同时销毁同组成员。一次调用更新一次布局版本，金币保持原值。之后结束对已移除实例的访问，来源效果由生命周期系统清理。
 
 <a id="deviceeventcontext"></a>
 
@@ -734,7 +734,7 @@ Build 阶段的一次库存提交上下文。源码：[DeviceOfferContext.cs](..
 
 无参数。标记接受本次提交，重复调用仍只处理这一件物品。
 
-回调正常结束且已接受时，提交暂存的回合/实例数值、耐久和状态文字，删除来源装置实例，更新布局与可用性，再分发新的 `OnOfferAccepted`。接受不发出售金币、不继承来源成长、不扣接收方耐久，也不自动消费配对的另一件物品。
+回调正常结束且已接受时，提交暂存的回合/实例数值、耐久和状态文字，销毁来源装置并更新布局与可用性，再分发新的 `OnOfferAccepted`。配对来源整对消耗，由被拖入的装置确定一次 `OfferedRarity`，只提交一次投喂收益。出售金币由出售入口处理，接收方耐久只应用暂存的改动，来源成长随来源装置一并清除。
 
 未调用 Accept 或回调异常时，上述暂存数据不提交，物品保留。Lua 局部变量不属于事务；需要与物品消耗一起提交的成长使用 `SetRoundValue` / `SetInstanceValue`。提交后的 `OnOfferAccepted` 异常不会撤销已完成事务。
 
@@ -1230,7 +1230,7 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 | --- | --- | --- | --- |
 | `name` | `string` | 非空 | 展示名称。 |
 | `description` | `string` | 非空 | 展示描述。 |
-| `value` | `number` | 装置为非负整数 | 出售单个库存实例的基础金币。 |
+| `value` | `number` | 装置为非负整数 | 一次出售的基础金币，配对装置整对移除并按此值发放一次。 |
 | `purchasePrice` | `number` | 默认 9，装置为正整数 | 一次购买的基础价格；普通/罕见/稀有/传奇标准值为 9/14/23/38，商店修正另行计算。 |
 | `rarity` | `string` | 默认 common | common / uncommon / rare / legendary。 |
 | `durability` | `integer` | 默认 20；-1 或 1–10000 | 每回合默认次数，-1 无限。包内不接受 0。 |
@@ -1246,6 +1246,7 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 | `Value` | `api.Parameter` | 脚本自定义数值参数。 |
 | `Strength` | `api.Strength` | 脚本自定义力度/系数。 |
 | `Range` | `api.Range` | 脚本自定义范围/参数。 |
+| `Bounce` | 物理系统 | 实体碰撞反弹系数，范围 0～1，缺省为 0。反弹取它与弹珠当前 `BALL_BOUNCE` 的较大值。 |
 | `ScoreMultiplier` | `api.ScoreMultiplier` | 装置完整配置倍率。 |
 | `Radius` | `Motion.Source.Radius` / E 的 `Radius` | 装置占位半径；C 的 Radius 是弹珠半径。 |
 | `Cooldown` / `MaxTriggersPerBall` | `Trigger` / `TryPrepareTrigger` | 公共冷却和每球访问上限。 |

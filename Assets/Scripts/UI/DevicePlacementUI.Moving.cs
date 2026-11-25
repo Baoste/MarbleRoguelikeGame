@@ -73,14 +73,16 @@ public sealed partial class DevicePlacementUI
         if (drop == DropTarget.Sale || drop == DropTarget.Backpack)
         {
             if (drop == DropTarget.Sale && TryGetSelectedDevice(out var device))
-                LastFeedback = $"松开出售「{device.Name}」，获得 {device.SellPrice} 金币。";
+                LastFeedback = $"松开出售{DeviceDisplayText.SaleTarget(device)}，获得 {device.SellPrice} 金币。";
             else
                 LastFeedback = IsMovingPlacedDevice ? "松开收回背包" : "松开放回背包";
             previewObject.SetActive(false);
             return;
         }
 
-        LastFeedback = drop == DropTarget.Offer ? $"松开投入「{receiver.Name}」，会消耗这件装置。" : string.Empty;
+        LastFeedback = drop == DropTarget.Offer && TryGetSelectedDevice(out var offered)
+            ? $"松开投入「{receiver.Name}」，会消耗{(offered.PairId != 0 ? "整对装置" : "这件装置")}。"
+            : string.Empty;
         if (!TryProjectOntoPlacementPlane(pointer, out var worldPoint))
         {
             previewObject.SetActive(false);

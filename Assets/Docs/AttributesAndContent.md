@@ -38,7 +38,7 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 | BALL_RUSH_GAIN | 旧兼容属性；当前球贡献从 2 开始，每次有效装置作用 +5，通过 RushContribution API 累积 |
 | BALL_RADIUS | 独立球体半径，乘 0.16 换算为世界单位；不随抽血档位变化 |
 | BALL_MASS | 直接设置实际刚体质量，不再乘抽血量 |
-| BALL_BOUNCE | 独立物理材质，支持 0～2。棋盘障碍按球属性校正反弹，静态或运动学实体装置取球属性和装置材质弹性中的较大值 |
+| BALL_BOUNCE | 独立物理材质，支持 0～2。棋盘障碍按球属性校正反弹，静态或运动学实体装置取球属性和 `device.json.Bounce` 中的较大值 |
 | BALL_FRICTION | 独立材质的静摩擦和动摩擦 |
 | BALL_GRAVITY_MOD | 每个 PhysX 子步按该球倍率施加重力 |
 | BALL_LAUNCH_SPEED | 直接设置发射速度（m/s），生成后不持续加速 |

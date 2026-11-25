@@ -339,8 +339,7 @@ namespace MarblesECS
             return result;
         }
         public void BreakPinsOnCross() => ((IMarblePhysicsCommands)C.Physics).BreakPinsOnCross(Device.InstanceId);
-        public void RemoveDevice()
-        { C.Manager.DestroyEntity(deviceEntity); var state = C.Campaign; state.LayoutRevision++; C.Campaign = state; }
+        public void RemoveDevice() => CampaignStateUtility.DestroyDevice(C, deviceEntity);
         /// <summary>Adds (amount - 1) to the device bonus; ordinary settlement applies 1 + total bonus.</summary>
         public void AddScoreMultiplier(double amount)
         {

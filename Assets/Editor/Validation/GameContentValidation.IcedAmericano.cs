@@ -126,7 +126,7 @@ namespace MarblesECS.Editor
                 view.Root.SetActive(true); Physics.SyncTransforms();
                 var colliders = view.Root.GetComponentsInChildren<Collider>(true).Where(c => c.name != "PlacementVolume").ToArray();
                 Check(colliders.Length == 1 && !colliders[0].isTrigger, "coffee cup has one solid collider");
-                Near(.4, colliders[0].sharedMaterial.bounciness, "cup retains its configured elasticity");
+                Near(definition.Bounce, colliders[0].sharedMaterial.bounciness, "cup uses its device.json bounce");
                 Check(view.Root.transform.Find("Cup") != null && view.Root.transform.Find("Ice6") != null && view.Root.transform.Find("Straw") != null, "package includes cup, six ice cubes and straw");
                 float radius = AttributeRuntime.Prepare(c, c.Launcher.Flow).Quote.Radius;
                 var spawn = board.transform.TransformPoint(new Vector3(0, radius + .001f, .9f));
@@ -148,8 +148,8 @@ namespace MarblesECS.Editor
                     Near(19 - pass, simulation.GetOwnedDevices().Single().RemainingDurability, "physical effective-hit wear");
                     VectorNear(solved, body.velocity, "Lua preserves natural collision response");
                     Check(Mathf.Abs(Vector3.Dot(impactNormal, board.transform.up)) < .05f, "cup wall deflects a board-level ball within the board plane");
-                    Check(Mathf.Abs(Vector3.Dot(body.velocity, board.transform.forward) - 1.2f) < .2f,
-                        "a default marble hitting the cup at 3 m/s rebounds along the board at about 1.2 m/s");
+                    Check(Mathf.Abs(Vector3.Dot(body.velocity, board.transform.forward) - 3 * definition.Bounce) < .2f,
+                        "a default marble hitting the cup at 3 m/s rebounds along the board according to device.json bounce");
                 }
                 Near(0, c.Round.RushMeter, "physical cup does not deposit Rush before settlement");
             }

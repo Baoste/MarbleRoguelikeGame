@@ -15,7 +15,7 @@ namespace MarblesECS
                 !CampaignStateUtility.FindDevice(c, targetId, out target)) return false;
             var receiver = c.Manager.GetComponentData<OwnedDeviceData>(target);
             var source = c.Manager.GetComponentData<OwnedDeviceData>(offered);
-            if (!receiver.Placed || (source.Placed &&
+            if (!receiver.Placed || (source.PairId != 0 && source.PairId == receiver.PairId) || (source.Placed &&
                 CampaignStateUtility.Device(c, receiver.DefinitionId)?.AcceptsPlacedOffers != true)) return false;
             script = c.DeviceScripts.Get(targetId, receiver.DefinitionId);
             return script.HasFunction("OnOffer");
@@ -26,21 +26,20 @@ namespace MarblesECS
         {
             if (!Resolve(c, offeredId, targetId, out var offered, out var target, out var script)) return false;
             var api = new DeviceOfferContext(c, target, offered);
-            try
+            using (c.DeviceScripts.BeginCallback())
             {
-                script.Invoke("OnOffer", api);
-                if (!api.Accepted) return false;
-                api.Commit(target);
-                c.Manager.DestroyEntity(offered);
-                c.DeviceScripts.Remove(offeredId);
-                c.Transients.RemoveSource(c, offeredId);
-                var campaign = c.Campaign; campaign.LayoutRevision++; c.Campaign = campaign;
-                DeviceDurabilitySystem.Refresh(c);
-                DeviceScriptSystem.InstanceEvent(c, targetId, "OnOfferAccepted");
-                return true;
+                try
+                {
+                    script.Invoke("OnOffer", api);
+                    if (!api.Accepted || !c.Manager.Exists(offered) || !c.Manager.Exists(target)) return false;
+                    api.Commit(target);
+                }
+                catch (DeviceLuaException error) { Debug.LogException(error); return false; }
+                finally { api.Close(); }
             }
-            catch (DeviceLuaException error) { Debug.LogException(error); return false; }
-            finally { api.Close(); }
+            CampaignStateUtility.DestroyDevice(c, offered);
+            DeviceScriptSystem.InstanceEvent(c, targetId, "OnOfferAccepted");
+            return true;
         }
     }
 }

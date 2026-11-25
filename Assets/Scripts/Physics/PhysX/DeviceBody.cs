@@ -19,6 +19,9 @@ namespace MarblesECS.PhysX
         public string LinkGroup { get; private set; }
         public DeviceLuaScript Script { get; private set; }
         public bool GameplayEnabled { get; private set; } = true;
+        private float? configuredBounce;
+        internal float Bounce => configuredBounce.GetValueOrDefault();
+        private List<PhysicMaterial> runtimeMaterials;
         private readonly List<Collider> disabledByUsage = new List<Collider>();
         internal void SetGameplayEnabled(bool enabled)
         {
@@ -62,9 +65,41 @@ namespace MarblesECS.PhysX
             InstanceId = instanceId; placementRadius = definition.PlacementRadius; Range = definition.Range;
             placementOffset = new Vector3(definition.PlacementOffsetX, definition.PlacementOffsetY, definition.PlacementOffsetZ);
             Strength = definition.Strength; LinkGroup = definition.LinkGroup; Script = script;
+            configuredBounce = definition.Bounce;
+            if (isActiveAndEnabled) ApplyBounce();
         }
-        private void OnEnable() => Active.Add(this);
+        private void OnEnable()
+        {
+            Active.Add(this);
+            if (configuredBounce.HasValue) ApplyBounce();
+        }
         private void OnDisable() => Active.Remove(this);
+        private void ApplyBounce()
+        {
+            if (runtimeMaterials == null)
+            {
+                runtimeMaterials = new List<PhysicMaterial>();
+                foreach (var collider in GetComponentsInChildren<Collider>(true))
+                {
+                    if (collider.isTrigger) continue;
+                    // Retain the authored friction settings and keep the shared asset untouched.
+                    var source = collider.sharedMaterial;
+                    var material = source != null ? Instantiate(source) : new PhysicMaterial();
+                    runtimeMaterials.Add(material);
+                    collider.sharedMaterial = material;
+                }
+            }
+            foreach (var material in runtimeMaterials) material.bounciness = Bounce;
+        }
+        private void OnDestroy()
+        {
+            if (runtimeMaterials == null) return;
+            foreach (var material in runtimeMaterials)
+            {
+                if (Application.isPlaying) Destroy(material);
+                else DestroyImmediate(material);
+            }
+        }
         public MarbleContact Contact(MarbleKey key, Vector3 position, float speed = 0) => new MarbleContact
         { Key = key, TargetId = checked(100000 + InstanceId), Kind = MarbleContactKind.Device, Multiplier = 1, Position = position, Speed = speed, RushDisabled = true };
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

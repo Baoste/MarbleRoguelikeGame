@@ -37,11 +37,8 @@ namespace MarblesECS
             var campaign = context.Campaign;
             long price = CampaignStateUtility.Device(context, device.DefinitionId).SellPrice;
             campaign.Coins = MarbleRules.AddScore(campaign.Coins, price, CampaignStateUtility.MaxCoins);
-            campaign.LayoutRevision++;
-            context.Manager.DestroyEntity(entity);
-            context.DeviceScripts.Remove(instanceId);
-            context.Transients.RemoveSource(context, instanceId);
             context.Campaign = campaign;
+            CampaignStateUtility.DestroyDevice(context, entity);
             return true;
         }
     }

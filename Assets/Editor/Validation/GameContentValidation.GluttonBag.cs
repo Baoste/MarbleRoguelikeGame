@@ -54,7 +54,7 @@ namespace MarblesECS.Editor
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 700, Multiplier = 1, RushDisabled = true });
                 Near(10 * (1 + 2 * gain), f.C.Round.Score + f.C.Round.FractionalScore, "score area applies final accumulated factor");
             }
-            BagRoundsAndLimits(); BagOfferContract(); BagRoundValueContract(); BagOfferUi();
+            BagRoundsAndLimits(); BagOfferContract(); BagAcceptsPairOnce(); BagRoundValueContract(); BagOfferUi();
             foreach (float dt in new[] { .01f, .02f }) GluttonBagPhysics(dt);
             Debug.Log("GLUTTON_BAG_VALIDATION_PASSED: " + (assertions - start) + " assertions; rarity feeding, atomic offers, round preparation, durability, drag UI and real collisions.");
         }
@@ -151,14 +151,40 @@ function Verify() assert(not pcall(function() return saved.RoundId end)) end");
                 Near(99, DeviceRoundState.Get(f.C, entity, "bonus"), "accepted growth committed");
                 Near(12, DeviceInstanceState.Get(f.C, entity, "growth"), "accepted persistent growth committed");
                 Near(7, DeviceDurabilitySystem.Remaining(f.C, f.C.Manager.GetComponentData<OwnedDeviceData>(entity)), "accepted capacity and refill committed");
-                var portal = f.C.Balance.Devices.Single(x => x.Id == 103); CampaignStateUtility.CreateDevice(f.C, portal, portal.Price);
-                var pair = f.Simulation.GetOwnedDevices().Where(x => x.DefinitionId == 103).ToArray();
-                Check(f.Simulation.TryOfferDevice(pair[0].InstanceId, d.InstanceId), "one member of a paired purchase can be offered");
-                Check(CampaignStateUtility.FindDevice(f.C, pair[1].InstanceId, out _), "unoffered paired member remains owned");
                 Check(f.Simulation.SellDevice(d.InstanceId), "receiver can be sold");
                 Check(!CampaignStateUtility.FindDevice(f.C, d.InstanceId, out _), "receiver state is removed with its entity");
             }
         }
+
+        private static void BagAcceptsPairOnce()
+        {
+            foreach (bool sourcePlaced in new[] { false, true })
+            using (var f = new Fixture())
+            {
+                var bag = AddGluttonBag(f);
+                var portal = f.C.Balance.Devices.Single(device => device.Id == 103);
+                CampaignStateUtility.CreateDevice(f.C, portal, portal.Price);
+                CampaignStateUtility.CreateDevice(f.C, portal, portal.Price);
+                var portals = f.Simulation.GetOwnedDevices().Where(device => device.DefinitionId == portal.Id).ToArray();
+                int source = portals[0].InstanceId, partner = portals[1].InstanceId;
+                MorePlace(f.C, source, sourcePlaced);
+                MorePlace(f.C, partner, !sourcePlaced);
+                BagBuild(f.C);
+                long coins = f.C.Campaign.Coins;
+                int revision = f.C.Campaign.LayoutRevision;
+                Check(f.Simulation.TryOfferDevice(source, bag.InstanceId), "feeding accepts a portal from the board or inventory");
+                var remaining = f.Simulation.GetOwnedDevices();
+                Check(remaining.Length == 3 && remaining.Where(device => device.DefinitionId == portal.Id)
+                    .All(device => device.PairId == portals[2].PairId), "feeding removes both members of just the source pair");
+                Check(!f.Simulation.TryOfferDevice(partner, bag.InstanceId), "feeding the deleted partner cannot commit again");
+                CampaignStateUtility.FindDevice(f.C, bag.InstanceId, out var receiver);
+                double gain = ((int)portal.Rarity + 1) * f.C.Balance.Devices.Single(device => device.Id == bag.DefinitionId).Strength;
+                Near(gain, DeviceRoundState.Get(f.C, receiver, "bonus"), "pair consumption grants the packaged bag a single rarity bonus");
+                Check(f.C.Campaign.Coins == coins && f.C.Campaign.LayoutRevision == revision + 1,
+                    "pair feeding changes layout once without granting a sale payout");
+            }
+        }
+
         private static void BagRoundValueContract()
         {
             using (var f = new Fixture())

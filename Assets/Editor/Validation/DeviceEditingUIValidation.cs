@@ -313,19 +313,28 @@ namespace MarblesECS.Editor
                 yield return null;
                 Check(game.GetOwnedDevices().All(d => d.InstanceId != id) && game.Session.Coins == coins + price, "the release removes one instance and credits its value");
                 Check(!placement.HandleBoardPointerUp(salePoint) && game.Session.Coins == coins + price, "a second release cannot pay twice");
+                long portalCoins = game.Session.Coins;
+                long portalPrice = Device(portals[0]).SellPrice;
                 Check(placement.HandleBoardPointerDown(Point(Device(portals[0]))), "pick up one paired portal");
+                sale.Refresh();
+                Check(sale.Title.text.Contains("整对") && sale.Title.text.Contains(portalPrice.ToString()),
+                    "the sale preview shows a pair and one payout");
                 Check(placement.HandleBoardPointerUp(salePoint), "release the portal to sell it");
                 yield return null;
-                Check(game.GetOwnedDevices().Length == 1 && Device(portals[1]).PairId == pairId, "selling one portal retains its partner");
+                Check(game.GetOwnedDevices().All(d => d.PairId != pairId) && !placement.GetPlacedDeviceRoot(portals[0]) &&
+                    !placement.GetPlacedDeviceRoot(portals[1]), "selling one portal clears both views and inventory entries");
+                Check(game.Session.Coins == portalCoins + portalPrice, "selling the portal pair credits one value");
 
                 var bagDefinition = context.Balance.Devices.Single(d => d.Id == 9026);
-                var foodDefinition = context.Balance.Devices.Single(d => d.Id == 9002);
+                var foodDefinition = context.Balance.Devices.Single(d => d.Id == 103);
                 CampaignStateUtility.CreateDevice(context, bagDefinition, bagDefinition.Price);
                 int bag = context.Campaign.NextDeviceId;
                 CampaignStateUtility.CreateDevice(context, foodDefinition, foodDefinition.Price);
                 int food = context.Campaign.NextDeviceId;
+                int foodPartner = food - 1;
                 PlaceFree(bag);
                 PlaceFree(food);
+                PlaceFree(foodPartner);
                 yield return null;
                 var originalFood = Device(food);
                 Vector2 pickup = Point(originalFood);
@@ -339,7 +348,8 @@ namespace MarblesECS.Editor
                 var outline = placement.BoardRoot.GetComponentsInChildren<MeshRenderer>()
                     .SelectMany(r => r.sharedMaterials).FirstOrDefault(m => m && m.shader.name == "Marbles/QuickOutline/Fill");
                 Check(outline && outline.GetColor("_OutlineColor").g > outline.GetColor("_OutlineColor").r &&
-                    rig.TooltipText.text.Contains("松开投入「大胃袋」"), "eligible drop shows a green preview and a consumption hint");
+                    rig.TooltipText.text.Contains("松开投入「大胃袋」") && rig.TooltipText.text.Contains("整对装置"),
+                    "eligible drop shows the green preview and pair consumption hint");
                 Check(Device(food).Placed && game.Session.LayoutRevision == offerRevision, "hovering over the receiver preserves the food's placement");
                 placement.CancelPlacement();
                 Check(!placement.HandleBoardPointerUp(receiver) && Device(food).X == originalFood.X &&
@@ -348,22 +358,23 @@ namespace MarblesECS.Editor
 
                 Check(placement.HandleBoardPointerDown(pickup) && placement.HandleBoardPointerUp(receiver),
                     "releasing the placed device on the bag completes the offer");
-                Check(game.GetOwnedDevices().All(d => d.InstanceId != food) && !placement.GetPlacedDeviceRoot(food) &&
+                Check(game.GetOwnedDevices().All(d => d.PairId != originalFood.PairId) && !placement.GetPlacedDeviceRoot(food) &&
+                    !placement.GetPlacedDeviceRoot(foodPartner) &&
                     placement.SelectedInstanceId == 0 && game.Session.LayoutRevision == offerRevision + 1,
-                    "the accepted drop consumes only the dragged device and clears its view");
+                    "the accepted drop consumes the pair and clears both views");
                 var growth = bagDefinition.Strength * ((int)originalFood.Rarity + 1);
                 rig.UpdateTooltip(receiver);
                 Check(game.GetDeviceStatus(bag).Contains("成长 +" + growth) && rig.TooltipText.text.Contains("已投入「大胃袋」") &&
                     game.Session.Coins == offerCoins && Device(bag).RemainingDurability == receiverDurability,
                     "the real drop reports growth without selling or spending the bag's durability");
 
-                Check(placement.HandleBoardPointerDown(Point(Device(portals[1]))), "pick up the remaining portal before opening the library");
+                Check(placement.HandleBoardPointerDown(Point(Device(bag))), "pick up the remaining device before opening the library");
                 var library = UnityEngine.Object.FindObjectOfType<ItemLibraryUI>(); library.Open(); yield return null;
                 sale.Refresh(); Check(placement.SelectedInstanceId == 0 && sale.Group.alpha == 0, "opening the item library cancels editing and hides the sale target");
                 library.Close(); while (library.InputBlocked) yield return null;
                 sale.Refresh(); viewport.Render(); Click(rig.Continue.gameObject); yield return null;
                 sale.Refresh(); Check(game.Session.Phase == RoundPhase.Playing && sale.Group.alpha == 0 && !sale.Group.blocksRaycasts, "starting the round removes editing UI and preserves the device");
-                CheckPlacedHover(portals[1], "Playing");
+                CheckPlacedHover(bag, "Playing");
                 viewport.Capture(Path.Combine(Output, "hover-playing-1920x1080.png"));
             }
         }

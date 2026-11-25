@@ -1,6 +1,7 @@
 {
   "name": "吸吸",
-  "description": "吸引附近弹珠聚成一团，2 秒后保留各自进入时的速度大小，沿棋盘向下释放。",
+  "description": "聚拢附近弹珠，再向下释放。",
+  "_descriptionDetail": "吸引附近弹珠聚成一团，2 秒后保留各自进入时的速度大小，沿棋盘向下释放。",
   "value": 120,
   "type": "device",
   "purchasePrice": 14,

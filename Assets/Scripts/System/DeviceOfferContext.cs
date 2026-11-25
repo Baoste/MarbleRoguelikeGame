@@ -49,7 +49,7 @@ namespace MarblesECS
         public int RemainingDurability => DeviceDurabilitySystem.Remaining(C, device);
         public void SetDurabilityLimit(int maximum) { _ = C; device = DeviceDurabilitySystem.WithLimit(device, maximum); }
         public void RestoreDurability() => device = DeviceDurabilitySystem.Restored(C, device);
-        /// <summary>Marks the offered device instance for consumption if the callback succeeds.</summary>
+        /// <summary>Accepts one offer. A paired device is consumed with the rest of its pair.</summary>
         public void Accept() { _ = C; Accepted = true; }
         public void SetStatus(string text) { _ = C; status = text ?? string.Empty; }
         internal void Commit(Entity target)

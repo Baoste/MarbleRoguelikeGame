@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using MarblesECS;
+using MarblesECS.Presentation;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -55,7 +56,7 @@ public sealed partial class DevicePlacementUI
         {
             case DropTarget.Sale:
                 committed = Controller.SellDevice(device.InstanceId);
-                LastFeedback = committed ? $"已出售「{device.Name}」，获得 {device.SellPrice} 金币。" : "出售未完成。";
+                LastFeedback = committed ? $"已出售{DeviceDisplayText.SaleTarget(device)}，获得 {device.SellPrice} 金币。" : "出售未完成。";
                 break;
             case DropTarget.Backpack:
                 committed = device.Placed && Controller.RemoveDevicePlacement(device.InstanceId);

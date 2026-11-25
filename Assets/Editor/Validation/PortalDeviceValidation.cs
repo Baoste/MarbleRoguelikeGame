@@ -16,6 +16,8 @@ namespace MarblesECS.Editor
         {
             assertions = 0;
             PurchasePairs();
+            SellPair();
+            DestroyPairFromLua();
             PreserveMotion();
             PhysicalCrossing();
             for (int fields = 0; fields < 4; fields++) ForceEnvironment((fields & 1) != 0, (fields & 2) != 0);
@@ -48,6 +50,79 @@ namespace MarblesECS.Editor
                 var campaign = r.C.Campaign; campaign.Coins = r.C.Balance.Devices.Single(d => d.Id == 103).Price - 1; r.C.Campaign = campaign;
                 Check(!CampaignShopSystem.Buy(r.C, 0) && r.Simulation.GetOwnedDevices().Length == 4, "insufficient funds cannot create either portal");
             }
+        }
+
+        private static void SellPair()
+        {
+            using var r = new Rig(2);
+            var round = r.C.Round;
+            round.Phase = (byte)RoundPhase.Build;
+            r.C.Round = round;
+            var source = r.Owned[0];
+            var partner = r.Owned[1];
+            Check(r.Simulation.RemoveDevicePlacement(source.InstanceId) && r.Simulation.GetOwnedDevices().Length == 4,
+                "returning a portal to inventory keeps all placements and pair membership independently editable");
+            int revision = r.C.Campaign.LayoutRevision;
+            long coins = r.C.Campaign.Coins;
+            var scripts = r.Views.Take(2).Select(view => view.Root.GetComponent<DeviceBody>().Script).ToArray();
+            Check(r.Simulation.SellDevice(source.InstanceId), "sell a stored portal whose partner is on the board");
+            Check(r.Simulation.GetOwnedDevices().Select(device => device.InstanceId).SequenceEqual(r.Owned.Skip(2).Select(device => device.InstanceId)),
+                "selling removes the whole pair and preserves a different pair of the same definition");
+            Check(r.C.Campaign.Coins == coins + source.SellPrice && r.C.Campaign.LayoutRevision == revision + 1,
+                "selling the pair credits one sale value and changes layout once");
+            Check(scripts.All(script => script.IsDisposed) && r.Views.Take(2).All(view => !view.Root.GetComponent<DeviceBody>().GameplayEnabled),
+                "both scripts are disposed and both colliders are unavailable after the sale");
+            Check(!r.Simulation.SellDevice(partner.InstanceId) && r.C.Campaign.Coins == coins + source.SellPrice,
+                "the deleted partner cannot pay out again");
+        }
+
+        private static void DestroyPairFromLua()
+        {
+            using var r = new Rig(2);
+            const string source = @"
+local saved, finished
+function OnContact(api)
+    saved = api
+    api:ForEachPlacedDevice(api.DefinitionId, 'RemoveFromField', 0)
+    finished = true
+end
+function RemoveFromField(api)
+    saved = api
+    api:ForEachBallInRadius(api.Position, 10, 'DestroyPair')
+    finished = true
+end
+function DestroyPair(api)
+    api:RemoveDevice()
+    api:RemoveDevice()
+end
+function OnDestroy()
+    assert(finished and not pcall(function() return saved.RoundId end), 'Portal teardown preceded callback exit')
+end";
+            r.C.DeviceScripts.CreateScript = resource => resource.CreateScript(source);
+            var scripts = new DeviceLuaScript[2];
+            for (int i = 0; i < scripts.Length; i++)
+            {
+                int id = r.Owned[i].InstanceId;
+                r.C.DeviceScripts.Remove(id);
+                scripts[i] = r.C.DeviceScripts.Get(id, r.Owned[i].DefinitionId);
+            }
+
+            long coins = r.C.Campaign.Coins;
+            int revision = r.C.Campaign.LayoutRevision;
+            var key = r.Launch(new Vector3(0, .085f, .5f), Vector3.zero);
+            bool prematureTeardown = false;
+            void ObserveLog(string message, string stack, LogType type)
+            {
+                if (type == LogType.Exception && message.Contains("Portal teardown preceded callback exit")) prematureTeardown = true;
+            }
+            Application.logMessageReceived += ObserveLog;
+            try { r.Contact(key, 1); }
+            finally { Application.logMessageReceived -= ObserveLog; }
+            Check(!prematureTeardown && scripts.All(script => script.IsDisposed), "both scripts are disposed after nested Lua callbacks close");
+            Check(r.Simulation.GetOwnedDevices().All(device => device.PairId == r.Owned[2].PairId) &&
+                r.Simulation.GetOwnedDevices().Length == 2, "Lua destruction removes exactly the source pair");
+            Check(r.C.Campaign.Coins == coins && r.C.Campaign.LayoutRevision == revision + 1,
+                "repeated Lua removal changes layout once without crediting sale coins");
         }
 
         private static void PreserveMotion()

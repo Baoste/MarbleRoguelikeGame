@@ -1,6 +1,7 @@
 {
   "name": "反重力",
-  "description": "弹珠从装置上方朝上射出，保留速度大小，反转重力 2 秒；撞击其他装置时提前恢复。",
+  "description": "弹珠向上射出，短暂反转重力。",
+  "_descriptionDetail": "弹珠从装置上方朝上射出，保留速度大小，反转重力 2 秒；撞击其他装置时提前恢复。",
   "value": 120,
   "type": "device",
   "purchasePrice": 23,
