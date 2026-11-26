@@ -27,7 +27,7 @@
 ```lua
 function OnContact(api)
     if not api:Trigger() then return end
-    api:AddScoreMultiplier(api.ScoreMultiplier)
+    api:MultiplyScore(api.ScoreMultiplier)
 end
 ```
 
@@ -67,7 +67,7 @@ end
 | `OnOffer(api)` | [DeviceOfferContext](#deviceoffercontext) | Build 阶段向已放置装置提交一件装置时。 |
 | `OnCreated(api)` | [DeviceEventContext](#deviceeventcontext) | 库存实例创建后一次；配对购买中的每件实例分别调用。 |
 | `OnOfferAccepted(api)` | [DeviceEventContext](#deviceeventcontext) | 装置提交事务成功后一次，读取已提交状态。 |
-| `OnRoundStart(api)` | [DeviceEventContext](#deviceeventcontext) | 回合重置和耐久恢复后，按实例 ID 通知全部已拥有装置。 |
+| `OnRoundStart(api)` | [DeviceEventContext](#deviceeventcontext) | 回合重置后按实例 ID 通知已有装置。Playing 中安装新装置时，在碰撞体投影就绪后仅通知该实例。 |
 
 `OnCreated`、`OnOfferAccepted`、`OnRoundStart` 不要求实例已放置、有物理视图或有剩余耐久。没有物理视图时，读取装置姿态属性会失败。
 
@@ -129,8 +129,8 @@ end
 | `DeltaTime` | `number` | 只读 | C / E | 固定模拟步秒数；E 在尚未运行固定步时可能为 0。 |
 | `Range` | `number` | 只读 | C / E | `device.json.Range`，不会自动筛选范围。 |
 | `ScoreMultiplier` | `number` | 只读 | C / E | 当前装置配置倍率，不是球的累计倍率。 |
-| `Coins` | `number` | 只读 | C / E | 实时钱包余额，上限 9,000,000,000,000,000。 |
-| `Blood` / `BloodCapacity` | `number` | 只读 | C / E | 玩家当前血量 / 容量。 |
+| `Coins` | `number` | 只读 | C / E | 旧机台金币余额。每日构筑流程使用独立货币。 |
+| `Blood` / `BloodCapacity` | `number` | 只读 | C / E | 玩家当前血量 / 容量。每日配置了 `bloodProgression.initialBlood` 时使用当天的容量。 |
 | `HeldCount` | `integer` | 只读 | C / E | 当前装置拥有的存活滞留球数量。 |
 | `Vectors` | [DeviceVectorApi](#devicevectorapi) | 只读 | C / E | 纯向量计算。 |
 | `Board` | [DeviceBoardApi](#deviceboardapi) | 只读 | C / E | 全盘状态与临时效果。 |
@@ -166,7 +166,7 @@ end
 
 C 使用世界坐标接触点，滞留完成使用装置的新位置。E 使用已放置装置的位置，瞬态完成回调使用瞬态终点。接口仅提交视觉事件，耐久、随机数和得分由原玩法 API 管理。
 
-`AddScoreMultiplier`、`SetDeviceScoreMultiplier`、`Board:AddScoreMultiplier`、基础价值修改、`AddCoins`、`RestoreBlood` 和 `TrySettleAmount` 已在有效执行时提供默认反馈。自定义复合效果可以在确认生效的分支调用 `api:EmitFloatingText("critical", amount)`。[样式和图集使用说明](FloatingTextSystem_Codex.md#18-实际接入与使用)
+`MultiplyScore`、`TryMultiplyScore`、`SetDeviceScoreMultiplier`、`Board:MultiplyScore`、基础价值修改、`AddBiomassScrap`、`AddCoins`、`RestoreBlood` 和 `TrySettleAmount` 已在有效执行时提供默认反馈。自定义复合效果可以在确认生效的分支调用 `api:EmitFloatingText("critical", amount)`。[样式和图集使用说明](FloatingTextSystem_Codex.md#18-实际接入与使用)
 
 <a id="getroundvalue"></a>
 
@@ -340,8 +340,8 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 | `BallId` | `string` | 只读 | 稳定 ID，格式为“回合:出生序号”；避免 64 位序号转换为 Lua 浮点数。 |
 | `Value` | `number` | 只读 | 当前 `BALL_BASE_VALUE`，含属性修正，不含 RUSH 临时加值。 |
 | `EffectiveValue` | `number` | 只读 | 当前基础价值加 RUSH 临时加值。 |
-| `DeviceScoreMultiplier` | `number` | 只读 | 球持有的累计装置倍率，范围 0–1000；不含临时全盘增量。 |
-| `EffectiveDeviceScoreMultiplier` | `number` | 只读 | 球持有增量与当前全盘增量合成后的装置倍率，范围 0–1000。 |
+| `DeviceScoreMultiplier` | `number` | 只读 | 球持有的装置倍率乘积，读取范围为 0–1000。 |
+| `EffectiveDeviceScoreMultiplier` | `number` | 只读 | 球持有的装置倍率乘以当前有效的全盘倍率，读取范围为 0–1000。 |
 | `HasTriggeredOtherDevice` | `boolean` | 只读 | 是否已有其他装置实例的有效作用历史；相同定义的另一实例也算其他装置。 |
 | `SpawnSourceId` | `integer` | 只读 | 最近生成来源的装置实例 ID；玩家发射为 0。 |
 | `PairId` | `integer` | 只读 | 当前装置配对 ID，0 表示未配对。 |
@@ -366,14 +366,16 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 | [MarkTriggered()](#marktriggered) | `void` | 登记纯 Lua 效果的成功作用。 |
 | [Get(attribute)](#get) / [Global(attribute)](#global) | `number` | 读取球属性 / 全局属性。 |
 | [Set(attribute, value)](#set) / [AddBase(attribute, amount)](#addbase) / [SetCurrent(attribute, value)](#setcurrent) | `void` | 修改基础属性或替换当前属性。 |
-| [AddScoreMultiplier(amount)](#addscoremultiplier) / [SetDeviceScoreMultiplier(amount)](#setdevicescoremultiplier) | `void` | 累加 / 替换球持有的装置倍率。 |
+| [MultiplyScore(factor)](#multiplyscore) / [SetDeviceScoreMultiplier(amount)](#setdevicescoremultiplier) | `void` | 将球持有的装置倍率乘以给定因子 / 替换该倍率。 |
+| [TryMultiplyScore(factor)](#trymultiplyscore) | `boolean` | 施加倍率因子并报告乘积是否变化。 |
 | [AddRushContribution(amount)](#addrushcontribution) | `void` | 增加球的普通 RUSH 贡献。 |
 | [SetScoreRushContribution(amount)](#setscorerushcontribution) / [ClearScoreRushContribution()](#clearscorerushcontribution) | `void` | 设置 / 清除得分区固定贡献。 |
 | [SetAppearance(label, red, green, blue)](#setappearance) | `void` | 修改球文字和颜色。 |
 | [TryConsume(refund)](#tryconsume) / [TrySettleAmount(score)](#trysettleamount) | `boolean` | 消耗球 / 按最终金额结算球。 |
-| [AddCoins(value)](#addcoins) | `void` | 向钱包增加整数金币。 |
+| [AddBiomassScrap(value)](#addbiomassscrap) | `void` | 向当前生产局增加血肉残料。 |
+| [AddCoins(value)](#addcoins) | `void` | 旧机台使用的金币接口。 |
 | [Roll(probability)](#roll) | `boolean` | 概率抽取。 |
-| [CreateCopy()](#createcopy) | `DeviceCopy` | 复制请求。 |
+| [CreateCopy(count = 1)](#createcopy) | `DeviceCopy` | 保留原球的单颗或整批复制请求。 |
 | [CreatePortion(value)](#createportion) | `DevicePortion` | 按价值分出请求。 |
 | [CreateSplitBatch(count, inheritVisits = true)](#createsplitbatch) | `DeviceSplitBatch` | 等分请求。 |
 | [HasCopiedFrom(instanceId)](#hascopiedfrom) / [HasSplitFrom(instanceId)](#hassplitfrom) | `boolean` | 查询生成祖先。 |
@@ -390,7 +392,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 1. 检查剩余耐久、装置公共冷却和 `MaxTriggersPerBall`。
 2. 登记访问和本次耐久。
 3. 设置下次可触发时间。
-4. 将非中性的装置 `MACHINE_MULT` 修正交给 `AddScoreMultiplier`。
+4. 用 `MultiplyScore` 应用装置的非中性 `MACHINE_MULT` 修正。
 
 当前实现的“触发率”用于冷却缩放，不进行随机抽签。冷却间隔至少为一个固定模拟步；该回调已准备过触发、处于 `OnHoldEnd` 或检查未通过时返回 `false`。成功的触发不会因后续出射失败而回滚。
 
@@ -461,14 +463,21 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 替换该属性的基础值和当前值，并移除这颗球在该属性上的 ADD/MUL/SET 修正；结果遵守属性上下限。其他属性、累计装置倍率和独立固定加分不受影响。非法数值抛错且不修改；不扣耐久。
 
 <a id="addscoremultiplier"></a>
+<a id="multiplyscore"></a>
 
-### AddScoreMultiplier(amount) → void
+### MultiplyScore(factor) → void
 
-参数：`amount: number`，完整倍率，有限且非负。
+`factor` 为有限非负的完整倍率。球的装置倍率从 1 开始。每次将当前乘积乘以 `factor`，例如两次 1.5 得到 2.25，两次 0.5 得到 0.25。乘以 1 保持原值，乘以 0 将乘积归零。
 
-累加 `amount - 1`；最终球持有倍率为 `clamp(1 + 累计增量, 0, 1000)`。增量上限 999，负增量保留供后续相加。两次 1.5 得到 2；1 为中性，0 提供 -1 增量。Lua 不要提前减 1。
+撞击时记录乘积，得分区结算时读取。倍率读取上限为 1000，后续因子继续作用于完整乘积。非法因子抛出异常。耐久由 `Trigger` 或 `TryUse` 单独登记。
 
-只记录倍率，到得分区统一计算；不修改基础价值、不立即计分、不扣耐久。非法参数抛出异常且不写入。旧 `MultiplyScore` 使用相同语义。
+`AddScoreMultiplier(amount)` 是同语义的兼容接口。
+
+<a id="trymultiplyscore"></a>
+
+### TryMultiplyScore(factor) → boolean
+
+采用相同的乘法规则。应用因子时返回 `true`，因子为 1 或乘积已经归零时返回 `false`。Lua 可以根据返回值登记耐久。
 
 <a id="setdevicescoremultiplier"></a>
 
@@ -476,9 +485,9 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 参数：`amount: number`，有限 `[0, 1000]`。
 
-把持有增量替换为 `amount - 1`，保留独立基础倍率及固定加分。不立即计分、不扣耐久。非法参数抛出异常。
+将球持有的装置倍率替换为 `amount`，保留当前有效的全盘倍率。非法参数抛出异常。该操作只更新倍率。
 
-例如先设为 0，再增加完整倍率 3，结果为 2。该方法不清除全盘临时装置效果。
+乘以 0 后可以用此方法替换乘积。设为 1 后再乘以 3，球持有的装置倍率为 3。
 
 <a id="addrushcontribution"></a>
 
@@ -534,7 +543,13 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 参数：`value: number`，有限且非负。
 
-向下取整后增加钱包金币，并遵守钱包上限。不消费弹珠、不计回合分数、不扣耐久。负数或非有限数抛出异常；输入至少为 1 时登记有效作用。
+旧机台中向下取整后增加金币，并遵守钱包上限。不消费弹珠、不计回合分数、不扣耐久。负数或非有限数抛出异常；输入至少为 1 时登记有效作用。每日构筑流程会忽略旧金币调用。
+
+<a id="addbiomassscrap"></a>
+
+### AddBiomassScrap(value) → void
+
+仅作用于每日构筑生产局。把有限的非负数 `value` 向下取整，增加 `BiomassScrap`，余额上限为 9,000,000,000,000,000。实际到账时登记作用并提供浮字反馈。装置用 `TryUse` 或 `TryUseOnce` 单独登记耐久。接口只操作血肉残料账户。
 
 <a id="roll"></a>
 
@@ -546,9 +561,9 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 <a id="createcopy"></a>
 
-### CreateCopy() → DeviceCopy
+### CreateCopy(count = 1) → DeviceCopy
 
-无参数。创建保留原球的[复制请求](#devicecopy)，不生成球、不扣耐久。
+创建保留原球的[复制请求](#devicecopy)，`count` 支持 1～20，默认 1。复制一颗可直接用 `TrySpawn`。批量复制用 `TryAddSpawn` 登记每个出口，再用 `TryCommit` 一次提交。
 
 <a id="createportion"></a>
 
@@ -983,16 +998,19 @@ destination.Position
 | `RushChanceBonus` | `number` | 只读 | 旧概率兼容值，新 RUSH 不读取，见兼容接口。 |
 
 <a id="deviceboardapi-addscoremultiplier"></a>
+<a id="deviceboardapi-multiplyscore"></a>
 
-### AddScoreMultiplier(amount, seconds) → integer
+### MultiplyScore(factor, seconds) → integer
 
-参数：`amount: number`，有限 `[0, 1000]` 的完整倍率；`seconds: number`，有限 `(0, 60]`。
+`factor` 为有限 `[0, 1000]` 的完整倍率，`seconds` 为有限 `(0, 60]` 的模拟秒数。
 
-注册独立的全盘临时增量 `amount - 1`，成功返回正整数效果 ID。非运行阶段、来源不可执行或同时已有 256 份效果时返回 0；非法参数抛出异常。
+注册全盘临时倍率，成功返回正整数效果 ID。非运行阶段、来源不可执行或同时已有 256 份效果时返回 0。非法参数抛出异常。
 
-不同效果增量相加、各自计时，不自动合并同一来源。不扣耐久；来源耗尽不会提前撤销已开始效果，移除/收回或回合结束时取消。
+同时有效的全盘因子相乘，各自计时。耐久由 Lua 单独登记。已开始的效果可持续到期，来源移除、收回或回合结束时取消。
 
-该增量在结算和有效倍率查询时实时合成，作用于现有和后来生成的球；不写入球持有倍率，复制/分裂不会永久继承它。TrySettleAmount 不隐式追加它。
+结算和有效倍率查询会将现有或后来生成的球的持有倍率乘以当前有效的全部全盘因子。复制和分裂继承球持有的倍率，全盘倍率随各自的期限生效。`TrySettleAmount` 按传入金额结算。
+
+`AddScoreMultiplier(amount, seconds)` 是同语义的兼容接口。
 
 <a id="deviceboardapi-getscoremultiplierendtime"></a>
 
@@ -1025,7 +1043,7 @@ destination.Position
 
 ## DeviceCopy
 
-由 `api:CreateCopy()` 创建。源码：[DeviceCopy.cs](../Scripts/System/DeviceCopy.cs)。
+由 `api:CreateCopy(count)` 创建。源码：[DeviceCopy.cs](../Scripts/System/DeviceCopy.cs)。
 
 ### 属性
 
@@ -1049,7 +1067,7 @@ destination.Position
 
 参数：`amount: number`，有限 `[0, 1000]`。
 
-仅覆盖副本的累计装置倍率，内部保存 amount - 1，保留独立基础倍率和其他属性。未调用时继承原球持有倍率。非法值或已提交返回 false。
+将副本持有的装置倍率设为 `amount`，保留独立基础倍率和其他属性。默认继承原球的乘积。非法值或已提交时返回 false。
 
 <a id="devicecopy-tryspawn"></a>
 
@@ -1060,6 +1078,10 @@ destination.Position
 成功生成一颗副本返回 true，原球保留；失败清理候选球并返回 false。副本沿用原球尺寸、质量、属性修正及到期时间、持有倍率、RUSH、外观、临时重力截止时间、家族及剩余寿命。旋转沿用原球，新球角速度为零。
 
 普通访问记录不继承，只有 Visit(..., true) 标记的记录继承；作用历史和复制/等分祖先继承。复制祖先加入本实例，SpawnSourceId 改为本实例，ReplicationGeneration 加 1，Generation 不增加。复制代数使用 MaxSplitGeneration 上限，不重新抽血或增加家族返还次数。
+
+### TryAddSpawn(position, velocity) / TryCommit()
+
+`TryAddSpawn` 登记有限的世界坐标和速度，达到 `count` 后提交。所有副本使用相同的价值策略和继承规则。任一位置被物理阻挡或无法生成时，`TryCommit` 返回 false，回收本批次已经生成的副本。原球始终保留。脚本在提交成功后登记有效耐久。
 
 <a id="deviceportion"></a>
 
@@ -1264,7 +1286,7 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 
 | 签名 / 属性 | 类型 / 返回值 | 当前语义 |
 | --- | --- | --- |
-| `MultiplyScore(factor)` | `number → void` | 转发 AddScoreMultiplier，仍只累加 factor - 1。 |
+| `AddScoreMultiplier(amount)` | `number → void` | 调用 `MultiplyScore(amount)`。 |
 | `Speed` | 只读 `number` | Motion.Speed。 |
 | `ScaleVelocity(scale)` | `number → boolean` | Motion.TryScaleSpeed(scale)。 |
 | `Exit(direction, speed, angle = 0)` | `string, number, number → boolean` | 从本装置发射；direction 为 "down" 时使用 Down，其余值使用 Forward，再绕 Up 偏转 angle 度。 |
@@ -1298,7 +1320,7 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 
 ### 耐久
 
-耐久按库存实例、回合计算，下一回合恢复至实例有效上限。-1 无限；运行时上限 0 可用于休眠。
+耐久由实例独立记录，-1 表示无限。每日构筑的实例安装时满耐久，耗尽后在固定步末完成销毁，发出 `DeviceBrokenEvent`，并释放 Lua、表现和原占位。已接受的滞留和持续窗口结束前，实例会保留必要的完成回调。独立机台流程按原库存回合规则恢复耐久，并支持上限 0 的休眠实例。
 
 即时效果通常用 Trigger 或 Visit + TryUse。储存/充能效果在释放时扣除：接纳、充能、取消、空激活不扣，成功完成一批或一颗由 Lua 用 TryUseOnce 定义。最后一点耐久必须完成已接受的批次或持续时间。
 
@@ -1337,9 +1359,9 @@ HasTriggeredOtherDevice 按实例查询成功效果，不是访问尝试。成�
 
 底部流失按普通贡献入账；普通/赌博得分区按贡献 ×1.5 或 SetScoreRushContribution 的覆盖值入账。TryConsume、寿命结束、清理及显式 TrySettleAmount 不冒充入区/落底。
 
-RUSH 达到 666 后清零并启动，期间不入账、不刷新；当前基础时长 6 秒，触发球可附加 RushDurationBonus。结束后进入 3 秒冷却，冷却期间底部、普通得分区、赌博得分区均不向 RUSH 条入账，台球的正负覆盖贡献同样忽略，不缓存补加；普通得分照常。冷却时 RushActive 为 false，免扣血、射速和临时价值加成均已结束。暂停冻结计时，新回合清空冷却。RUSH 临时价值 +5 通过 EffectiveValue 读取，不写入永久基础价值，也不均分/复制进基础价值。其他 RUSH 与开奖规则见 [Balance.md](Balance.md)。
+RUSH 达到 666 后清零并启动，期间暂停充能，基础时长为 6 秒，触发球可附加 RushDurationBonus。结束后进入 3 秒冷却，冷却期间照常得分，RUSH 贡献当次丢弃。冷却时 RushActive 为 false，免扣血、射速和临时价值加成均已结束。暂停冻结计时，新回合清空冷却。RUSH 临时价值 +1 通过 EffectiveValue 读取，普通结算和 Lua 可在活动期间读到这项加成。弹珠复制与分裂沿用基础价值的原有规则。其他 RUSH 与开奖规则见 [Balance.md](Balance.md)。
 
-撞击装置倍率遵循 `1 + Σ(amount - 1)`，基础 1 只算一次。球持有增量、全盘临时增量与其他独立倍率分别维护，到得分区统一合成；直接金额结算只使用 Lua 提供的金额。
+撞击时将球持有的倍率与本次因子相乘。进入得分区时乘入仍有效的全盘倍率及其他结算倍率，并应用结算上限。直接金额结算使用 Lua 提供的金额。
 
 ### 状态与异常
 
@@ -1351,12 +1373,12 @@ Lua 实例可跨回调保存普通状态，但引擎不会自动清空所有 Lua
 
 ## 最小示例
 
-### 碰撞后累加倍率
+### 碰撞后应用倍率
 
 ```lua
 function OnContact(api)
     if not api:Trigger() then return end
-    api:AddScoreMultiplier(1.5)
+    api:MultiplyScore(1.5)
 end
 ```
 

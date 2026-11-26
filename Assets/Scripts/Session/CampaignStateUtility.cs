@@ -26,12 +26,34 @@ namespace MarblesECS
             return false;
         }
 
-        internal static void CreateDevice(SimulationContext context, DeviceDefinition definition, long price)
+        internal static void CreateDevice(SimulationContext context, DeviceDefinition definition, long price,
+            bool isStarterRefill = false)
         {
             int quantity = definition.PurchaseQuantity;
             int pair = quantity > 1 ? context.Campaign.NextDeviceId + 1 : 0;
             for (int i = 0; i < quantity; i++)
-                CreateSingleDevice(context, definition, price / quantity + (i < price % quantity ? 1 : 0), pair);
+                CreateSingleDevice(context, definition, new OwnedDeviceData
+                {
+                    PurchasePrice = price / quantity + (i < price % quantity ? 1 : 0),
+                    PairId = pair,
+                    IsStarterRefill = isStarterRefill
+                });
+        }
+
+        internal static long SellPrice(DeviceDefinition definition, OwnedDeviceData device) =>
+            device.IsStarterRefill ? 0 : definition.SellPrice;
+
+        internal static void RestockStartingDevice(SimulationContext context, uint definitionId, int placingInstanceId = 0)
+        {
+            if (!context.Campaign.RestockStartingDevices) return;
+            using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
+                foreach (var entity in entities)
+                {
+                    var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+                    if (device.DefinitionId == definitionId && !device.Placed && device.InstanceId != placingInstanceId)
+                        return;
+                }
+            CreateDevice(context, Device(context, definitionId), 0, isStarterRefill: true);
         }
 
         internal static void DestroyDevice(SimulationContext context, Entity entity)
@@ -90,24 +112,32 @@ namespace MarblesECS
             return count;
         }
 
-        private static void CreateSingleDevice(SimulationContext context, DeviceDefinition definition, long price, int pair)
+        internal static Entity CreateSingleDevice(SimulationContext context, DeviceDefinition definition, OwnedDeviceData device)
         {
             var campaign = context.Campaign;
-            int instanceId = checked(campaign.NextDeviceId + 1);
-            var entity = CreateDeviceEntity(context, new OwnedDeviceData
-                { InstanceId = instanceId, DefinitionId = definition.Id, PurchasePrice = price, PairId = pair },
-                new StableIdentity { StableId = ++context.NextStableId });
-            if (AttributeRuntime.Enabled(context))
-            {
-                AttributeRuntime.Initialize(context, entity);
-                AttributeRuntime.SetBase(context, entity, GameAttribute.DEVICE_COOLDOWN, definition.Cooldown);
-                AttributeRuntime.SetBase(context, entity, GameAttribute.DEVICE_TRIGGER_RATE, 1);
-                AttributeRuntime.SetBase(context, entity, GameAttribute.MACHINE_MULT, 1);
-            }
-            campaign.NextDeviceId = instanceId;
+            device.InstanceId = checked(campaign.NextDeviceId + 1);
+            device.DefinitionId = definition.Id;
+            var entity = CreateDeviceEntity(context, device, new StableIdentity { StableId = ++context.NextStableId });
+            campaign.NextDeviceId = device.InstanceId;
             campaign.LayoutRevision++;
             context.Campaign = campaign;
-            DeviceScriptSystem.InstanceEvent(context, instanceId, "OnCreated");
+            try
+            {
+                if (AttributeRuntime.Enabled(context))
+                {
+                    AttributeRuntime.Initialize(context, entity);
+                    AttributeRuntime.SetBase(context, entity, GameAttribute.DEVICE_COOLDOWN, definition.Cooldown);
+                    AttributeRuntime.SetBase(context, entity, GameAttribute.DEVICE_TRIGGER_RATE, 1);
+                    AttributeRuntime.SetBase(context, entity, GameAttribute.MACHINE_MULT, 1);
+                }
+                DeviceScriptSystem.InstanceEvent(context, device.InstanceId, "OnCreated");
+                return entity;
+            }
+            catch
+            {
+                DestroyDevice(context, entity);
+                throw;
+            }
         }
 
         internal static Entity CreateDeviceEntity(SimulationContext context, OwnedDeviceData device, StableIdentity identity)

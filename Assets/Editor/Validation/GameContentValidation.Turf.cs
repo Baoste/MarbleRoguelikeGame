@@ -44,7 +44,7 @@ namespace MarblesECS.Editor
                 Near(2, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(child)).ScoreMultiplier, "device factors average without counting base twice");
                 Near(99, f.Simulation.GetMarbleAttribute(a, GameAttribute.BALL_BASE_VALUE), "first original stays unchanged by pairing");
                 Near(pair.Item2, f.Simulation.GetMarbleAttribute(b, GameAttribute.BALL_BASE_VALUE), "second original stays unchanged");
-                Near(3.5, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "first original multiplier unchanged");
+                Near(4.5, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "first original keeps the factor applied after capture");
                 Near(2.5, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(b)).ScoreMultiplier, "second original multiplier unchanged");
                 Near(0, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(child)).ScoreBonus, "child has no inherited fixed bonus");
                 Near(0, f.C.Manager.GetBuffer<MarbleModifier>(f.Ball(child)).Length, "child has no inherited flat score modifier");
@@ -151,7 +151,7 @@ namespace MarblesECS.Editor
                 Check(copy.TrySpawn(Vector3.one * 3, Vector3.zero), "copy generates with configured multiplier");
                 Check(!copy.TrySetDeviceScoreMultiplier(1), "submitted request cannot mutate its child");
                 var child = f.C.Marbles.Keys.OrderBy(k => k.Sequence).Last();
-                Near(factor, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(child)).ScoreMultiplier, "replacement is amount minus one, including zero");
+                Near(factor, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(child)).ScoreMultiplier, "replacement accepts the whole factor, including zero");
                 Near(3, api.DeviceScoreMultiplier, "replacement never changes parent's multiplier");
                 Near(10, f.Simulation.GetMarbleAttribute(child, GameAttribute.BALL_BASE_VALUE), "multiplier override does not change copied value");
                 Near(20, api.RemainingDurability, "multiplier/copy primitives do not implicitly consume wear");
@@ -187,7 +187,7 @@ namespace MarblesECS.Editor
                     simulation.FireOnce(); simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge);
                     var key = c.Marbles.Keys.OrderBy(k => k.Sequence).Last(); var body = Body(key).Body; body.drag = body.angularDrag = 0;
                     AttributeRuntime.SetBase(c, c.Marbles[key], GameAttribute.BALL_BASE_VALUE, value);
-                    var score = c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]); score.AddDeviceMultiplier(factor); c.Manager.SetComponentData(c.Marbles[key], score);
+                    var score = c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]); score.MultiplyDeviceMultiplier(factor); c.Manager.SetComponentData(c.Marbles[key], score);
                     Check(bridge.TrySetVelocity(key, incoming), "launch input at real turf"); return key;
                 }
                 void Hit(MarbleKey key)

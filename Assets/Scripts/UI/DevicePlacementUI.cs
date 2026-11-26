@@ -26,6 +26,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
     public DeviceSellAreaUI SellArea;
 
     public int SelectedInstanceId { get; private set; }
+    public uint SelectedDefinitionId { get; private set; }
     public string LastFeedback { get; private set; }
 
     private readonly Dictionary<int, PlacedDeviceView> placedObjects = new Dictionary<int, PlacedDeviceView>();
@@ -41,6 +42,8 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         RestoreSelectedView();
         IsMovingPlacedDevice = false;
         SelectedInstanceId = 0;
+        SelectedDefinitionId = 0;
+        installByClick = false;
         preview?.Dispose();
         preview = null;
         previewOutline?.Dispose();
@@ -68,7 +71,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         if (Input.GetMouseButtonDown(0)) HandleBoardPointerDown(pointer);
         if (Input.GetKeyDown(KeyCode.R)) RotateSelected(45);
         if (Input.GetMouseButtonUp(0) && IsMovingPlacedDevice) HandleBoardPointerUp(pointer);
-        UpdatePlacementPointer(IsDraggingInventory ? dragPointer : pointer);
+        UpdatePlacementPointer(IsDraggingInventory && !installByClick ? dragPointer : pointer);
 #else
         ValidateSelection();
 #endif
@@ -118,14 +121,24 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         int roundId = Controller.Snapshot.RoundId;
         if (revision == displayedRevision && roundId == displayedRoundId)
             return;
-        displayedRevision = revision;
-        displayedRoundId = roundId;
-
-        ClearPlacedObjects();
+        if (roundId != displayedRoundId) ClearPlacedObjects();
         if (!Controller.HasProductionFeature(ProductionFeature.DevicePlacement)) return;
+        var removed = new HashSet<int>(placedObjects.Keys);
         foreach (OwnedDeviceSnapshot device in Controller.GetOwnedDevices())
         {
             if (!device.Placed) continue;
+            if (placedObjects.TryGetValue(device.InstanceId, out var existing))
+            {
+                removed.Remove(device.InstanceId);
+                if (existing.Device.X != device.X || existing.Device.Z != device.Z || existing.Device.Angle != device.Angle)
+                {
+                    ClearPlacedDeviceHover();
+                    SetDeviceTransform(existing.Root.transform, device.X, device.Z);
+                    existing.Root.transform.rotation *= Quaternion.Euler(0, device.Angle, 0);
+                }
+                existing.Device = device;
+                continue;
+            }
             var handle = DeviceView.Create(device, BoardRoot, Controller.DeviceScript(device));
             var item = handle.Root;
             SetDeviceTransform(item.transform, device.X, device.Z);
@@ -133,8 +146,17 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
             placedObjects.Add(device.InstanceId, new PlacedDeviceView(handle, device));
             item.SetActive(true);
         }
+        foreach (int id in removed)
+        {
+            var view = placedObjects[id];
+            if (view == hoveredView) ClearPlacedDeviceHover();
+            view.Dispose();
+            placedObjects.Remove(id);
+        }
         HideSelectedView();
         Physics.SyncTransforms();
+        displayedRevision = revision;
+        displayedRoundId = roundId;
     }
 
     private void SetDeviceTransform(Transform device, float boardX, float boardZ)
@@ -198,6 +220,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         if (dayProjectionController == null) return;
         dayProjectionController.DayBoardResetting += ResetDayProjection;
         dayProjectionController.DayBoardRestored += RestoreDayProjection;
+        dayProjectionController.DeviceLayoutChanged += RestoreDayProjection;
     }
 
     private void UnbindDayProjection()
@@ -205,6 +228,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         if (ReferenceEquals(dayProjectionController, null)) return;
         dayProjectionController.DayBoardResetting -= ResetDayProjection;
         dayProjectionController.DayBoardRestored -= RestoreDayProjection;
+        dayProjectionController.DeviceLayoutChanged -= RestoreDayProjection;
         dayProjectionController = null;
     }
 

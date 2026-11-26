@@ -37,8 +37,10 @@ namespace MarblesECS
                 catch (DeviceLuaException error) { Debug.LogException(error); return false; }
                 finally { api.Close(); }
             }
+            uint definitionId = c.Manager.GetComponentData<OwnedDeviceData>(offered).DefinitionId;
             CampaignStateUtility.DestroyDevice(c, offered);
             DeviceScriptSystem.InstanceEvent(c, targetId, "OnOfferAccepted");
+            CampaignStateUtility.RestockStartingDevice(c, definitionId);
             return true;
         }
     }

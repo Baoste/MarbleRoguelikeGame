@@ -49,7 +49,7 @@ namespace MarblesECS.Editor
                 Near(13, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "original value is unchanged");
                 Near(.7, f.Simulation.GetMarbleAttribute(copyKey, GameAttribute.BALL_RADIUS), "copy keeps modified size");
                 Near(2, f.Simulation.GetMarbleAttribute(copyKey, GameAttribute.BALL_MASS), "copy keeps modified mass");
-                Near(2, f.C.Manager.GetComponentData<MarbleScore>(copy).ScoreMultiplier, "copy inherits additive multipliers");
+                Near(2.25, f.C.Manager.GetComponentData<MarbleScore>(copy).ScoreMultiplier, "copy inherits the multiplier product");
                 Near(0, f.C.Manager.GetComponentData<MarbleScore>(copy).ScoreBonus, "zero override removes flat score");
                 Check(f.C.Manager.GetBuffer<MarbleModifier>(copy).Length == 0, "zero override removes inherited flat modifiers");
                 Near(expiry, f.C.Manager.GetComponentData<Lifetime>(copy).ExpireTick, "copy does not restart lifespan");
@@ -62,7 +62,7 @@ namespace MarblesECS.Editor
                 f.Step(new MarbleContact { Key = copyKey, TargetId = 700, Kind = MarbleContactKind.Score, Multiplier = 1, RushDisabled = true });
                 Near(0, f.C.Round.Score + f.C.Round.FractionalScore, "untouched zero copy settles for zero even with inherited multiplier");
                 f.Step(new MarbleContact { Key = key, TargetId = 700, Kind = MarbleContactKind.Score, Multiplier = 1, RushDisabled = true });
-                Near(58, f.C.Round.Score + f.C.Round.FractionalScore, "original value and flat bonuses are untouched");
+                Near(65.25, f.C.Round.Score + f.C.Round.FractionalScore, "original value and flat bonuses are untouched");
             }
             using (var f = new Fixture())
             {

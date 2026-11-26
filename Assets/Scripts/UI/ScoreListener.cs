@@ -16,29 +16,24 @@ public class ScoreListener : MonoBehaviour
     public UnityEngine.UI.Slider RushSlider;
     public TMP_Text ScoreStackText;
     public UnityEngine.UI.Slider ScoreStackSlider;
+    private BloodValueBar bloodValueBar;
 
     private void OnEnable()
     {
-        if (Controller != null)
-        {
-            Controller.Scored += OnScored;
-            Controller.BloodChanged += OnBloodChanged;
-        }
+        if (Controller != null) Controller.Scored += OnScored;
 
         RefreshScoreText();
-        RefreshBloodSlider();
         RefreshStatusBars();
     }
 
     private void OnDisable()
     {
         if (StatusHud != null) StatusHud.alpha = 0;
-        if (Controller != null)
-        {
-            Controller.Scored -= OnScored;
-            Controller.BloodChanged -= OnBloodChanged;
-        }
+        if (Controller != null) Controller.Scored -= OnScored;
+        bloodValueBar?.Hide();
     }
+
+    private void OnDestroy() => bloodValueBar?.Dispose();
 
     private void OnScored(MarbleScoreEvent result)
     {
@@ -46,22 +41,6 @@ public class ScoreListener : MonoBehaviour
         //Debug.Log("当前回合总分：" + result.RoundScore);
         //Debug.Log("得分区 ID：" + result.ZoneId);
         RefreshScoreText();
-    }
-
-    private void OnBloodChanged(float blood)
-    {
-        if (BloodSlider == null)
-            return;
-
-        if (Controller != null && Controller.IsReady)
-        {
-            float capacity = Controller.EnableCampaign
-                ? Controller.Balance.Marble.BloodCapacity
-                : Mathf.Max(Controller.Tuning.BloodCapacity, Controller.StartingBlood);
-            BloodSlider.maxValue = capacity;
-        }
-
-        BloodSlider.value = blood;
     }
 
     private void Update()
@@ -84,18 +63,31 @@ public class ScoreListener : MonoBehaviour
             TargetScoreText.text = session.TargetScore.ToString();
     }
 
-    private void RefreshBloodSlider()
+    private void RefreshBloodSlider(MarbleSnapshot snapshot, BloodProgressionDefinition progression)
     {
-        if (Controller == null || !Controller.IsReady)
+        if (bloodValueBar != null && bloodValueBar.Slider != BloodSlider)
+        {
+            bloodValueBar.Dispose();
+            bloodValueBar = null;
+        }
+        if (!BloodSlider) return;
+        BloodSlider.maxValue = snapshot.BloodCapacity;
+        BloodSlider.value = snapshot.Blood;
+        if (progression == null || snapshot.BloodValueStage < 0)
+        {
+            bloodValueBar?.Hide();
             return;
-
-        OnBloodChanged(Controller.Snapshot.Blood);
+        }
+        if (bloodValueBar == null) bloodValueBar = new BloodValueBar(BloodSlider);
+        bloodValueBar.Refresh(snapshot, progression);
     }
 
     private void RefreshStatusBars()
     {
         bool ready = Controller != null && Controller.IsReady;
         var snapshot = ready ? Controller.Snapshot : default;
+        if (ready) RefreshBloodSlider(snapshot, Controller.CurrentDayDefinition?.BloodProgression);
+        else bloodValueBar?.Hide();
         bool playing = ready && (snapshot.Phase == RoundPhase.Playing || snapshot.Phase == RoundPhase.Draining);
         bool rushVisible = playing && Controller.HasProductionFeature(ProductionFeature.Rush);
         bool rushActive = rushVisible && snapshot.RushSecondsRemaining > 0;

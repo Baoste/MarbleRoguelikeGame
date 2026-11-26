@@ -1,0 +1,10 @@
+{
+  "name": "+3 价值钉子",
+  "description": "碰撞使弹珠当前基础价值增加 3。",
+  "value": 4,
+  "purchasePrice": 9,
+  "biomassScrapPrice": 3,
+  "rarity": "common",
+  "durability": 10,
+  "type": "device"
+}

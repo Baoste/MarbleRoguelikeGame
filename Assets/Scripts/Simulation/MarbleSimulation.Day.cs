@@ -1,4 +1,5 @@
 using System;
+using Unity.Collections;
 
 namespace MarblesECS
 {
@@ -11,6 +12,7 @@ namespace MarblesECS
 
         public DayProgressSnapshot Day => dayFlow == null ? default : dayFlow.Snapshot;
         public DayDefinition CurrentDayDefinition => dayFlow?.Current;
+        public bool LoadoutConfirmed => dayFlow == null || dayFlow.LoadoutConfirmed;
         public bool HasProductionFeature(ProductionFeature feature) => context.HasProductionFeature(feature);
         internal bool HasDayFlow => dayFlow != null;
         public bool ProductionCommandsAvailable => !startingDay && (dayFlow == null || dayFlow.AllowsProduction);
@@ -30,6 +32,8 @@ namespace MarblesECS
             { error = "Day campaigns require the existing GameBalance production session."; return false; }
             if (definition == null || !definition.IsConfigured)
             { error = "The Day sequence is unconfigured. Add at least one Day before starting."; return false; }
+            if (definition.Days[0].DailyLoadout != null && context.Content == null)
+            { error = "Daily loadouts require GameContent for their device effects."; return false; }
             if (!(physics is IMarbleDayPhysics dayPhysics) || (started && !ReferenceEquals(physics, context.Physics)))
             { error = "Use the current physics adapter with Day checkpoint support."; return false; }
 
@@ -40,7 +44,16 @@ namespace MarblesECS
                 {
                     if (day.TargetScore > context.Tuning.MaxRoundScore)
                         throw new ArgumentException($"Day '{day.DayId}' targetScore exceeds this session's MaxRoundScore.");
+                    if (day.BloodProgression?.Stages.Count > 0 && context.Content == null)
+                        throw new ArgumentException($"Day '{day.DayId}' blood progression requires GameContent.");
                     ValidateRuleAttributes(day.Rules);
+                    if (day.DailyLoadout != null)
+                        foreach (uint id in day.DailyLoadout.UnlockedPegIds)
+                        {
+                            var device = CampaignStateUtility.Device(context, id);
+                            if (device == null || device.PurchaseQuantity != 1 || device.PlacementRadius <= 0)
+                                throw new ArgumentException($"Day '{day.DayId}' cannot install device {id} with this balance.");
+                        }
                     if (day.BoardLayout == null) continue;
                     if (!(physics is IMarbleBoardLayoutPhysics boardPhysics))
                         throw new ArgumentException($"Day '{day.DayId}' requires board layout physics support.");
@@ -54,7 +67,9 @@ namespace MarblesECS
             {
                 uint runSeed = randomSeed ?? context.Tuning.RandomSeed;
                 BeforeDayBoardRestore();
-                StartSessionCore(physics, 0, runSeed, grantAllStartingDevices, definition.Days[0].ProductionFeatures);
+                var firstDay = definition.Days[0];
+                StartSessionCore(physics, 0, runSeed, grantAllStartingDevices, firstDay.ProductionFeatures,
+                    firstDay.DailyLoadout != null, definition.StartingCompanyScrip);
                 dayPhysics.ResetDayPhysics();
                 dayFlow = new DayFlowSystem(this, definition, retryRandom, runSeed);
                 dayFlow.Start();
@@ -106,16 +121,33 @@ namespace MarblesECS
         internal void BeforeDayBoardRestore() => DayBoardResetting?.Invoke();
         internal void AfterDayBoardRestore() => DayBoardRestored?.Invoke();
 
+        internal void ClearDailyProduction()
+        {
+            BeforeDayBoardRestore();
+            using (var devices = context.DeviceQuery.ToEntityArray(Allocator.Temp))
+                if (devices.Length != 0)
+                {
+                    context.Manager.DestroyEntity(devices);
+                    var campaign = context.Campaign;
+                    campaign.LayoutRevision++;
+                    context.Campaign = campaign;
+                    DeviceDurabilitySystem.Refresh(context);
+                }
+            context.DeviceScripts.Clear();
+        }
+
         internal void PrepareDayProduction(DayDefinition day, bool firstDay)
         {
             if (!firstDay) ResetRound(context.Physics, resetRandom: false);
             if (context.Physics is IMarbleBoardLayoutPhysics boardPhysics) boardPhysics.ApplyBoardLayout(day.BoardLayout);
+            context.BloodProgression = day.BloodProgression;
             var campaign = context.Campaign;
             campaign.RewardCoins = day.RewardCoins;
             campaign.RepeatRounds = false;
             campaign.DisabledFeatures = ProductionFeature.All & ~day.ProductionFeatures;
             campaign.TotalScore = 0;
             campaign.LastRewardCoins = campaign.LastCashoutCoins = 0;
+            campaign.LastCompanyScripReward = 0;
             campaign.ShopRefreshCount = 0;
             context.Campaign = campaign;
             context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity).Clear();
@@ -124,6 +156,7 @@ namespace MarblesECS
             round.TargetScore = day.TargetScore;
             context.Round = round;
             FillBlood();
+            if (day.DailyLoadout != null) DailyLoadoutSystem.StartDay(context, day.DailyLoadout);
             if (AttributeRuntime.Enabled(context)) AttributeRuntime.Recompute(context, context.PlayerEntity);
         }
     }

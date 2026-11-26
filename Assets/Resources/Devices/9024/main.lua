@@ -8,7 +8,7 @@ end
 
 local function status(api)
     local amount, count = bonus(api)
-    api:SetStatus(string.format("less is more · 其他装置 %d · 附加倍率 +%.3g", count, amount))
+    api:SetStatus(string.format("less is more · 其他装置 %d · 碰撞倍率 ×%.3g", count, 1 + amount))
 end
 
 function OnTick(api)
@@ -19,6 +19,6 @@ function OnContact(api)
     if api.Impact == nil or api.LinkKey ~= 0 then return end
     local amount = bonus(api)
     if amount <= 0 or not api:Visit(0, 0) or not api:TryUse() then return end
-    api:AddScoreMultiplier(1 + amount)
+    api:MultiplyScore(1 + amount)
     status(api)
 end

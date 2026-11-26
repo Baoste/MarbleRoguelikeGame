@@ -49,7 +49,7 @@ namespace MarblesECS.Editor
                     VectorNear(f.Physics.Poses[device.InstanceId].Forward * 6, f.Physics.States[childKey].LinearVelocity, "visible muzzle matches shot direction");
                     float angle = Vector3.SignedAngle(Vector3.forward, f.Physics.States[childKey].LinearVelocity, Vector3.up); angles.Add(angle);
                     Check(Math.Abs(angle) <= 22.501f, "shot stays within total 45 degree fan");
-                    Near(2, f.C.Manager.GetComponentData<MarbleScore>(child).ScoreMultiplier, "additive multiplier is inherited unchanged");
+                    Near(2.25, f.C.Manager.GetComponentData<MarbleScore>(child).ScoreMultiplier, "multiplier product is inherited unchanged");
                     Near(1, f.C.Manager.GetComponentData<MarbleScore>(child).ScoreBonus, "flat bonus is apportioned rather than duplicated per bullet");
                     Near(expiry, f.C.Manager.GetComponentData<Lifetime>(child).ExpireTick, "output keeps original lifetime");
                     api = CashApi(f, childKey, device); Check(api.HasSplitFrom(device.InstanceId), "output records its split ancestor"); api.Close();
@@ -62,7 +62,7 @@ namespace MarblesECS.Editor
                 var children = f.C.Marbles.Keys.ToArray(); f.Step(children.Select(k => f.Hit(k, device)).ToArray());
                 Check(f.Physics.Suspended.Count == 0 && f.C.Marbles.Count == count, "own descendants pass through without being recaptured");
                 f.Step(children.Select(k => new MarbleContact { Key = k, TargetId = 700, Kind = MarbleContactKind.Score, Multiplier = 1, RushDisabled = true }).ToArray());
-                Near(count * 5, f.C.Round.Score + f.C.Round.FractionalScore, "remaining value and proportional bonuses settle once with inherited multiplier");
+                Near(count * 5.625, f.C.Round.Score + f.C.Round.FractionalScore, "remaining value and proportional bonuses settle once with inherited multiplier");
             }
             using (var f = new Fixture())
             {

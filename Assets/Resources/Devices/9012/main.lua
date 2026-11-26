@@ -18,7 +18,6 @@ function OnContact(api)
     local factor = multiplier(api)
     if factor <= 1 then return end
     if not api:Visit(0, 0) or not api:TryUse() then return end
-    -- Pass the full factor; the engine accumulates factor - 1 around a single base of 1.
-    api:AddScoreMultiplier(factor)
+    api:MultiplyScore(factor)
     status(api)
 end

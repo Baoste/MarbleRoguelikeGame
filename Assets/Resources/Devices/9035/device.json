@@ -1,0 +1,12 @@
+{
+  "Id": 9035,
+  "SourceId": "MultiplyPeg",
+  "Bounce": 0.6,
+  "ScoreMultiplier": 2,
+  "StartingCount": 0,
+  "PurchaseQuantity": 1,
+  "Cooldown": 0,
+  "Value": 1,
+  "Strength": 0,
+  "RotationLocked": true
+}

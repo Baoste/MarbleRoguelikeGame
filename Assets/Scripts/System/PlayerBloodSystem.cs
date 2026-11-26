@@ -4,13 +4,22 @@ namespace MarblesECS
 {
     internal static class PlayerBloodSystem
     {
+        internal static void SpendOnLaunch(SimulationContext c, double cost)
+        {
+            if (cost == 0) return;
+            var player = c.Player;
+            player.Blood -= (float)cost;
+            player.BloodSpent += cost;
+            c.Player = player;
+        }
+
         /// <summary>Restore spendable blood up to capacity, returning the amount actually restored.</summary>
         internal static double Restore(SimulationContext c, double amount)
         {
             if (!MarbleRules.IsFinite(amount) || amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
             if (!c.IsRunning || c.Round.SettlementComplete || amount == 0) return 0;
             var player = c.Player; float before = player.Blood;
-            player.Blood = (float)Math.Min(c.Tuning.BloodCapacity, (double)before + amount);
+            player.Blood = (float)Math.Min(c.BloodCapacity, (double)before + amount);
             double restored = (double)player.Blood - before;
             if (restored <= 0) return 0;
             c.Player = player;

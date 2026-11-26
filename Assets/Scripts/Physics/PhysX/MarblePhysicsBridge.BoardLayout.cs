@@ -65,7 +65,7 @@ namespace MarblesECS.PhysX
                 int pinId = 100000;
                 int zoneId = 1;
                 var projection = layoutSurface.LayoutProjection;
-                foreach (var pin in layout.Pins) AddLayoutPin(group.transform, projection, pin, NextLayoutId(ids, ref pinId));
+                foreach (var pin in layout.Pins) AddLayoutPin(group.transform, projection, pin, ids, ref pinId);
                 foreach (var zone in layout.Zones) AddLayoutZone(group.transform, projection, zone, NextLayoutId(ids, ref zoneId));
             }
             catch
@@ -113,17 +113,19 @@ namespace MarblesECS.PhysX
             node.SetActive(false);
         }
 
-        private void AddLayoutPin(Transform parent, BoardLayoutProjection projection, BoardLayoutPin data, int targetId)
+        private void AddLayoutPin(Transform parent, BoardLayoutProjection projection, BoardLayoutPin data,
+            HashSet<int> ids, ref int nextPinId)
         {
             var node = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            node.name = "Pin " + parent.childCount;
+            node.name = (data.collisionOnly ? "Collision Pin " : "Pin ") + parent.childCount;
             node.transform.SetParent(parent, false);
             node.transform.localPosition = projection.ToSurfaceLocal(data.x, data.y, data.radius * 2);
             node.transform.localScale = Vector3.one * (data.radius * 2);
             if (pinVisualMaterial) node.GetComponent<Renderer>().sharedMaterial = pinVisualMaterial;
             if (pinPhysicsMaterial) node.GetComponent<CapsuleCollider>().sharedMaterial = pinPhysicsMaterial;
+            if (data.collisionOnly) return;
             var pin = node.AddComponent<MarblePin>();
-            pin.TargetId = targetId;
+            pin.TargetId = NextLayoutId(ids, ref nextPinId);
             pin.ScoreMultiplier = data.scoreMultiplier;
             pin.RushChanceAdd = data.rushChanceAdd;
         }

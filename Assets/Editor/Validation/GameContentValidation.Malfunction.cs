@@ -39,8 +39,8 @@ namespace MarblesECS.Editor
                 var motion = f.Physics.States[key]; double blood = f.C.Player.Blood, coins = f.C.Campaign.Coins;
                 MalfunctionRandom(f, factor); uint expectedRandom = f.C.Round.RandomState; MarbleRules.NextRandom(ref expectedRandom);
                 var hit = PiggyHit(f, key, d); f.Step(hit, hit);
-                double expected = factor == 0 ? 0 : 4 + factor - 1;
-                Near(expected, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "sampled factor resets at zero or adds factor minus one");
+                double expected = 4 * factor;
+                Near(expected, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "sampled factor multiplies the carried product");
                 Near(expectedRandom, f.C.Round.RandomState, "one effective collision uses exactly one round RNG draw");
                 Near(19, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "all eight outcomes including zero and one cost one use");
                 Near(10, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "random factor does not alter base value");
@@ -53,7 +53,7 @@ namespace MarblesECS.Editor
             }
             MalfunctionResets(); MalfunctionRandomAndWear(); DeviceMultiplierSetApi();
             foreach (float dt in new[] { .01f, .02f }) MalfunctionPhysics(dt);
-            Debug.Log("MALFUNCTION_VALIDATION_PASSED: " + (assertions - start) + " assertions; eight seeded outcomes, reset then recovery, additive settlement, wear, inheritance and real collisions.");
+            Debug.Log("MALFUNCTION_VALIDATION_PASSED: " + (assertions - start) + " assertions; eight seeded outcomes, products, persistent zero, wear, inheritance and real collisions.");
         }
         private static void MalfunctionResets()
         {
@@ -63,22 +63,22 @@ namespace MarblesECS.Editor
                 var d = AddMalfunction(f); var key = f.Launch(); double expected = 1;
                 foreach (int factor in new[] { 13, 11, 0, 1, 3, 2, 0, 0, 5 })
                 {
-                    MalfunctionRandom(f, factor); f.Step(PiggyHit(f, key, d)); expected = factor == 0 ? 0 : expected + factor - 1;
-                    Near(expected, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "zero clears the full accumulated value; later factors can recover");
+                    MalfunctionRandom(f, factor); f.Step(PiggyHit(f, key, d)); expected *= factor;
+                    Near(expected, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "later factors keep a zero product at zero");
                 }
                 Near(11, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "each valid repeat is one use");
                 f.Step(new MarbleContact { Key = key, Kind = pending ? MarbleContactKind.RandomScore : MarbleContactKind.Score,
                     TargetId = 700, Multiplier = 1, RushDisabled = true });
-                Near(40, pending ? f.C.Round.PendingScore + f.C.Round.FractionalPendingScore : f.C.Round.Score + f.C.Round.FractionalScore, "recovered multiplier settles through ordinary or pending scoring");
+                Near(0, pending ? f.C.Round.PendingScore + f.C.Round.FractionalPendingScore : f.C.Round.Score + f.C.Round.FractionalScore, "zero product settles at zero in ordinary or pending scoring");
             }
             using (var f = new Fixture())
             {
                 var d = AddMalfunction(f); var pig = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, 50);
                 f.Step(PiggyHit(f, key, pig)); MalfunctionRandom(f, 0); f.Step(PiggyHit(f, key, d));
                 Near(0, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "zero removes contributions from all previous devices");
-                f.Step(PiggyHit(f, key, pig)); Near(.5, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "another device can add half a point after zero");
+                f.Step(PiggyHit(f, key, pig)); Near(0, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "positive factor from another device preserves zero");
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 700, Multiplier = 1, RushDisabled = true });
-                Near(5, f.C.Round.Score, "zero is not a persistent no-score flag");
+                Near(0, f.C.Round.Score, "the value portion settles at zero");
             }
             using (var f = new Fixture())
             {
@@ -88,12 +88,12 @@ namespace MarblesECS.Editor
                 foreach (var child in f.C.Marbles.Keys.ToArray())
                 {
                     var api = CashApi(f, child, d); Near(0, api.DeviceScoreMultiplier, "split children inherit zero accumulated factor");
-                    api.AddScoreMultiplier(3); Near(2, api.DeviceScoreMultiplier, "split children can recover independently"); api.Close();
+                    api.MultiplyScore(3); Near(0, api.DeviceScoreMultiplier, "split children keep multiplying from zero"); api.Close();
                 }
                 var copiedFrom = f.C.Marbles.Keys.First(); var copyApi = CashApi(f, copiedFrom, d); copyApi.SetDeviceScoreMultiplier(0);
                 var copy = copyApi.CreateCopy(); Check(copy.TrySpawn(Vector3.one * 3, Vector3.zero), "zero factor can be copied"); copyApi.Close();
                 var copied = f.C.Marbles.Keys.OrderBy(k => k.Sequence).Last(); copyApi = CashApi(f, copied, d);
-                Near(0, copyApi.DeviceScoreMultiplier, "copy inherits zero"); copyApi.AddScoreMultiplier(2); Near(1, copyApi.DeviceScoreMultiplier, "copy also recovers without touching parent"); copyApi.Close();
+                Near(0, copyApi.DeviceScoreMultiplier, "copy inherits zero"); copyApi.SetDeviceScoreMultiplier(2); Near(2, copyApi.DeviceScoreMultiplier, "copy multiplier can be replaced independently"); copyApi.Close();
                 copyApi = CashApi(f, copiedFrom, d); Near(0, copyApi.DeviceScoreMultiplier, "child recovery does not change parent"); copyApi.Close();
             }
         }
@@ -106,7 +106,7 @@ namespace MarblesECS.Editor
                 var d = AddMalfunction(f); var key = f.Launch();
                 for (int i = 0; i < 22; i++) { MalfunctionRandom(f, 2); f.Step(PiggyHit(f, key, d)); }
                 int uses = wear == -1 ? 22 : wear;
-                Near(1 + uses, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "last durability applies and unlimited continues");
+                Near(Math.Min(1000, Math.Pow(2, uses)), f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "last durability applies and unlimited continues");
                 Near(wear == -1 ? -1 : 0, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "finite/unlimited wear");
                 if (wear != -1) { MalfunctionRandom(f, 13); uint seed = f.C.Round.RandomState; f.Step(PiggyHit(f, key, d)); Near(seed, f.C.Round.RandomState, "exhausted device does not advance RNG"); }
                 var round = f.C.Round; round.Phase = (byte)RoundPhase.Build; f.C.Round = round; Check(f.Simulation.BeginRound(), "new round restores malfunction device");
@@ -125,7 +125,7 @@ namespace MarblesECS.Editor
                 Near(second, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(b)).ScoreMultiplier, "second simultaneous ball is not blocked by device cooldown");
                 Near(next, f.C.Round.RandomState, "two distinct contacts advance RNG twice"); Near(18, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "two distinct balls spend two uses");
                 var other = AddMalfunction(f); MalfunctionRandom(f, 7); f.Step(PiggyHit(f, a, other));
-                Near(first + 6, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "another instance shares normal additive score");
+                Near(first * 7, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "another instance multiplies the same product");
                 Near(19, f.Simulation.GetOwnedDevices().Single(x => x.InstanceId == other.InstanceId).RemainingDurability, "other device has independent wear");
             }
             // Fixed, reproducible stream exercises every bucket without relying on nondeterministic sampling.
@@ -138,9 +138,9 @@ namespace MarblesECS.Editor
                 for (int n = 0; n < 256; n++)
                 {
                     int index = (int)(MarbleRules.NextRandom(ref state) * 8); counts[index]++; int factor = MalfunctionFactors[index];
-                    expected = factor == 0 ? 0 : Math.Min(1000, expected + factor - 1);
+                    expected *= factor;
                     f.Step(PiggyHit(f, key, d));
-                    Near(expected, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "packaged Lua follows round-seeded eight-way random stream");
+                    Near(Math.Min(1000, expected), f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "packaged Lua follows round-seeded eight-way random stream");
                 }
                 Check(counts.All(x => x > 0), "fixed stream reaches all eight outcomes"); Near(state, f.C.Round.RandomState, "random stream is deterministic and one draw per hit");
             }
@@ -162,7 +162,8 @@ namespace MarblesECS.Editor
                 ExpectArgument(() => api.SetDeviceScoreMultiplier(-1)); ExpectArgument(() => api.SetDeviceScoreMultiplier(double.NaN));
                 ExpectArgument(() => api.SetDeviceScoreMultiplier(double.PositiveInfinity)); ExpectArgument(() => api.SetDeviceScoreMultiplier(1000.001));
                 Near(1000, api.DeviceScoreMultiplier, "invalid setter does not mutate factor");
-                api.SetDeviceScoreMultiplier(0); api.AddScoreMultiplier(3); Near(2, api.DeviceScoreMultiplier, "zero setter leaves an ordinary recoverable bonus of minus one");
+                api.SetDeviceScoreMultiplier(0); api.MultiplyScore(3); Near(0, api.DeviceScoreMultiplier, "multiplying keeps an explicitly set zero");
+                api.SetDeviceScoreMultiplier(3); Near(3, api.DeviceScoreMultiplier, "replacing the product recovers from zero");
                 Near(20, api.RemainingDurability, "setter itself does not register durability");
                 api.Close(); ExpectExpired(() => api.SetDeviceScoreMultiplier(0));
             }
@@ -198,15 +199,15 @@ namespace MarblesECS.Editor
                     for (int n = 0; hits.Count <= pass && n < 100; n++)
                     { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); solved = body.velocity; simulation.AfterPhysics(bridge); }
                     pass++; Check(hits.Count == pass, "real collision triggers once");
-                    expected = factor == 0 ? 0 : expected + factor - 1;
-                    Near(expected, c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier, "physical collision executes packaged random factor and recoverable reset");
+                    expected *= factor;
+                    Near(expected, c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier, "physical collision multiplies by the sampled factor");
                     Near(10, simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "physical ball keeps its base value");
                     Check(Vector3.Dot(body.velocity, incoming) < 0, "original ball bounces normally"); VectorNear(solved, body.velocity, "Lua does not replace solver velocity");
                     for (int n = 0; n < 5; n++) Step(); Check(hits.Count == pass, "continuous contact does not draw repeatedly");
                     Near(20 - pass, simulation.GetOwnedDevices().Single().RemainingDurability, "physical impact spends exactly one use");
                 }
                 simulation.EnqueueContact(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 700, Multiplier = 1, RushDisabled = true }); Step();
-                Near(20, c.Round.Score, "real ball scores normally after zero then three");
+                Near(0, c.Round.Score, "real ball keeps zero after zero then three");
             }
             finally { view?.Dispose(); simulation.Dispose(); bridge.Dispose(); UnityEngine.Object.DestroyImmediate(board); SceneManager.UnloadSceneAsync(scene); }
         }

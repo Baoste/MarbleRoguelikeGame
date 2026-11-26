@@ -12,6 +12,17 @@ namespace MarblesECS.PhysX
         private readonly List<MarbleBody> orderedFieldBodies = new List<MarbleBody>();
         private Func<int, bool> deviceAvailable, useDevice;
         private Action<MarbleKey, int> recordDeviceEffect;
+
+        internal bool IsClearOfMarbles(Vector3 center, float radius)
+        {
+            foreach (var view in bodies.Values)
+            {
+                if (view == null || view.Suspended || !view.gameObject.activeInHierarchy) continue;
+                float distance = radius + view.Radius;
+                if ((view.Body.position - center).sqrMagnitude < distance * distance) return false;
+            }
+            return true;
+        }
         public void BindDeviceEffect(Action<MarbleKey, int> recordEffect) { recordDeviceEffect = recordEffect; }
         private Func<int, bool> canCompleteDevice;
         public void BindDeviceInteraction(Func<int, bool> canComplete) { canCompleteDevice = canComplete; }

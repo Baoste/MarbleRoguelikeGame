@@ -25,9 +25,9 @@ namespace MarblesECS
                     if (visits[i].DeviceId == contact.TargetId) { visited = true; break; }
                 if (visited) continue;
                 var score = context.Manager.GetComponentData<MarbleScore>(entity);
-                double before = score.DeviceMultiplierBonus;
-                if (contact.Kind == MarbleContactKind.Multiplier) score.AddDeviceMultiplier(contact.Multiplier);
-                context.Manager.SetComponentData(entity, score);
+                bool multiplierApplied = contact.Kind == MarbleContactKind.Multiplier &&
+                    score.MultiplyDeviceMultiplier(contact.Multiplier);
+                if (multiplierApplied) context.Manager.SetComponentData(entity, score);
                 var rush = context.Manager.GetComponentData<MarbleRush>(entity);
                 rush.RushChanceBonus = System.Math.Min(1, rush.RushChanceBonus + contact.RushChanceAdd);
                 context.Manager.SetComponentData(entity, rush);
@@ -35,10 +35,9 @@ namespace MarblesECS
                 RushSystem.RecordTrigger(context, entity, contact.TargetId);
                 if (context.FloatingText == null) continue;
                 var source = contact.IsPin ? FloatingTextSource.Pin : FloatingTextSource.Zone;
-                double change = FloatingTextFeedback.MultiplierChange(before, score.DeviceMultiplierBonus);
-                if (change != 0)
+                if (multiplierApplied)
                     context.FloatingText.Enqueue(new FloatingTextEvent(contact.Position, source, contact.TargetId,
-                        FloatingTextType.Multiplier, 1 + change, contact.Key));
+                        FloatingTextType.Multiplier, contact.Multiplier, contact.Key));
                 else if (contact.IsPin)
                     context.FloatingText.Enqueue(new FloatingTextEvent(contact.Position, source, contact.TargetId,
                         FloatingTextType.PinContact, 0, contact.Key));

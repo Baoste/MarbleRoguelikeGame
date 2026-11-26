@@ -8,6 +8,7 @@ namespace MarblesECS
         public uint DefinitionId;
         public long PurchasePrice;
         public bool Placed;
+        public bool IsStarterRefill;
         public float X;
         public float Z;
         public float Angle;

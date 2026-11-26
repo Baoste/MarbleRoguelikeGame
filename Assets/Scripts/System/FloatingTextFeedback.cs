@@ -1,12 +1,7 @@
-using System;
-
 namespace MarblesECS
 {
     internal static class FloatingTextFeedback
     {
-        internal static double MultiplierChange(double beforeBonus, double afterBonus) =>
-            Math.Max(0, 1 + afterBonus) - Math.Max(0, 1 + beforeBonus);
-
         internal static void DeviceAtPose(SimulationContext context, int instanceId, FloatingTextType type, double value, int styleId = 0)
         {
             if (context.FloatingText != null && context.Physics is IMarblePhysicsCommands commands &&

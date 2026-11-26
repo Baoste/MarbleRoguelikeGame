@@ -13,16 +13,24 @@ namespace MarblesECS.Presentation
         public MarbleGameController Controller;
         public Camera ViewCamera;
         private readonly List<RaycastResult> uiHits = new List<RaycastResult>();
+        private DevicePlacementUI placement;
         private bool Running => Controller != null && Controller.IsReady &&
             (Controller.Snapshot.Phase == RoundPhase.Playing || Controller.Snapshot.Phase == RoundPhase.Draining);
 
         private Camera ResolveCamera()
         {
             if (ViewCamera != null) return ViewCamera;
-            var placement = FindObjectOfType<DevicePlacementUI>();
-            if (placement != null && placement.Controller == Controller) ViewCamera = placement.ViewCamera;
+            var board = FindPlacement();
+            if (board != null) ViewCamera = board.ViewCamera;
             if (ViewCamera == null) ViewCamera = Camera.main;
             return ViewCamera;
+        }
+        private DevicePlacementUI FindPlacement()
+        {
+            if (placement != null && placement.Controller == Controller) return placement;
+            var board = FindObjectOfType<DevicePlacementUI>();
+            placement = board != null && board.Controller == Controller ? board : null;
+            return placement;
         }
         private bool PointerBlocked(Vector2 position)
         {
@@ -45,6 +53,8 @@ namespace MarblesECS.Presentation
         {
 #if ENABLE_LEGACY_INPUT_MANAGER
             if (!Running || Controller.Paused || !Input.GetMouseButtonDown(0)) return;
+            if (Controller.Session.UsesDailyLoadout && FindPlacement() is DevicePlacementUI board &&
+                board != null && board.BlocksDeviceActivation) return;
             var camera = ResolveCamera();
             if (camera != null && !PointerBlocked(Input.mousePosition))
                 Controller.TryActivateDevice(camera.ScreenPointToRay(Input.mousePosition));

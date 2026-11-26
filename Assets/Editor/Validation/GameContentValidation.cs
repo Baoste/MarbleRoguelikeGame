@@ -597,7 +597,7 @@ namespace MarblesECS.Editor
                 f.Simulation.ApplyDeviceAttribute(device.InstanceId, 2, GameAttribute.MACHINE_MULT, AttributeOperation.Set, 2);
                 f.Step(f.Hit(key, device)); f.Step(f.Hit(key, device));
                 Near(1, f.Physics.Moves, "device cooldown seconds prevent a second BouncePad launch");
-                Near(2, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "device machine multiplier contributes to the additive score total");
+                Near(2, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "device machine multiplier multiplies the carried score factor");
                 Near(1, f.Simulation.GetMarbleAttribute(key, GameAttribute.MACHINE_MULT), "device contact does not bake factors into the ball attribute");
                 f.Simulation.ApplyAttribute(key, 2, GameAttribute.BALL_LIFETIME, AttributeOperation.Set, 1);
                 for (int i = 0; i < 12; i++) f.Step();

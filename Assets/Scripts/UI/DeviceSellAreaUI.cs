@@ -23,7 +23,7 @@ public sealed class DeviceSellAreaUI : MonoBehaviour, IPointerClickHandler
 
     public bool ContainsPointer(Vector2 position)
     {
-        if (!isActiveAndEnabled || !Placement || !Placement.CanEdit) return false;
+        if (!isActiveAndEnabled || !Placement || !Placement.CanEdit || Placement.Controller.Session.UsesDailyLoadout) return false;
         if (!canvas) canvas = GetComponentInParent<Canvas>();
         Camera camera = canvas && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
         return RectTransformUtility.RectangleContainsScreenPoint((RectTransform)transform, position, camera);
@@ -31,7 +31,7 @@ public sealed class DeviceSellAreaUI : MonoBehaviour, IPointerClickHandler
 
     public void Refresh()
     {
-        bool visible = Placement && Placement.CanEdit;
+        bool visible = Placement && Placement.CanEdit && !Placement.Controller.Session.UsesDailyLoadout;
         MarblesECS.OwnedDeviceSnapshot device = default;
         bool dragging = visible && Placement.TryGetSelectedDevice(out device);
         if (Group)

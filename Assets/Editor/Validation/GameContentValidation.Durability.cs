@@ -9,12 +9,16 @@ namespace MarblesECS.Editor
         private static void MetadataAndDurability()
         {
             int start = assertions;
+            var defaults = DeviceMetadata.Read("{\"name\":\"Test\",\"description\":\"Test\",\"value\":0,\"type\":\"device\"}", "fixture");
+            Near(20, defaults.durability, "missing metadata durability defaults to 20");
             foreach (var definition in DeviceResourceCatalog.Current.Definitions())
             {
                 var metadata = DeviceResourceCatalog.Current.Get(definition.Id).Metadata;
                 Check(metadata.rarity == definition.Rarity.ToString().ToLowerInvariant(), "catalog rarity follows metadata.json");
-                Near(20, metadata.durability, "resource default durability"); Near(20, definition.Durability, "catalog durability authority");
+                Near(metadata.durability, definition.Durability, "catalog durability follows metadata.json");
                 Near(metadata.purchasePrice, definition.Price, "catalog buys for purchasePrice"); Near(metadata.value, definition.SellPrice, "catalog sells for value");
+                Near(metadata.biomassScrapPrice > 0 ? metadata.biomassScrapPrice : metadata.purchasePrice,
+                    definition.InstallPrice, "daily installation uses the configured scrap price");
             }
             using (var f = new Fixture())
             {

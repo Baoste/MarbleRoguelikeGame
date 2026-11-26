@@ -118,17 +118,33 @@ namespace MarblesECS.Editor
                     if (pack.Length > 1)
                         Check(pack.All(d => d.PairId > 0 && d.PairId == pack[0].PairId), "starter pack shares its pair identity");
                 }
-                Check(simulation.Session.Phase == RoundPhase.Build && simulation.Session.Coins == balance.Campaign.StartingCoins,
+                Check(simulation.Session.Phase == RoundPhase.Build && simulation.Session.Coins == balance.Campaign.AllDevicesStartingCoins,
                     "full starter mode starts in placement at the configured wallet balance");
                 Check(simulation.GetRandomStartingDeviceIds().Length == 0 && simulation.Context.Round.RandomState == seed,
                     "granting the full catalog consumes no shared random draws");
+                var paired = inventory.FirstOrDefault(device => device.PairId != 0);
+                if (paired.PairId != 0)
+                {
+                    var originals = inventory.Where(device => device.PairId == paired.PairId).ToArray();
+                    Check(simulation.PlaceDevice(originals[0].InstanceId, 0, 0), "the first member of a pair can be placed");
+                    Check(!simulation.PlaceDevice(originals[1].InstanceId, 0, 0) && simulation.GetOwnedDevices().Length == count,
+                        "overlapping or partial placement does not replenish the pair");
+                    for (int i = 1; i < originals.Length; i++)
+                        Check(simulation.PlaceDevice(originals[i].InstanceId, i * 100, 0), "remaining pair member can be placed");
+                    var refills = simulation.GetOwnedDevices().Where(device => device.DefinitionId == paired.DefinitionId && !device.Placed).ToArray();
+                    Check(refills.Length == originals.Length && refills.All(device => device.PairId == refills[0].PairId &&
+                        device.PairId != paired.PairId && device.PairId > 0), "restock creates a separate complete pair");
+                    count += originals.Length;
+                }
                 Check(simulation.BeginRound() && simulation.GetOwnedDevices().Length == count,
                     "beginning play carries the starting backpack into the first round");
                 simulation.StartSession(physics, grantAllStartingDevices: true, randomSeed: seed);
-                Check(simulation.GetOwnedDevices().Length == count, "restarting replaces the full starting inventory");
+                Check(simulation.GetOwnedDevices().Length == inventory.Length && simulation.Session.Coins == balance.Campaign.AllDevicesStartingCoins,
+                    "restarting restores the full starting inventory and its wallet balance");
                 simulation.StartSession(physics, grantAllStartingDevices: false, randomSeed: seed);
-                Check(simulation.GetOwnedDevices().Length == balance.Devices[0].PurchaseQuantity,
-                    "turning off full starter mode uses the authored starting count");
+                Check(simulation.GetOwnedDevices().Length == balance.Devices[0].PurchaseQuantity &&
+                    simulation.Session.Coins == balance.Campaign.StartingCoins,
+                    "turning off full starter mode uses the authored starting count and ordinary wallet");
             }
         }
 

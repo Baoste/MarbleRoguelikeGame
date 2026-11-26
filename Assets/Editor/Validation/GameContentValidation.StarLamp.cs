@@ -47,7 +47,7 @@ namespace MarblesECS.Editor
                 Near(1, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "aura never enters permanent multiplier storage");
                 var api = CashApi(f, untouched, a); Near(1, api.DeviceScoreMultiplier, "stored multiplier excludes temporary effects");
                 Near(4, api.EffectiveDeviceScoreMultiplier, "effective query includes board contribution"); api.AddScoreMultiplier(1.5); api.Close();
-                Near(4.5, LampMultiplier(f, untouched), "persistent and temporary contributions add rather than multiply");
+                Near(6, LampMultiplier(f, untouched), "persistent and temporary factors multiply");
                 var fresh = f.Launch(); Near(4, LampMultiplier(f, fresh), "newly launched ball gains current board bonus");
                 f.Step(f.Hit(key, a), f.Hit(untouched, b), f.Hit(fresh, c));
                 foreach (var lamp in f.Simulation.GetOwnedDevices())
@@ -91,7 +91,7 @@ namespace MarblesECS.Editor
                 }
             StarLampLifecycleAndScoring(); StarLampQueryApi(); StarLampVisibilityApi(); StarLampBoardApi(); StarLampDispatchApi();
             StarLampPhysics(.01f); StarLampPhysics(.02f);
-            Debug.Log("STAR_LAMP_VALIDATION_PASSED: " + (assertions - start) + " assertions; all-lit board aura, five-second expiry, per-participant wear, fresh balls, additive settlement, lifecycle and real pass-through.");
+            Debug.Log("STAR_LAMP_VALIDATION_PASSED: " + (assertions - start) + " assertions; all-lit board aura, five-second expiry, per-participant wear, fresh balls, multiplier products, lifecycle and real pass-through.");
         }
         private static void StarLampLifecycleAndScoring()
         {
@@ -104,7 +104,7 @@ namespace MarblesECS.Editor
                 Near(0, LampEnd(f.C, inventory.InstanceId), "unplaced lamp is not a participant");
                 var api = CashApi(f, key, a); api.AddScoreMultiplier(2); api.Close();
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.RandomScore, TargetId = 700, Multiplier = 1, RushDisabled = true });
-                Near(40, f.C.Round.PendingScore, "gambling area includes aura and permanent bonus additively");
+                Near(60, f.C.Round.PendingScore, "gambling area multiplies the aura and carried factor");
                 var cash = AddCashOut(f); key = f.Launch(); double coins = f.C.Campaign.Coins;
                 f.Step(f.Hit(key, cash)); Near(coins + 30, f.C.Campaign.Coins, "cashout uses live temporary multiplier for fresh ball");
                 CampaignStateUtility.FindDevice(f.C, b.InstanceId, out var entity); f.C.Manager.DestroyEntity(entity);

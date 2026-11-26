@@ -45,14 +45,14 @@ namespace MarblesECS.Editor
                 Check(f.Simulation.GetDeviceStatus(d.InstanceId).Contains("成长 +" + gain), "build feedback shows upcoming round growth");
                 Check(f.Simulation.BeginRound(), "begin prepared round"); var key = f.Launch();
                 var before = f.Physics.States[key]; var hit = PiggyHit(f, key, d); f.Step(hit, hit);
-                Near(1 + gain, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "rarity contributes two/four/six/eight actual multiplier points");
+                Near(1 + gain, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "rarity determines the factor applied by a fed bag");
                 Near(19, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "same-step repeated report only spends one use");
                 Near(10, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "base value remains intact until settlement");
                 VectorNear(before.LinearVelocity, f.Physics.States[key].LinearVelocity, "Lua preserves normal bounce");
                 Near(0, f.C.Round.Score, "feeding multiplier is deferred to scoring area");
-                f.Step(hit); Near(1 + 2 * gain, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "later collision adds the growth again");
+                f.Step(hit); Near(Math.Pow(1 + gain, 2), f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "later collision applies the fed factor again");
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 700, Multiplier = 1, RushDisabled = true });
-                Near(10 * (1 + 2 * gain), f.C.Round.Score + f.C.Round.FractionalScore, "score area applies final accumulated factor");
+                Near(10 * Math.Pow(1 + gain, 2), f.C.Round.Score + f.C.Round.FractionalScore, "score area applies the completed product");
             }
             BagRoundsAndLimits(); BagOfferContract(); BagAcceptsPairOnce(); BagRoundValueContract(); BagOfferUi();
             foreach (float dt in new[] { .01f, .02f }) GluttonBagPhysics(dt);
@@ -74,7 +74,7 @@ namespace MarblesECS.Editor
                 f.Step(PiggyHit(f, key, first), PiggyHit(f, other, first));
                 Near(21, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "all four rarities sum to twenty");
                 Near(21, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(other)).ScoreMultiplier, "simultaneous balls each get growth");
-                f.Step(PiggyHit(f, key, second)); Near(23, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "second bag contributes only its own growth");
+                f.Step(PiggyHit(f, key, second)); Near(63, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "second bag applies its own factor");
                 BagBuild(f.C); Check(string.IsNullOrEmpty(f.Simulation.GetDeviceStatus(first.InstanceId)), "previous round status is not shown as new growth");
                 Check(f.Simulation.TryOfferDevice(BagFood(f.C), second.InstanceId), "next build prepares fresh growth");
                 Check(f.Simulation.BeginRound(), "begin next round"); key = f.Launch(); f.Step(PiggyHit(f, key, first));
@@ -89,7 +89,7 @@ namespace MarblesECS.Editor
                 var d = AddGluttonBag(f); BagBuild(f.C); Check(f.Simulation.TryOfferDevice(BagFood(f.C), d.InstanceId), "prepare wear test");
                 Check(f.Simulation.BeginRound(), "start wear test"); var key = f.Launch();
                 for (int n = 0; n < 22; n++) f.Step(PiggyHit(f, key, d));
-                Near(1 + 2 * (durability == -1 ? 22 : durability), f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "finite and unlimited durability preserve last effect");
+                Near(Math.Min(1000, Math.Pow(3, durability == -1 ? 22 : durability)), f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "finite and unlimited durability preserve last effect");
                 Near(durability == -1 ? -1 : 0, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "feeding and impact wear are separate");
             }
         }
@@ -238,15 +238,15 @@ function Verify() assert(not pcall(function() return saved.RoundId end)) end");
                     for (int n = 0; hits.Count == before && n < 100; n++)
                     { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); solved = body.velocity; simulation.AfterPhysics(bridge); }
                     Check(hits.Count == before + 1, "real collision enters once");
-                    expected += 2; uses++;
-                    Near(expected, c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier, "prepared growth adds two per real impact");
+                    expected *= 3; uses++;
+                    Near(expected, c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier, "prepared growth gives a factor of three per real impact");
                     Near(10, simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "physical ball retains value");
                     Check(Vector3.Dot(body.velocity, incoming) < 0, "ball bounces normally"); VectorNear(solved, body.velocity, "Lua preserves solver velocity");
                     for (int n = 0; n < 5; n++) Step(); Check(hits.Count == before + 1, "continuous contact does not reapply bonus");
                     Near(20 - uses, simulation.GetOwnedDevices().Single(x => x.InstanceId == owned.InstanceId).RemainingDurability, "physical effective-use durability");
                 }
                 simulation.EnqueueContact(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 700, Multiplier = 1, RushDisabled = true }); Step();
-                Near(70, c.Round.Score, "three plus-two effects settle as value times seven");
+                Near(270, c.Round.Score, "three factors of three settle at twenty-seven times the value");
             }
             finally { view?.Dispose(); simulation.Dispose(); bridge.Dispose(); UnityEngine.Object.DestroyImmediate(board); SceneManager.UnloadSceneAsync(scene); }
         }

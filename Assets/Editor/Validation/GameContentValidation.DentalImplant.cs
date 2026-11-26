@@ -47,7 +47,8 @@ namespace MarblesECS.Editor
                 }
                 f.Step(f.Hit(key, d)); Near(limits[stage], f.Simulation.GetOwnedDevices().Single().RemainingDurability, "non-impact sensor report does not spend a tooth use");
                 f.Step(hit, hit);
-                Near(1 + bonuses[stage], f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "one impact adds actual bonus once");
+                double factor = 1 + bonuses[stage];
+                Near(factor, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "one impact applies the factor for this stage");
                 Near(limits[stage] - 1, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "duplicate same-step report costs one use");
                 VectorNear(velocity, f.Physics.States[key].LinearVelocity, "tooth preserves solver velocity");
                 Near(0, f.C.Round.Score, "score awaits scoring area");
@@ -58,15 +59,16 @@ namespace MarblesECS.Editor
                 for (int n = 0; n < limits[stage]; n++)
                 {
                     f.Step(hit);
-                    Near(1 + (n + 1) * bonuses[stage], f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "all stage uses including final impact award bonus");
+                    Near(Math.Min(1000, Math.Pow(factor, n + 1)), f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "all stage uses including final impact apply the factor");
                 }
                 Near(0, DeviceInstanceState.Get(f.C, entity, "stage"), "exhaustion immediately returns to hole");
                 Near(0, f.Simulation.GetOwnedDevices().Single().Durability, "snapshot switches to dormant capacity");
                 Check(f.Simulation.GetDeviceStatus(d.InstanceId).Contains("挖洞"), "exhaustion updates stage text");
-                f.Step(hit); Near(1 + limits[stage] * bonuses[stage], f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "hole cannot keep awarding effects");
+                double product = Math.Pow(factor, limits[stage]);
+                f.Step(hit); Near(Math.Min(1000, product), f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "hole cannot keep awarding effects");
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 700, Multiplier = 1, RushDisabled = true });
-                Near(10 * Math.Min(f.C.Content.Definition(GameAttribute.MACHINE_MULT).MaxValue, 1 + limits[stage] * bonuses[stage]),
-                    f.C.Round.Score + f.C.Round.FractionalScore, "scoring area applies accumulated factor and existing global cap");
+                Near(10 * Math.Min(f.C.Content.Definition(GameAttribute.MACHINE_MULT).MaxValue, product),
+                    f.C.Round.Score + f.C.Round.FractionalScore, "scoring area applies the product up to the machine cap");
                 BagBuild(f.C); Check(f.Simulation.BeginRound(), "next round after tooth exhausted");
                 Near(0, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "exhausted tooth does not regrow automatically");
                 BagBuild(f.C); Check(f.Simulation.TryOfferDevice(DentalFood(f.C), d.InstanceId), "hole accepts replanting");

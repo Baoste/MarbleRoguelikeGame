@@ -13,6 +13,8 @@ namespace MarblesECS
         internal readonly MarbleTuning Tuning;
         internal readonly GameBalance Balance;
         internal readonly GameContent Content;
+        internal BloodProgressionDefinition BloodProgression;
+        internal float BloodCapacity => BloodProgression?.InitialBlood ?? Tuning.BloodCapacity;
         internal readonly Entity RoundEntity, PlayerEntity, LauncherEntity, BoardEntity;
         internal readonly EntityQuery MarbleQuery;
         internal readonly EntityQuery DeviceQuery;

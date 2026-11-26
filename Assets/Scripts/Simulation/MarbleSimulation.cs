@@ -147,6 +147,7 @@ namespace MarblesECS
                 if (context.HasProductionFeature(ProductionFeature.DevicePlacement)) DeviceScriptSystem.BallUpdate(context);
                 LostMarbleSystem.Execute(context, physics);
                 DespawnSystem.Execute(context, physics);
+                DeviceDurabilitySystem.RemoveExhausted(context, brokenDevices);
                 RoundFlowSystem.Execute(context);
             }
             finally
@@ -154,8 +155,16 @@ namespace MarblesECS
                 context.Contacts.Clear();
                 insidePhysicsStep = false;
             }
-            dayFlow?.ObserveRound(before, context.Round, stepped: true);
+            try
+            {
+                dayFlow?.ObserveRound(before, context.Round, stepped: true);
+                foreach (var broken in brokenDevices) DeviceBroken?.Invoke(broken);
+            }
+            finally { brokenDevices.Clear(); }
         }
+
+        private readonly System.Collections.Generic.List<DeviceBrokenEvent> brokenDevices = new System.Collections.Generic.List<DeviceBrokenEvent>();
+        public event Action<DeviceBrokenEvent> DeviceBroken;
 
         /// <summary>Recover the step boundary after a failed PhysX step; restart the round before resuming.</summary>
         public void AbortPhysicsStep()
@@ -164,6 +173,7 @@ namespace MarblesECS
             context.Contacts.Clear();
             context.FloatingText?.Reset();
             context.ClearFireInput();
+            brokenDevices.Clear();
             insidePhysicsStep = false;
         }
 

@@ -9,6 +9,7 @@ namespace MarblesECS
             ThrowIfDisposed();
             if (context.Balance == null) return Array.Empty<ShopOfferSnapshot>();
             var offers = context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);
+            bool daily = context.Campaign.UsesDailyLoadout;
             var result = new ShopOfferSnapshot[offers.Length];
             for (int i = 0; i < offers.Length; i++)
             {
@@ -21,11 +22,12 @@ namespace MarblesECS
                     name = definition.Name; description = definition.Description; basePrice = definition.Price;
                 }
                 else throw new InvalidOperationException("Unsupported shop item kind.");
-                if (!offer.Sold) offer.Price = CampaignShopSystem.Price(context, basePrice);
+                if (!daily && !offer.Sold) offer.Price = CampaignShopSystem.Price(context, basePrice);
                 result[i] = new ShopOfferSnapshot
                 {
                     Index = i, Kind = offer.Kind, DefinitionId = offer.DefinitionId,
-                    Name = name, Description = description, Price = offer.Price, Sold = offer.Sold
+                    Name = name, Description = description, Price = offer.Price, Sold = offer.Sold,
+                    Selected = daily && DailyLoadoutSystem.IsSelected(context, offer.DefinitionId)
                 };
                 if (offer.Kind == ShopItemKind.Device)
                 {

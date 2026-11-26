@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -13,12 +14,19 @@ namespace MarblesECS
         private readonly Func<SimulationContext> context;
         private readonly Entity parent;
         private readonly int sourceId;
+        private readonly int count;
+        private readonly List<(Vector3 position, Vector3 velocity)> outputs;
         private double? valueOverride;
         private double? deviceMultiplierOverride;
         private bool submitted;
         private readonly bool registerRush;
-        internal DeviceCopy(Func<SimulationContext> context, Entity parent, int sourceId, bool registerRush = true)
-        { this.context = context; this.parent = parent; this.sourceId = sourceId; this.registerRush = registerRush; }
+        internal DeviceCopy(Func<SimulationContext> context, Entity parent, int sourceId, int count, bool registerRush)
+        {
+            if (count < 1 || count > 20) throw new ArgumentOutOfRangeException(nameof(count));
+            this.context = context; this.parent = parent; this.sourceId = sourceId; this.count = count;
+            this.registerRush = registerRush;
+            outputs = new List<(Vector3, Vector3)>(count);
+        }
         public double Value { get { var c = context(); return valueOverride ?? AttributeRuntime.Get(c, parent, GameAttribute.BALL_BASE_VALUE); } }
         public float Radius => (float)AttributeRuntime.Get(context(), parent, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
         public bool CanCopy
@@ -29,7 +37,8 @@ namespace MarblesECS
                 return !submitted && c.IsRunning && c.Manager.Exists(parent) && !c.Manager.HasComponent<HeldMotion>(parent) &&
                     !c.Manager.GetComponentData<SettlementState>(parent).IsSettled && !c.Manager.GetComponentData<DespawnState>(parent).PendingDespawn &&
                     c.Manager.GetComponentData<BallFeatures>(parent).ReplicationGeneration < c.Content.MaxSplitGeneration &&
-                    BallInteractionSystem.Finite(c.StepSeconds) && c.StepSeconds > 0 && c.Round.ActiveMarbleCount < c.Tuning.MaxActiveMarbles &&
+                    BallInteractionSystem.Finite(c.StepSeconds) && c.StepSeconds > 0 &&
+                    c.Round.ActiveMarbleCount <= c.Tuning.MaxActiveMarbles - count &&
                     CampaignStateUtility.FindDevice(c, sourceId, out var source) && DeviceDurabilitySystem.CanRun(c, source) &&
                     c.Physics is IMarblePhysicsCommands commands && commands.TryGetDevicePose(sourceId, out _) &&
                     !(c.Round.Phase == (byte)RoundPhase.Draining && c.Round.Time - c.Round.DrainStartedAt >= c.Tuning.DrainTimeoutSeconds);
@@ -51,9 +60,26 @@ namespace MarblesECS
         }
         public bool TrySpawn(Vector3 position, Vector3 velocity)
         {
-            var c = context(); bool valid = CanCopy; submitted = true;
-            if (!valid || !SimulationContext.IsFinite(position) || !SimulationContext.IsFinite(velocity) ||
-                !BallInteractionSystem.Finite(velocity.sqrMagnitude)) return false;
+            if (TryAddSpawn(position, velocity)) return TryCommit();
+            submitted = true;
+            return false;
+        }
+
+        public bool TryAddSpawn(Vector3 position, Vector3 velocity)
+        {
+            _ = context();
+            if (submitted || outputs.Count == count || !SimulationContext.IsFinite(position) ||
+                !SimulationContext.IsFinite(velocity) || !BallInteractionSystem.Finite(velocity.sqrMagnitude)) return false;
+            outputs.Add((position, velocity));
+            return true;
+        }
+
+        public bool TryCommit()
+        {
+            var c = context();
+            bool valid = CanCopy && outputs.Count == count;
+            submitted = true;
+            if (!valid) return false;
             using var attributes = c.Manager.GetBuffer<AttributeValue>(parent).ToNativeArray(Allocator.Temp);
             using var effects = c.Manager.GetBuffer<AttributeModifierData>(parent).ToNativeArray(Allocator.Temp);
             using var modifiers = c.Manager.GetBuffer<MarbleModifier>(parent).ToNativeArray(Allocator.Temp);
@@ -73,42 +99,49 @@ namespace MarblesECS
             var quote = new ShotQuote(0, 0, Radius, (float)values[(int)GameAttribute.BALL_MASS], score.BaseScore, score.BaseMultiplier);
             var spawn = new AttributeRuntime.Spawn { Values = values, Features = features, Quote = quote, Count = 1 };
             var rotation = c.Manager.GetComponentData<Transform3D>(parent).Rotation;
-            if (!ContentSpawnSystem.Create(c, spawn, position, rotation, velocity, out var child)) return false;
+            var created = new List<Entity>(count);
             bool committed = false;
             try
             {
-                c.Manager.SetComponentData(child, score);
-                c.Manager.SetComponentData(child, c.Manager.GetComponentData<MarbleRush>(parent));
-                MarbleAppearanceSystem.Copy(c, parent, child);
-                c.Manager.SetComponentData(child, c.Manager.GetComponentData<Lifetime>(parent));
-                var targetAttributes = c.Manager.GetBuffer<AttributeValue>(child); targetAttributes.CopyFrom(attributes);
-                if (valueOverride.HasValue) targetAttributes[(int)GameAttribute.BALL_BASE_VALUE] = new AttributeValue { Base = valueOverride.Value, Current = valueOverride.Value };
-                var targetEffects = c.Manager.GetBuffer<AttributeModifierData>(child);
-                foreach (var entry in effects)
-                    if (!valueOverride.HasValue || entry.Effect.Attribute != GameAttribute.BALL_BASE_VALUE) targetEffects.Add(entry);
-                var targetModifiers = c.Manager.GetBuffer<MarbleModifier>(child);
-                foreach (var entry in modifiers)
-                    if (!valueOverride.HasValue || entry.Attribute != MarbleModifierAttribute.ScoreAdd) targetModifiers.Add(entry);
-                c.Manager.GetBuffer<DeviceSplitSource>(child).CopyFrom(splits);
-                var history = c.Manager.GetBuffer<DeviceCopySource>(child); history.CopyFrom(copies);
-                bool known = false; foreach (var entry in history) if (entry.InstanceId == sourceId) known = true;
-                if (!known) history.Add(new DeviceCopySource { InstanceId = sourceId });
-                if (c.Manager.HasComponent<TimedGravity>(parent))
+                foreach (var output in outputs)
                 {
-                    c.Manager.AddComponentData(child, c.Manager.GetComponentData<TimedGravity>(parent));
-                    var shot = c.Manager.GetComponentData<ShotOrigin>(child);
-                    ((IMarblePhysicsCommands)c.Physics).SetProperties(new MarbleKey(shot.RoundId, shot.SpawnSequence), AttributeRuntime.Properties(c, child));
+                    if (!ContentSpawnSystem.Create(c, spawn, output.position, rotation, output.velocity, out var child)) return false;
+                    created.Add(child);
+                    c.Manager.SetComponentData(child, score);
+                    c.Manager.SetComponentData(child, c.Manager.GetComponentData<MarbleRush>(parent));
+                    MarbleAppearanceSystem.Copy(c, parent, child);
+                    c.Manager.SetComponentData(child, c.Manager.GetComponentData<Lifetime>(parent));
+                    var targetAttributes = c.Manager.GetBuffer<AttributeValue>(child);
+                    targetAttributes.CopyFrom(attributes);
+                    if (valueOverride.HasValue)
+                        targetAttributes[(int)GameAttribute.BALL_BASE_VALUE] = new AttributeValue { Base = valueOverride.Value, Current = valueOverride.Value };
+                    var targetEffects = c.Manager.GetBuffer<AttributeModifierData>(child);
+                    foreach (var entry in effects)
+                        if (!valueOverride.HasValue || entry.Effect.Attribute != GameAttribute.BALL_BASE_VALUE) targetEffects.Add(entry);
+                    var targetModifiers = c.Manager.GetBuffer<MarbleModifier>(child);
+                    foreach (var entry in modifiers)
+                        if (!valueOverride.HasValue || entry.Attribute != MarbleModifierAttribute.ScoreAdd) targetModifiers.Add(entry);
+                    c.Manager.GetBuffer<DeviceSplitSource>(child).CopyFrom(splits);
+                    var history = c.Manager.GetBuffer<DeviceCopySource>(child);
+                    history.CopyFrom(copies);
+                    bool known = false;
+                    foreach (var entry in history) if (entry.InstanceId == sourceId) known = true;
+                    if (!known) history.Add(new DeviceCopySource { InstanceId = sourceId });
+                    if (c.Manager.HasComponent<TimedGravity>(parent))
+                    {
+                        c.Manager.AddComponentData(child, c.Manager.GetComponentData<TimedGravity>(parent));
+                        var shot = c.Manager.GetComponentData<ShotOrigin>(child);
+                        ((IMarblePhysicsCommands)c.Physics).SetProperties(new MarbleKey(shot.RoundId, shot.SpawnSequence), AttributeRuntime.Properties(c, child));
+                    }
+                    var childVisits = c.Manager.GetBuffer<DeviceVisit>(child);
+                    foreach (var entry in visits) if (entry.InheritOnCopy) childVisits.Add(entry);
+                    BallInteractionSystem.RecordDeviceEffect(c, child, sourceId);
                 }
-                // Ordinary visit limits start fresh; explicitly inheritable effects retain their guards.
-                var childVisits = c.Manager.GetBuffer<DeviceVisit>(child);
-                foreach (var entry in visits) if (entry.InheritOnCopy) childVisits.Add(entry);
-                // Successful-effect history is inherited through BallFeatures.
-                BallInteractionSystem.RecordDeviceEffect(c, child, sourceId);
                 BallInteractionSystem.RecordDeviceEffect(c, parent, sourceId);
-                RushSystem.RecordSpawn(c, parent, new[] { child }, sourceId, registerRush);
+                RushSystem.RecordSpawn(c, parent, created, sourceId, registerRush);
                 committed = true; return true;
             }
-            finally { if (!committed) ContentSpawnSystem.Rollback(c, child); }
+            finally { if (!committed) foreach (var child in created) ContentSpawnSystem.Rollback(c, child); }
         }
     }
 }

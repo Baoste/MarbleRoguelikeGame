@@ -48,10 +48,10 @@ namespace MarblesECS.Editor
                 f.Step(PiggyHit(f, key, pig)); f.Step(PiggyHit(f, key, pig));
                 var api = CashApi(f, key, cash);
                 Check(api.HasTriggeredOtherDevice, "successful multiplier impacts are recorded");
-                Near(2, api.DeviceScoreMultiplier, "two pig factors of 1.5 give accumulated factor two");
+                Near(2.25, api.DeviceScoreMultiplier, "two pig factors of 1.5 multiply to 2.25");
                 api.Close(); GrantRefund(f, key); double blood = f.C.Player.Blood;
                 f.Step(f.Hit(key, cash), new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 1, Multiplier = 1 });
-                Near(70, f.C.Campaign.Coins, "ten value with factor two returns twenty coins");
+                Near(73, f.C.Campaign.Coins, "ten value with a factor of 2.25 returns twenty-three coins after rounding");
                 Near(0, f.C.Round.Score, "same-step score contact cannot settle the redeemed ball again");
                 Near(blood, f.C.Player.Blood, "consumption does not refund launch blood");
                 Check(!f.C.Marbles.ContainsKey(key), "redeemed ball removed from simulation and physics");
@@ -60,7 +60,7 @@ namespace MarblesECS.Editor
                 ExpectExpired(() => { _ = api.DeviceScoreMultiplier; }); ExpectExpired(() => api.MarkTriggered());
             }
             foreach (double value in new[] { 0, .24, .25, .49, .5, 1.5, 10.49, 10.5 })
-                foreach (double multiplier in new[] { 1d, 2d })
+                foreach (double multiplier in new[] { .5d, 1d, 2d })
                     using (var f = new Fixture())
                     {
                         var other = f.Add(f.C.Balance.Devices.Single(d => d.Id == 9000)); var cash = AddCashOut(f); var key = f.Launch();

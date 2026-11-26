@@ -27,6 +27,6 @@ function OnContact(api)
     if api.Impact == nil or api.LinkKey ~= 0 then return end
     local amount = bonus(api)
     if amount <= 0 or not api:Visit(0, 0) or not api:TryUse() then return end
-    api:AddScoreMultiplier(math.min(1000, 1 + amount))
+    api:MultiplyScore(math.min(1000, 1 + amount))
     status(api)
 end

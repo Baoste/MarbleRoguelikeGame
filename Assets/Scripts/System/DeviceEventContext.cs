@@ -65,7 +65,7 @@ namespace MarblesECS
         /// <summary>Current wallet balance, readable without an associated ball.</summary>
         public double Coins => C.Campaign.Coins;
         public double Blood => C.Player.Blood;
-        public double BloodCapacity => C.Tuning.BloodCapacity;
+        public double BloodCapacity => C.BloodCapacity;
         public double RestoreBlood(double amount)
         {
             var context = C;

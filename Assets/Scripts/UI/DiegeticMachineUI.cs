@@ -44,7 +44,11 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     [HideInInspector] public RectTransform Overlay;
     [HideInInspector] public GameObject DevicePager;
     readonly List<OwnedDeviceSnapshot> unplacedDevices = new List<OwnedDeviceSnapshot>();
+    private DailyPegSnapshot[] dailyDevices = Array.Empty<DailyPegSnapshot>();
     readonly int[] deviceIds = new int[6];
+    private readonly uint[] installIds = new uint[6];
+    private TMP_Text walletBalance;
+    private RawImage[] installIcons;
     Quaternion leverOnRotation;
     float slide, nextRefresh;
     int devicePage, hoverKind=-1, hoverIndex;
@@ -74,6 +78,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         if (!Placement) return;
         Placement.BackpackDropArea = ItemGroup;
         Placement.DeviceDropFinished += ShowPlacementFeedback;
+        if (Controller) Controller.DeviceBroken += ShowBreakFeedback;
     }
 
     public void BindScoreListener()
@@ -89,11 +94,17 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         bool ready=Controller && Controller.IsReady;
         bool build=ready && Controller.HasProductionFeature(ProductionFeature.DevicePlacement) &&
             Controller.ProductionCommandsAvailable && Controller.Session.Phase==RoundPhase.Build;
-        slide=Mathf.MoveTowards(slide,build?1:0,Time.unscaledDeltaTime/Mathf.Max(.01f,SlideSeconds));
+        bool daily = ready && Controller.Session.UsesDailyLoadout;
+        bool showBoard = build || (daily && Controller.ProductionCommandsAvailable && Controller.Session.Phase == RoundPhase.Playing);
+        slide=Mathf.MoveTowards(slide,showBoard?1:0,Time.unscaledDeltaTime/Mathf.Max(.01f,SlideSeconds));
         if(ItemBoard)ItemBoard.localPosition=Vector3.Lerp(BoardClosedPosition,BoardOpenPosition,Mathf.SmoothStep(0,1,slide));
-        bool show=build && IsBoardOpen;
+        bool show=showBoard && IsBoardOpen;
         if(ItemGroup){ItemGroup.alpha=show?1:0;ItemGroup.blocksRaycasts=show;ItemGroup.interactable=show && !Controller.Paused;}
-        if(Continue)Continue.interactable=show && !Controller.Paused;
+        if (Continue)
+        {
+            Continue.gameObject.SetActive(!daily || build);
+            Continue.interactable=show && build && !Controller.Paused;
+        }
         bool on=ready && Controller.ProductionCommandsAvailable && Controller.Session.Phase==RoundPhase.Playing;
         if(LeverPivot) LeverPivot.localRotation=Quaternion.RotateTowards(LeverPivot.localRotation,
             leverOnRotation*Quaternion.AngleAxis(on?0:LeverOffAngle,LeverAxis.normalized),Time.unscaledDeltaTime*240);
@@ -126,8 +137,16 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     }
     public bool BeginDeviceDrag(int index, Vector2 pointer)
     {
-        if(!Controller||!Controller.HasProductionFeature(ProductionFeature.DevicePlacement)||!Controller.ProductionCommandsAvailable||Controller.Paused||Controller.Session.Phase!=RoundPhase.Build||!IsBoardOpen||!Placement||index<0||index>=deviceIds.Length)return false;
+        if (!Controller || !IsBoardOpen || !Placement || index < 0 || index >= deviceIds.Length) return false;
+        if (Controller.Session.UsesDailyLoadout) return Placement.BeginInstallSelection(installIds[index], pointer, click: false);
+        if (!Controller.ProductionCommandsAvailable || Controller.Paused || Controller.Session.Phase != RoundPhase.Build) return false;
         return Placement.BeginInventoryDrag(deviceIds[index],pointer);
+    }
+    internal void SelectInstallType(int index, Vector2 pointer)
+    {
+        if (Controller && Controller.Session.UsesDailyLoadout && IsBoardOpen && Placement &&
+            index >= 0 && index < installIds.Length)
+            Placement.BeginInstallSelection(installIds[index], pointer, click: true);
     }
     public void UpdateDeviceDrag(Vector2 pointer){if(Placement)Placement.UpdateInventoryDrag(pointer);}
     public void EndDeviceDrag(Vector2 pointer, GameObject pointerTarget = null)
@@ -142,17 +161,36 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         deviceFeedbackUntil = string.IsNullOrEmpty(deviceFeedback) ? 0 : Time.unscaledTime + 3;
         RefreshInventory();
     }
+    private void ShowBreakFeedback(DeviceBrokenEvent broken)
+    {
+        deviceFeedback = $"「{DeviceResourceCatalog.Current.Get(broken.DefinitionId).Definition.Name}」耐久耗尽，原位可重新安装。";
+        deviceFeedbackUntil = Time.unscaledTime + 3;
+        RefreshInventory();
+    }
     public void CancelDeviceDrag(){if(Placement && Placement.IsDraggingInventory)Placement.CancelPlacement();}
     public void ChangeDevicePage(int step)
     {
-        int pages=Mathf.Max(1,(unplacedDevices.Count+5)/6);devicePage=(devicePage+step+pages)%pages;ClearHover();RefreshInventory();
+        int count = Controller && Controller.Session.UsesDailyLoadout ? dailyDevices.Length : unplacedDevices.Count;
+        int pages=Mathf.Max(1,(count+5)/6);devicePage=(devicePage+step+pages)%pages;ClearHover();RefreshInventory();
     }
     public void RefreshInventory()
     {
         if(!Controller||!Controller.IsReady)return;
+        var session = Controller.Session;
+        if (session.UsesDailyLoadout)
+        {
+            RefreshInstallTypes(session.BiomassScrapBalance);
+            return;
+        }
+        if (Controller.EnableRandomStartingDevices) ShowWalletBalance($"金币 {session.Coins:N0}");
+        else if (walletBalance) walletBalance.gameObject.SetActive(false);
         unplacedDevices.Clear();
-        if(Controller.HasProductionFeature(ProductionFeature.DevicePlacement))
-            unplacedDevices.AddRange(Controller.GetOwnedDevices().Where(d=>!d.Placed));
+        if (Controller.HasProductionFeature(ProductionFeature.DevicePlacement))
+        {
+            var inventory = Controller.GetOwnedDevices().Where(device => !device.Placed);
+            unplacedDevices.AddRange(Controller.EnableRandomStartingDevices
+                ? inventory.OrderBy(device => device.DefinitionId) : inventory);
+        }
         devicePage=Mathf.Clamp(devicePage,0,Mathf.Max(0,(unplacedDevices.Count-1)/6));
         VisibleDeviceCount=0;
         for(int i=0;i<6;i++)
@@ -168,6 +206,67 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         int devicePages=Mathf.Max(1,(unplacedDevices.Count+5)/6);
         if(DevicePager)DevicePager.SetActive(devicePages>1);
         if(DevicePageLabel)DevicePageLabel.text=$"{devicePage+1} / {devicePages}";
+    }
+    private void RefreshInstallTypes(long scrap)
+    {
+        if (!ItemGroup || DeviceButtons == null) return;
+        if (installIcons == null) CreateInstallIcons();
+        ShowWalletBalance($"♦  血肉残料 {scrap}  ·  用于安装");
+        dailyDevices = Controller.GetDailyPegs().Where(peg => peg.Selected).ToArray();
+        int pages = Mathf.Max(1, (dailyDevices.Length + 5) / 6);
+        devicePage = Mathf.Clamp(devicePage, 0, pages - 1);
+        VisibleDeviceCount = 0;
+        for (int i = 0; i < installIds.Length; i++)
+        {
+            int slot = devicePage * installIds.Length + i;
+            bool occupied = slot < dailyDevices.Length;
+            var button = DeviceButtons[i];
+            button.gameObject.SetActive(occupied);
+            installIds[i] = occupied ? dailyDevices[slot].DefinitionId : 0;
+            if (!occupied) continue;
+            var peg = dailyDevices[slot];
+            bool affordable = scrap >= peg.InstallPrice;
+            VisibleDeviceCount++;
+            button.interactable = IsBoardOpen && Controller.CanInstallDevices && affordable;
+            DeviceNames[i].text = peg.Name;
+            string durability = peg.Durability < 0 ? "无限耐久" : $"耐久 {peg.Durability}";
+            DeviceDescriptions[i].text = $"安装 {peg.InstallPrice}  ·  {durability}\n" + (!affordable ? "血肉残料不足\n" : "") + peg.Description;
+            var icon = DeviceResourceCatalog.Current.Get(peg.DefinitionId).Icon;
+            installIcons[i].texture = icon;
+            installIcons[i].enabled = icon;
+        }
+        if (DevicePager) DevicePager.SetActive(pages > 1);
+        if (DevicePageLabel) DevicePageLabel.text = $"{devicePage + 1} / {pages}";
+    }
+
+    private void ShowWalletBalance(string text)
+    {
+        if (!ItemGroup) return;
+        if (!walletBalance)
+            walletBalance = Label(ItemGroup.transform, "钱包余额", "", 24, new Vector2(0, 456),
+                new Vector2(550, 31), TextAlignmentOptions.Center, new Color(.95f, .57f, .59f));
+        walletBalance.gameObject.SetActive(true);
+        walletBalance.text = text;
+    }
+
+    private void CreateInstallIcons()
+    {
+        installIcons = new RawImage[DeviceButtons.Length];
+        for (int i = 0; i < installIcons.Length; i++)
+        {
+            var icon = new GameObject("装置图标", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage)).GetComponent<RawImage>();
+            icon.transform.SetParent(DeviceButtons[i].transform, false);
+            icon.rectTransform.anchoredPosition = new Vector2(-95, 79);
+            icon.rectTransform.sizeDelta = new Vector2(46, 46);
+            icon.raycastTarget = false;
+            installIcons[i] = icon;
+            var name = DeviceNames[i];
+            name.rectTransform.anchoredPosition = new Vector2(23, 79);
+            name.rectTransform.sizeDelta = new Vector2(184, 60);
+            name.enableAutoSizing = true;
+            name.fontSizeMin = 18;
+            name.fontSizeMax = 29;
+        }
     }
     public void Hover(int kind,int index,bool entering)
     {
@@ -198,6 +297,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
             if (Placement.BackpackDropArea == ItemGroup) Placement.BackpackDropArea = null;
             Placement.DeviceDropFinished -= ShowPlacementFeedback;
         }
+        if (Controller) Controller.DeviceBroken -= ShowBreakFeedback;
         ClearHover();
         CancelDeviceDrag();
     }
@@ -224,17 +324,22 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         }
         else if (Placement && Placement.UpdatePlacedDeviceHover(pointer, out var placedDevice))
         {
-            text = $"<b>{placedDevice.Name}</b>\n{DeviceDisplayText.Details(placedDevice)}\n{placedDevice.Description}";
+            string details = Controller.Session.UsesDailyLoadout
+                ? DeviceDisplayText.Durability(placedDevice) : DeviceDisplayText.Details(placedDevice);
+            text = $"<b>{placedDevice.Name}</b>\n{details}\n{placedDevice.Description}";
             if (showFeedback) text += "\n" + deviceFeedback;
         }
         else if (showFeedback) text = deviceFeedback;
         else if (hoverKind == 0)
-            text = CanCashOut() ? "<b>结算开关</b>\n向下拨动 / 点击结算\n关闭供血，按原规则结算本回合。" :
+            text = CanCashOut() ? "<b>结算开关</b>\n向下拨动 / 点击结算\n关闭供血，等待盘面弹珠结算。" :
                 Controller.Session.Phase == RoundPhase.Playing ? "<b>供血已开启</b>\n达到目标分后才能向下拨动并结算。" :
                 Controller.Session.Phase == RoundPhase.Build ? "<b>供血已关闭</b>\n布置完成后点击或向上拨动，开始回合。\n也可使用物品板上的“开始回合”。" :
                 "<b>供血已关闭</b>\n等待结算和购买阶段结束。";
         else if (hoverKind == 2 && hoverIndex >= 0 && hoverIndex < deviceIds.Length)
         {
+            var peg = Array.Find(dailyDevices, item => item.DefinitionId == installIds[hoverIndex] && item.DefinitionId != 0);
+            if (peg.DefinitionId != 0)
+                text = $"<b>{peg.Name}</b>\n安装 {peg.InstallPrice} 血肉残料 · 耐久 {(peg.Durability < 0 ? "无限" : peg.Durability.ToString())}\n{peg.Description}";
             var device = unplacedDevices.Find(x => x.InstanceId == deviceIds[hoverIndex]);
             if (device.InstanceId != 0)
                 text = $"<b>{device.Name}</b>\n{DeviceDisplayText.Details(device)}\n{device.Description}\n";

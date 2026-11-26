@@ -30,14 +30,7 @@ namespace MarblesECS
         {
             var input = ConfigJson.Read(json, source);
             if (input.Int("schemaVersion") != SchemaVersion) throw input.Error("schemaVersion");
-            var pins = ReadEntries(input, "pins", entry => new BoardLayoutPin
-            {
-                x = Number(entry, "x", 0, 1),
-                y = Number(entry, "y", 0, 1),
-                radius = Positive(entry, "radius"),
-                scoreMultiplier = Number(entry, "scoreMultiplier", 0, 1000, 2),
-                rushChanceAdd = Number(entry, "rushChanceAdd", 0, 1, 0)
-            });
+            var pins = ReadEntries(input, "pins", ReadPin);
             var zones = ReadEntries(input, "zones", ReadZone);
             return new BoardLayoutDefinition(source, pins, zones);
         }
@@ -63,6 +56,20 @@ namespace MarblesECS
             for (int i = 0; i < result.Length; i++)
                 result[i] = read(ConfigFields.From(list[i], $"{input.Context}/{field}[{i}]"));
             return result;
+        }
+
+        private static BoardLayoutPin ReadPin(ConfigFields entry)
+        {
+            bool collisionOnly = entry.Bool("collisionOnly", false);
+            return new BoardLayoutPin
+            {
+                x = Number(entry, "x", 0, 1),
+                y = Number(entry, "y", 0, 1),
+                radius = Positive(entry, "radius"),
+                collisionOnly = collisionOnly,
+                scoreMultiplier = collisionOnly ? 1 : Number(entry, "scoreMultiplier", 0, 1000, 2),
+                rushChanceAdd = collisionOnly ? 0 : Number(entry, "rushChanceAdd", 0, 1, 0)
+            };
         }
 
         private static BoardLayoutZone ReadZone(ConfigFields entry)

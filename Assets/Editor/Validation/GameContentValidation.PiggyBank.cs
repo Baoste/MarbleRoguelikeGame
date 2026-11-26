@@ -33,17 +33,17 @@ namespace MarblesECS.Editor
             {
                 var device = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, 25);
                 var hit = PiggyHit(f, key, device); f.Step(hit, hit); f.Step(hit);
-                Near(1.4, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "reentry adds factor minus one, duplicate same-step events do not");
+                Near(1.44, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "reentry multiplies the factor once even with duplicate same-step events");
                 PiggyCoins(f, 15); f.Step(hit);
-                Near(1.5, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "next impact adds the current bonus to earlier contributions");
+                Near(1.584, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "next impact multiplies by the current wallet factor");
                 PiggyCoins(f, 9); f.Step(hit);
-                Near(1.5, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "low balance never removes earlier gains");
+                Near(1.584, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "low balance never removes earlier gains");
                 Near(17, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "only three effective impacts spend durability");
                 PiggyCoins(f, 30); f.Step();
                 Check(f.Simulation.GetDeviceStatus(device.InstanceId).Contains("1.3"), "status refreshes when coins change without a collision");
                 var other = AddPiggyBank(f); var second = f.Launch();
                 f.Step(PiggyHit(f, key, other), PiggyHit(f, second, other));
-                Near(1.8, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "independent pig adds to the shared device bonus");
+                Near(2.0592, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "independent pig multiplies the same score factor");
                 Near(1.3, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(second)).ScoreMultiplier, "different simultaneous balls do not share a cooldown");
                 Near(18, f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == other.InstanceId).RemainingDurability, "each simultaneous ball spends one use");
                 var link = PiggyHit(f, key, other); link.LinkKey = 88;
@@ -62,7 +62,7 @@ namespace MarblesECS.Editor
                     var device = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, 10);
                     for (int i = 0; i < 22; i++) f.Step(PiggyHit(f, key, device));
                     int uses = durability == -1 ? 22 : durability;
-                    Near(1 + .1 * uses, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "final and infinite uses add the right number of bonuses");
+                    Near(Math.Pow(1.1, uses), f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "each effective use multiplies once");
                     Near(durability == -1 ? -1 : 0, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "finite and infinite wear remain correct");
                 }
             using (var f = new Fixture())
@@ -73,8 +73,8 @@ namespace MarblesECS.Editor
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 10, Multiplier = 1, RushDisabled = true });
                 Near(10 * f.C.Content.Definition(GameAttribute.MACHINE_MULT).MaxValue, f.C.Round.Score, "normal settlement still respects the shared machine multiplier cap");
             }
-            PiggyWalletApi(); AdditiveDeviceScores(); PiggyPhysics();
-            Debug.Log("PIGGY_BANK_VALIDATION_PASSED: " + (assertions - start) + " assertions; wallet tiers, additive device scores, unchanged coins/value, durability, API bounds and real impacts.");
+            PiggyWalletApi(); MultiplicativeDeviceScores(); PiggyPhysics();
+            Debug.Log("PIGGY_BANK_VALIDATION_PASSED: " + (assertions - start) + " assertions; wallet tiers, multiplier products, durability, API bounds and real impacts.");
         }
 
         private static OwnedDeviceData AddPiggyBank(Fixture f)
@@ -98,31 +98,34 @@ namespace MarblesECS.Editor
                 Near(api.Coins, tick.Coins, "event wallet read agrees without requiring a ball");
                 PiggyCoins(f, 17); Near(17, api.Coins, "wallet getter reads the current state rather than a cached value");
                 api.AddScoreMultiplier(1.2); api.MultiplyScore(1.2);
-                Near(1.4, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "new API and legacy alias both accumulate factor minus one");
+                Near(1.44, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "both API names multiply the supplied factor");
                 ExpectArgument(() => api.AddScoreMultiplier(-1)); ExpectArgument(() => api.AddScoreMultiplier(double.NaN)); ExpectArgument(() => api.MultiplyScore(double.PositiveInfinity));
-                Near(1.4, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "invalid contribution never mutates score");
-                api.AddScoreMultiplier(1);
-                Near(1.4, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "neutral factor contributes zero");
-                api.AddScoreMultiplier(0);
-                Near(.4, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "factor zero contributes minus one");
-                api.AddScoreMultiplier(double.MaxValue);
-                Near(1000, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "large finite contribution saturates safely");
+                Near(1.44, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "invalid factor never mutates score");
+                Check(!api.TryMultiplyScore(1), "multiplying by one leaves the product unchanged");
+                Check(api.TryMultiplyScore(.5), "multiplying by a half divides the product");
+                Near(.72, api.DeviceScoreMultiplier, "fractional factor divides the whole product");
+                Check(api.TryMultiplyScore(0), "first zero changes the product");
+                Check(!api.TryMultiplyScore(3), "zero stays zero under multiplication");
+                Near(0, api.DeviceScoreMultiplier, "zero persists until replaced");
+                api.SetDeviceScoreMultiplier(1);
+                api.MultiplyScore(double.MaxValue);
+                Near(1000, api.DeviceScoreMultiplier, "large finite factor respects the read cap");
                 api.Close(); tick.Close();
-                ExpectExpired(() => { _ = api.Coins; }); ExpectExpired(() => { _ = tick.Coins; }); ExpectExpired(() => api.AddScoreMultiplier(2)); ExpectExpired(() => api.MultiplyScore(2));
+                ExpectExpired(() => { _ = api.Coins; }); ExpectExpired(() => { _ = tick.Coins; }); ExpectExpired(() => api.AddScoreMultiplier(2)); ExpectExpired(() => api.MultiplyScore(2)); ExpectExpired(() => api.TryMultiplyScore(2));
             }
         }
 
-        private static void AdditiveDeviceScores()
+        private static void MultiplicativeDeviceScores()
         {
             using (var f = new Fixture())
             {
                 var pig = AddPiggyBank(f); var multi = f.Add(f.C.Balance.Devices.Single(d => d.Id == 113));
                 var key = f.Launch(); PiggyCoins(f, 25);
                 f.Step(PiggyHit(f, key, pig)); f.Step(f.Hit(key, multi)); f.Step(PiggyHit(f, key, pig));
-                Near(2.25, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "pig plus Multi Ding plus pig gives 1 + .2 + .85 + .2");
+                Near(2.664, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "pig and Multi Ding give 1.2 * 1.85 * 1.2");
                 Near(0, f.C.Round.Score, "all device contributions wait for settlement");
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 10, Multiplier = 1, RushDisabled = true });
-                Near(22.5, f.C.Round.Score + f.C.Round.FractionalScore, "score area multiplies value by the completed bonus once");
+                Near(26.64, f.C.Round.Score + f.C.Round.FractionalScore, "score area multiplies value by the combined factor");
             }
             using (var f = new Fixture())
             {
@@ -131,14 +134,14 @@ namespace MarblesECS.Editor
                     new MarbleContact { Key = key, Kind = MarbleContactKind.RushPin, TargetId = 7002, Multiplier = 1, RushChanceAdd = .1 },
                     new MarbleContact { Key = key, Kind = MarbleContactKind.Multiplier, TargetId = 7003, Multiplier = 3 },
                     new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 10, Multiplier = 1, RushDisabled = true });
-                Near(40, f.C.Round.Score, "legacy pins give 1 + (2 - 1) + (3 - 1) before same-step settlement; Rush pin adds nothing");
+                Near(60, f.C.Round.Score, "fixed pins give 2 * 3 before same-step settlement");
             }
             using (var f = new Fixture())
             {
                 var bounce = f.Add(f.C.Balance.Devices.Single(d => d.Id == 9000)); var pig = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, 25);
                 f.Simulation.ApplyDeviceAttribute(bounce.InstanceId, 991, GameAttribute.MACHINE_MULT, AttributeOperation.Set, 2);
                 f.Step(f.Hit(key, bounce)); f.Step(PiggyHit(f, key, pig));
-                Near(2.2, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "generic Trigger factor and Lua factor share the same bonus total");
+                Near(2.4, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "generic Trigger factor and Lua factor share the same product");
                 Near(1, f.Simulation.GetMarbleAttribute(key, GameAttribute.MACHINE_MULT), "generic trigger does not bake device factors into the base attribute");
             }
             using (var f = new Fixture())
@@ -147,7 +150,7 @@ namespace MarblesECS.Editor
                 f.Simulation.ApplyMarbleEffect(key, MarbleModifierAttribute.ScoreMul, 2); f.Step(PiggyHit(f, key, pig));
                 Near(2.4, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "permanent non-device modifier scales the contribution total");
                 f.Simulation.ApplyMarbleEffect(key, MarbleModifierAttribute.ScoreMul, 2); f.Step(PiggyHit(f, key, pig));
-                Near(5.6, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "later device bonus retains independent permanent modifiers");
+                Near(5.76, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "later device factor retains independent permanent modifiers");
             }
             using (var f = new Fixture())
             {
@@ -155,25 +158,20 @@ namespace MarblesECS.Editor
                 var key = f.Launch(); PiggyCoins(f, 25); f.Step(PiggyHit(f, key, pig)); f.Step(f.Hit(key, multi));
                 Check(ContentSpawnSystem.Children(f.C, f.Ball(key), 1, false, Vector3.forward, Vector3.up), "create a child after multiple device contributions");
                 var child = f.C.Marbles.Keys.Single(k => !k.Equals(key)); f.Step(PiggyHit(f, child, pig));
-                Near(2.25, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(child)).ScoreMultiplier, "child inherits the bonus total and can add another bonus");
-                Near(2.05, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "child contribution does not change its parent's total");
+                Near(2.664, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(child)).ScoreMultiplier, "child inherits the product and multiplies it again");
+                Near(2.22, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "the parent keeps its own product");
             }
-            var standalone = new MarbleScore { BaseMultiplier = 2, ScoreMultiplier = 2 };
-            standalone.AddDeviceMultiplier(2); standalone.AddDeviceMultiplier(3);
-            Near(8, standalone.ScoreMultiplier, "launcher multiplier stays separate from additive device bonuses");
-            var reduced = new MarbleScore { BaseMultiplier = 1, ScoreMultiplier = 1 };
-            reduced.AddDeviceMultiplier(0); reduced.AddDeviceMultiplier(0);
-            Near(0, reduced.ScoreMultiplier, "negative combined bonus never produces negative score");
-            reduced.AddDeviceMultiplier(3);
-            Near(1, reduced.ScoreMultiplier, "negative bonus remains in the sum for later additions");
+            var standalone = new MarbleScore { BaseMultiplier = 2 };
+            standalone.MultiplyDeviceMultiplier(2); standalone.MultiplyDeviceMultiplier(3);
+            Near(12, standalone.ScoreMultiplier, "launcher multiplier scales the complete device product");
             using (var f = new Fixture())
             {
                 var pig = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, 50);
                 f.Step(PiggyHit(f, key, pig)); f.Step(PiggyHit(f, key, pig));
-                Near(2, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "two factors of 1.5 give 1 + 2 * (1.5 - 1)");
-                Near(0, f.C.Round.Score, "the two hits only accumulate a bonus");
+                Near(2.25, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "two factors of 1.5 give 2.25");
+                Near(0, f.C.Round.Score, "both hits only record the multiplier");
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 10, Multiplier = 1, RushDisabled = true });
-                Near(20, f.C.Round.Score + f.C.Round.FractionalScore, "score area applies the requested two-hit multiplier");
+                Near(22.5, f.C.Round.Score + f.C.Round.FractionalScore, "score area applies the two-hit multiplier");
             }
         }
 
@@ -205,7 +203,7 @@ namespace MarblesECS.Editor
                     for (int step = 0; hits.Count <= pass && step < 50; step++)
                     { simulation.BeforePhysics(.02f, bridge, spawn, Quaternion.identity); bridge.Simulate(.02f); simulation.AfterPhysics(bridge); }
                     Check(hits.Count == pass + 1, "real pig collision registers once per entry");
-                    Near(1 + .2 * (pass + 1), c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier, "real pig impact accumulates factor minus one");
+                    Near(Math.Pow(1.2, pass + 1), c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier, "real pig impacts multiply for each entry");
                     for (int step = 0; step < 10; step++)
                     { simulation.BeforePhysics(.02f, bridge, spawn, Quaternion.identity); bridge.Simulate(.02f); simulation.AfterPhysics(bridge); }
                     Check(hits.Count == pass + 1, "resting on the pig does not repeatedly multiply score");

@@ -16,16 +16,21 @@ namespace MarblesECS
 
     public sealed class DayCampaignDefinition
     {
-        internal const int CurrentSchemaVersion = 2;
-        public int SchemaVersion => CurrentSchemaVersion;
+        internal const int LegacySchemaVersion = 2;
+        internal const int CurrentSchemaVersion = 3;
+        public int SchemaVersion { get; }
+        public long StartingCompanyScrip { get; }
         public string SequenceId { get; }
         public IReadOnlyList<DayDefinition> Days { get; }
         public bool IsConfigured => Days.Count != 0;
         internal IReadOnlyList<DayRuleDefinition> CampaignRules { get; }
 
-        internal DayCampaignDefinition(string id, DayDefinition[] days, DayRuleDefinition[] campaignRules)
+        internal DayCampaignDefinition(int schemaVersion, string id, long startingCompanyScrip,
+            DayDefinition[] days, DayRuleDefinition[] campaignRules)
         {
+            SchemaVersion = schemaVersion;
             SequenceId = id;
+            StartingCompanyScrip = startingCompanyScrip;
             Days = Array.AsReadOnly(days);
             CampaignRules = Array.AsReadOnly(campaignRules);
         }
@@ -37,6 +42,8 @@ namespace MarblesECS
         public int Order { get; }
         public long TargetScore { get; }
         public long RewardCoins { get; }
+        public DailyLoadoutDefinition DailyLoadout { get; }
+        public BloodProgressionDefinition BloodProgression { get; }
         public ProductionFeature ProductionFeatures { get; }
         public string BoardLayoutFile { get; }
         public BoardLayoutDefinition BoardLayout { get; }
@@ -46,18 +53,52 @@ namespace MarblesECS
 
         internal DayDefinition(string id, int order, long targetScore, long rewardCoins, ProductionFeature features,
             string boardLayoutFile, BoardLayoutDefinition boardLayout, MorningPrepDefinition[] morningPrep,
-            DayEventDefinition[] events, DayRuleDefinition[] rules)
+            DayEventDefinition[] events, DayRuleDefinition[] rules, DailyLoadoutDefinition dailyLoadout,
+            BloodProgressionDefinition bloodProgression)
         {
             DayId = id;
             Order = order;
             TargetScore = targetScore;
             RewardCoins = rewardCoins;
+            DailyLoadout = dailyLoadout;
+            BloodProgression = bloodProgression;
             ProductionFeatures = features;
             BoardLayoutFile = boardLayoutFile;
             BoardLayout = boardLayout;
             MorningPrep = Array.AsReadOnly(morningPrep);
             Events = Array.AsReadOnly(events);
             Rules = Array.AsReadOnly(rules);
+        }
+    }
+
+    public readonly struct BloodValueStage
+    {
+        public double SpentBlood { get; }
+        public double BaseValue { get; }
+
+        internal BloodValueStage(double spentBlood, double baseValue)
+        {
+            SpentBlood = spentBlood;
+            BaseValue = baseValue;
+        }
+    }
+
+    public sealed class BloodProgressionDefinition
+    {
+        public float InitialBlood { get; }
+        public IReadOnlyList<BloodValueStage> Stages { get; }
+
+        internal BloodProgressionDefinition(float initialBlood, IReadOnlyList<BloodValueStage> stages)
+        {
+            InitialBlood = initialBlood;
+            Stages = stages;
+        }
+
+        internal int StageAt(double spentBlood)
+        {
+            int index = Stages.Count - 1;
+            while (index >= 0 && spentBlood < Stages[index].SpentBlood) index--;
+            return index;
         }
     }
 

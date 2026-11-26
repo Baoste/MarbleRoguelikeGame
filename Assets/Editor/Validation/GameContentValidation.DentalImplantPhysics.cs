@@ -59,7 +59,7 @@ namespace MarblesECS.Editor
                     Check(bridge.TrySetVelocity(key, incoming), "approach planted tooth");
                     for (int i = 0; contacts == previous && i < 150; i++) Step();
                     Near(previous + 1, contacts, "physical impact enters once");
-                    Near(1 + use * 2, c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier, "real steel impact adds two points");
+                Near(Math.Pow(3, use), c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier, "real steel impact applies a factor of three");
                     Check(Vector3.Dot(body.velocity, incoming) < 0, "original ball bounces normally including last use");
                 }
                 Check(!collider.enabled, "final use disables collider immediately");

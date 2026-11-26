@@ -9,11 +9,12 @@ namespace MarblesECS.Editor
 {
     internal sealed class BoardLayoutEditorWindow : EditorWindow
     {
-        private enum Tool { Select, Pin, ScoreZone, RandomZone }
+        private enum Tool { Select, Pin, ScoreZone, RandomZone, CollisionPin }
 
-        private static readonly string[] Tools = { "Select", "Pin", "Score Zone", "Random Zone" };
+        private static readonly string[] Tools = { "Select", "Pin", "Score Zone", "Random Zone", "Collision Pin" };
         private static readonly string[] ZoneTypes = { nameof(MarbleContactKind.Score), nameof(MarbleContactKind.RandomScore) };
         private static readonly Color PinColor = new Color(.96f, .69f, .29f);
+        private static readonly Color CollisionPinColor = new Color(.52f, .76f, .86f);
         private static readonly Color ScoreColor = new Color(.24f, .74f, .47f);
         private static readonly Color RandomColor = new Color(.67f, .45f, .94f);
 
@@ -105,13 +106,16 @@ namespace MarblesECS.Editor
         private void DrawPinInspector()
         {
             var pin = pins[pinIndex];
-            EditorGUILayout.LabelField("Pin", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(pin.collisionOnly ? "Collision Pin" : "Pin", EditorStyles.boldLabel);
             EditorGUI.BeginChangeCheck();
             pin.x = EditorGUILayout.FloatField("X", pin.x);
             pin.y = EditorGUILayout.FloatField("Y", pin.y);
             pin.radius = EditorGUILayout.FloatField("Radius", pin.radius);
-            pin.scoreMultiplier = EditorGUILayout.FloatField("Score Multiplier", pin.scoreMultiplier);
-            pin.rushChanceAdd = EditorGUILayout.FloatField("Rush Chance Add", pin.rushChanceAdd);
+            if (!pin.collisionOnly)
+            {
+                pin.scoreMultiplier = EditorGUILayout.FloatField("Score Multiplier", pin.scoreMultiplier);
+                pin.rushChanceAdd = EditorGUILayout.FloatField("Rush Chance Add", pin.rushChanceAdd);
+            }
             if (EditorGUI.EndChangeCheck()) { pins[pinIndex] = pin; MarkEdited(); }
             if (GUILayout.Button("Delete Pin")) DeleteSelection();
         }
@@ -181,7 +185,7 @@ namespace MarblesECS.Editor
                     var pin = pins[i];
                     var center = Screen(pin.x, pin.y) - offset;
                     if (!Drawable(center, pin.radius, pin.radius)) continue;
-                    Handles.color = PinColor;
+                    Handles.color = pin.collisionOnly ? CollisionPinColor : PinColor;
                     Handles.DrawSolidDisc(center, Vector3.forward, pin.radius * zoom);
                     if (i != pinIndex) continue;
                     Handles.color = Color.white;
@@ -257,11 +261,12 @@ namespace MarblesECS.Editor
         {
             pinIndex = zoneIndex = -1;
             float minimumWidth = Mathf.Min(projection.TopWidth, projection.BottomWidth);
-            if (tool == Tool.Pin)
+            if (tool == Tool.Pin || tool == Tool.CollisionPin)
             {
                 pinIndex = pins.Count;
                 float radius = Mathf.Min(.1f, Mathf.Min(minimumWidth, projection.Length) * .1f);
-                pins.Add(new BoardLayoutPin { radius = radius, scoreMultiplier = 2 });
+                bool collisionOnly = tool == Tool.CollisionPin;
+                pins.Add(new BoardLayoutPin { radius = radius, collisionOnly = collisionOnly, scoreMultiplier = collisionOnly ? 1 : 2 });
             }
             else
             {

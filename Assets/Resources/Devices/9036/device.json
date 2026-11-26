@@ -1,0 +1,12 @@
+{
+  "Id": 9036,
+  "SourceId": "SplitPeg",
+  "Bounce": 0.6,
+  "ScoreMultiplier": 1,
+  "StartingCount": 0,
+  "PurchaseQuantity": 1,
+  "Cooldown": 0,
+  "Value": 1,
+  "Strength": 42,
+  "RotationLocked": true
+}

@@ -12,6 +12,7 @@ namespace MarblesECS
         public string description;
         public double value;
         public double purchasePrice;
+        public long biomassScrapPrice;
         public string rarity;
         public int durability;
         public DeviceItemType type;
@@ -34,14 +35,19 @@ namespace MarblesECS
             };
             double value = input.Number("value");
             double price = input.Number("purchasePrice", 9, optional: true);
+            double installPrice = input.Number("biomassScrapPrice", 0, optional: true);
             if (value < 0 || value != Math.Truncate(value)) throw input.Error("value");
             if (price < 1 || price != Math.Truncate(price)) throw input.Error("purchasePrice");
+            if (installPrice < (input.Has("biomassScrapPrice") ? 1 : 0) ||
+                installPrice > CampaignWalletSystem.MaxBalance || installPrice != Math.Truncate(installPrice))
+                throw input.Error("biomassScrapPrice");
             return new DeviceMetadata
             {
                 name = input.String("name"),
                 description = input.String("description"),
                 value = value,
                 purchasePrice = price,
+                biomassScrapPrice = (long)installPrice,
                 rarity = rarity,
                 durability = input.Int("durability", 20, optional: true),
                 type = DeviceItemType.Device,

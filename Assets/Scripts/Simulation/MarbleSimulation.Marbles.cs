@@ -51,9 +51,7 @@ namespace MarblesECS
                 }
                 else
                 {
-                    // Permanent non-device effects remain independent of the additive device contributions.
                     score.BaseMultiplier = MarbleRules.CombineDeviceMultiplier(score.BaseMultiplier, value);
-                    score.ScoreMultiplier = MarbleRules.CombineDeviceMultiplier(score.ScoreMultiplier, value);
                 }
                 context.Manager.SetComponentData(entity, score);
             }

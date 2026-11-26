@@ -60,16 +60,18 @@ namespace MarblesECS
                 definition.Name = metadata.name;
                 definition.Description = metadata.description;
                 definition.Price = checked((long)metadata.purchasePrice);
+                definition.BiomassScrapPrice = metadata.biomassScrapPrice;
                 definition.SellPrice = checked((long)metadata.value);
                 definition.Durability = metadata.durability;
                 definition.Rarity = metadata.Rarity;
                 definition.Validate();
 
                 var prefab = ReadEntry<GameObject>(folder, manifest, "prefab", ".prefab");
+                var icon = manifest.Has("icon") ? ReadEntry<Texture2D>(folder, manifest, "icon", ".png") : null;
                 ReadPlacementSphere(prefab, definition);
                 string lua = ReadEntry<TextAsset>(folder, manifest, "lua", ".lua").text;
                 if (string.IsNullOrWhiteSpace(lua)) throw new ArgumentException("Lua script is empty.");
-                return new DeviceResource(definition, prefab, metadata, lua, name);
+                return new DeviceResource(definition, prefab, metadata, lua, name, icon);
             }
             catch (Exception error)
             {
@@ -135,15 +137,17 @@ namespace MarblesECS
         public DeviceMetadata Metadata => metadata.Copy();
         public DeviceDefinition Definition { get; }
         public GameObject Prefab { get; }
+        public Texture2D Icon { get; }
         public string LuaSource { get; }
 
-        internal DeviceResource(DeviceDefinition definition, GameObject prefab, DeviceMetadata metadata, string lua, string name)
+        internal DeviceResource(DeviceDefinition definition, GameObject prefab, DeviceMetadata metadata, string lua, string name, Texture2D icon = null)
         {
             Definition = definition;
             Prefab = prefab;
             this.metadata = metadata;
             LuaSource = lua;
             this.name = name;
+            Icon = icon;
         }
 
         internal DeviceLuaScript CreateScript(string source = null) => new DeviceLuaScript(source ?? LuaSource, Metadata, name);

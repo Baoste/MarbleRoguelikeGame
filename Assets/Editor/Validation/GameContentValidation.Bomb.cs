@@ -55,12 +55,12 @@ namespace MarblesECS.Editor
                     Near(.25, f.Simulation.GetMarbleAttribute(k, GameAttribute.BALL_RADIUS), "one eighth volume");
                     Near(.125, f.Simulation.GetMarbleAttribute(k, GameAttribute.BALL_MASS), "one eighth mass");
                     Near(6, f.Physics.States[k].LinearVelocity.magnitude, "blast gives configured scatter speed");
-                    Near(i < 8 ? 2 : 1, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(k)).ScoreMultiplier, "each parent's own multiplier inherited");
+                    Near(i < 8 ? 2.25 : 1, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(k)).ScoreMultiplier, "each parent's own multiplier inherited");
                     api = CashApi(f, k, device); Check(api.HasSplitFrom(device.InstanceId), "blast ancestry recorded"); api.Close();
                 }
                 BombUntil(f, 6.3); Near(0, f.C.Transients.Count, "flash removed after final use");
                 f.Step(children.Select(k => new MarbleContact { Key = k, TargetId = 709, Kind = MarbleContactKind.Score, Multiplier = 1, RushDisabled = true }).ToArray());
-                Near(30, f.C.Round.Score, "two original values and independent factors conserved at scoring");
+                Near(32.5, f.C.Round.Score + f.C.Round.FractionalScore, "two original values and independent factors conserved at scoring");
                 BombUntil(f, 11.1); Near(0, f.C.Transients.Count, "depleted launcher throws no more bombs");
             }
             foreach (int wear in new[] { 1, 20, -1 })

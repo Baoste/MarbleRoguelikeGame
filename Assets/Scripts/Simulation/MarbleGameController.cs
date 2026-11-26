@@ -131,7 +131,7 @@ namespace MarblesECS.PhysX
         {
             if (!IsReady) return;
 
-            float blood = simulation.Snapshot.Blood;
+            float blood = simulation.Context.Player.Blood;
             if (!float.IsNaN(publishedBlood) && Mathf.Approximately(publishedBlood, blood)) return;
 
             publishedBlood = blood;

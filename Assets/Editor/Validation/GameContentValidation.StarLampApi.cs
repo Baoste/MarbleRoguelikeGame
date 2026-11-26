@@ -13,15 +13,15 @@ namespace MarblesECS.Editor
             {
                 var a = AddStarLamp(f); var b = AddStarLamp(f); var key = f.Launch();
                 var api = CashApi(f, key, a); var board = api.Board;
-                int first = board.AddScoreMultiplier(3, 1), second = board.AddScoreMultiplier(1.5, 2);
+                int first = board.MultiplyScore(3, 1), second = board.AddScoreMultiplier(.5, 2);
                 Check(first > 0 && second > first, "timed effects have distinct handles");
-                Near(3.5, LampMultiplier(f, key), "independent temporary factors add their offsets from one");
+                Near(1.5, LampMultiplier(f, key), "concurrent boost and divisor multiply");
                 Near(f.C.Round.Time + 1, board.GetScoreMultiplierEndTime(first), "handle returns exact simulation deadline");
                 Near(0, board.GetScoreMultiplierEndTime(int.MaxValue), "unknown handle is inactive");
                 var endpoint = api.Motion.Source;
                 var copy = api.CreateCopy(); Check(copy.TrySpawn(endpoint.Position + endpoint.Down, endpoint.Down * 6), "spawn copied ball while board bonus active");
                 var children = f.C.Marbles.Keys.Where(k => !k.Equals(key)).ToArray(); Check(children.Length == 1, "one copy created");
-                Near(3.5, LampMultiplier(f, children[0]), "copy receives one shared aura without double inheritance");
+                Near(1.5, LampMultiplier(f, children[0]), "copy receives each shared factor once");
                 Near(1, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(children[0])).ScoreMultiplier, "copy stores only permanent multiplier");
                 var splitApi = CashApi(f, children[0], b); var split = splitApi.CreateSplitBatch(3);
                 for (int i = -1; i <= 1; i++)
@@ -32,19 +32,22 @@ namespace MarblesECS.Editor
                 Check(split.TryCommit(), "split copy while board effect is active"); splitApi.Close(); f.Step();
                 children = f.C.Marbles.Keys.Where(k => !k.Equals(key)).ToArray(); Near(3, children.Length, "copy replaced by three split descendants");
                 foreach (var child in children)
-                { Near(3.5, LampMultiplier(f, child), "split descendant receives exactly one board contribution"); Near(1, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(child)).ScoreMultiplier, "temporary multiplier not copied into split score"); }
+                { Near(1.5, LampMultiplier(f, child), "split descendant receives each shared factor once"); Near(1, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(child)).ScoreMultiplier, "temporary multiplier not copied into split score"); }
                 ExpectArgument(() => board.AddScoreMultiplier(-1, 1)); ExpectArgument(() => board.AddScoreMultiplier(1001, 1));
                 ExpectArgument(() => board.AddScoreMultiplier(2, double.NaN)); ExpectArgument(() => board.AddScoreMultiplier(2, 0));
                 ExpectArgument(() => board.AddScoreMultiplier(2, 61));
                 Near(20, api.RemainingDurability, "board effect registration does not implicitly spend durability");
                 double end = board.GetScoreMultiplierEndTime(first); api.Close();
                 ExpectExpired(() => board.AddScoreMultiplier(2, 1)); ExpectExpired(() => board.GetScoreMultiplierEndTime(first));
-                LampAdvance(f, end); Near(1.5, LampMultiplier(f, key), "effects expire independently");
-                Near(1.5, LampMultiplier(f, children[0]), "copy also loses expired contribution");
+                LampAdvance(f, end); Near(.5, LampMultiplier(f, key), "effects expire independently");
+                Near(.5, LampMultiplier(f, children[0]), "split descendant retains the temporary divisor");
                 LampAdvance(f, end + 1); Near(1, LampMultiplier(f, key), "all temporary contributions removed");
-                api = CashApi(f, key, b); api.SetDeviceScoreMultiplier(999); api.Board.AddScoreMultiplier(4, .2);
-                Near(1000, LampMultiplier(f, key), "combined factor respects cap without erasing stored bonus");
-                end = f.C.Round.Time + .2; api.Close(); LampAdvance(f, end); Near(999, LampMultiplier(f, key), "cap does not permanently consume existing bonus");
+                api = CashApi(f, key, b); api.MultiplyScore(2000);
+                Near(1000, LampMultiplier(f, key), "stored factor respects the read cap");
+                api.Board.MultiplyScore(.25, .2);
+                Near(500, LampMultiplier(f, key), "temporary divisor applies to the full stored factor");
+                end = f.C.Round.Time + .2; api.Close(); LampAdvance(f, end); Near(1000, LampMultiplier(f, key), "divisor expiry restores the capped display");
+                api = CashApi(f, key, b); api.SetDeviceScoreMultiplier(999); api.Close();
                 CampaignStateUtility.FindDevice(f.C, a.InstanceId, out var entity);
                 var tick = new DeviceEventContext(f.C, entity); int id = tick.Board.AddScoreMultiplier(2, 5); var retained = tick.Board;
                 Check(id > 0, "device-only callback can register board effect"); tick.Close(); ExpectExpired(() => retained.GetScoreMultiplierEndTime(id));

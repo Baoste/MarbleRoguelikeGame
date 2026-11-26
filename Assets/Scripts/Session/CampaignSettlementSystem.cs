@@ -18,8 +18,11 @@ namespace MarblesECS
                 round.Phase = (byte)RoundPhase.Lost;
             else
             {
-                campaign.LastRewardCoins = Reward(context, campaign.RewardCoins, round.Score - round.TargetScore);
-                campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastRewardCoins, CampaignStateUtility.MaxCoins);
+                if (!campaign.UsesDailyLoadout)
+                {
+                    campaign.LastRewardCoins = Reward(context, campaign.RewardCoins, round.Score - round.TargetScore);
+                    campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastRewardCoins, CampaignStateUtility.MaxCoins);
+                }
                 round.Phase = (byte)(campaign.RepeatRounds ? RoundPhase.Build : RoundPhase.Won);
             }
             context.Campaign = campaign;

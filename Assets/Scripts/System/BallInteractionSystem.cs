@@ -111,7 +111,7 @@ namespace MarblesECS
             if (!AttributeRuntime.Enabled(c)) return;
             var features = c.Manager.GetComponentData<BallFeatures>(ball);
             if (!features.Revive || !c.RefundedFamilies.Add(features.Family)) return;
-            var player = c.Player; player.Blood = Math.Min(c.Tuning.BloodCapacity, player.Blood + features.RefundBlood); c.Player = player;
+            var player = c.Player; player.Blood = Math.Min(c.BloodCapacity, player.Blood + features.RefundBlood); c.Player = player;
             var round = c.Round;
             if (!round.CashoutRequested && round.Phase == (byte)RoundPhase.Draining && !round.SettlementComplete)
             { round.Phase = (byte)RoundPhase.Playing; c.Round = round; }

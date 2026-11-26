@@ -39,6 +39,7 @@ namespace MarblesECS
         internal DayProgressSnapshot Snapshot => new DayProgressSnapshot(State, definition.Days.Count, context.Round.RandomState, Busy);
         internal bool ShopOpen => State.ShopOpen;
         internal bool AllowsShopping => ShopOpen && !Busy;
+        internal bool LoadoutConfirmed => Current.DailyLoadout == null || DailyLoadoutSystem.State(context).Confirmed;
 
         internal DayFlowSystem(MarbleSimulation simulation, DayCampaignDefinition definition,
             DayRetryRandomPolicy retryRandom, uint runSeed)
@@ -50,6 +51,7 @@ namespace MarblesECS
             context.Manager.AddComponentData(context.RoundEntity,
                 new DayRuntimeData { SequenceId = new FixedString128Bytes(definition.SequenceId), RunSeed = runSeed });
             context.Manager.AddBuffer<MorningPrepProgress>(context.RoundEntity);
+            if (context.Campaign.UsesDailyLoadout) DailyLoadoutSystem.Initialize(context);
             rules = new DayRuleSystem(context);
             events = new DayEventSystem(context, rules);
         }
@@ -69,6 +71,8 @@ namespace MarblesECS
             { error = "Close the shop before using the marble machine."; return false; }
             if (reason == DayTransitionReason.WakeUpCompleted && state.Phase == DayPhase.WakeUp && state.MorningPrepRemaining != 0)
             { error = "Finish Morning Prep before using the marble machine."; return false; }
+            if (reason == DayTransitionReason.WakeUpCompleted && !LoadoutConfirmed)
+            { error = "Confirm today's device loadout before using the marble machine."; return false; }
             if (!DayStateMachine.CanTransition(state, reason))
             {
                 error = $"Day '{state.DayId}' attempt {state.Attempt}: {reason} is invalid in {state.Status}/{state.Phase}.";
@@ -112,9 +116,9 @@ namespace MarblesECS
         {
             var state = State;
             if (state.Version != version || state.Status != DayCampaignStatus.Active || state.Phase != DayPhase.WakeUp ||
-                state.ShopOpen || Busy || !context.HasProductionFeature(ProductionFeature.Shop)) return false;
+                state.ShopOpen || Busy || (Current.DailyLoadout == null && !context.HasProductionFeature(ProductionFeature.Shop))) return false;
 
-            if (!state.ShopStockReady) CampaignShopSystem.Generate(context);
+            if (!state.ShopStockReady) CampaignShopSystem.Generate(context, Current.DailyLoadout);
             state.ShopStockReady = true;
             state.ShopOpen = true;
             State = state;
@@ -122,6 +126,14 @@ namespace MarblesECS
             Pump();
             return true;
         }
+
+        internal bool TryTogglePeg(long version, uint id) =>
+            CanEditLoadout(version) && DailyLoadoutSystem.Toggle(context, Current.DailyLoadout, id);
+
+        internal bool TryConfirmLoadout(long version) =>
+            CanEditLoadout(version) && DailyLoadoutSystem.Confirm(context, Current.DailyLoadout);
+
+        private bool CanEditLoadout(long version) => AllowsShopping && Current.DailyLoadout != null && State.Version == version;
 
         internal bool TryCloseShop(long version)
         {
@@ -244,6 +256,7 @@ namespace MarblesECS
                 case DayTransitionReason.WakeUpCompleted:
                     state.Phase = DayPhase.Production;
                     state.Result = DayResult.InProgress;
+                    if (Current.DailyLoadout != null) state.AttemptStartRandomState = context.Round.RandomState;
                     State = state;
                     rules.Install(Current.Rules, DayRuleScope.Temporary, Snapshot);
                     EnterPhase();
@@ -252,6 +265,12 @@ namespace MarblesECS
                 case DayTransitionReason.ProductionSucceeded:
                     state.Phase = DayPhase.DaySettlement;
                     State = state;
+                    if (Current.DailyLoadout != null)
+                    {
+                        DailyLoadoutSystem.AwardClearScrip(context, state.DayId, Current.DailyLoadout.ClearCompanyScripReward);
+                        DailyLoadoutSystem.EndRun(context);
+                        simulation.ClearDailyProduction();
+                    }
                     EnterPhase();
                     break;
                 case DayTransitionReason.ProductionFailed:
@@ -265,7 +284,7 @@ namespace MarblesECS
                     break;
                 case DayTransitionReason.RestCompleted:
                     rules.ClearAttempt(Snapshot);
-                    DevicePlacementSystem.ReturnAllToInventory(context);
+                    if (Current.DailyLoadout == null) DevicePlacementSystem.ReturnAllToInventory(context);
                     state.CompletedDays++;
                     if (state.CompletedDays == definition.Days.Count)
                     {
@@ -304,10 +323,13 @@ namespace MarblesECS
 
         private void RetryCurrentDay(DayRuntimeData state)
         {
-            uint random = checkpoint.RandomState;
+            bool dailyLoadout = Current.DailyLoadout != null;
+            bool keepStock = dailyLoadout && state.ShopStockReady;
+            uint baselineRandom = dailyLoadout ? state.AttemptStartRandomState : checkpoint.RandomState;
+            uint random = baselineRandom;
             try
             {
-                if (retryRandom != null) random = retryRandom(new DayRetryRandomContext(Snapshot, random));
+                if (retryRandom != null) random = retryRandom(new DayRetryRandomContext(Snapshot, baselineRandom));
             }
             catch (Exception error)
             {
@@ -320,6 +342,7 @@ namespace MarblesECS
             checkpoint.Restore(context, random);
             state.Attempt = checked(state.Attempt + 1);
             InitializeWakeUp(ref state, Current);
+            state.ShopStockReady = keepStock;
             State = state;
             rules.Restore(checkpoint.Rules, definition.CampaignRules, Snapshot);
             simulation.AfterDayBoardRestore();

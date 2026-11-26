@@ -36,11 +36,11 @@ namespace MarblesECS.Editor
                 Near(f.C.Player.Blood, f.Simulation.Snapshot.Blood, "HUD snapshot exposes restored spendable blood");
                 Near(value > 0 ? 19 : 20, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "positive value conversion uses once; zero value is free");
                 Near(coins, f.C.Campaign.Coins, "factory gives blood rather than coins"); Near(0, f.C.Round.Score, "factory does not settle score");
-                Near(2, f.C.Manager.GetComponentData<MarbleScore>(ball).ScoreMultiplier, "value reduction keeps accumulated multiplier");
+                Near(2.25, f.C.Manager.GetComponentData<MarbleScore>(ball).ScoreMultiplier, "value reduction keeps accumulated multiplier");
                 Check(f.C.Marbles.ContainsKey(key), "factory retains the original ball");
                 VectorNear(motion.LinearVelocity, f.Physics.States[key].LinearVelocity, "Lua leaves natural bounce alone");
                 f.Step(new MarbleContact { Key = key, TargetId = 700, Kind = MarbleContactKind.Score, Multiplier = 1, RushDisabled = true });
-                Near(remaining * 2, f.C.Round.Score + f.C.Round.FractionalScore, "reduced value settles with the preserved multiplier");
+                Near(remaining * 2.25, f.C.Round.Score + f.C.Round.FractionalScore, "reduced value settles with the preserved multiplier");
             }
             using (var f = new Fixture())
             {

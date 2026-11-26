@@ -12,13 +12,15 @@ namespace MarblesECS
                 ThrowIfDisposed();
                 var round = context.Round;
                 var player = context.Player;
-                float restitution = context.Tuning.BaseRestitution;
-                if (AttributeRuntime.Enabled(context))
-                    restitution = (float)AttributeRuntime.Prepare(context, context.Launcher.Flow).Values[(int)GameAttribute.BALL_BOUNCE];
+                var flow = context.Launcher.Flow;
+                var next = AttributeRuntime.Enabled(context) ? AttributeRuntime.Prepare(context, flow) : null;
                 return new MarbleSnapshot
                 {
                     RoundId = round.RoundId, Tick = round.Tick, Phase = (RoundPhase)round.Phase,
-                    Blood = player.Blood, Score = round.Score, TargetScore = round.TargetScore,
+                    Blood = player.Blood, BloodCapacity = context.BloodCapacity, BloodSpent = player.BloodSpent,
+                    NextMarbleBaseValue = next?.Quote.BaseValue ?? context.Tuning.BaseScore,
+                    BloodValueStage = next?.BloodValueStage ?? -1,
+                    Score = round.Score, TargetScore = round.TargetScore,
                     ActiveMarbles = round.ActiveMarbleCount, TimeSeconds = round.Time,
                     RushSecondsRemaining = round.RushRemaining,
                     RushDurationSeconds = round.RushDuration,
@@ -28,8 +30,9 @@ namespace MarblesECS
                     ScoreStackSecondsRemaining = Math.Max(0, round.ScoreStackExpiresAt - round.Time),
                     ScoreStackWindowSeconds = round.ScoreStackWindowSeconds,
                     ShotsPerSecond = 1 / RushSystem.FireInterval(context, context.Tuning.FireIntervalSeconds),
-                    Flow = context.Launcher.Flow,
-                    NextMarbleRestitution = restitution
+                    Flow = flow,
+                    NextMarbleRestitution = next != null
+                        ? (float)next.Values[(int)GameAttribute.BALL_BOUNCE] : context.Tuning.BaseRestitution
                 };
             }
         }

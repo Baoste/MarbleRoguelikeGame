@@ -8,7 +8,7 @@ public sealed partial class DevicePlacementUI
     private sealed class PlacedDeviceView : IDisposable
     {
         private readonly DeviceViewHandle handle;
-        internal readonly OwnedDeviceSnapshot Device;
+        internal OwnedDeviceSnapshot Device;
         internal readonly Collider[] Colliders;
         internal QuickOutline Outline;
         internal GameObject Root => handle.Root;
@@ -39,7 +39,7 @@ public sealed partial class DevicePlacementUI
     {
         device = default;
         if (!isActiveAndEnabled || !Controller || !Controller.IsReady || !BoardRoot ||
-            SelectedInstanceId != 0 || placedObjects.Count == 0)
+            IsDraggingDevice || placedObjects.Count == 0)
         {
             ClearPlacedDeviceHover();
             return false;

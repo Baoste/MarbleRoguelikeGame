@@ -26,9 +26,7 @@ namespace MarblesECS
                     if (!Create(c, spawn, position + offset, rotation, velocity, out var entity)) return;
                     created.Add(entity);
                 }
-                var player = c.Player;
-                player.Blood -= (float)cost;
-                c.Player = player;
+                PlayerBloodSystem.SpendOnLaunch(c, cost);
                 LauncherFireSystem.RecordShot(c);
                 committed = true;
             }

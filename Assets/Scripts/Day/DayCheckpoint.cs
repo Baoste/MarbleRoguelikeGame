@@ -38,7 +38,7 @@ namespace MarblesECS
             movementConfig = manager.GetComponentData<LauncherMovementConfig>(context.LauncherEntity);
             movementState = manager.GetComponentData<LauncherMovementState>(context.LauncherEntity);
             movementInput = manager.GetComponentData<LauncherMovementInput>(context.LauncherEntity);
-            offers = CopyBuffer<ShopOfferData>(manager, context.RoundEntity);
+            if (!campaign.UsesDailyLoadout) offers = CopyBuffer<ShopOfferData>(manager, context.RoundEntity);
             playerValues = CopyBuffer<AttributeValue>(manager, context.PlayerEntity);
             playerModifiers = CopyBuffer<AttributeModifierData>(manager, context.PlayerEntity);
             using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
@@ -57,9 +57,10 @@ namespace MarblesECS
         internal void Restore(SimulationContext context, uint randomState)
         {
             var manager = context.Manager;
+            var current = context.Campaign;
             // Keep physical/contact identities fresh even when replaying the gameplay random stream.
             int nextRoundId = checked(context.Round.RoundId + 1);
-            int nextRevision = checked(context.Campaign.LayoutRevision + 1);
+            int nextRevision = checked(current.LayoutRevision + 1);
             context.ClearFireInput();
             context.RemoveAllMarbles();
             context.Contacts.Clear();
@@ -78,6 +79,13 @@ namespace MarblesECS
             context.Round = restored;
             var session = campaign;
             session.LayoutRevision = nextRevision;
+            if (session.UsesDailyLoadout)
+            {
+                // Procurement and loadout edits are committed during Morning Prep. Retry rolls back production.
+                session.CompanyScripBalance = current.CompanyScripBalance;
+                session.ShopRefreshCount = current.ShopRefreshCount;
+                session.NextDeviceId = current.NextDeviceId;
+            }
             context.Campaign = session;
             context.Player = player;
             context.Launcher = launcher;
@@ -85,7 +93,7 @@ namespace MarblesECS
             manager.SetComponentData(context.LauncherEntity, movementState);
             manager.SetComponentData(context.LauncherEntity, movementInput);
             context.NextSpawnSequence = spawnSequence;
-            context.NextStableId = stableId;
+            if (!session.UsesDailyLoadout) context.NextStableId = stableId;
             context.StepSeconds = stepSeconds;
             WriteBuffer(manager, context.RoundEntity, offers);
             WriteBuffer(manager, context.PlayerEntity, playerValues);

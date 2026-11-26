@@ -86,7 +86,7 @@ namespace MarblesECS.Editor
                 var round = f.C.Round; round.RushRemaining = 1; f.C.Round = round;
                 f.Step(GoldMineHit(f, key, device));
                 Near(5, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "active Rush does not get baked into halved base value");
-                Near(10, RushSystem.BallValue(f.C, f.Ball(key)), "temporary Rush five remains independent");
+                Near(6, RushSystem.BallValue(f.C, f.Ball(key)), "temporary Rush value remains independent");
                 Near(27, f.C.Manager.GetComponentData<MarbleRush>(f.Ball(key)).Contribution, "device gain is not doubled during Rush");
                 for (int i = 0; i < 12; i++) f.Step();
                 Near(5, RushSystem.BallValue(f.C, f.Ball(key)), "temporary value disappears without reversing coffee effect");

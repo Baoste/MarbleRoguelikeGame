@@ -50,14 +50,15 @@ namespace MarblesECS.Editor
                 VectorNear(before.LinearVelocity, f.Physics.States[key].LinearVelocity, "Lua leaves normal bounce unchanged");
                 Near(blood, f.C.Player.Blood, "count multiplier does not spend blood"); Near(coins, f.C.Campaign.Coins, "count multiplier does not spend coins");
                 Near(0, f.C.Round.Score, "bonus waits for score area");
-                Check(f.Simulation.GetDeviceStatus(d.InstanceId).Contains("其他装置 " + count + " · 附加倍率 +" + bonus), "status reflects live count and bonus even for zero");
-                f.Step(hit); Near(1 + 2 * bonus, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "repeat impacts add again; twenty is not a lifetime cap");
+                Check(f.Simulation.GetDeviceStatus(d.InstanceId).Contains("其他装置 " + count + " · 碰撞倍率 ×" + (1 + bonus)), "status reflects live count and factor");
+                double product = Math.Pow(1 + bonus, 2);
+                f.Step(hit); Near(product, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "repeat impacts multiply again");
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 700, Multiplier = 1, RushDisabled = true });
-                Near(10 * (1 + 2 * bonus), f.C.Round.Score + f.C.Round.FractionalScore, "score area applies final accumulated factor once");
+                Near(10 * Math.Min(100, product), f.C.Round.Score + f.C.Round.FractionalScore, "score area applies the product up to the machine cap");
             }
             MoreIsMoreLiveLayout(); MoreIsMoreLimits(); PlacedDeviceCountApi();
             foreach (float dt in new[] { .01f, .02f }) MoreIsMorePhysics(dt);
-            Debug.Log("MORE_IS_MORE_VALIDATION_PASSED: " + (assertions - start) + " assertions; live placed counts, exclusion, caps, additive scoring, wear, API lifetime and real impacts.");
+            Debug.Log("MORE_IS_MORE_VALIDATION_PASSED: " + (assertions - start) + " assertions; live placed counts, exclusion, caps, multiplier products, wear, API lifetime and real impacts.");
         }
         private static void MoreIsMoreLiveLayout()
         {
@@ -67,7 +68,7 @@ namespace MarblesECS.Editor
                 var other = MoreCompanion(f.C, false);
                 f.Step(PiggyHit(f, a, d)); Near(1, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "inventory device does not contribute");
                 var query = CashApi(f, a, d); Check(!query.HasTriggeredOtherDevice, "no other device effect is invented"); query.Close();
-                MorePlace(f.C, other, true); f.Step(); Check(f.Simulation.GetDeviceStatus(d.InstanceId).Contains("+2"), "placing a device refreshes display without a collision");
+                MorePlace(f.C, other, true); f.Step(); Check(f.Simulation.GetDeviceStatus(d.InstanceId).Contains("×3"), "placing a device refreshes display without a collision");
                 Near(1, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "layout change does not retroactively alter already flying balls");
                 f.Step(PiggyHit(f, a, d), PiggyHit(f, b, d));
                 Near(3, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "first simultaneous ball gets current bonus");
@@ -77,13 +78,13 @@ namespace MarblesECS.Editor
                 Near(3, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "removing support stops new gains but keeps previous bonus");
                 Near(18, f.Simulation.GetOwnedDevices().Single(x => x.InstanceId == d.InstanceId).RemainingDurability, "zero bonus after retrieval is free");
                 MorePlace(f.C, other, true); var exhausted = MoreCompanion(f.C, true, true);
-                f.Step(PiggyHit(f, a, d)); Near(7, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "exhausted but placed companion still contributes");
+                f.Step(PiggyHit(f, a, d)); Near(15, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "exhausted but placed companion still contributes");
                 CampaignStateUtility.FindDevice(f.C, exhausted, out var removed); f.C.Manager.DestroyEntity(removed);
-                f.Step(PiggyHit(f, a, d)); Near(9, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "deleted device immediately leaves the count");
+                f.Step(PiggyHit(f, a, d)); Near(45, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "deleted device immediately leaves the count");
                 var ignored = PiggyHit(f, a, d); ignored.LinkKey = 88; f.Step(f.Hit(a, d), ignored);
                 Near(16, f.Simulation.GetOwnedDevices().Single(x => x.InstanceId == d.InstanceId).RemainingDurability, "trigger-only and link events cost nothing");
                 var second = AddMoreIsMore(f); f.Step(PiggyHit(f, a, second));
-                Near(13, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "second instance counts first and companion, excluding only itself");
+                Near(225, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "second instance counts first and companion, excluding only itself");
                 Near(19, f.Simulation.GetOwnedDevices().Single(x => x.InstanceId == second.InstanceId).RemainingDurability, "second instance has independent wear");
                 query = CashApi(f, a, d); Check(query.HasTriggeredOtherDevice, "positive bonus records successful effect history"); query.Close();
                 var round = f.C.Round; round.Phase = (byte)RoundPhase.Build; f.C.Round = round; Check(f.Simulation.BeginRound(), "start another round with same placed layout");
@@ -95,7 +96,7 @@ namespace MarblesECS.Editor
             {
                 var d = AddMoreIsMore(f); var key = f.Launch(); MoreCompanion(f.C, true);
                 var api = CashApi(f, key, d); api.SetDeviceScoreMultiplier(0); api.Close();
-                f.Step(PiggyHit(f, key, d)); Near(2, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "plus two recovers from a zeroed device factor");
+                f.Step(PiggyHit(f, key, d)); Near(0, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "collision factor leaves a zeroed product at zero");
             }
         }
         private static void MoreIsMoreLimits()
@@ -107,7 +108,7 @@ namespace MarblesECS.Editor
                 var d = AddMoreIsMore(f); var key = f.Launch(); MoreCompanion(f.C, true);
                 for (int n = 0; n < 22; n++) f.Step(PiggyHit(f, key, d));
                 int uses = wear == -1 ? 22 : wear;
-                Near(1 + 2 * uses, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "last use applies completely and infinite durability continues");
+                Near(Math.Min(1000, Math.Pow(3, uses)), f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "last use applies completely and infinite durability continues");
                 Near(wear == -1 ? -1 : 0, f.Simulation.GetOwnedDevices().Single(x => x.InstanceId == d.InstanceId).RemainingDurability, "finite and infinite durability");
             }
             foreach (var config in new[] { (0d, 2f), (20d, 0f), (5.5d, 1.5f) })
@@ -177,7 +178,7 @@ namespace MarblesECS.Editor
                     for (int n = 0; hits.Count == before && n < 100; n++)
                     { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); solved = body.velocity; simulation.AfterPhysics(bridge); }
                     Check(hits.Count == before + 1, "real collision enters once");
-                    if (placed) { expected += 2; uses++; }
+                    if (placed) { expected *= 3; uses++; }
                     Near(expected, c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier, "physical impact uses current placed count");
                     Near(10, simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "physical ball retains value");
                     Check(Vector3.Dot(body.velocity, incoming) < 0, "ball bounces normally"); VectorNear(solved, body.velocity, "Lua preserves solver velocity");
@@ -185,7 +186,7 @@ namespace MarblesECS.Editor
                     Near(20 - uses, simulation.GetOwnedDevices().Single(x => x.InstanceId == owned.InstanceId).RemainingDurability, "physical effective-use durability");
                 }
                 simulation.EnqueueContact(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 700, Multiplier = 1, RushDisabled = true }); Step();
-                Near(50, c.Round.Score, "two plus-two effects settle as value times five");
+                Near(90, c.Round.Score, "two factors of three settle at nine times the value");
             }
             finally { view?.Dispose(); simulation.Dispose(); bridge.Dispose(); UnityEngine.Object.DestroyImmediate(board); SceneManager.UnloadSceneAsync(scene); }
         }

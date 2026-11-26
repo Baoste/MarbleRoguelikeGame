@@ -10,13 +10,30 @@ public sealed partial class DevicePlacementUI
 
     public bool IsMovingPlacedDevice { get; private set; }
     public bool CanEdit => isActiveAndEnabled && Controller != null && Controller.IsReady &&
-        !Controller.Paused && Controller.ProductionCommandsAvailable && Controller.HasProductionFeature(ProductionFeature.DevicePlacement) &&
-        Controller.Session.Phase == RoundPhase.Build && BoardRoot != null;
+        BoardRoot != null && (CanMovePlaced || Controller.CanInstallDevices);
+    private bool CanMovePlaced => !Controller.Paused && Controller.ProductionCommandsAvailable &&
+        Controller.HasProductionFeature(ProductionFeature.DevicePlacement) && Controller.Session.Phase == RoundPhase.Build;
     internal CanvasGroup BackpackDropArea { get; set; }
     private GameObject hiddenPlacedObject;
     private Vector2 boardPressPosition;
     private float previewAngle;
     private int selectionRound;
+    private bool installByClick;
+    private int lastInstallClick = -1;
+    internal bool BlocksDeviceActivation => IsDraggingDevice || lastInstallClick == Time.frameCount;
+
+    internal bool BeginInstallSelection(uint id, Vector2 pointer, bool click)
+    {
+        if (!CanEdit || !Controller.CanInstallDevices || (IsDraggingDevice && !installByClick)) return false;
+        var definition = Controller.InstallableDefinition(id);
+        if (definition == null || Controller.Session.BiomassScrapBalance < definition.InstallPrice) return false;
+        CancelPlacement();
+        BeginDrag(new OwnedDeviceSnapshot { DefinitionId = id, Name = definition.Name, RotationLocked = definition.RotationLocked });
+        SelectedDefinitionId = id;
+        installByClick = click;
+        UpdateInventoryDrag(pointer);
+        return true;
+    }
 
     private void BeginDrag(OwnedDeviceSnapshot device)
     {
@@ -41,6 +58,8 @@ public sealed partial class DevicePlacementUI
     private void ValidateSelection()
     {
         if (SelectedInstanceId != 0 && !TryGetSelectedDevice(out _)) CancelPlacement();
+        if (SelectedDefinitionId != 0 && (!Controller.CanInstallDevices || selectionRound != Controller.Snapshot.RoundId))
+            CancelPlacement();
     }
 
     private void HideSelectedView()
@@ -60,7 +79,13 @@ public sealed partial class DevicePlacementUI
 
     public void RotateSelected(float degrees)
     {
-        if (!TryGetSelectedDevice(out var device) || device.RotationLocked || !MarbleRules.IsFinite(degrees)) return;
+        if (!MarbleRules.IsFinite(degrees)) return;
+        if (SelectedDefinitionId != 0)
+        {
+            var definition = Controller.InstallableDefinition(SelectedDefinitionId);
+            if (definition == null || definition.RotationLocked) return;
+        }
+        else if (!TryGetSelectedDevice(out var device) || device.RotationLocked) return;
         previewAngle = (previewAngle + degrees) % 360;
     }
 
@@ -91,7 +116,11 @@ public sealed partial class DevicePlacementUI
         var point = BoardRoot.InverseTransformPoint(worldPoint);
         Transform pose = SetPreviewPose(ref point);
         bool canPlace = drop == DropTarget.Board && IsInsidePlacementPlane(worldPoint) && IsInsidePlacementPlane(pose.position) &&
-            Controller.CanPlaceDevice(SelectedInstanceId, point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation);
+            (SelectedDefinitionId != 0
+                ? Controller.CanInstallDevice(SelectedDefinitionId, point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation)
+                : Controller.CanPlaceDevice(SelectedInstanceId, point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation));
+        if (SelectedDefinitionId != 0 && drop == DropTarget.Board && !canPlace)
+            LastFeedback = "此处不可安装，或血肉残料不足。";
         previewOutline ??= new QuickOutline(previewObject);
         previewOutline.SetColor(canPlace || drop == DropTarget.Offer ? ValidOutline : InvalidOutline);
         previewObject.SetActive(true);
@@ -115,8 +144,14 @@ public sealed partial class DevicePlacementUI
 
     internal bool HandleBoardPointerDown(Vector2 pointer)
     {
-        if (!CanEdit || IsDraggingDevice || (SellArea && SellArea.ContainsPointer(pointer)) ||
+        if (!CanEdit || (!Controller.Session.UsesDailyLoadout && SellArea && SellArea.ContainsPointer(pointer)) ||
             PointerOnBackpack(pointer) || PointerOnControl(pointer)) return false;
+        if (installByClick)
+        {
+            lastInstallClick = Time.frameCount;
+            return FinishInstall(pointer, null);
+        }
+        if (!CanMovePlaced || IsDraggingDevice) return false;
         if (!ViewCamera) ViewCamera = Camera.main;
         if (!ViewCamera) return false;
         SyncPlacedObjects();
@@ -159,6 +194,22 @@ public sealed partial class DevicePlacementUI
         Transform pose = SetPreviewPose(ref point);
         return IsInsidePlacementPlane(pose.position) && Controller.PlaceDevice(SelectedInstanceId,
             point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation);
+    }
+
+    private bool FinishInstall(Vector2 pointer, GameObject pointerTarget)
+    {
+        bool installed = false;
+        if (previewObject && FindDropTarget(pointer, pointerTarget, out _) == DropTarget.Board &&
+            TryGetBoardPoint(pointer, out var point))
+        {
+            var pose = SetPreviewPose(ref point);
+            installed = IsInsidePlacementPlane(pose.position) && Controller.TryInstallDevice(SelectedDefinitionId,
+                point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation, out _);
+        }
+        LastFeedback = installed ? "装置已安装。" : "此处不可安装，或血肉残料不足。";
+        if (installed || !installByClick) CancelPlacement();
+        DeviceDropFinished?.Invoke();
+        return installed;
     }
 
     private float PlacementRadiusScale

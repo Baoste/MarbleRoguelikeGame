@@ -75,6 +75,7 @@ namespace MarblesECS
             internal BallFeatures Features;
             internal ShotQuote Quote;
             internal int Count;
+            internal int BloodValueStage;
         }
 
         internal static Spawn Prepare(SimulationContext c, float flow)
@@ -83,6 +84,9 @@ namespace MarblesECS
             var values = new double[(int)GameAttribute.Count];
             var bases = c.Manager.GetBuffer<AttributeValue>(c.PlayerEntity);
             for (int i = 0; i < values.Length; i++) values[i] = bases[i].Base;
+            var progression = c.BloodProgression;
+            int stage = progression?.StageAt(c.Player.BloodSpent) ?? -1;
+            if (stage >= 0) values[(int)GameAttribute.BALL_BASE_VALUE] = progression.Stages[stage].BaseValue;
             // Flow is a burst lever: larger shots are physically larger/heavier and gain a
             // small efficiency premium, while low flow still creates more Rush attempts.
             double investmentScale = investment / c.Tuning.MinInvestment;
@@ -98,7 +102,7 @@ namespace MarblesECS
             for (int i = 0; i < values.Length; i++) values[i] = AttributeMath.Evaluate(c.Content.Definition((GameAttribute)i), values[i], effects);
             return new Spawn
             {
-                Values = values, Features = features, Count = (int)values[(int)GameAttribute.BALL_SPAWN_COUNT],
+                Values = values, Features = features, Count = (int)values[(int)GameAttribute.BALL_SPAWN_COUNT], BloodValueStage = stage,
                 Quote = new ShotQuote(investment, (float)values[(int)GameAttribute.BLOOD_COST],
                     (float)values[(int)GameAttribute.BALL_RADIUS] * RadiusToWorld,
                     (float)values[(int)GameAttribute.BALL_MASS], values[(int)GameAttribute.BALL_BASE_VALUE], 1)

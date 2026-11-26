@@ -21,6 +21,7 @@ namespace MarblesECS
     public struct BoardLayoutPin
     {
         public float x, y, radius;
+        public bool collisionOnly;
         public float scoreMultiplier, rushChanceAdd;
     }
 

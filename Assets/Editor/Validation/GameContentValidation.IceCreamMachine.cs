@@ -28,26 +28,30 @@ namespace MarblesECS.Editor
                 f.Step(); Check(f.Simulation.GetDeviceStatus(d.InstanceId).Contains("已触发 0 次 · 下次 ×10"), "new machine advertises its first full factor");
                 for (int i = 0; i < 12; i++)
                 {
-                    f.Step(hit, hit); expected += Math.Max(0, 9 - i);
-                    Near(expected, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "factors ten through two add factor minus one, then remain neutral");
+                    f.Step(hit, hit); expected *= Math.Max(1, 10 - i);
+                    Near(Math.Min(1000, expected), f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "factors ten through two multiply, then remain neutral");
                     Near(20 - Math.Min(9, i + 1), f.Simulation.GetOwnedDevices().Single(x => x.InstanceId == d.InstanceId).RemainingDurability, "same-step duplicate counts once; nine effective hits use nine durability");
                     string next = "已触发 " + Math.Min(9, i + 1) + " 次 · 下次 ×" + Math.Max(1, 9 - i);
                     Check(f.Simulation.GetDeviceStatus(d.InstanceId).Contains(next), "display shows successful count and next full multiplier");
                     Near(10, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "ice cream multiplier leaves base value unchanged");
                     Near(0, f.C.Round.Score, "multipliers wait for score-area settlement");
                 }
-                Near(46, expected, "nine bonuses sum to forty-five above initial one");
+                var readback = CashApi(f, key, d);
+                readback.MultiplyScore(1d / 3628800);
+                Near(1, readback.DeviceScoreMultiplier, "nine hits retain the full product after the read cap");
+                readback.MultiplyScore(3628800);
+                readback.Close();
                 VectorNear(before.LinearVelocity, f.Physics.States[key].LinearVelocity, "Lua preserves bounce velocity");
                 Near(blood, f.C.Player.Blood, "machine does not spend blood"); Near(coins, f.C.Campaign.Coins, "machine does not spend coins");
                 var unused = f.Launch(); f.Step(PiggyHit(f, unused, d));
                 Near(1, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(unused)).ScoreMultiplier, "new balls also receive no bonus after the machine is used up");
                 Near(0, f.C.Manager.GetComponentData<BallFeatures>(f.Ball(unused)).FirstTriggeredDeviceId, "neutral hit does not record a successful device effect");
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 700, Multiplier = 1, RushDisabled = true });
-                Near(460, f.C.Round.Score + f.C.Round.FractionalScore, "settlement uses accumulated forty-six factor once");
+                Near(1000, f.C.Round.Score + f.C.Round.FractionalScore, "settlement caps the accumulated multiplier at the machine limit");
             }
             IceCreamMachineInstances(); IceCreamMachineLimits();
             foreach (float dt in new[] { .01f, .02f }) IceCreamMachinePhysics(dt);
-            Debug.Log("ICE_CREAM_MACHINE_VALIDATION_PASSED: " + (assertions - start) + " assertions; decreasing factors, per-instance rounds, duplicate contacts, additive settlement, durability and real collisions.");
+            Debug.Log("ICE_CREAM_MACHINE_VALIDATION_PASSED: " + (assertions - start) + " assertions; decreasing factors, per-instance rounds, duplicate contacts, multiplier products, durability and real collisions.");
         }
         private static void IceCreamMachineInstances()
         {
@@ -62,13 +66,13 @@ namespace MarblesECS.Editor
                 Near(18, f.Simulation.GetOwnedDevices().Single(x => x.InstanceId == first.InstanceId).RemainingDurability, "distinct balls in one step consume two uses");
                 double previous = f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier;
                 f.Step(PiggyHit(f, a, second));
-                Near(previous + 9, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "another instance starts at ten independently");
+                Near(previous * 10, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "another instance starts at ten independently");
                 Near(19, f.Simulation.GetOwnedDevices().Single(x => x.InstanceId == second.InstanceId).RemainingDurability, "independent instance durability");
                 var api = CashApi(f, a, first); Check(api.HasTriggeredOtherDevice, "successful second instance records effect history"); api.Close();
                 MorePlace(f.C, first.InstanceId, false); f.Step(); MorePlace(f.C, first.InstanceId, true); f.Step();
                 Check(f.Simulation.GetDeviceStatus(first.InstanceId).Contains("下次 ×8"), "retrieval and replacement within a round do not refill machine");
                 previous = f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier;
-                f.Step(PiggyHit(f, a, first)); Near(previous + 7, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "next effective hit continues at eight");
+                f.Step(PiggyHit(f, a, first)); Near(previous * 8, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(a)).ScoreMultiplier, "next effective hit continues at eight");
                 var round = f.C.Round; round.Phase = (byte)RoundPhase.Build; f.C.Round = round; Check(f.Simulation.BeginRound(), "start next round");
                 var fresh = f.Launch(); f.Step(PiggyHit(f, fresh, first));
                 Near(10, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(fresh)).ScoreMultiplier, "new round restarts at ten");
@@ -79,7 +83,7 @@ namespace MarblesECS.Editor
             {
                 var d = AddIceCreamMachine(f); var key = f.Launch();
                 var api = CashApi(f, key, d); api.SetDeviceScoreMultiplier(0); api.Close();
-                f.Step(PiggyHit(f, key, d)); Near(9, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "first bonus adds nine even to a previously zeroed multiplier");
+                f.Step(PiggyHit(f, key, d)); Near(0, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "first factor preserves a previously zeroed multiplier");
             }
         }
         private static void IceCreamMachineLimits()
@@ -91,10 +95,12 @@ namespace MarblesECS.Editor
                 var d = AddIceCreamMachine(f); var key = f.Launch();
                 for (int n = 0; n < 12; n++) f.Step(PiggyHit(f, key, d));
                 int uses = wear == -1 ? 9 : Math.Min(9, wear);
-                Near(1 + uses * 9 - uses * (uses - 1) / 2, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "last durability grants full factor, infinite durability still respects decay");
+                double product = 1;
+                for (int i = 0; i < uses; i++) product *= 10 - i;
+                Near(Math.Min(1000, product), f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "last durability grants full factor, infinite durability still respects decay");
                 Near(wear == -1 ? -1 : wear - uses, f.Simulation.GetOwnedDevices().Single(x => x.InstanceId == d.InstanceId).RemainingDurability, "only effective hits use durability");
             }
-            foreach (var config in new[] { (1d, 1f, 1d, 0), (0d, 1f, 1d, 0), (10d, 0f, 37d, 4), (2.5d, .75f, 3.25d, 2), (3d, 5f, 3d, 1) })
+            foreach (var config in new[] { (1d, 1f, 1d, 0), (0d, 1f, 1d, 0), (10d, 0f, 1000d, 4), (2.5d, .75f, 4.375d, 2), (3d, 5f, 3d, 1) })
             using (var f = new Fixture())
             {
                 var def = f.C.Balance.Devices.Single(d => d.Id == 9025); def.Value = config.Item1; def.Strength = config.Item2;
@@ -134,15 +140,15 @@ namespace MarblesECS.Editor
                     for (int n = 0; hits.Count == before && n < 100; n++)
                     { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); solved = body.velocity; simulation.AfterPhysics(bridge); }
                     Check(hits.Count == before + 1, "real collision enters once");
-                    if (impact < 9) { expected += 9 - impact; uses++; }
-                    Near(expected, c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier, "each real re-entry takes the next multiplier until the neutral floor");
+                    if (impact < 9) { expected *= 10 - impact; uses++; }
+                    Near(Math.Min(1000, expected), c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier, "each real re-entry takes the next multiplier until the neutral floor");
                     Near(10, simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "physical ball retains value");
                     Check(Vector3.Dot(body.velocity, incoming) < 0, "ball bounces normally"); VectorNear(solved, body.velocity, "Lua preserves solver velocity");
                     for (int n = 0; n < 5; n++) Step(); Check(hits.Count == before + 1, "continuous contact does not reapply bonus");
                     Near(20 - uses, simulation.GetOwnedDevices().Single(x => x.InstanceId == owned.InstanceId).RemainingDurability, "physical effective-use durability");
                 }
                 simulation.EnqueueContact(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 700, Multiplier = 1, RushDisabled = true }); Step();
-                Near(460, c.Round.Score, "nine declining bonuses settle as value times forty-six");
+                Near(1000, c.Round.Score, "nine declining multipliers reach the machine cap");
             }
             finally { view?.Dispose(); simulation.Dispose(); bridge.Dispose(); UnityEngine.Object.DestroyImmediate(board); SceneManager.UnloadSceneAsync(scene); }
         }

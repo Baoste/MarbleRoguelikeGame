@@ -43,7 +43,7 @@ namespace MarblesECS.Editor
                         Near(10d / 3, f.Simulation.GetMarbleAttribute(children[i], GameAttribute.BALL_BASE_VALUE), "each child gets one third value");
                         Near(radius * radius * radius / 3, Math.Pow(f.Simulation.GetMarbleAttribute(children[i], GameAttribute.BALL_RADIUS), 3), "each child gets one third volume");
                         Near(mass / 3, f.Simulation.GetMarbleAttribute(children[i], GameAttribute.BALL_MASS), "mass is conserved");
-                        Near(2, f.C.Manager.GetComponentData<MarbleScore>(child).ScoreMultiplier, "factor-minus-one accumulation inherited unchanged");
+                        Near(2.25, f.C.Manager.GetComponentData<MarbleScore>(child).ScoreMultiplier, "multiplier product inherited unchanged");
                         Near(expiry, f.C.Manager.GetComponentData<Lifetime>(child).ExpireTick, "split does not extend lifetime");
                         VectorNear(Quaternion.AngleAxis((i - 1) * 30, Vector3.up) * Vector3.forward * speed, f.Physics.States[children[i]].LinearVelocity, "three configured directions preserve speed");
                         var query = CashApi(f, children[i], device); Check(query.HasSplitFrom(device.InstanceId), "lineage records source instance"); query.Close();
@@ -52,7 +52,7 @@ namespace MarblesECS.Editor
                     Check(f.C.Marbles.Count == 3, "returning children cannot split again at their source");
                     Near(wear == -1 ? -1 : wear - 1, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "complete batch spends one use; self returns are free");
                     f.Step(children.Select(k => new MarbleContact { Key = k, TargetId = 700, Kind = MarbleContactKind.Score, Multiplier = 1, RushDisabled = true }).ToArray());
-                    Near(28, f.C.Round.Score + f.C.Round.FractionalScore, "value, flat bonus and accumulated multiplier settle without tripling flat bonuses");
+                    Near(31.5, f.C.Round.Score + f.C.Round.FractionalScore, "value and apportioned flat bonuses settle with the inherited factor");
                 }
             using (var f = new Fixture())
             {

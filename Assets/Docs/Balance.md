@@ -16,7 +16,7 @@
 
 机器倍率、全局倍率的合并上限读取对应属性 `MaxValue`。RUSH 改为全盘固定 666 点累积条、基础持续 6 秒，结束后冷却 3 秒；冷却期间不入账，也不缓存结束后补加；旧持续时间及概率属性不再控制核心机制，详见 `Device_Lua_API.md`。
 
-RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 666`、`Duration = 6`、`Cooldown = 3`。旧 `GameContent.RushThreshold` 仅保留配置兼容，不控制这条累积条。冷却按模拟时间计算，暂停时冻结，回合结束或重开时清空；存活弹珠自身的贡献记录保留，但冷却期间落入终点的球不会延后补入条值。
+RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 666`、`Duration = 6`、`Cooldown = 3` 和 `ValueBonus = 1`。旧 `GameContent.RushThreshold` 仅保留配置兼容。冷却按模拟时间计算，暂停时冻结，回合结束或重开时清空。存活弹珠保留自身的贡献记录，冷却期间落入终点的弹珠当次贡献丢弃。
 
 | 调整内容 | GameContent 属性 | 已移除的 JSON / Excel 重复字段 |
 |---|---|---|
@@ -32,7 +32,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 | 赌博转盘 | `GamblingWheelRules`：八档等概率，2 秒起步、最短 0.2 秒 | 旧输/返还/双倍/四倍规则、概率和赌池修正均停用 |
 | 剩余血量兑换率 | `BLOOD_DIVIDEND_RATE` | `Campaign.CashoutCoinsPerBlood` |
 
-半径按现有单位转换：**实际世界半径 = 最终 BALL_RADIUS × 0.16**。最低档默认属性值 `0.5` 对应半径 `0.08`、直径 `0.16`。高档位以 `Investment / MinInvestment` 为投入倍率：半径按立方根增长，质量线性增长，基础价值按 `FlowValueExponent` 次方增长；当前指数为 `1.15`。通用体积缩放按体积倍率的立方根换算半径。旧药物不再影响发射参数。
+半径按现有单位转换：**实际世界半径 = 最终 BALL_RADIUS × 0.16**。最低档默认属性值 `0.5` 对应半径 `0.08`、直径 `0.16`。高档位以 `Investment / MinInvestment` 为投入倍率：半径按立方根增长，质量线性增长，基础价值按 `FlowValueExponent` 次方增长；当前指数为 `1.15`。每日曲线先提供最低发射档的基础价值，再应用投入倍率和属性修正。阈值与初始血量见[每日内容制作指南](DayFramework_Content_Guide.md#血量与血珠升值)。通用体积缩放按体积倍率的立方根换算半径。旧药物不再影响发射参数。
 
 发射速度直接采用 `BALL_LAUNCH_SPEED`，单位为 m/s，最终仍受 `BALL_MAX_SPEED` 限制。静态或运动学棋盘障碍按 `BALL_BOUNCE` 校正反弹，实体装置取该值与自身 `device.json.Bounce` 的较大值。超过 `1` 的弹珠属性值提供额外反弹增益。各装置的 `Bounce` 见 [装置一览](Device_Overview.md)。
 
@@ -75,9 +75,9 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 商店在每次 Morning Prep 首次打开和付费刷新时，按普通/罕见/稀有/传奇权重 60/30/7/3 选择档位，再在该档剩余装置中等概率、无重复抽取 `Campaign.ShopOfferCount` 个装置（默认 4），不设 RUSH 保底；目录不足时只显示实际可用装置。无货或已抽空的档位不参与，剩余权重归一化；当前无传奇时为 60:30:7。基础购买价分别为 9/14/23/38，分档见 [装置一览](Device_Overview.md)。关店后重开保留现有货架，购买不会重抽其他货位。商店与初始装置、装置 Lua、赌博开奖共用整局唯一随机序列；生成和刷新商品会推进后续玩法的随机状态。目录按 ID 排序，相同种子和调用次序可复现抽取结果。旧药物商品、初始库存、服药和药效代码保持删除，后续药物将改用 Lua。
 
-勾选控制器的「开局获得全部装置」（`EnableRandomStartingDevices`）后，`TestScene` 会在 Play 时直接进入机台的装置布置阶段，并启用装置摆放、RUSH 和赌博转盘。每次开新局或重开整局时，背包免费获得 ID 列表中每种装置一套，数量按 `PurchaseQuantity` 发放，传送门为完整的一对。全目录赠送可超过库存购买上限。Morning Prep 商店购买按 `MaxOwnedDevices` 检查。
+勾选控制器的「开局获得全部装置」（`EnableRandomStartingDevices`）后，`TestScene` 使用 `Config/Resources/BoardLayouts/Day0.json` 的盘面并直接进入装置布置。背包按目录的 `PurchaseQuantity` 发放每种装置一套。同种装置的未摆放库存用完后，背包免费补一套，传送门按完整的一对补充。补货装置的出售收入为 0。物品板显示当前金币，初始值由 `Config/GameBalance.xlsx` 的 Campaign 表中 `AllDevicesStartingCoins` 控制，默认 99,999。各回合延续当前余额，商店购买按 `MaxOwnedDevices` 检查。
 
-关闭开关时按 `device.json` 的 `StartingCount` 发放。当前全部装置的 `StartingCount` 为 `0`，此时空背包直接开始第一回合。全目录赠送在整局初始化时执行一次，直接按目录发放，不抽取随机数。
+关闭开关后，独立机台按 `device.json` 的 `StartingCount` 发放装置。当前全部装置的 `StartingCount` 为 `0`，此时空背包直接开始第一回合。全装置模式的初次发放和后续补货直接读取目录，使用确定的装置类型和套装数量。
 
 在场景的 `MarbleGameController` Inspector「随机数」分组中，`每次开新局刷新随机种子`（`RefreshRandomSeedOnNewRun`）默认勾选：每次进入游戏或重新开局生成一个新的非零整局种子；取消勾选时使用 `Resources/GameBalance.json` 的 `Marble.RandomSeed`（当前为 `12345`）。进入下一回合、打开商店或道具库均不重新播种；只在需要随机结果时依次取数。`LastRunRandomSeed` 记录本次实际种子，方便复现。固定种子只保证相同随机调用次序的结果，不保证物理在不同平台完全一致。战役和独立模式均遵守此开关。
 
@@ -85,7 +85,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 当前共 34 个属性、35 种装置、0 种药物；装置包含 BouncePad、黏黏、弹弹、吸吸、加速力场、传送门、黑洞、反重力、大炮、沙包、大石碎胸口、矿老板、淘金热、猪猪存钱罐、赚赚、摇钱树、分流器、大喷菇、炸弹、复制体、造血工厂、弹珠机关枪、草皮、故障装置、more is more、less is more、雪糕机、大胃袋、星星灯、种植牙、有锅气、降降火、台球、超大杯全冰美式和 Multi Ding。装置数量以 `GameContent.json.Devices` 为准，详见 [装置资源](../Resources/Devices/README.md)。
 
-装置每次只累加“倍率 - 1”，到得分区以 `1 + Σ(倍率 - 1)` 统一计算；两次 1.5 得到 2，两次 1.2 得到 1.4，基础 1 只算一次。Lua 使用 `AddScoreMultiplier` 传入完整倍率，通用装置修正和旧倍率钉共用规则；全局和得分区倍率仍按各自结算层处理。
+装置倍率从 1 开始，每次有效撞击将当前倍率乘以完整因子。两次 ×1.5 得到 ×2.25，两次 ÷2 等同于两次 ×0.5，最终为 ×0.25。Lua 使用 `MultiplyScore`，通用装置修正与固定倍率钉都应用相同规则。得分区结算时乘入当前有效的全盘倍率，并应用机台、得分区和全局的结算规则。
 
 ## 赌博转盘
 

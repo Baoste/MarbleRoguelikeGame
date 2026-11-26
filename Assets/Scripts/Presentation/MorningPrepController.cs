@@ -100,11 +100,11 @@ namespace MarblesECS.Presentation
             view.ShowPrompt(FindNearbyInteraction(day, out _) switch
             {
                 RoomInteraction.Note => "E  Read note",
-                RoomInteraction.Shop => "E  Open shop",
+                RoomInteraction.Shop => controller.Session.UsesDailyLoadout ? "E  装置选择与商店" : "E  Open shop",
                 RoomInteraction.Machine => "E  Use marble machine",
                 _ => day.MorningPrepRemaining > 0
                     ? "Morning Prep   ·   Read the note by the machine"
-                    : "Morning Prep   ·   Go to the marble machine"
+                    : !controller.LoadoutConfirmed ? "晨间准备 · 请前往终端确认背包" : "Morning Prep   ·   Go to the marble machine"
             });
         }
 
@@ -118,7 +118,7 @@ namespace MarblesECS.Presentation
             machineCamera.Priority = authoredMachinePriority;
             view.Fade(1);
             view.ShowNote(null);
-            ShowShopTerminal(controller.HasProductionFeature(ProductionFeature.Shop));
+            ShowShopTerminal(controller.Session.UsesDailyLoadout || controller.HasProductionFeature(ProductionFeature.Shop));
             foreach (var objective in controller.CurrentDayDefinition.MorningPrep)
             {
                 var anchor = FindAnchor(objective.AnchorId);
@@ -157,7 +157,12 @@ namespace MarblesECS.Presentation
                 return;
             }
             if (day.Phase == DayPhase.DaySettlement)
-                view.ShowPrompt(day.LifecyclePending ? null : "E  Continue to rest");
+            {
+                var session = controller.Session;
+                view.ShowPrompt(day.LifecyclePending ? null : session.UsesDailyLoadout
+                    ? $"生产达标 · 公司工票 +{session.LastCompanyScripReward}（余额 {session.CompanyScripBalance}）   E  休息"
+                    : "E  Continue to rest");
+            }
             else if (day.Phase == DayPhase.Rest)
                 view.ShowPrompt(day.LifecyclePending ? null : "E  Finish rest");
             else
@@ -210,7 +215,8 @@ namespace MarblesECS.Presentation
 
         private bool CanUseMachineFrom(DayProgressSnapshot day) =>
             day.Status == DayCampaignStatus.Active && day.Phase == DayPhase.WakeUp && day.Version == wakeVersion &&
-            day.MorningPrepRemaining == 0 && !day.ShopOpen && !day.LifecyclePending && !enteringMachine && !IsReading &&
+            day.MorningPrepRemaining == 0 && controller.LoadoutConfirmed && !day.ShopOpen &&
+            !day.LifecyclePending && !enteringMachine && !IsReading &&
             FadeAlpha == 0 && HorizontalDistanceSquared(machineInteraction.position) <= interactionRange * interactionRange;
 
         private RoomInteraction FindNearbyInteraction(DayProgressSnapshot day, out MorningPrepDefinition objective)

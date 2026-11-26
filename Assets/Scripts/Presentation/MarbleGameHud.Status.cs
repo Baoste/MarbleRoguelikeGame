@@ -11,8 +11,12 @@ namespace MarblesECS.Presentation
             GUILayout.Space(6);
             var day = Controller.Day;
             string dayLabel = day.Status == DayCampaignStatus.NotStarted ? string.Empty : day.DayId + "　";
-            GUILayout.Label(dayLabel + PhaseName(session.Phase) + "　金币 " + session.Coins);
-            GUILayout.Label("血量 Blood  " + marble.Blood.ToString("0.0") + " / " + Controller.Balance.Marble.BloodCapacity.ToString("0") +
+            string wallet = session.UsesDailyLoadout
+                ? day.Phase == DayPhase.Production ? "　血肉残料 " + session.BiomassScrapBalance
+                    : "　公司工票 " + session.CompanyScripBalance
+                : "　金币 " + session.Coins;
+            GUILayout.Label(dayLabel + PhaseName(session.Phase) + wallet);
+            GUILayout.Label("血量 Blood  " + marble.Blood.ToString("0.0") + " / " + marble.BloodCapacity.ToString("0") +
                 "　场内 " + marble.ActiveMarbles);
             GUILayout.Label("累计已结算 " + session.TotalScore);
             GUILayout.Label("当前确认分 " + session.ConfirmedScore + " / " + session.TargetScore + "（奖池未开奖不计入提现门槛）");
@@ -32,7 +36,9 @@ namespace MarblesECS.Presentation
         {
             var session = Controller.Session;
             GUILayout.Label("本轮结算 " + session.RoundScore + "　累计 " + session.TotalScore);
-            GUILayout.Label("通关奖励 +" + session.LastRewardCoins + " 金币　提现 +" + session.LastCashoutCoins);
+            GUILayout.Label(session.UsesDailyLoadout
+                ? "通关奖励 +" + session.LastCompanyScripReward + " 公司工票"
+                : "通关奖励 +" + session.LastRewardCoins + " 金币　提现 +" + session.LastCashoutCoins);
         }
 
         private static string PhaseName(RoundPhase phase)

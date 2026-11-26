@@ -56,7 +56,7 @@ function OnContact(api)
     local lit = api:CountPlacedDevicesWithRoundValue(api.DefinitionId, "lit", 1)
     local idle = api:CountPlacedDevicesWithRoundValue(api.DefinitionId, "endsAt", 0)
     if total >= 2 and lit == total and idle == total and api.Parameter > 0 then
-        local effect = api.Board:AddScoreMultiplier(math.min(1000, 1 + total * math.max(0, api.Strength)), math.min(60, api.Parameter))
+        local effect = api.Board:MultiplyScore(math.min(1000, 1 + total * math.max(0, api.Strength)), math.min(60, api.Parameter))
         if effect ~= 0 then api:ForEachPlacedDevice(api.DefinitionId, "OnLampWindow", effect) end
     end
     status(api)

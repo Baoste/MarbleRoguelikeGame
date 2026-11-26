@@ -1,0 +1,12 @@
+{
+  "Id": 9034,
+  "SourceId": "AddValuePeg",
+  "Bounce": 0.6,
+  "ScoreMultiplier": 1,
+  "StartingCount": 0,
+  "PurchaseQuantity": 1,
+  "Cooldown": 0,
+  "Value": 3,
+  "Strength": 0,
+  "RotationLocked": true
+}

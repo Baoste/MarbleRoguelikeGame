@@ -1,0 +1,10 @@
+{
+  "name": "经济钉子",
+  "description": "碰撞使弹珠当前基础价值减半，回收 1 份血肉残料。",
+  "value": 4,
+  "purchasePrice": 9,
+  "biomassScrapPrice": 2,
+  "rarity": "common",
+  "durability": 12,
+  "type": "device"
+}

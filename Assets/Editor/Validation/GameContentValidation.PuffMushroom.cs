@@ -35,7 +35,7 @@ namespace MarblesECS.Editor
                         Near(1.25, f.Simulation.GetMarbleAttribute(keys[i], GameAttribute.BALL_BASE_VALUE), "eighth of value");
                         Near(.25, f.Simulation.GetMarbleAttribute(keys[i], GameAttribute.BALL_RADIUS), "eighth of volume halves radius");
                         Near(.125, f.Simulation.GetMarbleAttribute(keys[i], GameAttribute.BALL_MASS), "eighth of mass");
-                        Near(2, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(keys[i])).ScoreMultiplier, "accumulated multiplier inherited without division");
+                        Near(2.25, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(keys[i])).ScoreMultiplier, "accumulated multiplier inherited without division");
                         VectorNear(Quaternion.AngleAxis(-60 + i * (120f / 7), Vector3.up) * Vector3.back * speed, f.Physics.States[keys[i]].LinearVelocity, "eight evenly spaced uphill directions retain input speed");
                         var query = CashApi(f, keys[i], device); Check(query.HasSplitFrom(device.InstanceId), "mushroom source recorded"); query.Close();
                     }
@@ -43,7 +43,7 @@ namespace MarblesECS.Editor
                     Near(8, f.C.Marbles.Count, "same source is transparent to every child");
                     Near(wear == -1 ? -1 : wear - 1, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "whole batch costs one use including final use; reentry costs none");
                     f.Step(keys.Select(k => new MarbleContact { Key = k, TargetId = 702, Kind = MarbleContactKind.Score, Multiplier = 1, RushDisabled = true }).ToArray());
-                    Near(20, f.C.Round.Score, "all eight shares settle to original value times accumulated factor");
+                    Near(22.5, f.C.Round.Score + f.C.Round.FractionalScore, "all eight shares settle to original value times accumulated factor");
                 }
             foreach (int failedChild in new[] { 1, 4, 8 })
                 using (var f = new Fixture())
@@ -124,8 +124,9 @@ namespace MarblesECS.Editor
                     board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(-63, 121, 0));
                     view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
                     var colliders = view.Root.GetComponentsInChildren<Collider>().Where(c => c.name != "PlacementVolume").ToArray(); Check(colliders.Length == 1 && colliders[0].isTrigger, "mushroom has a single nonsolid entry sensor");
-                    Check(view.Root.transform.Find("Stem") != null && view.Root.transform.Find("Cap") != null, "package contains mushroom model");
-                    for (int i = 0; i < 8; i++) Check(view.Root.transform.Find("Opening" + i) != null, "model contains eight open mouths");
+                    var modelNodes = view.Root.GetComponentsInChildren<Transform>(true).Select(node => node.name).ToHashSet();
+                    Check(modelNodes.Contains("Stem") && modelNodes.Contains("Cap"), "package contains mushroom model");
+                    for (int i = 0; i < 8; i++) Check(modelNodes.Contains("Opening" + i), "model contains eight open mouths");
                     Check(bridge.TryGetDevicePose(owned.InstanceId, out var pose), "loaded mushroom has physics pose");
                     var uphill = -BallInteractionSystem.Down(pose); var spawn = pose.Position + pose.Up * .12f - uphill * .9f;
                     void Step() { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); simulation.AfterPhysics(bridge); }
@@ -193,7 +194,7 @@ namespace MarblesECS.Editor
                     Near(1, bridge.ActiveBodyCount, "self return creates no more children");
                     Near(19, simulation.GetOwnedDevices().Single(d => d.InstanceId == owned.InstanceId).RemainingDurability, "self return is free");
                     HitMultiplier(returning);
-                    Near(1 + 2 * (multiplier.ScoreMultiplier - 1),
+                    Near(multiplier.ScoreMultiplier * multiplier.ScoreMultiplier,
                         c.Manager.GetComponentData<MarbleScore>(c.Marbles[returning]).ScoreMultiplier,
                         "child inherits the multiplier and can activate the same once-per-ball device independently");
                     Near(multiplier.Durability - 2, simulation.GetOwnedDevices().Single(d => d.InstanceId == multiplierData.InstanceId).RemainingDurability,

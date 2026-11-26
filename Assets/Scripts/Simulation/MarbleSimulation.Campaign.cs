@@ -22,7 +22,7 @@ namespace MarblesECS
         }
 
         private void StartSessionCore(IMarblePhysics physics, int randomStarterTypeCount, uint? randomSeed, bool grantAllStartingDevices,
-            ProductionFeature features = ProductionFeature.All)
+            ProductionFeature features = ProductionFeature.All, bool usesDailyLoadout = false, long startingCompanyScrip = 0)
         {
             ThrowIfDisposed();
             if (context.Balance == null) throw new InvalidOperationException("Construct with GameBalance to start a campaign.");
@@ -37,15 +37,20 @@ namespace MarblesECS
             }
             using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
                 context.Manager.DestroyEntity(entities);
+            var tuning = context.Balance.Campaign;
+            long startingCoins = grantAllStartingDevices ? tuning.AllDevicesStartingCoins : tuning.StartingCoins;
             context.Campaign = new CampaignData
             {
-                Coins = context.Balance.Campaign.StartingCoins,
+                Coins = usesDailyLoadout ? 0 : startingCoins,
+                UsesDailyLoadout = usesDailyLoadout,
+                RestockStartingDevices = grantAllStartingDevices && !usesDailyLoadout,
+                CompanyScripBalance = startingCompanyScrip,
                 RepeatRounds = true,
                 DisabledFeatures = ProductionFeature.All & ~features
             };
             context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity).Clear();
             randomStartingDeviceIds = Array.Empty<uint>();
-            if (context.HasProductionFeature(ProductionFeature.DevicePlacement))
+            if (!usesDailyLoadout && context.HasProductionFeature(ProductionFeature.DevicePlacement))
                 CreateStartingDevices(randomStarterTypeCount, grantAllStartingDevices);
             var round = context.Round;
             round.Phase = (byte)RoundPhase.Build;
@@ -57,7 +62,9 @@ namespace MarblesECS
         {
             if (!CanCampaignAct(RoundPhase.Build)) return false;
             var before = context.Round;
+            long scrap = context.Player.BiomassScrapBalance;
             ResetRound(context.Physics, resetRandom: false);
+            CampaignWalletSystem.Set(context, GameCurrency.BiomassScrap, scrap);
             var round = context.Round;
             round.TargetScore = before.TargetScore;
             context.Round = round;
@@ -75,13 +82,15 @@ namespace MarblesECS
             if (!CanCampaignAct(RoundPhase.Playing) || !CampaignStateUtility.CanCashOut(context)) return false;
             var before = context.Round;
             var campaign = context.Campaign;
-            double dividend = AttributeRuntime.Enabled(context)
-                ? AttributeRuntime.Global(context, GameAttribute.BLOOD_DIVIDEND_RATE) * AttributeRuntime.Global(context, GameAttribute.COIN_GAIN_RATE)
-                : context.Balance.Campaign.CashoutCoinsPerBlood;
-            campaign.LastCashoutCoins = MarbleRules.RoundScore(context.Player.Blood * dividend,
-                CampaignStateUtility.MaxCoins);
-            campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastCashoutCoins, CampaignStateUtility.MaxCoins);
-            context.Campaign = campaign;
+            if (!campaign.UsesDailyLoadout)
+            {
+                double dividend = AttributeRuntime.Enabled(context)
+                    ? AttributeRuntime.Global(context, GameAttribute.BLOOD_DIVIDEND_RATE) * AttributeRuntime.Global(context, GameAttribute.COIN_GAIN_RATE)
+                    : context.Balance.Campaign.CashoutCoinsPerBlood;
+                campaign.LastCashoutCoins = MarbleRules.RoundScore(context.Player.Blood * dividend, CampaignStateUtility.MaxCoins);
+                campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastCashoutCoins, CampaignStateUtility.MaxCoins);
+                context.Campaign = campaign;
+            }
             var player = context.Player;
             player.Blood = 0;
             context.Player = player;
@@ -103,7 +112,7 @@ namespace MarblesECS
         private void FillBlood()
         {
             var player = context.Player;
-            player.Blood = context.Tuning.BloodCapacity;
+            player.Blood = context.BloodCapacity;
             context.Player = player;
         }
     }

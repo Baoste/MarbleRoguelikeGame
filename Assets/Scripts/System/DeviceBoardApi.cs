@@ -13,13 +13,14 @@ namespace MarblesECS
         private readonly Func<SimulationContext> context;
         private readonly int sourceId;
         internal DeviceBoardApi(Func<SimulationContext> context, int sourceId) { this.context = context; this.sourceId = sourceId; }
-        public int AddScoreMultiplier(double amount, double seconds)
+        public int MultiplyScore(double factor, double seconds)
         {
             var c = context();
-            int id = c.BoardScores.Add(c, sourceId, amount, seconds);
-            if (id != 0 && amount != 1) FloatingTextFeedback.DeviceAtPose(c, sourceId, FloatingTextType.Multiplier, amount);
+            int id = c.BoardScores.Add(c, sourceId, factor, seconds);
+            if (id != 0 && factor != 1) FloatingTextFeedback.DeviceAtPose(c, sourceId, FloatingTextType.Multiplier, factor);
             return id;
         }
+        public int AddScoreMultiplier(double amount, double seconds) => MultiplyScore(amount, seconds);
         public double GetScoreMultiplierEndTime(int effectId)
         { var c = context(); return c.BoardScores.EndTime(c, effectId); }
         public double RushChanceBonus { get { var c = context(); return c.BoardRush.Bonus(c); } }

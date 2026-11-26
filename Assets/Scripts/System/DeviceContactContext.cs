@@ -66,20 +66,17 @@ namespace MarblesECS
             var context = C; var rush = context.Manager.GetComponentData<MarbleRush>(ball);
             rush.HasScoreContribution = false; rush.ScoreContribution = 0; context.Manager.SetComponentData(ball, rush);
         }
-        /// <summary>Device contributions only: one base plus accumulated factor-minus-one bonuses.</summary>
-        public double DeviceScoreMultiplier => Math.Max(0, Math.Min(1000,
-            1 + C.Manager.GetComponentData<MarbleScore>(ball).DeviceMultiplierBonus));
-        /// <summary>Replaces the current device multiplier; later AddScoreMultiplier calls still accumulate normally.</summary>
+        /// <summary>The ball's own product of device factors.</summary>
+        public double DeviceScoreMultiplier => C.Manager.GetComponentData<MarbleScore>(ball).DeviceMultiplier.Value;
+        /// <summary>Replaces the ball's own product of device factors.</summary>
         public void SetDeviceScoreMultiplier(double amount)
         {
             var context = C;
             var score = context.Manager.GetComponentData<MarbleScore>(ball);
-            double before = score.DeviceMultiplierBonus;
-            score.SetDeviceMultiplier(amount);
+            if (!score.SetDeviceMultiplier(amount)) return;
             context.Manager.SetComponentData(ball, score);
-            if (score.DeviceMultiplierBonus != before) MarkTriggered();
-            if (context.FloatingText != null && FloatingTextFeedback.MultiplierChange(before, score.DeviceMultiplierBonus) != 0)
-                EmitNumber(context, FloatingTextType.Multiplier, amount);
+            MarkTriggered();
+            EmitNumber(context, FloatingTextType.Multiplier, amount);
         }
         /// <summary>Successful effects from any other placed device instance during this ball's lifetime.</summary>
         public bool HasTriggeredOtherDevice
@@ -105,7 +102,7 @@ namespace MarblesECS
         /// <summary>Current wallet balance as a Lua number; read only and exact through the wallet cap.</summary>
         public double Coins => C.Campaign.Coins;
         public double Blood => C.Player.Blood;
-        public double BloodCapacity => C.Tuning.BloodCapacity;
+        public double BloodCapacity => C.BloodCapacity;
         public double RestoreBlood(double amount)
         {
             double restored = PlayerBloodSystem.Restore(C, amount);
@@ -133,7 +130,8 @@ namespace MarblesECS
             => DeviceScriptSystem.ForEachPlacedDevice(C, InstanceId, definitionId, callback, value);
         public int SpawnSourceId => Features.SpawnSourceId;
         public DeviceSpawnBatch CreateSpawnBatch() => new DeviceSpawnBatch(() => C, InstanceId);
-        public DeviceCopy CreateCopy() => new DeviceCopy(() => C, ball, InstanceId, allowRushContribution);
+        public DeviceCopy CreateCopy() => CreateCopy(1);
+        public DeviceCopy CreateCopy(int count) => new DeviceCopy(() => C, ball, InstanceId, count, allowRushContribution);
         public DevicePortion CreatePortion(double value) => new DevicePortion(() => C, ball, InstanceId, value, allowRushContribution);
         public bool HasCopiedFrom(int instanceId)
         {
@@ -275,7 +273,7 @@ namespace MarblesECS
             d.NextTriggerAt = Time + Math.Max(C.StepSeconds, AttributeRuntime.Device(C, deviceEntity, GameAttribute.DEVICE_COOLDOWN) / rate);
             C.Manager.SetComponentData(deviceEntity, d); triggered = true;
             double multiplier = AttributeRuntime.Get(C, deviceEntity, GameAttribute.MACHINE_MULT);
-            if (multiplier != 1) AddScoreMultiplier(multiplier);
+            if (multiplier != 1) MultiplyScore(multiplier);
             return true;
         }
         public void Consume(bool refund)
@@ -304,6 +302,7 @@ namespace MarblesECS
         public void SetStatus(string text) => C.DeviceScripts.SetStatus(Device.InstanceId, RoundId, text);
         public void AddCoins(double value)
         {
+            if (C.Campaign.UsesDailyLoadout) return;
             var state = C.Campaign;
             long before = state.Coins;
             state.Coins = MarbleRules.AddScore(state.Coins, MarbleRules.RoundScore(value, CampaignStateUtility.MaxCoins), CampaignStateUtility.MaxCoins);
@@ -312,6 +311,19 @@ namespace MarblesECS
             if (state.Coins != before)
                 C.FloatingText?.Enqueue(FloatingTextEvent.FromInteger(TextPosition, FloatingTextSource.Device, sourceId,
                     FloatingTextType.Currency, state.Coins - before, contact.Key));
+        }
+
+        public void AddBiomassScrap(double value)
+        {
+            var context = C;
+            if (!context.Campaign.UsesDailyLoadout) return;
+            long amount = MarbleRules.RoundScore(value, CampaignWalletSystem.MaxBalance);
+            if (amount == 0) return;
+            long credited = CampaignWalletSystem.Credit(context, GameCurrency.BiomassScrap, amount);
+            if (credited == 0) return;
+            MarkTriggered();
+            context.FloatingText?.Enqueue(FloatingTextEvent.FromInteger(TextPosition, FloatingTextSource.Device, sourceId,
+                FloatingTextType.Currency, credited, contact.Key));
         }
         // Compatibility aliases for previously authored packages. New Lua uses Motion directly.
         public bool ScaleVelocity(float scale) => Motion.TryScaleSpeed(scale);
@@ -340,18 +352,16 @@ namespace MarblesECS
         }
         public void BreakPinsOnCross() => ((IMarblePhysicsCommands)C.Physics).BreakPinsOnCross(Device.InstanceId);
         public void RemoveDevice() => CampaignStateUtility.DestroyDevice(C, deviceEntity);
-        /// <summary>Adds (amount - 1) to the device bonus; ordinary settlement applies 1 + total bonus.</summary>
-        public void AddScoreMultiplier(double amount)
+        /// <summary>Applies a factor to the carried multiplier and reports whether the product changed.</summary>
+        public bool TryMultiplyScore(double factor)
         {
             var context = C;
             var score = context.Manager.GetComponentData<MarbleScore>(ball);
-            double before = score.DeviceMultiplierBonus;
-            score.AddDeviceMultiplier(amount);
+            if (!score.MultiplyDeviceMultiplier(factor)) return false;
             context.Manager.SetComponentData(ball, score);
-            if (amount != 1) MarkTriggered();
-            if (context.FloatingText == null) return;
-            double change = FloatingTextFeedback.MultiplierChange(before, score.DeviceMultiplierBonus);
-            if (change != 0) EmitNumber(context, FloatingTextType.Multiplier, 1 + change);
+            MarkTriggered();
+            EmitNumber(context, FloatingTextType.Multiplier, Math.Min(1000, factor));
+            return true;
         }
 
         /// <summary>Emits optional visual feedback after a Lua-composed effect succeeds.</summary>
@@ -369,8 +379,9 @@ namespace MarblesECS
             context.FloatingText?.Enqueue(new FloatingTextEvent(TextPosition, FloatingTextSource.Device, sourceId,
                 type, value, contact.Key, styleId));
 
-        /// <summary>Legacy package name; now uses the same additive rule as AddScoreMultiplier.</summary>
-        public void MultiplyScore(double factor) => AddScoreMultiplier(factor);
+        public void MultiplyScore(double factor) => TryMultiplyScore(factor);
+        /// <summary>Compatibility name for applying a multiplicative factor.</summary>
+        public void AddScoreMultiplier(double amount) => MultiplyScore(amount);
         public void AddRushChance(double amount)
         { var r = C.Manager.GetComponentData<MarbleRush>(ball); r.RushChanceBonus = Math.Min(1, r.RushChanceBonus + amount); C.Manager.SetComponentData(ball, r); }
     }

@@ -1,0 +1,10 @@
+{
+  "name": "倍率钉子",
+  "description": "每次有效碰撞将当前得分倍率乘以装置配置的倍率，到得分区结算。",
+  "value": 7,
+  "purchasePrice": 14,
+  "biomassScrapPrice": 4,
+  "rarity": "uncommon",
+  "durability": 8,
+  "type": "device"
+}

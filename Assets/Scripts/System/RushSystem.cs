@@ -13,7 +13,7 @@ namespace MarblesECS
     internal static class RushSystem
     {
         internal const double InitialContribution = 2, DeviceContribution = 5;
-        internal const double Threshold = 666, Duration = 6, Cooldown = 3, ValueBonus = 5, ExtraShotsPerSecond = 5;
+        internal const double Threshold = 666, Duration = 6, Cooldown = 3, ValueBonus = 1, ExtraShotsPerSecond = 5;
         internal static bool Active(SimulationContext c) => c.IsRunning && c.Round.RushRemaining > 1e-7 &&
             c.HasProductionFeature(ProductionFeature.Rush);
         internal static double BallValue(SimulationContext c, Entity ball) =>

@@ -1,5 +1,19 @@
 namespace MarblesECS
 {
+    public readonly struct DeviceBrokenEvent
+    {
+        public int RoundId { get; }
+        public int InstanceId { get; }
+        public uint DefinitionId { get; }
+
+        internal DeviceBrokenEvent(int roundId, int instanceId, uint definitionId)
+        {
+            RoundId = roundId;
+            InstanceId = instanceId;
+            DefinitionId = definitionId;
+        }
+    }
+
     public struct OwnedDeviceSnapshot
     {
         public int InstanceId;

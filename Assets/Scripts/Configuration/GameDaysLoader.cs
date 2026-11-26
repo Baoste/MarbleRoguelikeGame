@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 
@@ -25,10 +26,17 @@ namespace MarblesECS
                 if (json[0] == '\uFEFF') json = json.Substring(1);
                 // Use the existing bounded reader so required fields, JSON types and duplicate keys are checked.
                 var input = new ConfigFields(ConfigJson.Parse(json, "JSON"), "sequence");
-                if (input.Int("schemaVersion") != DayCampaignDefinition.CurrentSchemaVersion)
-                    throw new ArgumentException($"schemaVersion: expected {DayCampaignDefinition.CurrentSchemaVersion} with targetScore and rewardCoins on each Day.");
+                int schemaVersion = input.Int("schemaVersion");
+                bool dailyLoadouts = schemaVersion == DayCampaignDefinition.CurrentSchemaVersion;
+                if (!dailyLoadouts && schemaVersion != DayCampaignDefinition.LegacySchemaVersion)
+                    throw new ArgumentException($"schemaVersion: expected {DayCampaignDefinition.CurrentSchemaVersion} or {DayCampaignDefinition.LegacySchemaVersion}.");
+                long startingScrip = dailyLoadouts && input.Has("startingCompanyScrip")
+                    ? ReadInteger(input, "startingCompanyScrip", 0, CampaignWalletSystem.MaxBalance) : 0;
                 string sequenceId = Id(input.String("sequenceId"), "sequenceId");
                 var defaultFeatures = ReadProductionFeatures(input, "defaultProductionFeatures");
+                var defaultBlood = input.Has("defaultBloodProgression")
+                    ? ReadBloodProgression(input.Object("defaultBloodProgression"), balance, null) : null;
+                var devices = balance.Devices.ToDictionary(device => device.Id);
                 var events = ReadIndex(input, "events", "eventId", (entry, id) => ReadEvent(entry, id, behaviors));
                 var rules = ReadIndex(input, "rules", "ruleId", (entry, id) => ReadRule(entry, id, balance, behaviors));
                 var campaignRules = ReadRefs(input, "campaignRuleIds", rules);
@@ -39,7 +47,10 @@ namespace MarblesECS
                     int order = entry.Int("order");
                     if (order <= 0) throw new ArgumentException($"{path}.order: expected a positive integer.");
                     long targetScore = ReadInteger(entry, "targetScore", 1, balance.Marble.MaxRoundScore);
-                    long rewardCoins = ReadInteger(entry, "rewardCoins", 0, CampaignStateUtility.MaxCoins);
+                    long rewardCoins = dailyLoadouts ? 0 : ReadInteger(entry, "rewardCoins", 0, CampaignStateUtility.MaxCoins);
+                    var loadout = dailyLoadouts ? ReadDailyLoadout(entry, devices) : null;
+                    var blood = entry.Has("bloodProgression")
+                        ? ReadBloodProgression(entry.Object("bloodProgression"), balance, defaultBlood) : defaultBlood;
                     var dayRules = ReadRefs(entry, "ruleIds", rules);
                     CheckRuleScope(dayRules, false, path + ".ruleIds");
                     string boardLayoutFile = entry.Has("boardLayout") ? entry.String("boardLayout") : null;
@@ -50,20 +61,120 @@ namespace MarblesECS
                         catch (ArgumentException error) { throw new ArgumentException($"{path}.boardLayout: {error.Message}", error); }
                     }
                     var features = defaultFeatures | ReadProductionFeatures(entry, "productionFeatures");
+                    if (loadout != null)
+                    {
+                        features = (features | ProductionFeature.DevicePlacement) & ~ProductionFeature.Shop;
+                        if (loadout.Shop != null) features |= ProductionFeature.Shop;
+                    }
                     return new DayDefinition(id, order, targetScore, rewardCoins, features, boardLayoutFile,
-                        boardLayout, ReadMorningPrep(entry), ReadRefs(entry, "eventIds", events), dayRules);
+                        boardLayout, ReadMorningPrep(entry), ReadRefs(entry, "eventIds", events), dayRules, loadout, blood);
                 }, required: true);
                 var ordered = new List<DayDefinition>(days.Values);
                 ordered.Sort((a, b) => a.Order.CompareTo(b.Order));
                 for (int i = 1; i < ordered.Count; i++)
                     if (ordered[i - 1].Order == ordered[i].Order)
                         throw new ArgumentException($"Day '{ordered[i].DayId}'.order conflicts with '{ordered[i - 1].DayId}'.");
-                return new DayCampaignDefinition(sequenceId, ordered.ToArray(), campaignRules);
+                return new DayCampaignDefinition(schemaVersion, sequenceId, startingScrip, ordered.ToArray(), campaignRules);
             }
             catch (ArgumentException error)
             {
                 throw new ArgumentException($"{source}: {error.Message}", error);
             }
+        }
+
+        private static BloodProgressionDefinition ReadBloodProgression(ConfigFields fields, GameBalance balance,
+            BloodProgressionDefinition fallback)
+        {
+            float initialBlood = (float)fields.Number("initialBlood",
+                fallback?.InitialBlood ?? balance.Marble.BloodCapacity, optional: true);
+            if (initialBlood <= 0) throw fields.Error("initialBlood (expected a positive amount)");
+            if (!fields.Has("stages"))
+                return new BloodProgressionDefinition(initialBlood, fallback?.Stages ?? Array.Empty<BloodValueStage>());
+
+            var array = fields.Array("stages");
+            var stages = new BloodValueStage[array.Count];
+            var attribute = balance.Content?.Definition(GameAttribute.BALL_BASE_VALUE);
+            for (int i = 0; i < array.Count; i++)
+            {
+                var stage = ConfigFields.From(array[i], $"{fields.Context}/stages[{i}]");
+                double spent = stage.Number("spentBlood");
+                double value = stage.Number("baseValue");
+                if (i == 0 ? spent != 0 : spent <= stages[i - 1].SpentBlood)
+                    throw stage.Error("spentBlood (start at zero and increase at each stage)");
+                if (value < (attribute?.MinValue ?? 0) || value > (attribute?.MaxValue ?? float.MaxValue) ||
+                    (i > 0 && value < stages[i - 1].BaseValue))
+                    throw stage.Error("baseValue (expected a nondecreasing value in the BALL_BASE_VALUE range)");
+                stages[i] = new BloodValueStage(spent, value);
+            }
+            return new BloodProgressionDefinition(initialBlood, Array.AsReadOnly(stages));
+        }
+
+        private static DailyLoadoutDefinition ReadDailyLoadout(ConfigFields day, Dictionary<uint, DeviceDefinition> devices)
+        {
+            var unlocked = ReadPegIds(day, "unlockedPegIds", devices.ContainsKey, optional: false);
+            foreach (uint id in unlocked)
+                if (devices[id].PurchaseQuantity != 1 || devices[id].PlacementRadius <= 0)
+                    throw new ArgumentException($"{day.Context}.unlockedPegIds: device {id} must support individual placement.");
+            var defaults = ReadPegIds(day, "defaultPegIds", id => unlocked.Contains(id));
+            var required = ReadPegIds(day, "requiredPegIds", id => defaults.Contains(id));
+            int max = (int)ReadInteger(day, "maxLoadoutTypeCount", 1, Math.Min(200, unlocked.Length));
+            int min = day.Has("minLoadoutTypeCount") ? (int)ReadInteger(day, "minLoadoutTypeCount", 0, max) : 1;
+            if (required.Length > max) throw day.Error("requiredPegIds (exceeds maxLoadoutTypeCount)");
+            var mode = ReadEnum<LoadoutSelectionMode>(day.String("loadoutSelectionMode",
+                nameof(LoadoutSelectionMode.Manual), optional: true), day.Context + ".loadoutSelectionMode");
+            long scrap = ReadInteger(day, "initialBiomassScrap", 0, CampaignWalletSystem.MaxBalance);
+            long reward = ReadInteger(day, "clearCompanyScripReward", 0, CampaignWalletSystem.MaxBalance);
+            var shop = ReadDailyShop(day, unlocked, defaults);
+            return new DailyLoadoutDefinition(unlocked, defaults, required, max, min, mode, scrap, reward, shop);
+        }
+
+        private static DailyShopDefinition ReadDailyShop(ConfigFields day, uint[] unlocked, uint[] defaults)
+        {
+            if (day.String("shopCurrencyType", nameof(GameCurrency.CompanyScrip), optional: true) != nameof(GameCurrency.CompanyScrip))
+                throw day.Error("shopCurrencyType (expected CompanyScrip)");
+            if (!day.Bool("shopEnabled", false)) return null;
+
+            bool CanOffer(uint id) => unlocked.Contains(id) && !defaults.Contains(id);
+            var guaranteed = ReadPegIds(day, "shopGuaranteedPegIds", CanOffer);
+            var pool = day.Has("shopRandomPool")
+                ? ReadPegIds(day, "shopRandomPool", CanOffer) : unlocked.Where(CanOffer).ToArray();
+            int offerCount = (int)ReadInteger(day, "shopOfferCount", Math.Max(1, guaranteed.Length),
+                Math.Min(200, pool.Union(guaranteed).Count()));
+            long drawCost = ReadInteger(day, "shopDrawCost", 1, CampaignWalletSystem.MaxBalance);
+            long? refreshCost = day.Has("shopRefreshCost")
+                ? ReadInteger(day, "shopRefreshCost", 1, CampaignWalletSystem.MaxBalance) : (long?)null;
+            int limit = day.Has("shopSelectionLimit") ? (int)ReadInteger(day, "shopSelectionLimit", 1, 200) : 200;
+            uint seed = day.Has("shopRandomSeed") ? (uint)ReadInteger(day, "shopRandomSeed", 0, uint.MaxValue) : 0;
+            var scope = ReadEnum<PegPermissionScope>(day.String("pegPermissionScope",
+                nameof(PegPermissionScope.CampaignPermanent), optional: true), day.Context + ".pegPermissionScope");
+            var weights = Enum.GetValues(typeof(DeviceRarity)).Cast<DeviceRarity>().Select(DeviceRarityRules.ShopWeight).ToArray();
+            if (day.Has("shopRarityWeights"))
+            {
+                var values = day.Array("shopRarityWeights");
+                if (values.Count != weights.Length) throw day.Error("shopRarityWeights (expected common, uncommon, rare, legendary)");
+                for (int i = 0; i < values.Count; i++)
+                {
+                    if (!(values[i] is double number) || number < 1 || number > 100000 || number != Math.Truncate(number))
+                        throw day.Error($"shopRarityWeights[{i}]");
+                    weights[i] = (int)number;
+                }
+            }
+            return new DailyShopDefinition(drawCost, refreshCost, offerCount, limit, seed, scope, guaranteed, pool, weights);
+        }
+
+        private static uint[] ReadPegIds(ConfigFields day, string field, Predicate<uint> allowed, bool optional = true)
+        {
+            var values = day.Array(field, optional);
+            var ids = new uint[values.Count];
+            var seen = new HashSet<uint>();
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (!(values[i] is double value) || value < 1 || value > uint.MaxValue || value != Math.Truncate(value) ||
+                    !allowed((uint)value) || !seen.Add((uint)value))
+                    throw day.Error($"{field}[{i}] (expected a unique eligible device ID)");
+                ids[i] = (uint)value;
+            }
+            return ids;
         }
 
         private static ProductionFeature ReadProductionFeatures(ConfigFields entry, string field)

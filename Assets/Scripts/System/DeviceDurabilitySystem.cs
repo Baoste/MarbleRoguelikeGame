@@ -1,5 +1,6 @@
 using Unity.Entities;
 using Unity.Collections;
+using System.Collections.Generic;
 
 namespace MarblesECS
 {
@@ -35,6 +36,8 @@ namespace MarblesECS
         internal static bool Continuing(SimulationContext c, Entity entity) => c.Manager.HasComponent<DeviceEffectContinuation>(entity) &&
             c.Manager.GetComponentData<DeviceEffectContinuation>(entity).Round == c.Round.RoundId &&
             c.Round.Time <= c.Manager.GetComponentData<DeviceEffectContinuation>(entity).Until + 1e-7;
+        internal static bool HasPendingEffect(SimulationContext context, Entity entity, int instanceId) =>
+            context.IsRunning && (Continuing(context, entity) || HeldMotionSystem.Count(context, instanceId) != 0);
         internal static bool CanRun(SimulationContext c, int id) => CampaignStateUtility.FindDevice(c, id, out var entity) && CanRun(c, entity);
         internal static bool CanRun(SimulationContext c, Entity entity)
         {
@@ -86,6 +89,20 @@ namespace MarblesECS
             c.Manager.SetComponentData(entity, device);
             if (Remaining(c, device) == 0 && c.Physics is IMarbleDeviceUsageSink sink) sink.RefreshDeviceAvailability();
             return true; // The final accepted operation is allowed to finish.
+        }
+
+        internal static void RemoveExhausted(SimulationContext context, List<DeviceBrokenEvent> broken)
+        {
+            if (!context.Campaign.UsesDailyLoadout) return;
+            using var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp);
+            foreach (var entity in entities)
+            {
+                var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+                if (!device.Placed || Remaining(context, device) != 0 || HasPendingEffect(context, entity, device.InstanceId)) continue;
+                CampaignStateUtility.DestroyDevice(context, entity);
+                broken.Add(new DeviceBrokenEvent(context.Round.RoundId, device.InstanceId, device.DefinitionId));
+            }
+            broken.Sort((a, b) => a.InstanceId.CompareTo(b.InstanceId));
         }
     }
 }

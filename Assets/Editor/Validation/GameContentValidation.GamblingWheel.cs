@@ -79,7 +79,7 @@ namespace MarblesECS.Editor
             using (var f = new Fixture())
             {
                 var key = f.Launch();
-                var score = f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)); score.ScoreMultiplier = 3;
+                var score = f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)); score.SetDeviceMultiplier(3);
                 f.C.Manager.SetComponentData(f.Ball(key), score);
                 var contact = new MarbleContact { Key = key, TargetId = 9, Kind = MarbleContactKind.RandomScore,
                     Multiplier = 2, ScoreStackEnabled = true };

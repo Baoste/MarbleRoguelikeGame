@@ -10,7 +10,7 @@ public sealed partial class DevicePlacementUI
     private enum DropTarget { Blocked, Board, Backpack, Sale, Offer }
 
     public bool IsDraggingInventory => IsDraggingDevice && !IsMovingPlacedDevice;
-    internal bool IsDraggingDevice => SelectedInstanceId != 0;
+    internal bool IsDraggingDevice => SelectedInstanceId != 0 || SelectedDefinitionId != 0;
     internal event Action DeviceDropFinished;
     private Vector2 dragPointer;
     private readonly List<RaycastResult> offerUiHits = new List<RaycastResult>();
@@ -36,8 +36,9 @@ public sealed partial class DevicePlacementUI
     private DropTarget FindDropTarget(Vector2 pointer, GameObject pointerTarget, out OwnedDeviceSnapshot receiver)
     {
         receiver = default;
-        if (SellArea && SellArea.ContainsPointer(pointer)) return DropTarget.Sale;
-        if (PointerOnBackpack(pointer)) return DropTarget.Backpack;
+        bool daily = Controller.Session.UsesDailyLoadout;
+        if (!daily && SellArea && SellArea.ContainsPointer(pointer)) return DropTarget.Sale;
+        if (PointerOnBackpack(pointer)) return daily ? DropTarget.Blocked : DropTarget.Backpack;
         if (IsControl(pointerTarget) || PointerOnControl(pointer)) return DropTarget.Blocked;
         return (!IsMovingPlacedDevice || BoardPointerMoved(pointer)) && TryFindOfferTarget(pointer, out receiver)
             ? DropTarget.Offer : DropTarget.Board;
@@ -45,6 +46,7 @@ public sealed partial class DevicePlacementUI
 
     private bool FinishDrag(Vector2 pointer, GameObject pointerTarget)
     {
+        if (SelectedDefinitionId != 0) return FinishInstall(pointer, pointerTarget);
         if (!TryGetSelectedDevice(out var device))
         {
             CancelPlacement();

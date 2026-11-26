@@ -7,7 +7,9 @@ namespace MarblesECS
         public int RoundId;
         public long Tick;
         public RoundPhase Phase;
-        public float Blood;
+        public float Blood, BloodCapacity;
+        public double BloodSpent, NextMarbleBaseValue;
+        public int BloodValueStage;
         public long Score;
         public long TargetScore;
         public int ActiveMarbles;

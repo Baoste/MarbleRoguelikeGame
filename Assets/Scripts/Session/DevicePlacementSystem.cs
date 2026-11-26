@@ -11,6 +11,8 @@ namespace MarblesECS
         internal static bool Place(SimulationContext context, int instanceId, float x, float z, float clearance, float? angle = null)
         {
             if (!TryValidatePlacement(context, instanceId, x, z, clearance, angle, out var entity, out var device)) return false;
+            if (!device.Placed)
+                CampaignStateUtility.RestockStartingDevice(context, device.DefinitionId, instanceId);
             device.X = x;
             device.Z = z;
             device.Placed = true;
@@ -57,21 +59,28 @@ namespace MarblesECS
         {
             entity = Entity.Null;
             device = default;
-            if (!MarbleRules.IsFinite(x) || !MarbleRules.IsFinite(z) ||
-                !MarbleRules.IsFinite(clearance) || clearance < 0 ||
-                (angle.HasValue && !MarbleRules.IsFinite(angle.Value)) ||
-                !CampaignStateUtility.FindDevice(context, instanceId, out entity)) return false;
+            if (!CampaignStateUtility.FindDevice(context, instanceId, out entity)) return false;
             device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
             var definition = CampaignStateUtility.Device(context, device.DefinitionId);
+            float proposed = angle ?? device.Angle;
+            if (!CanPlaceDefinition(context, definition, x, z, clearance, proposed, instanceId)) return false;
+            device.Angle = definition.ResolvePlacementAngle(proposed % 360);
+            return true;
+        }
+
+        internal static bool CanPlaceDefinition(SimulationContext context, DeviceDefinition definition, float x, float z,
+            float clearance, float angle, int excludedInstanceId = 0)
+        {
+            if (!MarbleRules.IsFinite(x) || !MarbleRules.IsFinite(z) || !MarbleRules.IsFinite(angle) ||
+                !MarbleRules.IsFinite(clearance) || clearance < 0) return false;
             float radius = definition.PlacementRadius;
-            if (radius <= 0 || (definition.RotationLocked && angle.GetValueOrDefault() % 360 != 0)) return false;
-            device.Angle = definition.ResolvePlacementAngle(angle.HasValue ? angle.Value % 360 : device.Angle);
-            definition.PlacementCenter(x, z, device.Angle, out float centerX, out float centerZ);
+            if (radius <= 0 || (definition.RotationLocked && angle % 360 != 0)) return false;
+            definition.PlacementCenter(x, z, angle % 360, out float centerX, out float centerZ);
             using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
                 for (int i = 0; i < entities.Length; i++)
                 {
                     var other = context.Manager.GetComponentData<OwnedDeviceData>(entities[i]);
-                    if (!other.Placed || other.InstanceId == instanceId) continue;
+                    if (!other.Placed || other.InstanceId == excludedInstanceId) continue;
                     var otherDefinition = CampaignStateUtility.Device(context, other.DefinitionId);
                     if (otherDefinition.PlacementRadius <= 0) return false;
                     float distance = radius + otherDefinition.PlacementRadius + clearance;

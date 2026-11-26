@@ -12,6 +12,7 @@ using Unity.Entities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace MarblesECS.Tests
@@ -45,6 +46,7 @@ namespace MarblesECS.Tests
             Assert.That(game.Day.Status, Is.EqualTo(DayCampaignStatus.NotStarted));
             Assert.That(game.Snapshot.Phase, Is.EqualTo(RoundPhase.Playing));
             Assert.That(game.Session.TargetScore, Is.EqualTo(game.Balance.Marble.TargetScore));
+            Assert.That(game.Session.Coins, Is.EqualTo(game.Balance.Campaign.StartingCoins));
             game.AutoMoveLauncher = false;
             var score = AddZone(game.PhysicsRoot, game.LaunchPoint.TransformPoint(game.LaunchOffset), game.Session.TargetScore);
             score.Priority = int.MaxValue;
@@ -75,25 +77,104 @@ namespace MarblesECS.Tests
             Assert.That(game.StartWithDayCampaign, Is.True);
             Assert.That(game.Day.Status, Is.EqualTo(DayCampaignStatus.NotStarted));
             Assert.That(game.Session.Phase, Is.EqualTo(RoundPhase.Build));
+            const long startingCoins = 99_999;
+            Assert.That(game.Session.Coins, Is.EqualTo(startingCoins));
             Assert.That(game.HasProductionFeature(ProductionFeature.All), Is.True);
-            Assert.That(game.GetOwnedDevices().Select(device => device.DefinitionId).Distinct(),
+            var day0 = BoardLayoutLoader.Load("Day0.json");
+            CheckBoard();
+            var inventory = game.GetOwnedDevices().OrderBy(device => device.DefinitionId).ToArray();
+            Assert.That(inventory.Select(device => device.DefinitionId).Distinct(),
                 Is.EquivalentTo(game.Balance.Devices.Select(device => device.Id)));
+            Assert.That(inventory.Length, Is.EqualTo(game.Balance.Devices.Sum(device => device.PurchaseQuantity)));
             Assert.That(InTestScene<MorningPrepController>().transform.Find("Morning Prep Overlay"), Is.Null);
 
             var brain = InTestScene<CinemachineBrain>();
             var rig = InTestScene<DiegeticMachineUI>();
             yield return Until(() => brain.ActiveVirtualCamera?.Name == "VCamera_Machine" && rig.IsBoardOpen,
                 "machine camera and build controls are active");
+            rig.RefreshInventory();
+            var wallet = rig.ItemGroup.transform.Find("钱包余额").GetComponent<TMP_Text>();
+            Assert.That(wallet.text, Is.EqualTo($"金币 {startingCoins:N0}"));
+            int pageSize = rig.DeviceButtons.Length;
+            for (int offset = 0; offset < inventory.Length; offset += pageSize)
+            {
+                int count = Math.Min(pageSize, inventory.Length - offset);
+                Assert.That(rig.VisibleDeviceCount, Is.EqualTo(count));
+                for (int slot = 0; slot < count; slot++)
+                {
+                    Assert.That(rig.DeviceButtons[slot].IsInteractable(), Is.True);
+                    Assert.That(rig.DeviceNames[slot].text, Is.EqualTo(inventory[offset + slot].Name));
+                }
+                rig.ChangeDevicePage(1);
+            }
+            rig.ChangeDevicePage(-1);
+            Assert.That(rig.BeginDeviceDrag(rig.VisibleDeviceCount - 1, Vector2.zero), Is.True);
+            Assert.That(rig.Placement.SelectedInstanceId, Is.EqualTo(inventory.Last().InstanceId));
+            rig.CancelDeviceDrag();
+
+            int pegIndex = Array.FindIndex(inventory, device => device.DefinitionId == 9033);
+            rig.ChangeDevicePage(1 + pegIndex / pageSize);
+            int pegSlot = pegIndex % pageSize;
+            int firstId = inventory[pegIndex].InstanceId;
+            Assert.That(DragPeg(firstId), Is.True, "the original peg can be placed on the Day0 layout");
+            var refill = game.GetOwnedDevices().Single(device => device.DefinitionId == 9033 && !device.Placed);
+            Assert.That(refill.InstanceId, Is.Not.EqualTo(firstId));
+            Assert.That(DragPeg(refill.InstanceId), Is.True, "the same inventory slot can place another copy");
+            Assert.That(game.GetOwnedDevices().Count(device => device.DefinitionId == 9033 && device.Placed), Is.EqualTo(2));
+            Assert.That(game.Session.Coins, Is.EqualTo(startingCoins));
+            Assert.That(game.SellDevice(refill.InstanceId), Is.True);
+            Assert.That(game.Session.Coins, Is.EqualTo(startingCoins), "free refills have no sale revenue");
+
+            var deviceToSell = inventory.First(device => device.PairId == 0 && device.SellPrice > 0);
+            Assert.That(game.SellDevice(deviceToSell.InstanceId), Is.True);
+            Assert.That(game.Session.Coins, Is.EqualTo(startingCoins + deviceToSell.SellPrice));
+            game.RestartRound();
+            Assert.That(game.Session.Coins, Is.EqualTo(startingCoins));
+            Assert.That(game.GetOwnedDevices().Length, Is.EqualTo(inventory.Length));
+            CheckBoard();
             Assert.That(rig.TryContinue(), Is.True);
             var score = InTestScene<ScoreListener>();
             var wheel = InTestScene<GamblingWheelDisplay>();
             yield return Until(() => game.Session.Phase == RoundPhase.Playing &&
                 score.RushText.enabled && wheel.DisplayGroup.alpha > 0, "RUSH and the wheel are visible during play");
+            Assert.That(game.Session.Coins, Is.EqualTo(startingCoins));
+
+            void CheckBoard()
+            {
+                var zones = game.PhysicsRoot.GetComponentsInChildren<MarbleZone>()
+                    .Where(zone => zone.Kind != MarbleContactKind.Drain).ToArray();
+                Assert.That(zones.Select(zone => zone.Kind), Is.EqualTo(day0.Zones.Select(zone => zone.Kind)));
+                for (int i = 0; i < zones.Length; i++)
+                    Assert.That(zones[i].GetComponent<BoxCollider>().size.z, Is.EqualTo(day0.Zones[i].width));
+                var layout = zones[0].transform.parent;
+                Assert.That(layout.GetComponentsInChildren<CapsuleCollider>(), Has.Length.EqualTo(day0.Pins.Count));
+            }
+
+            bool DragPeg(int instanceId)
+            {
+                var placement = rig.Placement;
+                var reference = placement.PlacementPlane;
+                var plane = new Plane(reference.up, reference.position);
+                foreach (float x in new[] { -2f, -1f, 1f })
+                    foreach (float z in new[] { -2.25f, 2.25f })
+                    {
+                        var point = plane.ClosestPointOnPlane(placement.BoardRoot.TransformPoint(new Vector3(x, 0, z)));
+                        var pointer = rig.ViewCamera.WorldToScreenPoint(point);
+                        if (pointer.z <= 0 || !rig.ViewCamera.pixelRect.Contains(pointer) ||
+                            !game.CanPlaceDevice(instanceId, x, z, point + reference.up * placement.DevicePlaneDistance,
+                                1, 0, reference.rotation) || !rig.BeginDeviceDrag(pegSlot, pointer)) continue;
+                        Assert.That(placement.SelectedInstanceId, Is.EqualTo(instanceId));
+                        rig.EndDeviceDrag(pointer);
+                        if (game.GetOwnedDevices().Single(device => device.InstanceId == instanceId).Placed) return true;
+                    }
+                return false;
+            }
         }
 
         [UnityTest]
-        public IEnumerator ConfiguredDaysRequireTheirNotesAndEnableTheDayOneShop()
+        public IEnumerator ConfiguredDaysOpenTheLoadoutTerminalAndUnlockDrawsOnDayTwo()
         {
+            var knownWorlds = OwnedWorlds();
             yield return SceneManager.LoadSceneAsync("TestScene", LoadSceneMode.Additive);
             testScene = SceneManager.GetSceneByName("TestScene");
             var game = InTestScene<MarbleGameController>();
@@ -104,19 +185,23 @@ namespace MarblesECS.Tests
             localScene = game.PhysicsRoot.gameObject.scene;
             Assert.That(game.Day.DayId, Is.EqualTo("day0"));
             Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.WakeUp));
-            Assert.That(game.Session.TargetScore, Is.EqualTo(50));
-            var pins = game.PhysicsRoot.GetComponentsInChildren<MarblePin>();
+            Assert.That(game.Session.TargetScore, Is.EqualTo(game.CurrentDayDefinition.TargetScore));
             var scoreZone = game.PhysicsRoot.GetComponentsInChildren<MarbleZone>().Single();
-            Assert.That(pins, Has.Length.EqualTo(3));
-            Assert.That(pins.All(pin => pin.ScoreMultiplier == 2 && pin.RushChanceAdd == 0), Is.True);
-            Assert.That(pins[0].gameObject.scene, Is.EqualTo(localScene));
+            var pins = scoreZone.transform.parent.GetComponentsInChildren<MarblePin>();
+            var configuredPins = game.CurrentDayDefinition.BoardLayout.Pins.Where(pin => !pin.collisionOnly).ToArray();
+            Assert.That(pins, Has.Length.EqualTo(configuredPins.Length));
+            var projection = game.PlacementSurface.LayoutProjection;
+            for (int i = 0; i < pins.Length; i++)
+            {
+                var data = configuredPins[i];
+                Assert.That(pins[i].gameObject.scene, Is.EqualTo(localScene));
+                Assert.That(pins[i].transform.localPosition, Is.EqualTo(projection.ToSurfaceLocal(data.x, data.y, data.radius * 2)));
+                Assert.That(pins[i].ScoreMultiplier, Is.EqualTo(data.scoreMultiplier));
+                Assert.That(pins[i].RushChanceAdd, Is.EqualTo(data.rushChanceAdd));
+            }
             Assert.That(scoreZone.Kind, Is.EqualTo(MarbleContactKind.Score));
             Assert.That(scoreZone.RushEnabled, Is.True);
             Assert.That(scoreZone.GetComponent<BoxCollider>().isTrigger, Is.True);
-            Assert.That(scoreZone.transform.parent, Is.EqualTo(pins[0].transform.parent));
-            Assert.That(pins[0].transform.localPosition.z, Is.GreaterThan(0), "the first pin is left of center");
-            Assert.That(pins[1].transform.localPosition.z, Is.LessThan(0), "the second pin is right of center");
-            Assert.That(game.TryOpenShop(game.Day.Version), Is.False);
             Assert.That(game.BeginRound(), Is.False);
             Assert.That(prep.FadeAlpha, Is.GreaterThan(0), "wake-up starts black");
             Assert.That(prep.TryInteract(), Is.False);
@@ -127,7 +212,10 @@ namespace MarblesECS.Tests
             yield return Until(() => walker.CanMove, "fade finished and room camera is active");
             Assert.That(brain.ActiveVirtualCamera.Name, Is.EqualTo("VCamera_Free"));
             var shopAnchor = prep.transform.Find("Shop Terminal Anchor");
-            Assert.That(shopAnchor.childCount, Is.EqualTo(1), "the disabled shop has only its scene interaction point");
+            Assert.That(shopAnchor.childCount, Is.EqualTo(2), "the loadout terminal is present with draws closed");
+            var terminal = shopAnchor.Find("Shop Terminal Interaction");
+            var shop = InTestScene<ShopUI>();
+            var rig = InTestScene<DiegeticMachineUI>();
             var noteAnchor = prep.transform.Find("Platform Note Anchor");
             Assert.That(noteAnchor.Find("Morning Prep Note"), Is.Not.Null);
             var notePoint = noteAnchor.Find("Platform Note Interaction").position;
@@ -147,7 +235,6 @@ namespace MarblesECS.Tests
             WalkTo(walker, -14, -13);
             WalkTo(walker, -14, -2);
             Assert.That(prep.CanUseMachine, Is.False);
-            Assert.That(prep.TryInteract(), Is.False, "E at the machine is blocked while the note is unread");
             Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.False);
 
             WalkTo(walker, -14, -13);
@@ -169,34 +256,75 @@ namespace MarblesECS.Tests
             Assert.That(game.Day.MorningPrepRemaining, Is.Zero);
 
             yield return Until(() => walker.CanMove, "reading unlocks room movement");
+            Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.False, "the loadout also needs confirmation");
             WalkTo(walker, notePoint.x - 5, -13);
+            WalkTo(walker, terminal.position.x - 5, -13);
+            WalkTo(walker, terminal.position.x - 5, terminal.position.z);
+            Assert.That(prep.TryInteract(), Is.True);
+            yield return Until(() => shop.ShopCanvasGroup.interactable, "Day0 loadout opens at the terminal");
+            var daily = shop.ShopCanvasGroup.transform.Find("Daily Loadout");
+            Assert.That(daily.Find("商店抽取/标题").GetComponent<TMP_Text>().text, Does.Contain("暂时关闭"));
+            var cards = daily.Find("可选装置").GetComponentsInChildren<Button>();
+            Assert.That(cards, Has.Length.EqualTo(2));
+            Assert.That(daily.Find("可选装置").GetComponentsInChildren<RawImage>().All(icon => icon.texture), Is.True);
+            foreach (var card in cards) card.onClick.Invoke();
+            daily.Find("确认背包").GetComponent<Button>().onClick.Invoke();
+            yield return Until(() => walker.CanMove, "confirming Day0 returns to the room");
+            WalkTo(walker, terminal.position.x - 5, -13);
             WalkTo(walker, -14, -13);
             WalkTo(walker, -14, -2);
             Assert.That(prep.CanUseMachine, Is.True);
             Assert.That(prep.TryInteract(), Is.True);
             Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.WakeUp), "production waits for the priority blend");
             Assert.That(walker.CanMove, Is.False);
-            yield return Until(() => game.Day.Phase == DayPhase.Production && game.Snapshot.Phase == RoundPhase.Playing,
-                "machine camera takes over and opens basic production");
+            yield return Until(() => game.Day.Phase == DayPhase.Production && rig.IsBoardOpen,
+                "machine camera takes over and opens Build");
+            Assert.That(rig.TryContinue(), Is.True);
             Assert.That(brain.ActiveVirtualCamera.Name, Is.EqualTo("VCamera_Machine"));
             Assert.That(brain.IsBlending, Is.False);
             Assert.That(walker.CanMove, Is.False);
             Assert.That(game.HasProductionFeature(ProductionFeature.Shop), Is.False);
-            Assert.That(game.HasProductionFeature(ProductionFeature.DevicePlacement), Is.False);
+            Assert.That(game.HasProductionFeature(ProductionFeature.DevicePlacement), Is.True);
             Assert.That(game.HasProductionFeature(ProductionFeature.Rush), Is.True);
             Assert.That(game.HasProductionFeature(ProductionFeature.GamblingWheel), Is.False);
             Assert.That(game.GetShopOffers(), Is.Empty);
-            Assert.That(InTestScene<DiegeticMachineUI>().IsBoardOpen, Is.False);
+            Assert.That(rig.IsBoardOpen, Is.True, "the type panel remains usable during production");
+            Assert.That(rig.VisibleDeviceCount, Is.EqualTo(2));
+            Assert.That(TryDragEconomyPeg(game, rig), Is.True, "the world-space purchase card installs in Playing");
+            Assert.That(game.GetOwnedDevices().Single().DefinitionId, Is.EqualTo(9033));
+            long expectedScrap = game.CurrentDayDefinition.DailyLoadout.InitialBiomassScrap -
+                game.Balance.Devices.Single(device => device.Id == 9033).InstallPrice;
+            Assert.That(game.Session.BiomassScrapBalance, Is.EqualTo(expectedScrap));
             var library = InTestScene<ItemLibraryUI>();
             library.Open();
             Assert.That(library.IsOpen, Is.False);
             var status = InTestScene<ScoreListener>();
             yield return Until(() => status.RushText.enabled && status.RushSlider.gameObject.activeSelf, "Day0 shows the RUSH meter");
             Assert.That(InTestScene<GamblingWheelDisplay>().DisplayGroup.alpha, Is.Zero);
+            var curve = game.CurrentDayDefinition.BloodProgression;
+            if (curve?.Stages.Count > 0)
+            {
+                var bloodView = rig.BloodBar.transform.Find("Blood Value Progression");
+                Assert.That(bloodView, Is.Not.Null);
+                Assert.That(rig.BloodBar.maxValue, Is.EqualTo(curve.InitialBlood));
+                Assert.That(bloodView.GetComponentsInChildren<Image>(), Has.Length.EqualTo(curve.Stages.Count - 1));
+                Assert.That(bloodView.Find("Next Marble Value").GetComponent<TMP_Text>().text,
+                    Does.EndWith($"{game.Snapshot.NextMarbleBaseValue:G4}"));
+            }
 
             game.AutoMoveLauncher = false;
             game.SetLauncherPosition(game.LauncherCenterZ);
             game.SetFlow(0f);
+            // A real score zone hit should activate RUSH and meet the target at any authored pin spacing.
+            scoreZone.FlatScore = game.Session.TargetScore;
+            var manager = OwnedWorlds().Single(world => !knownWorlds.Contains(world)).EntityManager;
+            using (var query = manager.CreateEntityQuery(typeof(RoundData)))
+            {
+                var entity = query.GetSingletonEntity();
+                var round = manager.GetComponentData<RoundData>(entity);
+                round.RushMeter = RushSystem.Threshold - RushSystem.InitialContribution;
+                manager.SetComponentData(entity, round);
+            }
             int zoneHits = 0;
             game.Scored += item => { if (item.ZoneId == scoreZone.TargetId && !item.IsPending) zoneHits++; };
             game.SetFireHeld(true);
@@ -215,8 +343,9 @@ namespace MarblesECS.Tests
             Assert.That(prep.TryInteract(), Is.True);
             Assert.That(prep.TryInteract(), Is.True);
             Assert.That(game.Day.DayId, Is.EqualTo("day1"));
-            Assert.That(game.Session.TargetScore, Is.EqualTo(200));
-            Assert.That(game.HasProductionFeature(ProductionFeature.Shop | ProductionFeature.DevicePlacement | ProductionFeature.Rush), Is.True);
+            Assert.That(game.Session.TargetScore, Is.EqualTo(game.CurrentDayDefinition.TargetScore));
+            Assert.That(game.HasProductionFeature(ProductionFeature.DevicePlacement | ProductionFeature.Rush), Is.True);
+            Assert.That(game.HasProductionFeature(ProductionFeature.Shop), Is.False);
             yield return Until(() => walker.CanMove, "Day1 Morning Prep begins");
             Assert.That(shopAnchor.childCount, Is.EqualTo(2), "Day1 spawns the shop terminal");
             Assert.That(game.Day.MorningPrepRemaining, Is.EqualTo(1));
@@ -226,7 +355,7 @@ namespace MarblesECS.Tests
             Assert.That(prep.TryInteract(), Is.True);
             Assert.That(prep.IsReading, Is.True);
             Assert.That(displayedNote.text, Is.EqualTo(game.CurrentDayDefinition.MorningPrep.Single().Text));
-            Assert.That(displayedNote.text, Does.Contain("200 分"));
+            Assert.That(displayedNote.text, Does.Contain($"{game.CurrentDayDefinition.TargetScore} 分"));
             string printedCharacters = string.Concat(displayedNote.text.Where(character => !char.IsWhiteSpace(character)));
             Assert.That(displayedNote.font.HasCharacters(printedCharacters, out uint[] missing, true, true), Is.True,
                 "Missing note characters: " + string.Join(", ", missing ?? Array.Empty<uint>()));
@@ -236,39 +365,205 @@ namespace MarblesECS.Tests
             Assert.That(prep.TryInteract(), Is.True);
             yield return Until(() => walker.CanMove, "finished reading the Day1 announcement");
 
-            var terminal = shopAnchor.Find("Shop Terminal Interaction");
-            var shop = InTestScene<ShopUI>();
             WalkTo(walker, notePoint.x - 5, -13);
             WalkTo(walker, terminal.position.x - 5, -13);
             WalkTo(walker, terminal.position.x - 5, terminal.position.z);
             Assert.That(prep.TryInteract(), Is.True);
             yield return Until(() => shop.ShopCanvasGroup.interactable, "Day1 shop opens at the terminal");
-            var offers = game.GetShopOffers();
-            Assert.That(offers, Is.Not.Empty);
-            Assert.That(game.BuyOffer(offers[0].Index), Is.True);
-            Assert.That(game.GetOwnedDevices().Any(device => device.DefinitionId == offers[0].DefinitionId), Is.True);
-            shop.ContinueButton.onClick.Invoke();
-            yield return Until(() => walker.CanMove, "Day1 shopping returns to the room");
+            Assert.That(game.GetShopOffers(), Is.Empty);
+            Assert.That(daily.Find("可选装置").GetComponentsInChildren<Button>(), Has.Length.EqualTo(5));
+            Assert.That(game.TryToggleLoadoutPeg(game.Day.Version, 9035), Is.True);
+            daily.Find("确认背包").GetComponent<Button>().onClick.Invoke();
+            yield return Until(() => walker.CanMove, "Day1 loadout returns to the room");
 
             WalkTo(walker, terminal.position.x - 5, -13);
             WalkTo(walker, -14, -13);
             WalkTo(walker, -14, -2);
             Assert.That(prep.TryInteract(), Is.True);
-            var rig = InTestScene<DiegeticMachineUI>();
             yield return Until(() => game.Day.Phase == DayPhase.Production && rig.IsBoardOpen, "Day1 opens device placement");
             Assert.That(game.Snapshot.Phase, Is.EqualTo(RoundPhase.Build));
             Assert.That(rig.TryContinue(), Is.True);
             game.SetLauncherPosition(game.LauncherCenterZ);
             game.SetFlow(1f);
+            game.PhysicsRoot.GetComponentsInChildren<MarbleZone>().Single().FlatScore = game.Session.TargetScore;
             game.SetFireHeld(true);
             yield return Until(() => game.Session.CanCashOut || game.Day.Phase == DayPhase.DaySettlement,
-                "Day1 reaches its 200-point target with the existing board");
+                "Day1 reaches its target through the generated score zone");
             game.SetFireHeld(false);
             if (game.Session.CanCashOut) Assert.That(game.CashOut(), Is.True);
             yield return Until(() => game.Day.Phase == DayPhase.DaySettlement, "Day1 settlement");
             Assert.That(prep.TryInteract(), Is.True);
             Assert.That(prep.TryInteract(), Is.True);
-            Assert.That(game.Day.Status, Is.EqualTo(DayCampaignStatus.Completed));
+            Assert.That(game.Day.DayId, Is.EqualTo("day2"));
+            yield return Until(() => walker.CanMove, "Day2 Morning Prep begins");
+            WalkTo(walker, -14, -13);
+            WalkTo(walker, terminal.position.x - 5, -13);
+            WalkTo(walker, terminal.position.x - 5, terminal.position.z);
+            Assert.That(prep.TryInteract(), Is.True);
+            yield return Until(() => shop.ShopCanvasGroup.interactable, "Day2 permission shop opens");
+            Assert.That(game.GetShopOffers(), Has.Length.EqualTo(4));
+            long scrip = game.Session.CompanyScripBalance;
+            var first = game.GetShopOffers()[0];
+            daily.Find("商店抽取").GetComponentsInChildren<Button>().First(button => button.interactable).onClick.Invoke();
+            Assert.That(game.GetShopOffers()[0].Sold, Is.True);
+            Assert.That(game.Session.CompanyScripBalance, Is.EqualTo(scrip - first.Price));
+            Assert.That(game.GetOwnedDevices(), Is.Empty);
+            Assert.That(daily.Find("反馈").GetComponent<TMP_Text>().text, Does.Contain(first.Name));
+        }
+
+        [UnityTest]
+        public IEnumerator BloodBarMarksTheThresholdsAndFlashesOnAdvancement()
+        {
+            testScene = SceneManager.CreateScene("Blood progression HUD");
+            board = new GameObject("Blood slider", typeof(RectTransform), typeof(Slider));
+            SceneManager.MoveGameObjectToScene(board, testScene);
+            var slider = board.GetComponent<Slider>();
+            var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            fill.transform.SetParent(slider.transform, false);
+            slider.fillRect = fill.rectTransform;
+            var originalFill = fill.color = Color.red;
+            var view = new BloodValueBar(slider);
+            var curve = new BloodProgressionDefinition(100, new[]
+            {
+                new BloodValueStage(0, .5), new BloodValueStage(30, 1), new BloodValueStage(60, 2)
+            });
+            var snapshot = new MarbleSnapshot
+            {
+                RoundId = 1, Blood = 100, BloodCapacity = 100, BloodValueStage = 0, NextMarbleBaseValue = .5
+            };
+            view.Refresh(snapshot, curve);
+            var overlay = slider.transform.Find("Blood Value Progression");
+            var next = overlay.Find("Next Marble Value").GetComponent<TMP_Text>();
+            var ticks = overlay.GetComponentsInChildren<Image>();
+            Assert.That(ticks, Has.Length.EqualTo(2));
+            Assert.That(ticks[0].rectTransform.anchorMin.x, Is.EqualTo(.7f).Within(1e-6));
+            Assert.That(ticks[1].rectTransform.anchorMin.x, Is.EqualTo(.4f).Within(1e-6));
+            Assert.That(next.text, Is.EqualTo($"下一颗基础价值 {.5:G4}"));
+
+            snapshot.Blood = 70;
+            snapshot.BloodSpent = 30;
+            snapshot.BloodValueStage = 1;
+            snapshot.NextMarbleBaseValue = 1;
+            view.Refresh(snapshot, curve);
+            Assert.That(next.text, Is.EqualTo("升值 · 下一颗 1"));
+            Assert.That(fill.color, Is.Not.EqualTo(originalFill));
+            var reachedColor = ticks[0].color;
+            Assert.That(reachedColor, Is.Not.EqualTo(ticks[1].color));
+            snapshot.Blood = 75;
+            view.Refresh(snapshot, curve);
+            Assert.That(ticks[0].rectTransform.anchorMin.x, Is.EqualTo(.75f).Within(1e-6));
+            Assert.That(ticks[0].color, Is.EqualTo(reachedColor));
+
+            snapshot.RoundId++;
+            snapshot.BloodValueStage = 0;
+            snapshot.NextMarbleBaseValue = .5;
+            view.Refresh(snapshot, curve);
+            Assert.That(next.text, Is.EqualTo($"下一颗基础价值 {.5:G4}"));
+            Assert.That(fill.color, Is.EqualTo(originalFill));
+            view.Dispose();
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator ExhaustedPegCanBeReinstalledDuringLivePhysXProduction()
+        {
+            var balance = GameBalanceLoader.Load();
+            balance.Devices.Single(peg => peg.Id == 9033).Durability = 1;
+            var game = CreateMachine(balance);
+            game.PlacementSurface = board.AddComponent<BoardPlacementSurface>();
+            yield return Until(() => game.IsReady, "fixture machine ready");
+            localScene = game.PhysicsRoot.gameObject.scene;
+            var campaign = GameDaysLoader.Parse(@"{
+                ""schemaVersion"":3,""sequenceId"":""live-placement"",""startingCompanyScrip"":3,
+                ""days"":[{""dayId"":""first"",""order"":1,""targetScore"":500,""unlockedPegIds"":[9033,9034],
+                ""defaultPegIds"":[9033,9034],""maxLoadoutTypeCount"":2,""initialBiomassScrap"":6,""clearCompanyScripReward"":2}]}",
+                balance);
+            Assert.That(game.TryStartDayCampaign(campaign, out string error, 42), Is.True, error);
+            long version = game.Day.Version;
+            Assert.That(game.TryOpenShop(version), Is.True);
+            Assert.That(game.TryToggleLoadoutPeg(version, 9033), Is.True);
+            Assert.That(game.TryToggleLoadoutPeg(version, 9034), Is.True);
+            Assert.That(game.TryConfirmLoadout(version), Is.True);
+            Assert.That(game.TryCloseShop(version), Is.True);
+            Assert.That(game.TryCompleteWakeUp(version, out error), Is.True, error);
+            Assert.That(game.BeginRound(), Is.True);
+            Assert.That(game.TryInstallDevice(9033, 10, 0, new Vector3(10, 0, 0), 1, 0, Quaternion.identity, out _), Is.False);
+            var launch = game.LaunchPoint.TransformPoint(game.LaunchOffset);
+            Assert.That(game.TryInstallDevice(9033, launch.x, launch.z, new Vector3(launch.x, 0, launch.z),
+                1, 0, Quaternion.identity, out int first), Is.True);
+            var firstBody = FindDeviceBody(first);
+            Assert.That(firstBody, Is.Not.Null, "projection is live when the install command returns");
+            var collider = firstBody.GetComponent<Collider>();
+            Assert.That(collider.enabled, Is.True);
+            Assert.That(game.TryInstallDevice(9034, launch.x, launch.z, new Vector3(launch.x, 0, launch.z),
+                1, 0, Quaternion.identity, out _), Is.False);
+            Assert.That(game.TryInstallDevice(9034, 2, 0, new Vector3(2, 0, 0), 1, 0, Quaternion.identity, out int second), Is.True);
+            var secondBody = FindDeviceBody(second);
+            Assert.That(FindDeviceBody(first), Is.SameAs(firstBody), "another purchase preserves the installed collider");
+            Assert.That(game.Session.BiomassScrapBalance, Is.EqualTo(1));
+            Assert.That(game.TryInstallDevice(9034, -2, 0, new Vector3(-2, 0, 0), 1, 0, Quaternion.identity, out _), Is.False);
+
+            var broken = new List<DeviceBrokenEvent>();
+            game.DeviceBroken += broken.Add;
+            game.SetFlow(0);
+            game.FireOnce();
+            yield return Until(() => broken.Count > 0, "real PhysX collision harvests scrap and breaks the peg");
+            Assert.That(broken.Single().InstanceId, Is.EqualTo(first));
+            Assert.That(game.Snapshot.ActiveMarbles, Is.EqualTo(1), "the final impact preserves the live ball");
+            Assert.That(game.Session.BiomassScrapBalance, Is.EqualTo(2));
+            Assert.That(game.Session.CompanyScripBalance, Is.EqualTo(3));
+            Assert.That(collider == null || !collider.enabled || !collider.gameObject.activeInHierarchy, Is.True);
+            Assert.That(FindDeviceBody(first), Is.Null);
+            Assert.That(FindDeviceBody(second), Is.SameAs(secondBody));
+            Assert.That(game.GetOwnedDevices().Select(peg => peg.InstanceId), Is.EqualTo(new[] { second }));
+            Assert.That(game.DailyLoadout.SelectedCount, Is.EqualTo(2));
+
+            var replacementPose = new Vector3(launch.x, 0, launch.z);
+            yield return Until(() => game.CanInstallDevice(9033, launch.x, launch.z, replacementPose, 1, 0, Quaternion.identity),
+                "the broken peg's slot is free as soon as the ball clears it");
+            Assert.That(game.TryInstallDevice(9033, launch.x, launch.z, replacementPose, 1, 0, Quaternion.identity, out int replacement), Is.True);
+            Assert.That(replacement, Is.Not.EqualTo(first));
+            Assert.That(FindDeviceBody(replacement).GetComponent<Collider>().enabled, Is.True);
+            Assert.That(game.GetOwnedDevices().Single(peg => peg.InstanceId == replacement).RemainingDurability, Is.EqualTo(1));
+            Assert.That(game.Session.BiomassScrapBalance, Is.Zero);
+        }
+
+        [UnityTest]
+        public IEnumerator CollisionOnlyLayoutPinBouncesMarblesWithoutPublishingGameplayContacts()
+        {
+            testScene = localScene = SceneManager.CreateScene("Collision pin physics", new CreateSceneParameters(LocalPhysicsMode.Physics3D));
+            board = new GameObject("Fixture Board");
+            SceneManager.MoveGameObjectToScene(board, localScene);
+            var surface = board.AddComponent<BoardPlacementSurface>();
+            var contacts = new List<MarbleContact>();
+            using var bridge = new MarblePhysicsBridge(localScene, null, null, contacts.Add);
+            bridge.ConfigureBoardLayout(board.transform, surface);
+            bridge.ApplyBoardLayout(BoardLayoutLoader.Parse(@"{
+                ""schemaVersion"":1,
+                ""pins"":[{""x"":0.5,""y"":0.5,""radius"":0.1,""collisionOnly"":true}],
+                ""zones"":[]}"));
+            var layout = bridge.GeneratedBoardLayout;
+            var pin = layout.GetComponentInChildren<CapsuleCollider>();
+            Assert.That(pin.enabled && !pin.isTrigger, Is.True);
+            Assert.That(pin.GetComponent<MarblePin>(), Is.Null);
+            Vector3 center = pin.bounds.center;
+            var obstacles = new DevicePlacementObstacles();
+            Assert.That(obstacles.IsClear(localScene.GetPhysicsScene(), null, center, .08f, layout), Is.False);
+
+            var key = new MarbleKey(1, 1);
+            Assert.That(bridge.TrySpawn(new MarbleSpawnData
+            {
+                Key = key, Position = center - Vector3.right * .55f, Rotation = Quaternion.identity,
+                Quote = new ShotQuote(0, 0, .08f, .1f, 1, 1), LinearVelocity = Vector3.right * 3,
+                HasSettings = true,
+                Settings = new MarblePhysicalSettings { Radius = .08f, Mass = .1f, Bounce = .6f, MaxSpeed = 12, PierceCount = 1 }
+            }), Is.True);
+
+            for (int step = 0; step < 20; step++) bridge.Simulate(.02f);
+            Assert.That(bridge.TryGetState(key, out var state), Is.True);
+            Assert.That(state.LinearVelocity.x, Is.LessThan(0), "even a marble with a pierce charge hits the collider");
+            Assert.That(contacts, Is.Empty);
+            yield return null;
         }
 
         [UnityTest]
@@ -311,9 +606,11 @@ namespace MarblesECS.Tests
                 Assert.That(bridge.GeneratedBoardLayout, Is.SameAs(first));
                 Assert.That(originalScore.isActiveAndEnabled, Is.False);
                 Assert.That(drain.isActiveAndEnabled, Is.True);
-                var pin = first.GetComponentInChildren<MarblePin>();
+                var pins = first.GetComponentsInChildren<CapsuleCollider>();
+                Assert.That(pins, Has.Length.EqualTo(day0.Pins.Count));
                 var obstacles = new DevicePlacementObstacles();
-                Assert.That(obstacles.IsClear(localScene.GetPhysicsScene(), null, pin.transform.position, .08f, first), Is.False);
+                foreach (var pin in pins)
+                    Assert.That(obstacles.IsClear(localScene.GetPhysicsScene(), null, pin.transform.position, .08f, first), Is.False);
             }
         }
 
@@ -675,6 +972,25 @@ namespace MarblesECS.Tests
 
         private DeviceBody FindDeviceBody(int id) =>
             DeviceBody.Active.FirstOrDefault(item => item != null && item.InstanceId == id && item.gameObject.scene == localScene);
+
+        private static bool TryDragEconomyPeg(MarbleGameController game, DiegeticMachineUI rig)
+        {
+            var placement = rig.Placement;
+            var reference = placement.PlacementPlane;
+            var plane = new Plane(reference.up, reference.position);
+            foreach (float x in new[] { -2f, -1f, 1f })
+                foreach (float z in new[] { -2.25f, 2.25f })
+                {
+                    var point = plane.ClosestPointOnPlane(placement.BoardRoot.TransformPoint(new Vector3(x, 0, z)));
+                    var pointer = rig.ViewCamera.WorldToScreenPoint(point);
+                    if (pointer.z <= 0 || !rig.ViewCamera.pixelRect.Contains(pointer) ||
+                        !game.CanInstallDevice(9033, x, z, point + reference.up * placement.DevicePlaneDistance,
+                            1, 0, reference.rotation) || !rig.BeginDeviceDrag(0, pointer)) continue;
+                    rig.EndDeviceDrag(pointer);
+                    if (game.GetOwnedDevices().Length != 0) return true;
+                }
+            return false;
+        }
 
         private static List<World> OwnedWorlds()
         {

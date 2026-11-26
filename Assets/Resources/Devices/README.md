@@ -80,7 +80,7 @@
 ```lua
 function OnContact(a)
     if not a:Trigger(0) then return end
-    a:AddScoreMultiplier(a.Parameter)
+    a:MultiplyScore(a.Parameter)
 end
 ```
 
@@ -101,11 +101,11 @@ end
 - `ScaleVelocity(scale)`、`Exit(direction, speed, angle)`、`ExitPartner(direction, speed)`：运动操作；方向为 `down` 或 `forward`，出口仍执行障碍检查。
 - `StoredValue`、`RushOnSettlement`、`RefundOnDespawn`、`ExitDown`、`TransportLockedUntil`：装置或弹珠状态。
 - `Coins`：只读当前钱包；猪猪存钱罐每满 10 金币提供 `1 + 0.1 × 档数` 的倍率，不花金币。
-- `AddScoreMultiplier(amount)`：传入完整倍率，累加 `amount - 1`，到得分区以 `1 + 累计增量` 统一计算。两次 1.5 得到 2，两次 1.2 得到 1.4；基础 1 只算一次。`MultiplyScore` 是相同语义的旧接口的兼容名。Multi Ding、猪猪存钱罐、装置通用倍率修正与旧倍率钉统一使用此规则。
-- `SetDeviceScoreMultiplier(amount)`：替换当前累计装置倍率；故障装置抽到 0 时设为 0，随后仍可通过 `AddScoreMultiplier` 增加，进入得分区按当前累计值结算。
+- `MultiplyScore(factor)` 将当前累计倍率乘以完整因子。两次 ×1.5 得到 ×2.25，两次 ×0.5 得到 ×0.25，进入得分区按乘积结算。`TryMultiplyScore(factor)` 同时返回是否应用了因子。`AddScoreMultiplier` 是同语义的兼容接口。
+- `SetDeviceScoreMultiplier(amount)` 替换球持有的累计装置倍率。故障装置抽到 0 时乘积归零，后续乘法仍为 0。需要重置时调用此接口。
 - `CountPlacedDevices(excludedInstanceId = 0)`：实时统计已放置实例，可排除指定实例。more is more 排除自身，每个其他装置提供 +2，单次最多 +20；less is more 同样排除自身，从 +20 起每个其他装置减 2，最低为 0。耗尽但仍在场的装置计入，库存不计；公式由各自 Lua 决定。
-- `RoundId` 配合 Lua 实例状态：雪糕机每回合依次提供 ×10、×9 至 ×2，之后 ×1 无效果；每次只累加“倍率 − 1”，有效作用扣耐久，下一回合重置次数。
-- `OnOffer` / `Accept` 与 `GetRoundValue` / `SetRoundValue` 用于接受提交的装置并准备下一回合。大胃袋可接收盘面和背包中的装置，回调成功后消耗该装置并按稀有度增加 2/4/6/8。增量在碰撞时施加，下一轮布置清空。
+- 雪糕机用 `RoundId` 管理每回合的触发次数。每次将当前倍率依次乘以 10、9 至 2，并扣 1 耐久。单次因子降至 ×1 后结束效果，下一回合重置次数。
+- `OnOffer` / `Accept` 与 `GetRoundValue` / `SetRoundValue` 用于接受提交的装置并准备下一回合。大胃袋可接收盘面和背包中的装置，回调成功后消耗该装置并按稀有度增加 2/4/6/8 点成长。撞击时将累计倍率乘以 `1 + 成长`，下一轮布置清空成长。
 - `AddRushChance`、`Roll`、`BreakPinsOnCross`、`RemoveDevice`：概率、随机与通用场景操作。
 
 磁力脚本通过 `DeviceFieldContext` 的距离、方向、磁性参数计算作用力，再调用 `AddRadialForce`。C# 只负责通用物理执行及总力/速度上限，磁极方向与距离衰减公式在装置 Lua。

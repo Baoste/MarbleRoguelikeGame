@@ -5,6 +5,10 @@ namespace MarblesECS
     internal struct CampaignData : IComponentData
     {
         public bool RepeatRounds;
+        public bool UsesDailyLoadout;
+        public bool RestockStartingDevices;
+        public long CompanyScripBalance, LastCompanyScripReward;
+        // Compatibility economy for standalone production and version 2 Day fixtures.
         public long RewardCoins;
         // Existing sessions leave this mask at zero. Day definitions opt in to each feature.
         public ProductionFeature DisabledFeatures;

@@ -15,7 +15,7 @@ local function paint()
 end
 local function status(api)
     local s = stages[stage(api)]
-    api:SetStatus(string.format("种植牙 · %s · 附加倍率 +%d · 耐久 %d/%d", s.name, s.bonus, api.RemainingDurability, s.durability))
+    api:SetStatus(string.format("种植牙 · %s · 碰撞倍率 ×%d · 耐久 %d/%d", s.name, 1 + s.bonus, api.RemainingDurability, s.durability))
 end
 local function refresh(api)
     visualStage = stage(api)
@@ -44,7 +44,7 @@ function OnContact(api)
     local current = stage(api)
     if current == 0 or api.Impact == nil or api.LinkKey ~= 0 then return end
     if not api:Visit(0, 0) or not api:TryUse() then return end
-    api:AddScoreMultiplier(1 + stages[current].bonus)
+    api:MultiplyScore(1 + stages[current].bonus)
     if api.RemainingDurability == 0 then
         api:SetInstanceValue("stage", 0)
         api:SetDurabilityLimit(0)

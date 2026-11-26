@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-public sealed class ShopUI : MonoBehaviour
+public sealed partial class ShopUI : MonoBehaviour
 {
     [Header("References")]
     public MarbleGameController Controller;
@@ -52,6 +52,13 @@ public sealed class ShopUI : MonoBehaviour
     {
         bool open = Controller != null && Controller.ShopOpen;
         SetShopVisible(open);
+
+        if (Controller != null && Controller.IsReady && Controller.Session.UsesDailyLoadout)
+        {
+            RefreshDailyView(open);
+            wasOpen = false;
+            return;
+        }
 
         if (!open)
         {
