@@ -8,6 +8,7 @@ namespace MarblesECS
     internal sealed class DayCheckpoint
     {
         private readonly RoundData round;
+        private readonly bool preserveMorningProgress;
         private readonly CampaignData campaign;
         private readonly PlayerData player;
         private readonly LauncherData launcher;
@@ -24,7 +25,7 @@ namespace MarblesECS
         internal DayRuleData[] Rules { get; }
         internal uint RandomState => round.RandomState;
 
-        internal DayCheckpoint(SimulationContext context, DayRuleData[] rules)
+        internal DayCheckpoint(SimulationContext context, DayRuleData[] rules, bool preserveMorningProgress)
         {
             round = context.Round;
             if (round.Phase != (byte)RoundPhase.Build || round.ActiveMarbleCount != 0 || context.Marbles.Count != 0 ||
@@ -32,13 +33,14 @@ namespace MarblesECS
                 throw new InvalidOperationException("A Day checkpoint requires Build with no active marbles.");
 
             var manager = context.Manager;
+            this.preserveMorningProgress = preserveMorningProgress;
             campaign = context.Campaign;
             player = context.Player;
             launcher = context.Launcher;
             movementConfig = manager.GetComponentData<LauncherMovementConfig>(context.LauncherEntity);
             movementState = manager.GetComponentData<LauncherMovementState>(context.LauncherEntity);
             movementInput = manager.GetComponentData<LauncherMovementInput>(context.LauncherEntity);
-            if (!campaign.UsesDailyLoadout) offers = CopyBuffer<ShopOfferData>(manager, context.RoundEntity);
+            if (!preserveMorningProgress) offers = CopyBuffer<ShopOfferData>(manager, context.RoundEntity);
             playerValues = CopyBuffer<AttributeValue>(manager, context.PlayerEntity);
             playerModifiers = CopyBuffer<AttributeModifierData>(manager, context.PlayerEntity);
             using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
@@ -79,7 +81,7 @@ namespace MarblesECS
             context.Round = restored;
             var session = campaign;
             session.LayoutRevision = nextRevision;
-            if (session.UsesDailyLoadout)
+            if (preserveMorningProgress)
             {
                 // Procurement and loadout edits are committed during Morning Prep. Retry rolls back production.
                 session.CompanyScripBalance = current.CompanyScripBalance;
@@ -93,7 +95,7 @@ namespace MarblesECS
             manager.SetComponentData(context.LauncherEntity, movementState);
             manager.SetComponentData(context.LauncherEntity, movementInput);
             context.NextSpawnSequence = spawnSequence;
-            if (!session.UsesDailyLoadout) context.NextStableId = stableId;
+            if (!preserveMorningProgress) context.NextStableId = stableId;
             context.StepSeconds = stepSeconds;
             WriteBuffer(manager, context.RoundEntity, offers);
             WriteBuffer(manager, context.PlayerEntity, playerValues);

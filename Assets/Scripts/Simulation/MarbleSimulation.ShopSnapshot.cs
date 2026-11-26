@@ -9,7 +9,7 @@ namespace MarblesECS
             ThrowIfDisposed();
             if (context.Balance == null) return Array.Empty<ShopOfferSnapshot>();
             var offers = context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity);
-            bool daily = context.Campaign.UsesDailyLoadout;
+            bool daily = CurrentDayDefinition?.DailyLoadout != null;
             var result = new ShopOfferSnapshot[offers.Length];
             for (int i = 0; i < offers.Length; i++)
             {

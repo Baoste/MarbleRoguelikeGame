@@ -41,7 +41,7 @@ namespace MarblesECS.Editor
             for (int i = 0; i < 4; i++) limited.Devices[i].Rarity = (DeviceRarity)i;
             using (var simulation = new MarbleSimulation(limited))
             {
-                simulation.StartSession(new EmptyPhysics(), 0, 517);
+                simulation.StartSession(new EmptyPhysics(), 517);
                 for (int i = 0; i < 32; i++)
                 {
                     uint state = simulation.Context.Round.RandomState;
@@ -54,7 +54,7 @@ namespace MarblesECS.Editor
             limited.Devices = limited.Devices.Take(1).ToArray(); limited.Devices[0].Rarity = DeviceRarity.Legendary;
             using (var simulation = new MarbleSimulation(limited))
             {
-                simulation.StartSession(new EmptyPhysics(), 0, 71); CampaignShopSystem.Generate(simulation.Context);
+                simulation.StartSession(new EmptyPhysics(), 71); CampaignShopSystem.Generate(simulation.Context);
                 Check(CheckOffers(simulation, 1)[0].Rarity == DeviceRarity.Legendary, "a lone legendary fills the only available slot");
                 Check(simulation.Context.Round.RandomState == Advance(71, 1), "catalog shortage does not consume missing-slot draws");
             }
@@ -68,7 +68,7 @@ namespace MarblesECS.Editor
             var counts = new int[4]; var hits = balance.Devices.ToDictionary(d => d.Id, d => 0);
             using (var simulation = new MarbleSimulation(balance))
             {
-                simulation.StartSession(new EmptyPhysics(), 0, 19357);
+                simulation.StartSession(new EmptyPhysics(), 19357);
                 for (int i = 0; i < samples; i++)
                 {
                     CampaignShopSystem.Generate(simulation.Context);

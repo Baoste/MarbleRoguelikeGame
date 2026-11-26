@@ -302,21 +302,20 @@ namespace MarblesECS
         public void SetStatus(string text) => C.DeviceScripts.SetStatus(Device.InstanceId, RoundId, text);
         public void AddCoins(double value)
         {
-            if (C.Campaign.UsesDailyLoadout) return;
-            var state = C.Campaign;
-            long before = state.Coins;
-            state.Coins = MarbleRules.AddScore(state.Coins, MarbleRules.RoundScore(value, CampaignStateUtility.MaxCoins), CampaignStateUtility.MaxCoins);
-            C.Campaign = state;
+            var context = C;
+            if (context.Campaign.Production.Currency != GameCurrency.Coins) return;
+            long credited = CampaignWalletSystem.Credit(context, GameCurrency.Coins,
+                MarbleRules.RoundScore(value, CampaignWalletSystem.MaxBalance));
             if (value >= 1) MarkTriggered();
-            if (state.Coins != before)
-                C.FloatingText?.Enqueue(FloatingTextEvent.FromInteger(TextPosition, FloatingTextSource.Device, sourceId,
-                    FloatingTextType.Currency, state.Coins - before, contact.Key));
+            if (credited != 0)
+                context.FloatingText?.Enqueue(FloatingTextEvent.FromInteger(TextPosition, FloatingTextSource.Device, sourceId,
+                    FloatingTextType.Currency, credited, contact.Key));
         }
 
         public void AddBiomassScrap(double value)
         {
             var context = C;
-            if (!context.Campaign.UsesDailyLoadout) return;
+            if (context.Campaign.Production.Currency != GameCurrency.BiomassScrap) return;
             long amount = MarbleRules.RoundScore(value, CampaignWalletSystem.MaxBalance);
             if (amount == 0) return;
             long credited = CampaignWalletSystem.Credit(context, GameCurrency.BiomassScrap, amount);

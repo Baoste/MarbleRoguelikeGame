@@ -9,7 +9,8 @@ namespace MarblesECS
         public long ConfirmedScore;
         public long RoundScore;
         public long TargetScore;
-        public bool UsesDailyLoadout;
+        public ProductionSettings Production;
+        public long ProductionBalance;
         public long CompanyScripBalance, BiomassScrapBalance, LastCompanyScripReward;
         public long Coins;
         public long LastRewardCoins;

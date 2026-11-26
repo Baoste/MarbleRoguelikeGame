@@ -81,7 +81,7 @@ namespace MarblesECS.PhysX
         /// <summary>Presentation supplies the actual world pose when its placement plane is offset or tilted.</summary>
         public bool PlaceDevice(int id, float x, float z, Vector3 worldPosition, float radiusScale = 1f, float? angle = null, Quaternion? worldRotation = null)
             => IsDevicePlacementClear(id, worldPosition, radiusScale, angle, worldRotation) &&
-                simulation.PlaceDevice(id, x, z, PlacementClearance, angle);
+                simulation.PlaceDevice(id, x, z, PlacementClearance, angle, DeviceLayoutChanged);
 
         internal bool CanPlaceDevice(int id, float x, float z, Vector3 worldPosition, float radiusScale, float angle, Quaternion worldRotation)
             => IsDevicePlacementClear(id, worldPosition, radiusScale, angle, worldRotation) &&
@@ -89,13 +89,13 @@ namespace MarblesECS.PhysX
 
         private bool IsDevicePlacementClear(int id, Vector3 worldPosition, float radiusScale, float? angle, Quaternion? worldRotation)
         {
-            if (!ProductionCommandsAvailable || !HasProductionFeature(ProductionFeature.DevicePlacement) || Paused ||
-                Session.Phase != RoundPhase.Build) return false;
+            if (!CanInstallDevices) return false;
             var context = simulation.Context;
             if (!CampaignStateUtility.FindDevice(context, id, out var entity)) return false;
             var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
             var definition = CampaignStateUtility.Device(context, device.DefinitionId);
-            return IsPlacementPoseClear(definition, worldPosition, radiusScale, angle ?? device.Angle, worldRotation);
+            return IsPlacementPoseClear(definition, worldPosition, radiusScale, angle ?? device.Angle, worldRotation,
+                avoidMarbles: Session.Phase == RoundPhase.Playing);
         }
 
         internal bool CanInstallDevice(uint id, float x, float z, Vector3 worldPosition, float radiusScale,
@@ -108,6 +108,8 @@ namespace MarblesECS.PhysX
         }
 
         internal DeviceDefinition InstallableDefinition(uint id) => CanInstallDevices ? simulation.InstallableDefinition(id) : null;
+
+        internal bool CanSelectInstallation(uint id) => CanInstallDevices && simulation.CanSelectInstallation(id);
 
         internal bool TryInstallDevice(uint id, float x, float z, Vector3 worldPosition, float radiusScale,
             float angle, Quaternion worldRotation, out int instanceId)
@@ -142,8 +144,8 @@ namespace MarblesECS.PhysX
         public bool RemoveDevicePlacement(int id) => simulation != null && simulation.RemoveDevicePlacement(id);
         public bool RotateDevice(int id, float degrees) => simulation != null && simulation.RotateDevice(id, degrees);
         public ShotQuote QuoteShot(float flow) => simulation != null ? simulation.QuoteShot(flow) : default;
-        public long ShopRefreshPrice => !IsReady ? 0 : Session.UsesDailyLoadout
-            ? CurrentDayDefinition.DailyLoadout.Shop?.RefreshCost ?? 0
+        public long ShopRefreshPrice => !IsReady ? 0 : CurrentDayDefinition?.DailyLoadout is DailyLoadoutDefinition loadout
+            ? loadout.Shop?.RefreshCost ?? 0
             : CampaignShopSystem.Price(simulation.Context, Balance.Campaign.ShopRefreshCost);
         public OwnedDeviceSnapshot[] GetOwnedDevices() => simulation?.GetOwnedDevices() ?? Array.Empty<OwnedDeviceSnapshot>();
         public ShopOfferSnapshot[] GetShopOffers() => simulation?.GetShopOffers() ?? Array.Empty<ShopOfferSnapshot>();

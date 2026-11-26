@@ -9,6 +9,8 @@
 | 根对象 | `schemaVersion` 为 3，`sequenceId` 是固定序列 ID，`days` 按 `order` 排序。`startingCompanyScrip` 控制新 Campaign 的工票初始值，默认 0。可配置 `defaultProductionFeatures`、`events`、`rules` 和 `campaignRuleIds`。 |
 | `days[]` | `dayId` 唯一，`order` 为唯一正整数，`targetScore` 范围为 1 到 `Marble.MaxRoundScore`。`boardLayout` 指定盘面 JSON。可用 `eventIds`、`ruleIds` 引用当天行为和规则，`morningPrep` 定义房间前置目标。 |
 
+根对象的 `defaultProductionSettings` 定义生产规则，每天可用 `productionSettings` 覆盖个别字段。规则包括 `deviceSupply`（库存实例 `OwnedInventory` 或已选种类 `SelectedTypes`）、`currency`、`installDuringProduction`、`destroyExhaustedDevices`、`allowDeviceReturn`、`allowDeviceSale` 和 `clearDevicesOnDaySettlement`。当天的 `initialBiomassScrap` 设置起始残料，`unlockedPegIds` 和 `defaultPegIds` 设置类型范围与初始权限。`skipMorningPrep` 默认关闭。开启时，由状态机确认已预选的背包并进入生产，预选类型须满足最低数量要求。
+
 IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白。菜单 `Marbles ECS → Validate Day Configuration` 检查配置字段、重复 ID、冲突顺序、事件、规则与行为类型。可用 `GameDaysLoader.Parse` 在测试中从字符串加载同一 Schema。
 
 每次尝试结算一个生产回合。弹珠排空且达标后，进入 DaySettlement 时按 `clearCompanyScripReward` 发放工票，同一个 Day ID 只到账一次。结算会清空血肉残料和盘面装置，工票及永久权限留在当前 Campaign。失败重试恢复 `initialBiomassScrap` 和盘面起始状态，保留当天货架、抽取次数、已抽权限、工票支出和已确认的背包。

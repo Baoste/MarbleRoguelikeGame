@@ -26,34 +26,21 @@ namespace MarblesECS
             return false;
         }
 
-        internal static void CreateDevice(SimulationContext context, DeviceDefinition definition, long price,
-            bool isStarterRefill = false)
+        internal static Entity CreateDevice(SimulationContext context, DeviceDefinition definition, long price,
+            OwnedDeviceData firstPlacement = default)
         {
             int quantity = definition.PurchaseQuantity;
             int pair = quantity > 1 ? context.Campaign.NextDeviceId + 1 : 0;
+            var first = Entity.Null;
             for (int i = 0; i < quantity; i++)
-                CreateSingleDevice(context, definition, new OwnedDeviceData
-                {
-                    PurchasePrice = price / quantity + (i < price % quantity ? 1 : 0),
-                    PairId = pair,
-                    IsStarterRefill = isStarterRefill
-                });
-        }
-
-        internal static long SellPrice(DeviceDefinition definition, OwnedDeviceData device) =>
-            device.IsStarterRefill ? 0 : definition.SellPrice;
-
-        internal static void RestockStartingDevice(SimulationContext context, uint definitionId, int placingInstanceId = 0)
-        {
-            if (!context.Campaign.RestockStartingDevices) return;
-            using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
-                foreach (var entity in entities)
-                {
-                    var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
-                    if (device.DefinitionId == definitionId && !device.Placed && device.InstanceId != placingInstanceId)
-                        return;
-                }
-            CreateDevice(context, Device(context, definitionId), 0, isStarterRefill: true);
+            {
+                var device = i == 0 ? firstPlacement : default;
+                device.PurchasePrice = price / quantity + (i < price % quantity ? 1 : 0);
+                device.PairId = pair;
+                var entity = CreateSingleDevice(context, definition, device);
+                if (i == 0) first = entity;
+            }
+            return first;
         }
 
         internal static void DestroyDevice(SimulationContext context, Entity entity)

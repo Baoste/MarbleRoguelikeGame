@@ -38,7 +38,6 @@ namespace MarblesECS.Tests
             yield return LoadTestScene(controller =>
             {
                 controller.StartWithDayCampaign = false;
-                controller.EnableRandomStartingDevices = false;
             });
             var game = InTestScene<MarbleGameController>();
             yield return Until(() => game.IsReady, "TestScene controller startup");
@@ -68,107 +67,44 @@ namespace MarblesECS.Tests
         }
 
         [UnityTest]
-        public IEnumerator StartingDevicesLaunchTheFullMachineCampaign()
+        public IEnumerator ConfiguredStartupUsesDailyProductionWithRepeatedLiveInstallation()
         {
-            yield return LoadTestScene(controller => controller.EnableRandomStartingDevices = true);
+            const long initialScrap = 99;
+            yield return LoadTestScene(controller => controller.ConfigureDayCampaign((_, campaign) =>
+            {
+                var day = campaign.Days[0];
+                var ids = new uint[] { 9033 };
+                var loadout = new DailyLoadoutDefinition(ids, ids, Array.Empty<uint>(), 1, 1,
+                    LoadoutSelectionMode.AutoSelectAvailable, day.DailyLoadout.Shop);
+                return campaign.WithDays(day.WithSetup(day.BoardLayoutFile, day.BoardLayout, initialScrap, loadout,
+                    skipMorningPrep: true));
+            }));
             var game = InTestScene<MarbleGameController>();
-            yield return Until(() => game.IsReady, "full machine startup");
+            yield return Until(() => game.IsReady, "production startup");
             localScene = game.PhysicsRoot.gameObject.scene;
-            Assert.That(game.StartWithDayCampaign, Is.True);
-            Assert.That(game.Day.Status, Is.EqualTo(DayCampaignStatus.NotStarted));
+            Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.Production));
             Assert.That(game.Session.Phase, Is.EqualTo(RoundPhase.Build));
-            const long startingCoins = 99_999;
-            Assert.That(game.Session.Coins, Is.EqualTo(startingCoins));
-            Assert.That(game.HasProductionFeature(ProductionFeature.All), Is.True);
-            var day0 = BoardLayoutLoader.Load("Day0.json");
-            CheckBoard();
-            var inventory = game.GetOwnedDevices().OrderBy(device => device.DefinitionId).ToArray();
-            Assert.That(inventory.Select(device => device.DefinitionId).Distinct(),
-                Is.EquivalentTo(game.Balance.Devices.Select(device => device.Id)));
-            Assert.That(inventory.Length, Is.EqualTo(game.Balance.Devices.Sum(device => device.PurchaseQuantity)));
-            Assert.That(InTestScene<MorningPrepController>().transform.Find("Morning Prep Overlay"), Is.Null);
-
+            Assert.That(game.CurrentDayDefinition.BoardLayoutFile, Is.EqualTo("Day0.json"));
+            Assert.That(game.Snapshot.NextMarbleBaseValue, Is.EqualTo(.5));
+            Assert.That(game.Session.ProductionBalance, Is.EqualTo(initialScrap));
+            Assert.That(game.Session.Production.Currency, Is.EqualTo(GameCurrency.BiomassScrap));
+            Assert.That(game.GetOwnedDevices(), Is.Empty);
             var brain = InTestScene<CinemachineBrain>();
             var rig = InTestScene<DiegeticMachineUI>();
             yield return Until(() => brain.ActiveVirtualCamera?.Name == "VCamera_Machine" && rig.IsBoardOpen,
                 "machine camera and build controls are active");
+            Assert.That(InTestScene<MorningPrepController>().FadeAlpha, Is.Zero);
             rig.RefreshInventory();
             var wallet = rig.ItemGroup.transform.Find("钱包余额").GetComponent<TMP_Text>();
-            Assert.That(wallet.text, Is.EqualTo($"金币 {startingCoins:N0}"));
-            int pageSize = rig.DeviceButtons.Length;
-            for (int offset = 0; offset < inventory.Length; offset += pageSize)
-            {
-                int count = Math.Min(pageSize, inventory.Length - offset);
-                Assert.That(rig.VisibleDeviceCount, Is.EqualTo(count));
-                for (int slot = 0; slot < count; slot++)
-                {
-                    Assert.That(rig.DeviceButtons[slot].IsInteractable(), Is.True);
-                    Assert.That(rig.DeviceNames[slot].text, Is.EqualTo(inventory[offset + slot].Name));
-                }
-                rig.ChangeDevicePage(1);
-            }
-            rig.ChangeDevicePage(-1);
-            Assert.That(rig.BeginDeviceDrag(rig.VisibleDeviceCount - 1, Vector2.zero), Is.True);
-            Assert.That(rig.Placement.SelectedInstanceId, Is.EqualTo(inventory.Last().InstanceId));
-            rig.CancelDeviceDrag();
-
-            int pegIndex = Array.FindIndex(inventory, device => device.DefinitionId == 9033);
-            rig.ChangeDevicePage(1 + pegIndex / pageSize);
-            int pegSlot = pegIndex % pageSize;
-            int firstId = inventory[pegIndex].InstanceId;
-            Assert.That(DragPeg(firstId), Is.True, "the original peg can be placed on the Day0 layout");
-            var refill = game.GetOwnedDevices().Single(device => device.DefinitionId == 9033 && !device.Placed);
-            Assert.That(refill.InstanceId, Is.Not.EqualTo(firstId));
-            Assert.That(DragPeg(refill.InstanceId), Is.True, "the same inventory slot can place another copy");
-            Assert.That(game.GetOwnedDevices().Count(device => device.DefinitionId == 9033 && device.Placed), Is.EqualTo(2));
-            Assert.That(game.Session.Coins, Is.EqualTo(startingCoins));
-            Assert.That(game.SellDevice(refill.InstanceId), Is.True);
-            Assert.That(game.Session.Coins, Is.EqualTo(startingCoins), "free refills have no sale revenue");
-
-            var deviceToSell = inventory.First(device => device.PairId == 0 && device.SellPrice > 0);
-            Assert.That(game.SellDevice(deviceToSell.InstanceId), Is.True);
-            Assert.That(game.Session.Coins, Is.EqualTo(startingCoins + deviceToSell.SellPrice));
-            game.RestartRound();
-            Assert.That(game.Session.Coins, Is.EqualTo(startingCoins));
-            Assert.That(game.GetOwnedDevices().Length, Is.EqualTo(inventory.Length));
-            CheckBoard();
+            StringAssert.Contains($"血肉残料 {initialScrap}", wallet.text);
+            long price = game.GetDailyPegs().Single().InstallPrice;
+            Assert.That(TryDragEconomyPeg(game, rig), Is.True);
+            Assert.That(game.Session.ProductionBalance, Is.EqualTo(initialScrap - price));
             Assert.That(rig.TryContinue(), Is.True);
-            var score = InTestScene<ScoreListener>();
-            var wheel = InTestScene<GamblingWheelDisplay>();
-            yield return Until(() => game.Session.Phase == RoundPhase.Playing &&
-                score.RushText.enabled && wheel.DisplayGroup.alpha > 0, "RUSH and the wheel are visible during play");
-            Assert.That(game.Session.Coins, Is.EqualTo(startingCoins));
-
-            void CheckBoard()
-            {
-                var zones = game.PhysicsRoot.GetComponentsInChildren<MarbleZone>()
-                    .Where(zone => zone.Kind != MarbleContactKind.Drain).ToArray();
-                Assert.That(zones.Select(zone => zone.Kind), Is.EqualTo(day0.Zones.Select(zone => zone.Kind)));
-                for (int i = 0; i < zones.Length; i++)
-                    Assert.That(zones[i].GetComponent<BoxCollider>().size.z, Is.EqualTo(day0.Zones[i].width));
-                var layout = zones[0].transform.parent;
-                Assert.That(layout.GetComponentsInChildren<CapsuleCollider>(), Has.Length.EqualTo(day0.Pins.Count));
-            }
-
-            bool DragPeg(int instanceId)
-            {
-                var placement = rig.Placement;
-                var reference = placement.PlacementPlane;
-                var plane = new Plane(reference.up, reference.position);
-                foreach (float x in new[] { -2f, -1f, 1f })
-                    foreach (float z in new[] { -2.25f, 2.25f })
-                    {
-                        var point = plane.ClosestPointOnPlane(placement.BoardRoot.TransformPoint(new Vector3(x, 0, z)));
-                        var pointer = rig.ViewCamera.WorldToScreenPoint(point);
-                        if (pointer.z <= 0 || !rig.ViewCamera.pixelRect.Contains(pointer) ||
-                            !game.CanPlaceDevice(instanceId, x, z, point + reference.up * placement.DevicePlaneDistance,
-                                1, 0, reference.rotation) || !rig.BeginDeviceDrag(pegSlot, pointer)) continue;
-                        Assert.That(placement.SelectedInstanceId, Is.EqualTo(instanceId));
-                        rig.EndDeviceDrag(pointer);
-                        if (game.GetOwnedDevices().Single(device => device.InstanceId == instanceId).Placed) return true;
-                    }
-                return false;
-            }
+            yield return null;
+            Assert.That(TryDragEconomyPeg(game, rig), Is.True, "the same type can be installed while playing");
+            Assert.That(game.GetOwnedDevices().Count(device => device.DefinitionId == 9033 && device.Placed), Is.EqualTo(2));
+            Assert.That(game.Session.ProductionBalance, Is.EqualTo(initialScrap - 2 * price));
         }
 
         [UnityTest]
@@ -292,7 +228,7 @@ namespace MarblesECS.Tests
             Assert.That(rig.VisibleDeviceCount, Is.EqualTo(2));
             Assert.That(TryDragEconomyPeg(game, rig), Is.True, "the world-space purchase card installs in Playing");
             Assert.That(game.GetOwnedDevices().Single().DefinitionId, Is.EqualTo(9033));
-            long expectedScrap = game.CurrentDayDefinition.DailyLoadout.InitialBiomassScrap -
+            long expectedScrap = game.CurrentDayDefinition.InitialBiomassScrap -
                 game.Balance.Devices.Single(device => device.Id == 9033).InstallPrice;
             Assert.That(game.Session.BiomassScrapBalance, Is.EqualTo(expectedScrap));
             var library = InTestScene<ItemLibraryUI>();
@@ -622,7 +558,6 @@ namespace MarblesECS.Tests
             yield return LoadTestScene(controller =>
             {
                 controller.StartWithDayCampaign = false;
-                controller.EnableRandomStartingDevices = false;
                 controller.ConfigureCampaign(balance);
             });
             var game = InTestScene<MarbleGameController>();
@@ -975,6 +910,7 @@ namespace MarblesECS.Tests
 
         private static bool TryDragEconomyPeg(MarbleGameController game, DiegeticMachineUI rig)
         {
+            int before = game.GetOwnedDevices().Length;
             var placement = rig.Placement;
             var reference = placement.PlacementPlane;
             var plane = new Plane(reference.up, reference.position);
@@ -987,7 +923,7 @@ namespace MarblesECS.Tests
                         !game.CanInstallDevice(9033, x, z, point + reference.up * placement.DevicePlaneDistance,
                             1, 0, reference.rotation) || !rig.BeginDeviceDrag(0, pointer)) continue;
                     rig.EndDeviceDrag(pointer);
-                    if (game.GetOwnedDevices().Length != 0) return true;
+                    if (game.GetOwnedDevices().Length > before) return true;
                 }
             return false;
         }

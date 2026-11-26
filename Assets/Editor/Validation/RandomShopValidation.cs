@@ -41,7 +41,7 @@ namespace MarblesECS.Editor
             using (var simulation = new MarbleSimulation(balance))
             {
                 const uint seed = 240127;
-                simulation.StartSession(physics, 0, seed);
+                simulation.StartSession(physics, seed);
                 var devices = new HashSet<uint>();
                 bool withoutRushDevice = false;
                 int draws = Math.Max(256, balance.Devices.Length * 12);
@@ -84,7 +84,7 @@ namespace MarblesECS.Editor
 
         private static string[] DrawSequence(MarbleSimulation simulation, IMarblePhysics physics, uint seed, int count)
         {
-            simulation.StartSession(physics, 0, seed);
+            simulation.StartSession(physics, seed);
             Check(simulation.Context.Round.RandomState == seed, "explicit run seed initializes the shared RNG");
             var sequence = new string[count];
             for (int i = 0; i < count; i++)
@@ -197,7 +197,7 @@ namespace MarblesECS.Editor
                 balance.Devices = balance.Devices.Take(available).ToArray();
                 using (var simulation = new MarbleSimulation(balance))
                 {
-                    simulation.StartSession(new EmptyPhysics(), 0, 91);
+                    simulation.StartSession(new EmptyPhysics(), 91);
                     CampaignShopSystem.Generate(simulation.Context);
                     CheckOffers(simulation, available);
                     Check(simulation.Context.Round.RandomState == Advance(91, available),

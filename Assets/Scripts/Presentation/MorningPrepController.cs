@@ -47,13 +47,7 @@ namespace MarblesECS.Presentation
         internal float FadeAlpha => view != null ? view.FadeAlpha : 1;
         internal bool CanUseMachine => controller && CanUseMachineFrom(controller.Day);
 
-        private void Start()
-        {
-            // Initialize the overlay before the first frame on the scene's normal Day entry.
-            if (controller && controller.ShouldStartDayCampaign) PrepareView();
-        }
-
-        private void PrepareView()
+        private void PrepareView(DayPhase phase)
         {
             if (view != null) return;
             if (!roomCamera || !machineCamera || !brain || !machineInteraction || !font)
@@ -64,6 +58,7 @@ namespace MarblesECS.Presentation
             roomPriority = Mathf.Max(authoredRoomPriority, authoredMachinePriority) + 1;
             free.Priority = roomPriority;
             view = new MorningPrepView(transform, font);
+            if (phase != DayPhase.WakeUp) view.Fade(0);
         }
 
         private void Update()
@@ -71,9 +66,10 @@ namespace MarblesECS.Presentation
             if (!controller || !controller.IsReady) return;
             var day = controller.Day;
             if (day.Status == DayCampaignStatus.NotStarted) return;
-            PrepareView();
+            PrepareView(day.Phase);
 
-            if (day.Status == DayCampaignStatus.Active && day.Phase == DayPhase.WakeUp)
+            if (day.Status == DayCampaignStatus.Active && day.Phase == DayPhase.WakeUp &&
+                !controller.CurrentDayDefinition.SkipMorningPrep)
                 UpdateWakeUp(day);
             else
                 UpdateAfterWakeUp(day);
@@ -100,7 +96,7 @@ namespace MarblesECS.Presentation
             view.ShowPrompt(FindNearbyInteraction(day, out _) switch
             {
                 RoomInteraction.Note => "E  Read note",
-                RoomInteraction.Shop => controller.Session.UsesDailyLoadout ? "E  装置选择与商店" : "E  Open shop",
+                RoomInteraction.Shop => controller.CurrentDayDefinition.DailyLoadout != null ? "E  装置选择与商店" : "E  Open shop",
                 RoomInteraction.Machine => "E  Use marble machine",
                 _ => day.MorningPrepRemaining > 0
                     ? "Morning Prep   ·   Read the note by the machine"
@@ -118,7 +114,7 @@ namespace MarblesECS.Presentation
             machineCamera.Priority = authoredMachinePriority;
             view.Fade(1);
             view.ShowNote(null);
-            ShowShopTerminal(controller.Session.UsesDailyLoadout || controller.HasProductionFeature(ProductionFeature.Shop));
+            ShowShopTerminal(controller.CurrentDayDefinition.DailyLoadout != null || controller.HasProductionFeature(ProductionFeature.Shop));
             foreach (var objective in controller.CurrentDayDefinition.MorningPrep)
             {
                 var anchor = FindAnchor(objective.AnchorId);
@@ -159,7 +155,7 @@ namespace MarblesECS.Presentation
             if (day.Phase == DayPhase.DaySettlement)
             {
                 var session = controller.Session;
-                view.ShowPrompt(day.LifecyclePending ? null : session.UsesDailyLoadout
+                view.ShowPrompt(day.LifecyclePending ? null : controller.CurrentDayDefinition.DailyLoadout != null
                     ? $"生产达标 · 公司工票 +{session.LastCompanyScripReward}（余额 {session.CompanyScripBalance}）   E  休息"
                     : "E  Continue to rest");
             }

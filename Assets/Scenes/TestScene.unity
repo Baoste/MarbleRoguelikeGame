@@ -7371,7 +7371,6 @@ MonoBehaviour:
   floatingTextJson: {fileID: 0}
   floatingTextCamera: {fileID: 0}
   RefreshRandomSeedOnNewRun: 1
-  EnableRandomStartingDevices: 0
 --- !u!4 &130887920
 Transform:
   m_ObjectHideFlags: 0

@@ -1,0 +1,7 @@
+{
+  "dayId": "day0",
+  "boardLayout": "Day0.json",
+  "initialBiomassScrap": 99999,
+  "skipMorningPrep": true,
+  "availableDeviceIds": []
+}

@@ -5,10 +5,7 @@ namespace MarblesECS
     [Serializable]
     public sealed class CampaignTuning
     {
-        public const long DefaultAllDevicesStartingCoins = 99_999;
-
         public long StartingCoins = 30;
-        [OptionalBalanceField] public long AllDevicesStartingCoins = DefaultAllDevicesStartingCoins;
         [NonSerialized] public double CashoutCoinsPerBlood = 0.5;
         public long ShopRefreshCost = 5;
         public int ShopOfferCount = 4;
@@ -21,7 +18,6 @@ namespace MarblesECS
         public void Validate()
         {
             BalanceGuard.Range(StartingCoins, 0, BalanceGuard.MaxInteger, nameof(StartingCoins));
-            BalanceGuard.Range(AllDevicesStartingCoins, 0, BalanceGuard.MaxInteger, nameof(AllDevicesStartingCoins));
             BalanceGuard.Range(CashoutCoinsPerBlood, 0, 1000000, nameof(CashoutCoinsPerBlood));
             BalanceGuard.Range(ShopRefreshCost, 1, BalanceGuard.MaxInteger, nameof(ShopRefreshCost));
             BalanceGuard.Range(ShopOfferCount, 1, 12, nameof(ShopOfferCount));

@@ -90,7 +90,7 @@ namespace MarblesECS.Editor
                 .ToDictionary(s => s, s => s.interactable);
             var eventSystems = UnityEngine.Object.FindObjectsOfType<EventSystem>(true).Select(e => e.GetInstanceID()).OrderBy(i => i).ToArray();
             int roundId = controller.Snapshot.RoundId;
-            var startingIds = controller.LastRandomStarterDeviceIds.ToArray();
+            var initialDevices = controller.GetOwnedDevices().Select(device => device.InstanceId).ToArray();
             uint runSeed = controller.LastRunRandomSeed;
             try
             {
@@ -180,7 +180,7 @@ namespace MarblesECS.Editor
                     "repeated open/close did not create extra EventSystems");
                 check(controller.Snapshot.RoundId == roundId &&
                       controller.LastRunRandomSeed == runSeed &&
-                      controller.LastRandomStarterDeviceIds.SequenceEqual(startingIds),
+                      controller.GetOwnedDevices().Select(device => device.InstanceId).SequenceEqual(initialDevices),
                     "browsing never restarts or rerolls the game");
             }
             finally

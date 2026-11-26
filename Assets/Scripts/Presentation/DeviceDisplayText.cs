@@ -2,6 +2,13 @@ namespace MarblesECS.Presentation
 {
     public static class DeviceDisplayText
     {
+        internal static string CurrencyName(GameCurrency currency) => currency switch
+        {
+            GameCurrency.CompanyScrip => "公司工票",
+            GameCurrency.BiomassScrap => "血肉残料",
+            _ => "金币"
+        };
+
         public static string Rarity(DeviceRarity rarity)
         {
             switch (rarity)

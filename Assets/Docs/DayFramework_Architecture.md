@@ -1,6 +1,8 @@
 # 每日挑战运行架构
 
-每日流程和原生产流程共用 `MarbleSimulation` 的 World。`TestScene` 通过 `StartWithDayCampaign` 从 `Resources/GameDays.json` 启动 Day0。勾选 `EnableRandomStartingDevices` 会直接启动使用 `Day0.json` 盘面的弹珠机战役，按目录持续供应装置，并发放 `Campaign.AllDevicesStartingCoins` 配置的金币。调用者也可显式调用 `TryStartConfiguredDayCampaign` 或 `TryStartDayCampaign`。关闭场景的每日挑战启动选项也可直接使用机台流程，旧场景验证菜单在各自的 PlayMode 会话选择这个流程。
+每日流程使用 `MarbleSimulation` 的 ECS World。`TestScene` 通过 `StartWithDayCampaign` 从 `Resources/GameDays.json` 启动 Day0。入口可在控制器启动前用 `ConfigureDayCampaign` 提供配置变换，也可显式把日期定义传入 `TryStartDayCampaign`。启动后由 `DayFlowSystem` 执行日期和生产状态转换。
+
+`PrepareDayProduction` 应用盘面、血珠曲线、目标分、生产规则和初始残料。`ProductionSettings` 独立配置装置供给、生产货币、实时安装、耐久销毁、装置收回、出售和日结清理。运行系统读 ECS 的生产规则，UI 从 `SessionSnapshot` 读取同一份规则和余额。背包负责装置类型权限与选择，钱包负责资金和通关奖励。
 
 ```mermaid
 flowchart LR

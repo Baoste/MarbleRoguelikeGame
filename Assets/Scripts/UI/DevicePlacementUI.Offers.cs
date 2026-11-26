@@ -36,9 +36,9 @@ public sealed partial class DevicePlacementUI
     private DropTarget FindDropTarget(Vector2 pointer, GameObject pointerTarget, out OwnedDeviceSnapshot receiver)
     {
         receiver = default;
-        bool daily = Controller.Session.UsesDailyLoadout;
-        if (!daily && SellArea && SellArea.ContainsPointer(pointer)) return DropTarget.Sale;
-        if (PointerOnBackpack(pointer)) return daily ? DropTarget.Blocked : DropTarget.Backpack;
+        if (SellArea && SellArea.ContainsPointer(pointer)) return DropTarget.Sale;
+        if (PointerOnBackpack(pointer))
+            return Controller.Session.Production.AllowDeviceReturn ? DropTarget.Backpack : DropTarget.Blocked;
         if (IsControl(pointerTarget) || PointerOnControl(pointer)) return DropTarget.Blocked;
         return (!IsMovingPlacedDevice || BoardPointerMoved(pointer)) && TryFindOfferTarget(pointer, out receiver)
             ? DropTarget.Offer : DropTarget.Board;
@@ -58,7 +58,7 @@ public sealed partial class DevicePlacementUI
         {
             case DropTarget.Sale:
                 committed = Controller.SellDevice(device.InstanceId);
-                LastFeedback = committed ? $"已出售{DeviceDisplayText.SaleTarget(device)}，获得 {device.SellPrice} 金币。" : "出售未完成。";
+                LastFeedback = committed ? $"已出售{DeviceDisplayText.SaleTarget(device)}，获得 {device.SellPrice} {CurrencyName}。" : "出售未完成。";
                 break;
             case DropTarget.Backpack:
                 committed = device.Placed && Controller.RemoveDevicePlacement(device.InstanceId);

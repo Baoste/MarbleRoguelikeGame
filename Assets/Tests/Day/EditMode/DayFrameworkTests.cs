@@ -18,28 +18,57 @@ namespace MarblesECS.Tests
         private const string First = "{\"dayId\":\"fixture-first\",\"order\":1,\"targetScore\":150,\"rewardCoins\":35" + Features + "}";
         private const string Second = "{\"dayId\":\"fixture-second\",\"order\":2,\"targetScore\":450,\"rewardCoins\":45" + Features + "}";
 
-        [TestCase(null, 99_999L)]
-        [TestCase(0L, 0L)]
-        [TestCase(4_321L, 4_321L)]
-        public void AllDevicesStartingWalletUsesItsBalanceSetting(long? configuredCoins, long expected)
+        [Test]
+        public void SelectedDevicePacksUseTheSameWalletAndCompleteSafelyDuringProduction()
         {
-            var authored = GameBalance.Default();
-            authored.Campaign.AllDevicesStartingCoins = configuredCoins ?? 0;
-            string json = JsonUtility.ToJson(authored);
-            if (!configuredCoins.HasValue)
-                json = json.Replace("\"AllDevicesStartingCoins\":0,", string.Empty);
-            var asset = new TextAsset(json);
-            try
-            {
-                var balance = GameBalanceLoader.Load(asset);
-                using var simulation = new MarbleSimulation(balance);
-                var physics = new PhysicsStub();
-                simulation.StartSession(physics, grantAllStartingDevices: true);
-                Assert.That(simulation.Session.Coins, Is.EqualTo(expected));
-                simulation.StartSession(physics);
-                Assert.That(simulation.Session.Coins, Is.EqualTo(authored.Campaign.StartingCoins));
-            }
-            finally { UnityEngine.Object.DestroyImmediate(asset); }
+            var balance = GameBalanceLoader.Load();
+            var source = GameDaysLoader.Load(balance);
+            var pair = balance.Devices.Single(device => device.Id == 103);
+            var ids = new[] { pair.Id };
+            var loadout = new DailyLoadoutDefinition(ids, ids, Array.Empty<uint>(), 1, 1,
+                LoadoutSelectionMode.AutoSelectAvailable, null);
+            var day = source.Days[0].WithSetup(null, null, pair.InstallPrice, loadout, skipMorningPrep: true);
+            using var simulation = new MarbleSimulation(balance);
+            var physics = new PhysicsStub();
+            Start(simulation, source.WithDays(day), physics);
+            Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.Production));
+            Assert.That(simulation.Session.ProductionBalance, Is.EqualTo(pair.InstallPrice));
+            Assert.Throws<InvalidOperationException>(() => simulation.TryInstallDevice(pair.Id, -4, 0, .15f, 0, out _,
+                () => throw new InvalidOperationException("projection failed")));
+            Assert.That(simulation.GetOwnedDevices(), Is.Empty);
+            Assert.That(simulation.Session.ProductionBalance, Is.EqualTo(pair.InstallPrice));
+
+            Assert.That(simulation.TryInstallDevice(pair.Id, -4, 0, .15f, 0, out int first), Is.True);
+            Assert.That(simulation.GetOwnedDevices().Count(device => device.Placed), Is.EqualTo(1));
+            Assert.That(simulation.Session.ProductionBalance, Is.Zero);
+            Assert.That(simulation.GetDailyPegs().Single().InstallPrice, Is.Zero);
+            Assert.That(simulation.BeginRound(), Is.True);
+            Assert.That(simulation.TryInstallDevice(pair.Id, -4, 0, .15f, 0, out _), Is.False);
+            Assert.That(simulation.TryInstallDevice(pair.Id, 4, 0, .15f, 0, out int second), Is.True);
+            Assert.That(second, Is.Not.EqualTo(first));
+            var installed = simulation.GetOwnedDevices();
+            Assert.That(installed, Has.Length.EqualTo(2));
+            Assert.That(installed.All(device => device.Placed && device.PairId > 0 && device.PairId == installed[0].PairId), Is.True);
+            Assert.That(simulation.Session.ProductionBalance, Is.Zero);
+
+            var context = simulation.Context;
+            Assert.That(CampaignStateUtility.FindDevice(context, first, out var firstEntity), Is.True);
+            Assert.That(CampaignStateUtility.FindDevice(context, second, out var secondEntity), Is.True);
+            DeviceDurabilitySystem.SetLimit(context, firstEntity, 1);
+            DeviceDurabilitySystem.SetLimit(context, secondEntity, 1);
+            Assert.That(DeviceDurabilitySystem.TryUse(context, first), Is.True);
+            Assert.That(DeviceDurabilitySystem.TryUse(context, second), Is.True);
+            Assert.That(DeviceDurabilitySystem.KeepActive(context, secondEntity, .1f), Is.True);
+            var broken = new List<DeviceBrokenEvent>();
+            DeviceDurabilitySystem.RemoveExhausted(context, broken);
+            Assert.That(simulation.GetOwnedDevices(), Has.Length.EqualTo(2));
+            Assert.That(broken, Is.Empty);
+            var round = context.Round;
+            round.Time += 1;
+            context.Round = round;
+            DeviceDurabilitySystem.RemoveExhausted(context, broken);
+            Assert.That(simulation.GetOwnedDevices(), Is.Empty);
+            Assert.That(broken, Has.Count.EqualTo(1), "the paired installation is removed as one group");
         }
 
         [Test]
@@ -77,7 +106,7 @@ namespace MarblesECS.Tests
             Assert.That(day0.DayId, Is.EqualTo("day0"));
             Assert.That(day0.BoardLayoutFile, Is.EqualTo("Day0.json"));
             Assert.That(day0.BoardLayout.Zones, Has.Count.EqualTo(1));
-            Assert.That(day0.DailyLoadout.ClearCompanyScripReward, Is.EqualTo(2));
+            Assert.That(day0.ClearCompanyScripReward, Is.EqualTo(2));
             Assert.That(day0.ProductionFeatures, Is.EqualTo(ProductionFeature.Rush | ProductionFeature.DevicePlacement));
             Assert.That(day0.MorningPrep, Has.Count.EqualTo(1));
             var note = day0.MorningPrep[0];
@@ -106,7 +135,7 @@ namespace MarblesECS.Tests
             Assert.That(simulation.TryCompleteWakeUp(wake, out _), Is.True);
             Assert.That(simulation.TryInstallDevice(9034, 0, 0, .1f, 0, out _), Is.False);
             Assert.That(simulation.TryInstallDevice(9033, 0, 0, .1f, 0, out _), Is.True);
-            long installedBalance = day0.DailyLoadout.InitialBiomassScrap - balance.Devices.Single(peg => peg.Id == 9033).InstallPrice;
+            long installedBalance = day0.InitialBiomassScrap - balance.Devices.Single(peg => peg.Id == 9033).InstallPrice;
             Assert.That(simulation.BeginRound(), Is.True);
             Assert.That(simulation.Session.BiomassScrapBalance, Is.EqualTo(installedBalance));
             Assert.That(simulation.Session.TargetScore, Is.EqualTo(day0.TargetScore));
@@ -119,7 +148,7 @@ namespace MarblesECS.Tests
             Assert.That(simulation.GetOwnedDevices(), Is.Empty);
             Assert.That(simulation.DailyLoadout.Confirmed, Is.True);
             Assert.That(simulation.Session.CompanyScripBalance, Is.Zero);
-            Assert.That(simulation.Session.BiomassScrapBalance, Is.EqualTo(day0.DailyLoadout.InitialBiomassScrap));
+            Assert.That(simulation.Session.BiomassScrapBalance, Is.EqualTo(day0.InitialBiomassScrap));
             Assert.That(physics.LayoutChanges, Is.EqualTo(1), "retry keeps the generated geometry");
             Assert.That(simulation.Day.MorningPrepRemaining, Is.EqualTo(1));
             Assert.That(simulation.IsMorningPrepComplete(note.ObjectiveId), Is.False);
@@ -136,14 +165,14 @@ namespace MarblesECS.Tests
             player = simulation.Context.Player;
             player.Blood = 40;
             simulation.Context.Player = player;
-            long reward = day0.DailyLoadout.ClearCompanyScripReward;
+            long reward = day0.ClearCompanyScripReward;
             Assert.That(simulation.CashOut(), Is.True);
             Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.DaySettlement));
             Assert.That(simulation.Session.LastCashoutCoins, Is.Zero);
             Assert.That(simulation.Session.LastCompanyScripReward, Is.EqualTo(reward));
             Assert.That(simulation.Session.CompanyScripBalance, Is.EqualTo(reward));
             Assert.That(simulation.Session.BiomassScrapBalance, Is.Zero);
-            DailyLoadoutSystem.AwardClearScrip(simulation.Context, new Unity.Collections.FixedString128Bytes(day0.DayId), reward);
+            CampaignWalletSystem.AwardClearScrip(simulation.Context, new Unity.Collections.FixedString128Bytes(day0.DayId), reward);
             Assert.That(simulation.Session.CompanyScripBalance, Is.EqualTo(reward));
             Assert.That(simulation.CashOut(), Is.False);
             Assert.That(simulation.TryCompleteRest(CompleteSettlement(simulation), out _), Is.True);
@@ -235,7 +264,7 @@ namespace MarblesECS.Tests
             ScoreRound(simulation, physics, simulation.Session.TargetScore);
             Assert.That(simulation.Session.BiomassScrapBalance, Is.Zero);
             Assert.That(simulation.Session.CompanyScripBalance,
-                Is.EqualTo(startScrip - offers[0].Price + definition.Days[2].DailyLoadout.ClearCompanyScripReward));
+                Is.EqualTo(startScrip - offers[0].Price + definition.Days[2].ClearCompanyScripReward));
             Assert.That(simulation.TryCompleteRest(CompleteSettlement(simulation), out _), Is.True);
             Assert.That(simulation.Day.Status, Is.EqualTo(DayCampaignStatus.Completed));
         }

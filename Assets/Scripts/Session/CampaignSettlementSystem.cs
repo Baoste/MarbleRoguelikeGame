@@ -18,7 +18,7 @@ namespace MarblesECS
                 round.Phase = (byte)RoundPhase.Lost;
             else
             {
-                if (!campaign.UsesDailyLoadout)
+                if (campaign.Production.Currency == GameCurrency.Coins)
                 {
                     campaign.LastRewardCoins = Reward(context, campaign.RewardCoins, round.Score - round.TargetScore);
                     campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastRewardCoins, CampaignStateUtility.MaxCoins);

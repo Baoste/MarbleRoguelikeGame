@@ -17,8 +17,6 @@ namespace MarblesECS
         internal uint Id;
         internal PegPermissionScope Scope;
     }
-    internal struct DayScripReward : IBufferElementData { internal FixedString128Bytes DayId; }
-
     internal static class DailyLoadoutSystem
     {
         internal static void Initialize(SimulationContext context)
@@ -26,7 +24,6 @@ namespace MarblesECS
             context.Manager.AddComponent<DailyLoadoutData>(context.RoundEntity);
             context.Manager.AddBuffer<SelectedPegType>(context.RoundEntity);
             context.Manager.AddBuffer<PegPermissionData>(context.RoundEntity);
-            context.Manager.AddBuffer<DayScripReward>(context.RoundEntity);
         }
 
         internal static DailyLoadoutData State(SimulationContext context) =>
@@ -48,7 +45,6 @@ namespace MarblesECS
                         selected.Add(new SelectedPegType { Id = id });
                 }
             context.Manager.SetComponentData(context.RoundEntity, new DailyLoadoutData());
-            CampaignWalletSystem.Set(context, GameCurrency.BiomassScrap, definition.InitialBiomassScrap);
         }
 
         internal static bool HasPermission(SimulationContext context, DailyLoadoutDefinition definition, uint id)
@@ -111,25 +107,13 @@ namespace MarblesECS
             context.Manager.SetComponentData(context.RoundEntity, state);
         }
 
-        internal static void EndRun(SimulationContext context)
+        internal static void ClearRunPermissions(SimulationContext context)
         {
-            CampaignWalletSystem.Set(context, GameCurrency.BiomassScrap, 0);
             var permissions = context.Manager.GetBuffer<PegPermissionData>(context.RoundEntity);
             for (int i = permissions.Length - 1; i >= 0; i--)
                 if (permissions[i].Scope == PegPermissionScope.RunOnly) permissions.RemoveAt(i);
         }
 
-        internal static void AwardClearScrip(SimulationContext context, FixedString128Bytes dayId, long amount)
-        {
-            var paid = context.Manager.GetBuffer<DayScripReward>(context.RoundEntity);
-            foreach (var reward in paid)
-                if (reward.DayId.Equals(dayId)) return;
-            paid.Add(new DayScripReward { DayId = dayId });
-            long credited = CampaignWalletSystem.Credit(context, GameCurrency.CompanyScrip, amount);
-            var campaign = context.Campaign;
-            campaign.LastCompanyScripReward = credited;
-            context.Campaign = campaign;
-        }
     }
 
     public struct DailyPegSnapshot

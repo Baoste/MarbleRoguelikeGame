@@ -19,11 +19,7 @@ namespace MarblesECS
         internal bool CanSimulateProduction => ProductionCommandsAvailable && context.IsRunning;
 
         public bool TryStartDayCampaign(DayCampaignDefinition definition, IMarblePhysics physics, out string error,
-            uint? randomSeed = null, DayRetryRandomPolicy retryRandom = null) =>
-            TryStartDayCampaign(definition, physics, out error, randomSeed, retryRandom, false);
-
-        internal bool TryStartDayCampaign(DayCampaignDefinition definition, IMarblePhysics physics, out string error,
-            uint? randomSeed, DayRetryRandomPolicy retryRandom, bool grantAllStartingDevices)
+            uint? randomSeed = null, DayRetryRandomPolicy retryRandom = null)
         {
             ThrowIfDisposed();
             if (dayFlow != null || startingDay || insidePhysicsStep)
@@ -42,6 +38,14 @@ namespace MarblesECS
                 ValidateRuleAttributes(definition.CampaignRules);
                 foreach (var day in definition.Days)
                 {
+                    if (day.InitialBiomassScrap < 0 || day.InitialBiomassScrap > CampaignWalletSystem.MaxBalance)
+                        throw new ArgumentException($"Day '{day.DayId}' initialBiomassScrap is outside the wallet range.");
+                    if (day.Production.Supply == DeviceSupply.SelectedTypes && day.DailyLoadout == null)
+                        throw new ArgumentException($"Day '{day.DayId}' needs a loadout for selected device types.");
+                    if (day.SkipMorningPrep && day.DailyLoadout is DailyLoadoutDefinition loadout &&
+                        loadout.MinLoadoutTypeCount > (loadout.SelectionMode == LoadoutSelectionMode.AutoSelectAvailable
+                            ? loadout.DefaultPegIds.Count : loadout.RequiredPegIds.Count))
+                        throw new ArgumentException($"Day '{day.DayId}' needs enough preselected types to skip Morning Prep.");
                     if (day.TargetScore > context.Tuning.MaxRoundScore)
                         throw new ArgumentException($"Day '{day.DayId}' targetScore exceeds this session's MaxRoundScore.");
                     if (day.BloodProgression?.Stages.Count > 0 && context.Content == null)
@@ -51,7 +55,7 @@ namespace MarblesECS
                         foreach (uint id in day.DailyLoadout.UnlockedPegIds)
                         {
                             var device = CampaignStateUtility.Device(context, id);
-                            if (device == null || device.PurchaseQuantity != 1 || device.PlacementRadius <= 0)
+                            if (device == null || device.PlacementRadius <= 0)
                                 throw new ArgumentException($"Day '{day.DayId}' cannot install device {id} with this balance.");
                         }
                     if (day.BoardLayout == null) continue;
@@ -68,8 +72,7 @@ namespace MarblesECS
                 uint runSeed = randomSeed ?? context.Tuning.RandomSeed;
                 BeforeDayBoardRestore();
                 var firstDay = definition.Days[0];
-                StartSessionCore(physics, 0, runSeed, grantAllStartingDevices, firstDay.ProductionFeatures,
-                    firstDay.DailyLoadout != null, definition.StartingCompanyScrip);
+                StartSessionCore(physics, runSeed, firstDay.ProductionFeatures, firstDay.Production, definition.StartingCompanyScrip);
                 dayPhysics.ResetDayPhysics();
                 dayFlow = new DayFlowSystem(this, definition, retryRandom, runSeed);
                 dayFlow.Start();
@@ -143,6 +146,7 @@ namespace MarblesECS
             context.BloodProgression = day.BloodProgression;
             var campaign = context.Campaign;
             campaign.RewardCoins = day.RewardCoins;
+            campaign.Production = day.Production;
             campaign.RepeatRounds = false;
             campaign.DisabledFeatures = ProductionFeature.All & ~day.ProductionFeatures;
             campaign.TotalScore = 0;
@@ -156,6 +160,7 @@ namespace MarblesECS
             round.TargetScore = day.TargetScore;
             context.Round = round;
             FillBlood();
+            CampaignWalletSystem.Set(context, GameCurrency.BiomassScrap, day.InitialBiomassScrap);
             if (day.DailyLoadout != null) DailyLoadoutSystem.StartDay(context, day.DailyLoadout);
             if (AttributeRuntime.Enabled(context)) AttributeRuntime.Recompute(context, context.PlayerEntity);
         }

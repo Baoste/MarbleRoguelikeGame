@@ -92,17 +92,20 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     {
         if(!initialized)return;
         bool ready=Controller && Controller.IsReady;
+        var session = ready ? Controller.Session : default;
         bool build=ready && Controller.HasProductionFeature(ProductionFeature.DevicePlacement) &&
-            Controller.ProductionCommandsAvailable && Controller.Session.Phase==RoundPhase.Build;
-        bool daily = ready && Controller.Session.UsesDailyLoadout;
-        bool showBoard = build || (daily && Controller.ProductionCommandsAvailable && Controller.Session.Phase == RoundPhase.Playing);
+            Controller.ProductionCommandsAvailable && session.Phase==RoundPhase.Build;
+        bool selectedTypes = session.Production.Supply == DeviceSupply.SelectedTypes;
+        bool showBoard = build || (ready && session.Production.InstallDuringProduction &&
+            Controller.HasProductionFeature(ProductionFeature.DevicePlacement) &&
+            Controller.ProductionCommandsAvailable && session.Phase == RoundPhase.Playing);
         slide=Mathf.MoveTowards(slide,showBoard?1:0,Time.unscaledDeltaTime/Mathf.Max(.01f,SlideSeconds));
         if(ItemBoard)ItemBoard.localPosition=Vector3.Lerp(BoardClosedPosition,BoardOpenPosition,Mathf.SmoothStep(0,1,slide));
         bool show=showBoard && IsBoardOpen;
         if(ItemGroup){ItemGroup.alpha=show?1:0;ItemGroup.blocksRaycasts=show;ItemGroup.interactable=show && !Controller.Paused;}
         if (Continue)
         {
-            Continue.gameObject.SetActive(!daily || build);
+            Continue.gameObject.SetActive(!selectedTypes || build);
             Continue.interactable=show && build && !Controller.Paused;
         }
         bool on=ready && Controller.ProductionCommandsAvailable && Controller.Session.Phase==RoundPhase.Playing;
@@ -138,13 +141,14 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     public bool BeginDeviceDrag(int index, Vector2 pointer)
     {
         if (!Controller || !IsBoardOpen || !Placement || index < 0 || index >= deviceIds.Length) return false;
-        if (Controller.Session.UsesDailyLoadout) return Placement.BeginInstallSelection(installIds[index], pointer, click: false);
-        if (!Controller.ProductionCommandsAvailable || Controller.Paused || Controller.Session.Phase != RoundPhase.Build) return false;
+        if (Controller.Session.Production.Supply == DeviceSupply.SelectedTypes)
+            return Placement.BeginInstallSelection(installIds[index], pointer, click: false);
+        if (!Controller.CanInstallDevices) return false;
         return Placement.BeginInventoryDrag(deviceIds[index],pointer);
     }
     internal void SelectInstallType(int index, Vector2 pointer)
     {
-        if (Controller && Controller.Session.UsesDailyLoadout && IsBoardOpen && Placement &&
+        if (Controller && Controller.Session.Production.Supply == DeviceSupply.SelectedTypes && IsBoardOpen && Placement &&
             index >= 0 && index < installIds.Length)
             Placement.BeginInstallSelection(installIds[index], pointer, click: true);
     }
@@ -170,27 +174,27 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     public void CancelDeviceDrag(){if(Placement && Placement.IsDraggingInventory)Placement.CancelPlacement();}
     public void ChangeDevicePage(int step)
     {
-        int count = Controller && Controller.Session.UsesDailyLoadout ? dailyDevices.Length : unplacedDevices.Count;
+        int count = Controller && Controller.Session.Production.Supply == DeviceSupply.SelectedTypes
+            ? dailyDevices.Length : unplacedDevices.Count;
         int pages=Mathf.Max(1,(count+5)/6);devicePage=(devicePage+step+pages)%pages;ClearHover();RefreshInventory();
     }
     public void RefreshInventory()
     {
         if(!Controller||!Controller.IsReady)return;
         var session = Controller.Session;
-        if (session.UsesDailyLoadout)
+        if (session.Production.Supply == DeviceSupply.SelectedTypes)
         {
-            RefreshInstallTypes(session.BiomassScrapBalance);
+            RefreshInstallTypes(session);
             return;
         }
-        if (Controller.EnableRandomStartingDevices) ShowWalletBalance($"金币 {session.Coins:N0}");
-        else if (walletBalance) walletBalance.gameObject.SetActive(false);
+        if (walletBalance) walletBalance.gameObject.SetActive(false);
+        if (installIcons != null)
+            foreach (var icon in installIcons) icon.enabled = false;
+        dailyDevices = Array.Empty<DailyPegSnapshot>();
+        Array.Clear(installIds, 0, installIds.Length);
         unplacedDevices.Clear();
         if (Controller.HasProductionFeature(ProductionFeature.DevicePlacement))
-        {
-            var inventory = Controller.GetOwnedDevices().Where(device => !device.Placed);
-            unplacedDevices.AddRange(Controller.EnableRandomStartingDevices
-                ? inventory.OrderBy(device => device.DefinitionId) : inventory);
-        }
+            unplacedDevices.AddRange(Controller.GetOwnedDevices().Where(device => !device.Placed));
         devicePage=Mathf.Clamp(devicePage,0,Mathf.Max(0,(unplacedDevices.Count-1)/6));
         VisibleDeviceCount=0;
         for(int i=0;i<6;i++)
@@ -199,7 +203,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
             if(DeviceButtons!=null && DeviceButtons.Length>i)
             {
                 DeviceButtons[i].gameObject.SetActive(occupied);
-                DeviceButtons[i].interactable=occupied && IsBoardOpen && Controller.ProductionCommandsAvailable && Controller.Session.Phase==RoundPhase.Build && !Controller.Paused;
+                DeviceButtons[i].interactable = occupied && IsBoardOpen && Controller.CanInstallDevices;
                 if(occupied){VisibleDeviceCount++;DeviceNames[i].text=unplacedDevices[n].Name;DeviceDescriptions[i].text=MarblesECS.Presentation.DeviceDisplayText.Details(unplacedDevices[n])+"\n"+(unplacedDevices[n].Description??"");}
             }
         }
@@ -207,11 +211,14 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         if(DevicePager)DevicePager.SetActive(devicePages>1);
         if(DevicePageLabel)DevicePageLabel.text=$"{devicePage+1} / {devicePages}";
     }
-    private void RefreshInstallTypes(long scrap)
+    private void RefreshInstallTypes(SessionSnapshot session)
     {
         if (!ItemGroup || DeviceButtons == null) return;
         if (installIcons == null) CreateInstallIcons();
-        ShowWalletBalance($"♦  血肉残料 {scrap}  ·  用于安装");
+        string currency = DeviceDisplayText.CurrencyName(session.Production.Currency);
+        ShowWalletBalance($"♦  {currency} {session.ProductionBalance}  ·  用于安装");
+        unplacedDevices.Clear();
+        Array.Clear(deviceIds, 0, deviceIds.Length);
         dailyDevices = Controller.GetDailyPegs().Where(peg => peg.Selected).ToArray();
         int pages = Mathf.Max(1, (dailyDevices.Length + 5) / 6);
         devicePage = Mathf.Clamp(devicePage, 0, pages - 1);
@@ -225,12 +232,12 @@ public sealed class DiegeticMachineUI : MonoBehaviour
             installIds[i] = occupied ? dailyDevices[slot].DefinitionId : 0;
             if (!occupied) continue;
             var peg = dailyDevices[slot];
-            bool affordable = scrap >= peg.InstallPrice;
+            bool affordable = session.ProductionBalance >= peg.InstallPrice;
             VisibleDeviceCount++;
             button.interactable = IsBoardOpen && Controller.CanInstallDevices && affordable;
             DeviceNames[i].text = peg.Name;
             string durability = peg.Durability < 0 ? "无限耐久" : $"耐久 {peg.Durability}";
-            DeviceDescriptions[i].text = $"安装 {peg.InstallPrice}  ·  {durability}\n" + (!affordable ? "血肉残料不足\n" : "") + peg.Description;
+            DeviceDescriptions[i].text = $"安装 {peg.InstallPrice}  ·  {durability}\n" + (!affordable ? currency + "不足\n" : "") + peg.Description;
             var icon = DeviceResourceCatalog.Current.Get(peg.DefinitionId).Icon;
             installIcons[i].texture = icon;
             installIcons[i].enabled = icon;
@@ -324,8 +331,8 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         }
         else if (Placement && Placement.UpdatePlacedDeviceHover(pointer, out var placedDevice))
         {
-            string details = Controller.Session.UsesDailyLoadout
-                ? DeviceDisplayText.Durability(placedDevice) : DeviceDisplayText.Details(placedDevice);
+            string details = Controller.Session.Production.AllowDeviceSale
+                ? DeviceDisplayText.Details(placedDevice) : DeviceDisplayText.Durability(placedDevice);
             text = $"<b>{placedDevice.Name}</b>\n{details}\n{placedDevice.Description}";
             if (showFeedback) text += "\n" + deviceFeedback;
         }
@@ -339,7 +346,8 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         {
             var peg = Array.Find(dailyDevices, item => item.DefinitionId == installIds[hoverIndex] && item.DefinitionId != 0);
             if (peg.DefinitionId != 0)
-                text = $"<b>{peg.Name}</b>\n安装 {peg.InstallPrice} 血肉残料 · 耐久 {(peg.Durability < 0 ? "无限" : peg.Durability.ToString())}\n{peg.Description}";
+                text = $"<b>{peg.Name}</b>\n安装 {peg.InstallPrice} {DeviceDisplayText.CurrencyName(Controller.Session.Production.Currency)}" +
+                    $" · 耐久 {(peg.Durability < 0 ? "无限" : peg.Durability.ToString())}\n{peg.Description}";
             var device = unplacedDevices.Find(x => x.InstanceId == deviceIds[hoverIndex]);
             if (device.InstanceId != 0)
                 text = $"<b>{device.Name}</b>\n{DeviceDisplayText.Details(device)}\n{device.Description}\n";

@@ -1,6 +1,10 @@
+using Unity.Collections;
+using Unity.Entities;
+
 namespace MarblesECS
 {
-    public enum GameCurrency : byte { CompanyScrip, BiomassScrap }
+    public enum GameCurrency : byte { CompanyScrip, BiomassScrap, Coins }
+    internal struct DayScripReward : IBufferElementData { internal FixedString128Bytes DayId; }
 
     internal static class CampaignWalletSystem
     {
@@ -10,6 +14,7 @@ namespace MarblesECS
         {
             GameCurrency.CompanyScrip => context.Campaign.CompanyScripBalance,
             GameCurrency.BiomassScrap => context.Player.BiomassScrapBalance,
+            GameCurrency.Coins => context.Campaign.Coins,
             _ => throw new System.ArgumentOutOfRangeException(nameof(currency))
         };
 
@@ -26,6 +31,11 @@ namespace MarblesECS
                     var player = context.Player;
                     player.BiomassScrapBalance = balance;
                     context.Player = player;
+                    break;
+                case GameCurrency.Coins:
+                    var session = context.Campaign;
+                    session.Coins = balance;
+                    context.Campaign = session;
                     break;
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(currency));
@@ -48,6 +58,18 @@ namespace MarblesECS
             long after = MarbleRules.AddScore(before, amount, MaxBalance);
             Set(context, currency, after);
             return after - before;
+        }
+
+        internal static void AwardClearScrip(SimulationContext context, FixedString128Bytes dayId, long amount)
+        {
+            var paid = context.Manager.GetBuffer<DayScripReward>(context.RoundEntity);
+            foreach (var reward in paid)
+                if (reward.DayId.Equals(dayId)) return;
+            paid.Add(new DayScripReward { DayId = dayId });
+            long credited = Credit(context, GameCurrency.CompanyScrip, amount);
+            var campaign = context.Campaign;
+            campaign.LastCompanyScripReward = credited;
+            context.Campaign = campaign;
         }
     }
 }

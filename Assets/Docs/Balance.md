@@ -75,9 +75,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 商店在每次 Morning Prep 首次打开和付费刷新时，按普通/罕见/稀有/传奇权重 60/30/7/3 选择档位，再在该档剩余装置中等概率、无重复抽取 `Campaign.ShopOfferCount` 个装置（默认 4），不设 RUSH 保底；目录不足时只显示实际可用装置。无货或已抽空的档位不参与，剩余权重归一化；当前无传奇时为 60:30:7。基础购买价分别为 9/14/23/38，分档见 [装置一览](Device_Overview.md)。关店后重开保留现有货架，购买不会重抽其他货位。商店与初始装置、装置 Lua、赌博开奖共用整局唯一随机序列；生成和刷新商品会推进后续玩法的随机状态。目录按 ID 排序，相同种子和调用次序可复现抽取结果。旧药物商品、初始库存、服药和药效代码保持删除，后续药物将改用 Lua。
 
-勾选控制器的「开局获得全部装置」（`EnableRandomStartingDevices`）后，`TestScene` 使用 `Config/Resources/BoardLayouts/Day0.json` 的盘面并直接进入装置布置。背包按目录的 `PurchaseQuantity` 发放每种装置一套。同种装置的未摆放库存用完后，背包免费补一套，传送门按完整的一对补充。补货装置的出售收入为 0。物品板显示当前金币，初始值由 `Config/GameBalance.xlsx` 的 Campaign 表中 `AllDevicesStartingCoins` 控制，默认 99,999。各回合延续当前余额，商店购买按 `MaxOwnedDevices` 检查。
-
-关闭开关后，独立机台按 `device.json` 的 `StartingCount` 发放装置。当前全部装置的 `StartingCount` 为 `0`，此时空背包直接开始第一回合。全装置模式的初次发放和后续补货直接读取目录，使用确定的装置类型和套装数量。
+每日玩法从已确认的类型反复安装装置。每次按 `InstallPrice` 从生产钱包扣费，装置容量按实际实例计入 `MaxOwnedDevices`。成套装置首次安装支付整套费用，后续再次选择同类型可放置套装的其余成员。独立机台用 `device.json` 的 `StartingCount` 设置初始库存。 [每日内容配置](DayFramework_Content_Guide.md)
 
 在场景的 `MarbleGameController` Inspector「随机数」分组中，`每次开新局刷新随机种子`（`RefreshRandomSeedOnNewRun`）默认勾选：每次进入游戏或重新开局生成一个新的非零整局种子；取消勾选时使用 `Resources/GameBalance.json` 的 `Marble.RandomSeed`（当前为 `12345`）。进入下一回合、打开商店或道具库均不重新播种；只在需要随机结果时依次取数。`LastRunRandomSeed` 记录本次实际种子，方便复现。固定种子只保证相同随机调用次序的结果，不保证物理在不同平台完全一致。战役和独立模式均遵守此开关。
 

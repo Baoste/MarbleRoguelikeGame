@@ -23,7 +23,9 @@ public sealed class DeviceSellAreaUI : MonoBehaviour, IPointerClickHandler
 
     public bool ContainsPointer(Vector2 position)
     {
-        if (!isActiveAndEnabled || !Placement || !Placement.CanEdit || Placement.Controller.Session.UsesDailyLoadout) return false;
+        if (!isActiveAndEnabled || !Placement || !Placement.CanEdit ||
+            !Placement.Controller.Session.Production.AllowDeviceSale ||
+            Placement.Controller.Session.Phase != MarblesECS.RoundPhase.Build) return false;
         if (!canvas) canvas = GetComponentInParent<Canvas>();
         Camera camera = canvas && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
         return RectTransformUtility.RectangleContainsScreenPoint((RectTransform)transform, position, camera);
@@ -31,7 +33,8 @@ public sealed class DeviceSellAreaUI : MonoBehaviour, IPointerClickHandler
 
     public void Refresh()
     {
-        bool visible = Placement && Placement.CanEdit && !Placement.Controller.Session.UsesDailyLoadout;
+        bool visible = Placement && Placement.CanEdit && Placement.Controller.Session.Production.AllowDeviceSale &&
+            Placement.Controller.Session.Phase == MarblesECS.RoundPhase.Build;
         MarblesECS.OwnedDeviceSnapshot device = default;
         bool dragging = visible && Placement.TryGetSelectedDevice(out device);
         if (Group)
@@ -46,7 +49,8 @@ public sealed class DeviceSellAreaUI : MonoBehaviour, IPointerClickHandler
             ? new Color32(186, 44, 53, 248) : new Color32(104, 27, 35, 240);
         if (dragging)
         {
-            if (Title) Title.text = "售出" + DeviceDisplayText.SaleTarget(device) + "  +" + device.SellPrice + " 金币";
+            if (Title) Title.text = "售出" + DeviceDisplayText.SaleTarget(device) + "  +" + device.SellPrice +
+                " " + DeviceDisplayText.CurrencyName(Placement.Controller.Session.Production.Currency);
             if (Hint) Hint.text = "拖到这里松开出售  ·  右键取消";
         }
         else

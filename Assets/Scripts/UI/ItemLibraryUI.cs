@@ -24,7 +24,8 @@ public sealed partial class ItemLibraryUI : MonoBehaviour
     public Vector2 ReferenceResolution = new Vector2(1920, 1080);
 
     public bool IsOpen { get; private set; }
-    private bool CanOpen => Controller && Controller.ProductionCommandsAvailable && !Controller.Session.UsesDailyLoadout &&
+    private bool CanOpen => Controller && Controller.ProductionCommandsAvailable &&
+        Controller.Session.Production.Supply == DeviceSupply.OwnedInventory &&
         Controller.HasProductionFeature(ProductionFeature.DevicePlacement);
     public bool InputBlocked => IsOpen || releasePending;
     public int TotalEntryCount => entries.Count;

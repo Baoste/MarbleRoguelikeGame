@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace MarblesECS
 {
@@ -34,6 +35,9 @@ namespace MarblesECS
             Days = Array.AsReadOnly(days);
             CampaignRules = Array.AsReadOnly(campaignRules);
         }
+
+        public DayCampaignDefinition WithDays(params DayDefinition[] days) =>
+            new DayCampaignDefinition(SchemaVersion, SequenceId, StartingCompanyScrip, days.ToArray(), CampaignRules.ToArray());
     }
 
     public sealed class DayDefinition
@@ -42,6 +46,10 @@ namespace MarblesECS
         public int Order { get; }
         public long TargetScore { get; }
         public long RewardCoins { get; }
+        public long InitialBiomassScrap { get; }
+        public long ClearCompanyScripReward { get; }
+        public bool SkipMorningPrep { get; }
+        public ProductionSettings Production { get; }
         public DailyLoadoutDefinition DailyLoadout { get; }
         public BloodProgressionDefinition BloodProgression { get; }
         public ProductionFeature ProductionFeatures { get; }
@@ -54,12 +62,17 @@ namespace MarblesECS
         internal DayDefinition(string id, int order, long targetScore, long rewardCoins, ProductionFeature features,
             string boardLayoutFile, BoardLayoutDefinition boardLayout, MorningPrepDefinition[] morningPrep,
             DayEventDefinition[] events, DayRuleDefinition[] rules, DailyLoadoutDefinition dailyLoadout,
-            BloodProgressionDefinition bloodProgression)
+            BloodProgressionDefinition bloodProgression, long initialBiomassScrap, long clearCompanyScripReward, bool skipMorningPrep,
+            ProductionSettings production)
         {
             DayId = id;
             Order = order;
             TargetScore = targetScore;
             RewardCoins = rewardCoins;
+            InitialBiomassScrap = initialBiomassScrap;
+            ClearCompanyScripReward = clearCompanyScripReward;
+            SkipMorningPrep = skipMorningPrep;
+            Production = production;
             DailyLoadout = dailyLoadout;
             BloodProgression = bloodProgression;
             ProductionFeatures = features;
@@ -69,6 +82,12 @@ namespace MarblesECS
             Events = Array.AsReadOnly(events);
             Rules = Array.AsReadOnly(rules);
         }
+
+        public DayDefinition WithSetup(string boardLayoutFile, BoardLayoutDefinition boardLayout, long initialBiomassScrap,
+            DailyLoadoutDefinition loadout, bool skipMorningPrep, ProductionSettings? production = null) =>
+            new DayDefinition(DayId, Order, TargetScore, RewardCoins, ProductionFeatures, boardLayoutFile, boardLayout,
+                MorningPrep.ToArray(), Events.ToArray(), Rules.ToArray(), loadout, BloodProgression, initialBiomassScrap, ClearCompanyScripReward,
+                skipMorningPrep, production ?? Production);
     }
 
     public readonly struct BloodValueStage

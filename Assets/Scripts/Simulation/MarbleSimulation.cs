@@ -45,7 +45,7 @@ namespace MarblesECS
 
         public void StartRound(IMarblePhysics physics, uint? randomSeed = null)
         {
-            if (context.Balance != null) StartSession(physics, 0, randomSeed);
+            if (context.Balance != null) StartSession(physics, randomSeed);
             else ResetRound(physics, randomSeed: randomSeed);
         }
 

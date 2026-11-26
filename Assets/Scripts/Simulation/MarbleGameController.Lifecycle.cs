@@ -62,7 +62,7 @@ namespace MarblesECS.PhysX
                 simulation.DayBoardResetting += BeforeDayBoardRestore;
                 simulation.DayBoardRestored += AfterDayBoardRestore;
                 simulation.DeviceBroken += OnDeviceBroken;
-                if (ShouldStartDayCampaign)
+                if (StartWithDayCampaign)
                 {
                     if (!TryStartConfiguredDayCampaign(out string error)) throw new InvalidOperationException(error);
                 }

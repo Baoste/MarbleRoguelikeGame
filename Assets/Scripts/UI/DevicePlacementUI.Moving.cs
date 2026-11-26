@@ -24,9 +24,9 @@ public sealed partial class DevicePlacementUI
 
     internal bool BeginInstallSelection(uint id, Vector2 pointer, bool click)
     {
-        if (!CanEdit || !Controller.CanInstallDevices || (IsDraggingDevice && !installByClick)) return false;
+        if (!CanEdit || (IsDraggingDevice && !installByClick) || !Controller.CanSelectInstallation(id)) return false;
         var definition = Controller.InstallableDefinition(id);
-        if (definition == null || Controller.Session.BiomassScrapBalance < definition.InstallPrice) return false;
+        if (definition == null) return false;
         CancelPlacement();
         BeginDrag(new OwnedDeviceSnapshot { DefinitionId = id, Name = definition.Name, RotationLocked = definition.RotationLocked });
         SelectedDefinitionId = id;
@@ -98,7 +98,7 @@ public sealed partial class DevicePlacementUI
         if (drop == DropTarget.Sale || drop == DropTarget.Backpack)
         {
             if (drop == DropTarget.Sale && TryGetSelectedDevice(out var device))
-                LastFeedback = $"松开出售{DeviceDisplayText.SaleTarget(device)}，获得 {device.SellPrice} 金币。";
+                LastFeedback = $"松开出售{DeviceDisplayText.SaleTarget(device)}，获得 {device.SellPrice} {CurrencyName}。";
             else
                 LastFeedback = IsMovingPlacedDevice ? "松开收回背包" : "松开放回背包";
             previewObject.SetActive(false);
@@ -120,7 +120,7 @@ public sealed partial class DevicePlacementUI
                 ? Controller.CanInstallDevice(SelectedDefinitionId, point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation)
                 : Controller.CanPlaceDevice(SelectedInstanceId, point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation));
         if (SelectedDefinitionId != 0 && drop == DropTarget.Board && !canPlace)
-            LastFeedback = "此处不可安装，或血肉残料不足。";
+            LastFeedback = InstallFailure;
         previewOutline ??= new QuickOutline(previewObject);
         previewOutline.SetColor(canPlace || drop == DropTarget.Offer ? ValidOutline : InvalidOutline);
         previewObject.SetActive(true);
@@ -144,7 +144,7 @@ public sealed partial class DevicePlacementUI
 
     internal bool HandleBoardPointerDown(Vector2 pointer)
     {
-        if (!CanEdit || (!Controller.Session.UsesDailyLoadout && SellArea && SellArea.ContainsPointer(pointer)) ||
+        if (!CanEdit || (SellArea && SellArea.ContainsPointer(pointer)) ||
             PointerOnBackpack(pointer) || PointerOnControl(pointer)) return false;
         if (installByClick)
         {
@@ -206,11 +206,14 @@ public sealed partial class DevicePlacementUI
             installed = IsInsidePlacementPlane(pose.position) && Controller.TryInstallDevice(SelectedDefinitionId,
                 point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation, out _);
         }
-        LastFeedback = installed ? "装置已安装。" : "此处不可安装，或血肉残料不足。";
+        LastFeedback = installed ? "装置已安装。" : InstallFailure;
         if (installed || !installByClick) CancelPlacement();
         DeviceDropFinished?.Invoke();
         return installed;
     }
+
+    private string CurrencyName => DeviceDisplayText.CurrencyName(Controller.Session.Production.Currency);
+    private string InstallFailure => $"此处不可安装，或{CurrencyName}不足。";
 
     private float PlacementRadiusScale
     {

@@ -8,6 +8,7 @@ namespace MarblesECS.Editor
     public static class LegacyMachineValidationStartup
     {
         private const string Pending = "MarblesECS.LegacyMachineValidationStartup";
+        private const string InventoryFixture = Pending + ".InventoryFixture";
 
         static LegacyMachineValidationStartup()
         {
@@ -18,9 +19,10 @@ namespace MarblesECS.Editor
             };
         }
 
-        public static void EnterPlayMode()
+        public static void EnterPlayMode(bool needsInitialDevice = false)
         {
             SessionState.SetBool(Pending, true);
+            SessionState.SetBool(InventoryFixture, needsInitialDevice);
             EditorApplication.EnterPlaymode();
         }
 
@@ -30,8 +32,17 @@ namespace MarblesECS.Editor
                 scene.path != "Assets/Scenes/TestScene.unity") return;
             foreach (var root in scene.GetRootGameObjects())
                 foreach (var controller in root.GetComponentsInChildren<MarbleGameController>(true))
+                {
                     controller.StartWithDayCampaign = false;
+                    if (SessionState.GetBool(InventoryFixture, false))
+                    {
+                        var balance = GameBalanceLoader.Load(controller.BalanceJson);
+                        balance.Devices[0].StartingCount = 1;
+                        controller.ConfigureCampaign(balance);
+                    }
+                }
             SessionState.EraseBool(Pending);
+            SessionState.EraseBool(InventoryFixture);
         }
     }
 }

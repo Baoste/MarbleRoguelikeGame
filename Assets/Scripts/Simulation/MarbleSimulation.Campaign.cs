@@ -6,28 +6,17 @@ namespace MarblesECS
     public sealed partial class MarbleSimulation
     {
         /// <summary>Restart the entire run, including wallet, score, inventory and placements.</summary>
-        public void StartSession(IMarblePhysics physics) => StartSession(physics, 0);
-
-        /// <summary>Initialize the one shared stream, then draw starters. Null uses Marble.RandomSeed.</summary>
-        public void StartSession(IMarblePhysics physics, int randomStarterTypeCount, uint? randomSeed = null) =>
-            StartSession(physics, randomStarterTypeCount, randomSeed, grantAllStartingDevices: false);
-
-        internal void StartSession(IMarblePhysics physics, bool grantAllStartingDevices, uint? randomSeed = null) =>
-            StartSession(physics, 0, randomSeed, grantAllStartingDevices);
-
-        private void StartSession(IMarblePhysics physics, int randomStarterTypeCount, uint? randomSeed, bool grantAllStartingDevices)
+        public void StartSession(IMarblePhysics physics, uint? randomSeed = null)
         {
             if (dayFlow != null || startingDay) throw new InvalidOperationException("The Day campaign owns this production session.");
-            StartSessionCore(physics, randomStarterTypeCount, randomSeed, grantAllStartingDevices);
+            StartSessionCore(physics, randomSeed, ProductionFeature.All, ProductionSettings.Inventory, 0);
         }
 
-        private void StartSessionCore(IMarblePhysics physics, int randomStarterTypeCount, uint? randomSeed, bool grantAllStartingDevices,
-            ProductionFeature features = ProductionFeature.All, bool usesDailyLoadout = false, long startingCompanyScrip = 0)
+        private void StartSessionCore(IMarblePhysics physics, uint? randomSeed, ProductionFeature features,
+            ProductionSettings production, long startingCompanyScrip)
         {
             ThrowIfDisposed();
             if (context.Balance == null) throw new InvalidOperationException("Construct with GameBalance to start a campaign.");
-            if (randomStarterTypeCount < 0 || randomStarterTypeCount > 200)
-                throw new ArgumentOutOfRangeException(nameof(randomStarterTypeCount));
             ResetRound(physics, randomSeed: randomSeed);
             context.DeviceScripts.Clear();
             if (AttributeRuntime.Enabled(context))
@@ -37,21 +26,19 @@ namespace MarblesECS
             }
             using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
                 context.Manager.DestroyEntity(entities);
-            var tuning = context.Balance.Campaign;
-            long startingCoins = grantAllStartingDevices ? tuning.AllDevicesStartingCoins : tuning.StartingCoins;
             context.Campaign = new CampaignData
             {
-                Coins = usesDailyLoadout ? 0 : startingCoins,
-                UsesDailyLoadout = usesDailyLoadout,
-                RestockStartingDevices = grantAllStartingDevices && !usesDailyLoadout,
+                Coins = production.Currency == GameCurrency.Coins ? context.Balance.Campaign.StartingCoins : 0,
+                Production = production,
                 CompanyScripBalance = startingCompanyScrip,
                 RepeatRounds = true,
                 DisabledFeatures = ProductionFeature.All & ~features
             };
             context.Manager.GetBuffer<ShopOfferData>(context.RoundEntity).Clear();
-            randomStartingDeviceIds = Array.Empty<uint>();
-            if (!usesDailyLoadout && context.HasProductionFeature(ProductionFeature.DevicePlacement))
-                CreateStartingDevices(randomStarterTypeCount, grantAllStartingDevices);
+            if (production.Supply == DeviceSupply.OwnedInventory && context.HasProductionFeature(ProductionFeature.DevicePlacement))
+                foreach (var device in context.Balance.Devices)
+                    for (int i = 0; i < device.StartingCount; i++)
+                        CampaignStateUtility.CreateDevice(context, device, device.Price);
             var round = context.Round;
             round.Phase = (byte)RoundPhase.Build;
             context.Round = round;
@@ -82,7 +69,7 @@ namespace MarblesECS
             if (!CanCampaignAct(RoundPhase.Playing) || !CampaignStateUtility.CanCashOut(context)) return false;
             var before = context.Round;
             var campaign = context.Campaign;
-            if (!campaign.UsesDailyLoadout)
+            if (campaign.Production.Currency == GameCurrency.Coins)
             {
                 double dividend = AttributeRuntime.Enabled(context)
                     ? AttributeRuntime.Global(context, GameAttribute.BLOOD_DIVIDEND_RATE) * AttributeRuntime.Global(context, GameAttribute.COIN_GAIN_RATE)

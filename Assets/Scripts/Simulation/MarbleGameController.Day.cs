@@ -7,7 +7,7 @@ namespace MarblesECS.PhysX
     {
         [Header("Daily campaign")]
         public bool StartWithDayCampaign;
-        internal bool ShouldStartDayCampaign => StartWithDayCampaign && !EnableRandomStartingDevices;
+        private Func<GameBalance, DayCampaignDefinition, DayCampaignDefinition> configureDayCampaign;
         public DayProgressSnapshot Day => IsReady ? simulation.Day : default;
         public DayDefinition CurrentDayDefinition => IsReady ? simulation.CurrentDayDefinition : null;
         public bool ProductionCommandsAvailable => IsReady && simulation.ProductionCommandsAvailable;
@@ -15,13 +15,24 @@ namespace MarblesECS.PhysX
         internal event Action DayBoardResetting;
         internal event Action DayBoardRestored;
 
+        public void ConfigureDayCampaign(Func<GameBalance, DayCampaignDefinition, DayCampaignDefinition> configure)
+        {
+            if (simulation != null) throw new InvalidOperationException("Configure the Day campaign before the controller starts.");
+            configureDayCampaign = configure ?? throw new ArgumentNullException(nameof(configure));
+        }
+
         public bool TryStartConfiguredDayCampaign(out string error, DayBehaviorRegistry behaviors = null,
             DayRetryRandomPolicy retryRandom = null)
         {
             if (!IsReady || !EnableCampaign)
             { error = "Start a campaign-enabled controller before starting the Day sequence."; return false; }
             DayCampaignDefinition definition;
-            try { definition = GameDaysLoader.Load(Balance, behaviors); }
+            try
+            {
+                definition = GameDaysLoader.Load(Balance, behaviors);
+                if (configureDayCampaign != null) definition = configureDayCampaign(Balance, definition);
+                configureDayCampaign = null;
+            }
             catch (ArgumentException configurationError) { error = configurationError.Message; return false; }
             return TryStartDayCampaign(definition, out error, retryRandom: retryRandom);
         }
@@ -32,7 +43,7 @@ namespace MarblesECS.PhysX
             if (!IsReady || !EnableCampaign || RequiresRestart)
             { error = "A ready campaign-enabled controller is required."; return false; }
             uint seed = randomSeed ?? (RefreshRandomSeedOnNewRun ? CreateRunRandomSeed() : Balance.Marble.RandomSeed);
-            if (!simulation.TryStartDayCampaign(definition, bridge, out error, seed, retryRandom, EnableRandomStartingDevices))
+            if (!simulation.TryStartDayCampaign(definition, bridge, out error, seed, retryRandom))
                 return false;
             LastRunRandomSeed = seed;
             PublishBloodIfChanged();

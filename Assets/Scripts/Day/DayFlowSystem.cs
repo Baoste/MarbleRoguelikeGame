@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Unity.Collections;
 using UnityEngine;
 
@@ -51,7 +52,8 @@ namespace MarblesECS
             context.Manager.AddComponentData(context.RoundEntity,
                 new DayRuntimeData { SequenceId = new FixedString128Bytes(definition.SequenceId), RunSeed = runSeed });
             context.Manager.AddBuffer<MorningPrepProgress>(context.RoundEntity);
-            if (context.Campaign.UsesDailyLoadout) DailyLoadoutSystem.Initialize(context);
+            context.Manager.AddBuffer<DayScripReward>(context.RoundEntity);
+            if (definition.Days.Any(day => day.DailyLoadout != null)) DailyLoadoutSystem.Initialize(context);
             rules = new DayRuleSystem(context);
             events = new DayEventSystem(context, rules);
         }
@@ -218,6 +220,8 @@ namespace MarblesECS
                         outcome = DayTransitionReason.None;
                         QueueTransition(reason);
                     }
+                    else if (State.Phase == DayPhase.WakeUp && Current.SkipMorningPrep && LoadoutConfirmed)
+                        QueueTransition(DayTransitionReason.WakeUpCompleted);
                     else return;
                 }
             }
@@ -265,12 +269,11 @@ namespace MarblesECS
                 case DayTransitionReason.ProductionSucceeded:
                     state.Phase = DayPhase.DaySettlement;
                     State = state;
-                    if (Current.DailyLoadout != null)
-                    {
-                        DailyLoadoutSystem.AwardClearScrip(context, state.DayId, Current.DailyLoadout.ClearCompanyScripReward);
-                        DailyLoadoutSystem.EndRun(context);
+                    CampaignWalletSystem.AwardClearScrip(context, state.DayId, Current.ClearCompanyScripReward);
+                    CampaignWalletSystem.Set(context, GameCurrency.BiomassScrap, 0);
+                    if (Current.DailyLoadout != null) DailyLoadoutSystem.ClearRunPermissions(context);
+                    if (context.Campaign.Production.ClearDevicesOnDaySettlement)
                         simulation.ClearDailyProduction();
-                    }
                     EnterPhase();
                     break;
                 case DayTransitionReason.ProductionFailed:
@@ -284,7 +287,8 @@ namespace MarblesECS
                     break;
                 case DayTransitionReason.RestCompleted:
                     rules.ClearAttempt(Snapshot);
-                    if (Current.DailyLoadout == null) DevicePlacementSystem.ReturnAllToInventory(context);
+                    if (!context.Campaign.Production.ClearDevicesOnDaySettlement)
+                        DevicePlacementSystem.ReturnAllToInventory(context);
                     state.CompletedDays++;
                     if (state.CompletedDays == definition.Days.Count)
                     {
@@ -315,7 +319,7 @@ namespace MarblesECS
             State = state;
             events.SetDay(day);
             if (first) rules.Install(definition.CampaignRules, DayRuleScope.Campaign, Snapshot);
-            checkpoint = new DayCheckpoint(context, rules.Capture());
+            checkpoint = new DayCheckpoint(context, rules.Capture(), preserveMorningProgress: day.DailyLoadout != null);
             simulation.AfterDayBoardRestore();
             rules.Install(day.Rules, DayRuleScope.Day, Snapshot);
             EnterPhase();
@@ -363,8 +367,14 @@ namespace MarblesECS
             state.AttemptStartRandomState = context.Round.RandomState;
             var objectives = context.Manager.GetBuffer<MorningPrepProgress>(context.RoundEntity);
             objectives.Clear();
-            foreach (var objective in day.MorningPrep)
-                objectives.Add(new MorningPrepProgress { ObjectiveId = new FixedString128Bytes(objective.ObjectiveId) });
+            if (day.SkipMorningPrep)
+            {
+                if (day.DailyLoadout != null && !DailyLoadoutSystem.State(context).Confirmed)
+                    DailyLoadoutSystem.Confirm(context, day.DailyLoadout);
+            }
+            else
+                foreach (var objective in day.MorningPrep)
+                    objectives.Add(new MorningPrepProgress { ObjectiveId = new FixedString128Bytes(objective.ObjectiveId) });
             state.MorningPrepRemaining = objectives.Length;
         }
 

@@ -11,8 +11,6 @@ namespace MarblesECS
         internal static bool Place(SimulationContext context, int instanceId, float x, float z, float clearance, float? angle = null)
         {
             if (!TryValidatePlacement(context, instanceId, x, z, clearance, angle, out var entity, out var device)) return false;
-            if (!device.Placed)
-                CampaignStateUtility.RestockStartingDevice(context, device.DefinitionId, instanceId);
             device.X = x;
             device.Z = z;
             device.Placed = true;
@@ -47,7 +45,7 @@ namespace MarblesECS
             return true;
         }
 
-        private static void MarkLayoutChanged(SimulationContext context)
+        internal static void MarkLayoutChanged(SimulationContext context)
         {
             var campaign = context.Campaign;
             campaign.LayoutRevision++;

@@ -410,7 +410,7 @@ namespace MarblesECS.Editor
                     "Unchecked seed option uses the configured run seed");
                 game.RestartRound();
                 Check(game.LastRunRandomSeed == game.Balance.Marble.RandomSeed &&
-                    game.LastRandomStarterDeviceIds.Length == 0 && game.GetOwnedDevices().Length == 0,
+                    game.GetOwnedDevices().Length == 0,
                     "Unchecked option preserves empty inventory on restart");
                 game.RefreshRandomSeedOnNewRun = true;
                 game.RestartRound();
@@ -420,7 +420,7 @@ namespace MarblesECS.Editor
                     "Checked seed option generates a different nonzero seed on each new run");
                 var simulation = (MarbleSimulation)typeof(MarbleGameController).GetField("simulation",
                     BindingFlags.NonPublic | BindingFlags.Instance).GetValue(game);
-                Check(game.LastRandomStarterDeviceIds.Length == 0 && game.GetOwnedDevices().Length == 0 &&
+                Check(game.GetOwnedDevices().Length == 0 &&
                     simulation.Context.Round.RandomState == game.LastRunRandomSeed,
                     "Empty inventory consumes no starter draws from the shared stream");
                 Check(game.Session.Phase == RoundPhase.Playing,
@@ -443,19 +443,17 @@ namespace MarblesECS.Editor
             Check(rig.Placement && rig.Placement.Controller == game && rig.ViewCamera &&
                 rig.Placement.ViewCamera == rig.ViewCamera, "Controller, physical UI and camera references agree");
             Check(EventSystem.current, "Scene supplies its own active EventSystem");
-            game.EnableRandomStartingDevices = false;
             game.RestartRound();
             Check(game.Session.Phase == RoundPhase.Playing && !game.Paused,
                 "Empty starting inventory enters unpaused Playing");
             Check(game.Balance.Devices.All(d => d.StartingCount == 0),
                 "The empty-inventory scenario has no fixed starters");
-            Check(game.GetOwnedDevices().Length == 0 && game.LastRandomStarterDeviceIds.Length == 0,
+            Check(game.GetOwnedDevices().Length == 0,
                 "Initial inventory contains no gifted devices");
             ValidateGeometry();
             ValidateRunSeedOption();
             uint runSeed = game.LastRunRandomSeed;
-            uint[] starterIds = game.LastRandomStarterDeviceIds;
-            Check(runSeed != 0 && starterIds.Length == 0 && game.GetOwnedDevices().Length == 0,
+            Check(runSeed != 0 && game.GetOwnedDevices().Length == 0,
                 "Restoring the seed option still starts with empty inventory");
             var library = UnityEngine.Object.FindObjectsOfType<ItemLibraryUI>().Single(l => l.Controller == game);
             var libraryCheck = ItemLibraryValidation.Validate(library, message => Report.Add(message));
@@ -521,7 +519,7 @@ namespace MarblesECS.Editor
                     "Physical Continue starts round " + (cycle + 1));
                 Check(game.GetOwnedDevices().Single(d => d.InstanceId == instanceId).Placed,
                     "Placed device survives round start: " + device.Name);
-                Check(game.LastRunRandomSeed == runSeed && game.LastRandomStarterDeviceIds.SequenceEqual(starterIds),
+                Check(game.LastRunRandomSeed == runSeed,
                     "Next round preserves the run seed and does not grant starters");
                 wait = Wait(.4);
                 while (wait.MoveNext()) yield return null;

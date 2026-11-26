@@ -17,7 +17,8 @@ namespace MarblesECS
                     IsCampaign = context.Balance != null, Phase = (RoundPhase)round.Phase,
                     TotalScore = campaign.TotalScore, ConfirmedScore = round.Score,
                     RoundScore = round.Score, TargetScore = round.TargetScore, Coins = campaign.Coins,
-                    UsesDailyLoadout = campaign.UsesDailyLoadout, CompanyScripBalance = campaign.CompanyScripBalance,
+                    Production = campaign.Production, CompanyScripBalance = campaign.CompanyScripBalance,
+                    ProductionBalance = CampaignWalletSystem.Balance(context, campaign.Production.Currency),
                     BiomassScrapBalance = context.Player.BiomassScrapBalance, LastCompanyScripReward = campaign.LastCompanyScripReward,
                     LastRewardCoins = campaign.LastRewardCoins,
                     LastCashoutCoins = campaign.LastCashoutCoins, ShopRefreshCount = campaign.ShopRefreshCount,
@@ -48,7 +49,7 @@ namespace MarblesECS
                         PlacementOffsetX = definition.PlacementOffsetX, PlacementOffsetY = definition.PlacementOffsetY,
                         PlacementOffsetZ = definition.PlacementOffsetZ,
                         PurchasePrice = item.PurchasePrice,
-                        SellPrice = CampaignStateUtility.SellPrice(definition, item),
+                        SellPrice = definition.SellPrice,
                         Rarity = definition.Rarity, Durability = DeviceDurabilitySystem.Limit(context, item),
                         RemainingDurability = remaining,
                         CompletingEffect = remaining == 0 && item.Placed &&

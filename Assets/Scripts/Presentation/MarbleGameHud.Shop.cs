@@ -6,7 +6,7 @@ namespace MarblesECS.Presentation
     {
         private void DrawShop()
         {
-            if (Controller.Session.UsesDailyLoadout) return;
+            if (Controller.CurrentDayDefinition?.DailyLoadout != null) return;
             GUILayout.Space(5);
             GUILayout.Label("商店 SHOP · 每个货位本次刷新只能买一次");
             foreach (var offer in Controller.GetShopOffers())
@@ -30,8 +30,8 @@ namespace MarblesECS.Presentation
 
         private void DrawBuild()
         {
-            if (Controller.Session.UsesDailyLoadout)
-                GUILayout.Label("从机台物品板选择装置，使用血肉残料安装。");
+            if (Controller.Session.Production.Supply == DeviceSupply.SelectedTypes)
+                GUILayout.Label($"从机台物品板选择装置，使用{DeviceDisplayText.CurrencyName(Controller.Session.Production.Currency)}安装。");
             else
             {
                 GUILayout.Label("布置 BUILD · 钉子可在盘面内自由摆放");

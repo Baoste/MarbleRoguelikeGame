@@ -53,7 +53,7 @@ public sealed partial class ShopUI : MonoBehaviour
         bool open = Controller != null && Controller.ShopOpen;
         SetShopVisible(open);
 
-        if (Controller != null && Controller.IsReady && Controller.Session.UsesDailyLoadout)
+        if (Controller != null && Controller.IsReady && Controller.CurrentDayDefinition?.DailyLoadout != null)
         {
             RefreshDailyView(open);
             wasOpen = false;

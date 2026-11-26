@@ -34,6 +34,9 @@ namespace MarblesECS
                     ? ReadInteger(input, "startingCompanyScrip", 0, CampaignWalletSystem.MaxBalance) : 0;
                 string sequenceId = Id(input.String("sequenceId"), "sequenceId");
                 var defaultFeatures = ReadProductionFeatures(input, "defaultProductionFeatures");
+                var defaultProduction = dailyLoadouts ? ProductionSettings.Daily : ProductionSettings.Inventory;
+                if (input.Has("defaultProductionSettings"))
+                    defaultProduction = ReadProductionSettings(input.Object("defaultProductionSettings"), defaultProduction);
                 var defaultBlood = input.Has("defaultBloodProgression")
                     ? ReadBloodProgression(input.Object("defaultBloodProgression"), balance, null) : null;
                 var devices = balance.Devices.ToDictionary(device => device.Id);
@@ -66,8 +69,15 @@ namespace MarblesECS
                         features = (features | ProductionFeature.DevicePlacement) & ~ProductionFeature.Shop;
                         if (loadout.Shop != null) features |= ProductionFeature.Shop;
                     }
+                    long scrap = dailyLoadouts || entry.Has("initialBiomassScrap")
+                        ? ReadInteger(entry, "initialBiomassScrap", 0, CampaignWalletSystem.MaxBalance) : 0;
+                    long clearScrip = dailyLoadouts || entry.Has("clearCompanyScripReward")
+                        ? ReadInteger(entry, "clearCompanyScripReward", 0, CampaignWalletSystem.MaxBalance) : 0;
+                    var production = entry.Has("productionSettings")
+                        ? ReadProductionSettings(entry.Object("productionSettings"), defaultProduction) : defaultProduction;
                     return new DayDefinition(id, order, targetScore, rewardCoins, features, boardLayoutFile,
-                        boardLayout, ReadMorningPrep(entry), ReadRefs(entry, "eventIds", events), dayRules, loadout, blood);
+                        boardLayout, ReadMorningPrep(entry), ReadRefs(entry, "eventIds", events), dayRules, loadout, blood,
+                        scrap, clearScrip, entry.Bool("skipMorningPrep", false), production);
                 }, required: true);
                 var ordered = new List<DayDefinition>(days.Values);
                 ordered.Sort((a, b) => a.Order.CompareTo(b.Order));
@@ -81,6 +91,16 @@ namespace MarblesECS
                 throw new ArgumentException($"{source}: {error.Message}", error);
             }
         }
+
+        private static ProductionSettings ReadProductionSettings(ConfigFields entry, ProductionSettings fallback) =>
+            new ProductionSettings(
+                ReadEnum<DeviceSupply>(entry.String("deviceSupply", fallback.Supply.ToString(), optional: true), entry.Context + ".deviceSupply"),
+                ReadEnum<GameCurrency>(entry.String("currency", fallback.Currency.ToString(), optional: true), entry.Context + ".currency"),
+                entry.Bool("installDuringProduction", fallback.InstallDuringProduction),
+                entry.Bool("destroyExhaustedDevices", fallback.DestroyExhaustedDevices),
+                entry.Bool("allowDeviceReturn", fallback.AllowDeviceReturn),
+                entry.Bool("allowDeviceSale", fallback.AllowDeviceSale),
+                entry.Bool("clearDevicesOnDaySettlement", fallback.ClearDevicesOnDaySettlement));
 
         private static BloodProgressionDefinition ReadBloodProgression(ConfigFields fields, GameBalance balance,
             BloodProgressionDefinition fallback)
@@ -113,8 +133,8 @@ namespace MarblesECS
         {
             var unlocked = ReadPegIds(day, "unlockedPegIds", devices.ContainsKey, optional: false);
             foreach (uint id in unlocked)
-                if (devices[id].PurchaseQuantity != 1 || devices[id].PlacementRadius <= 0)
-                    throw new ArgumentException($"{day.Context}.unlockedPegIds: device {id} must support individual placement.");
+                if (devices[id].PlacementRadius <= 0)
+                    throw new ArgumentException($"{day.Context}.unlockedPegIds: device {id} must support placement.");
             var defaults = ReadPegIds(day, "defaultPegIds", id => unlocked.Contains(id));
             var required = ReadPegIds(day, "requiredPegIds", id => defaults.Contains(id));
             int max = (int)ReadInteger(day, "maxLoadoutTypeCount", 1, Math.Min(200, unlocked.Length));
@@ -122,10 +142,8 @@ namespace MarblesECS
             if (required.Length > max) throw day.Error("requiredPegIds (exceeds maxLoadoutTypeCount)");
             var mode = ReadEnum<LoadoutSelectionMode>(day.String("loadoutSelectionMode",
                 nameof(LoadoutSelectionMode.Manual), optional: true), day.Context + ".loadoutSelectionMode");
-            long scrap = ReadInteger(day, "initialBiomassScrap", 0, CampaignWalletSystem.MaxBalance);
-            long reward = ReadInteger(day, "clearCompanyScripReward", 0, CampaignWalletSystem.MaxBalance);
             var shop = ReadDailyShop(day, unlocked, defaults);
-            return new DailyLoadoutDefinition(unlocked, defaults, required, max, min, mode, scrap, reward, shop);
+            return new DailyLoadoutDefinition(unlocked, defaults, required, max, min, mode, shop);
         }
 
         private static DailyShopDefinition ReadDailyShop(ConfigFields day, uint[] unlocked, uint[] defaults)

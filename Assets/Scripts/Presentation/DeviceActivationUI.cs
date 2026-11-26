@@ -53,8 +53,7 @@ namespace MarblesECS.Presentation
         {
 #if ENABLE_LEGACY_INPUT_MANAGER
             if (!Running || Controller.Paused || !Input.GetMouseButtonDown(0)) return;
-            if (Controller.Session.UsesDailyLoadout && FindPlacement() is DevicePlacementUI board &&
-                board != null && board.BlocksDeviceActivation) return;
+            if (FindPlacement() is DevicePlacementUI board && board != null && board.BlocksDeviceActivation) return;
             var camera = ResolveCamera();
             if (camera != null && !PointerBlocked(Input.mousePosition))
                 Controller.TryActivateDevice(camera.ScreenPointToRay(Input.mousePosition));

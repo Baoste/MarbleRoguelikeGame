@@ -45,16 +45,13 @@ namespace MarblesECS
 
         public bool SellDevice(int instanceId)
         {
-            if (context.Campaign.UsesDailyLoadout) return false;
+            if (!context.Campaign.Production.AllowDeviceSale) return false;
             if (!ShopCommandsAvailable && !CanEditDevices) return false;
             if (!CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
             var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
-            var campaign = context.Campaign;
-            long price = CampaignStateUtility.SellPrice(CampaignStateUtility.Device(context, device.DefinitionId), device);
-            campaign.Coins = MarbleRules.AddScore(campaign.Coins, price, CampaignStateUtility.MaxCoins);
-            context.Campaign = campaign;
+            long price = CampaignStateUtility.Device(context, device.DefinitionId).SellPrice;
+            CampaignWalletSystem.Credit(context, context.Campaign.Production.Currency, price);
             CampaignStateUtility.DestroyDevice(context, entity);
-            CampaignStateUtility.RestockStartingDevice(context, device.DefinitionId);
             return true;
         }
     }

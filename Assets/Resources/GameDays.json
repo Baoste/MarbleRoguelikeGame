@@ -3,6 +3,15 @@
   "sequenceId": "campaign",
   "startingCompanyScrip": 0,
   "defaultProductionFeatures": ["Rush"],
+  "defaultProductionSettings": {
+    "deviceSupply": "SelectedTypes",
+    "currency": "BiomassScrap",
+    "installDuringProduction": true,
+    "destroyExhaustedDevices": true,
+    "allowDeviceReturn": false,
+    "allowDeviceSale": false,
+    "clearDevicesOnDaySettlement": true
+  },
   "defaultBloodProgression": {
     "initialBlood": 100,
     "stages": [

@@ -462,11 +462,9 @@ namespace MarblesECS.Editor
                 Check(f.Simulation.BeginRound(), "advance to next round");
                 Check(f.C.Round.RandomState == expected, "round reset preserves the entire shared sequence");
 
-                f.Simulation.StartSession(f.Physics, 3, seed);
-                expected = seed;
-                for (int i = 1; i < f.C.Balance.Devices.Length; i++) MarbleRules.NextRandom(ref expected);
-                Check(f.C.Round.RandomState == expected, "new run initializes once and starters advance that same state");
-                Check(f.Simulation.BeginRound() && f.C.Round.RandomState == expected, "first round never rewinds starter draws");
+                f.Simulation.StartSession(f.Physics, seed);
+                Check(f.C.Round.RandomState == seed, "the new run initializes the shared stream from its supplied seed");
+                Check(f.Simulation.BeginRound() && f.C.Round.RandomState == seed, "first round preserves the run seed");
             }
             Debug.Log("SHARED_RANDOM_SEQUENCE_VALIDATION_PASSED: " + (assertions - start) + " assertions.");
         }

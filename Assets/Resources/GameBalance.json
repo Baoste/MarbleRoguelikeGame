@@ -22,7 +22,6 @@
     },
     "Campaign": {
         "StartingCoins": 30,
-        "AllDevicesStartingCoins": 99999,
         "ShopRefreshCost": 2,
         "ShopOfferCount": 4,
         "SellRatio": 0.5,

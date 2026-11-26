@@ -11,10 +11,9 @@ namespace MarblesECS.Presentation
             GUILayout.Space(6);
             var day = Controller.Day;
             string dayLabel = day.Status == DayCampaignStatus.NotStarted ? string.Empty : day.DayId + "　";
-            string wallet = session.UsesDailyLoadout
-                ? day.Phase == DayPhase.Production ? "　血肉残料 " + session.BiomassScrapBalance
-                    : "　公司工票 " + session.CompanyScripBalance
-                : "　金币 " + session.Coins;
+            string wallet = Controller.CurrentDayDefinition?.DailyLoadout != null && day.Phase != DayPhase.Production
+                ? "　公司工票 " + session.CompanyScripBalance
+                : "　" + DeviceDisplayText.CurrencyName(session.Production.Currency) + " " + session.ProductionBalance;
             GUILayout.Label(dayLabel + PhaseName(session.Phase) + wallet);
             GUILayout.Label("血量 Blood  " + marble.Blood.ToString("0.0") + " / " + marble.BloodCapacity.ToString("0") +
                 "　场内 " + marble.ActiveMarbles);
@@ -36,7 +35,7 @@ namespace MarblesECS.Presentation
         {
             var session = Controller.Session;
             GUILayout.Label("本轮结算 " + session.RoundScore + "　累计 " + session.TotalScore);
-            GUILayout.Label(session.UsesDailyLoadout
+            GUILayout.Label(Controller.CurrentDayDefinition?.DailyLoadout != null
                 ? "通关奖励 +" + session.LastCompanyScripReward + " 公司工票"
                 : "通关奖励 +" + session.LastRewardCoins + " 金币　提现 +" + session.LastCashoutCoins);
         }

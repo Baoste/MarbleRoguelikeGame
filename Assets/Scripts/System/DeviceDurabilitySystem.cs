@@ -93,16 +93,30 @@ namespace MarblesECS
 
         internal static void RemoveExhausted(SimulationContext context, List<DeviceBrokenEvent> broken)
         {
-            if (!context.Campaign.UsesDailyLoadout) return;
+            if (!context.Campaign.Production.DestroyExhaustedDevices) return;
             using var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp);
             foreach (var entity in entities)
             {
+                if (!context.Manager.Exists(entity)) continue;
                 var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
-                if (!device.Placed || Remaining(context, device) != 0 || HasPendingEffect(context, entity, device.InstanceId)) continue;
+                if (!device.Placed || Remaining(context, device) != 0 ||
+                    HasPendingEffect(context, entity, device.InstanceId) ||
+                    (device.PairId != 0 && PairHasPendingEffect(context, device.PairId, entities))) continue;
                 CampaignStateUtility.DestroyDevice(context, entity);
                 broken.Add(new DeviceBrokenEvent(context.Round.RoundId, device.InstanceId, device.DefinitionId));
             }
             broken.Sort((a, b) => a.InstanceId.CompareTo(b.InstanceId));
+        }
+
+        private static bool PairHasPendingEffect(SimulationContext context, int pairId, NativeArray<Entity> devices)
+        {
+            foreach (var entity in devices)
+            {
+                if (!context.Manager.Exists(entity)) continue;
+                var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+                if (device.PairId == pairId && HasPendingEffect(context, entity, device.InstanceId)) return true;
+            }
+            return false;
         }
     }
 }
