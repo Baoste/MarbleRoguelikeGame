@@ -56,6 +56,8 @@ namespace MarblesECS
             if (insidePhysicsStep) throw new InvalidOperationException("Cannot reset during a physics step.");
             int newRoundId = checked(context.Round.RoundId + 1);
             context.RemoveAllMarbles();
+            if (!ReferenceEquals(context.Physics, physics))
+                (context.Physics as IMarbleDevicePhysics)?.ClearDevices();
             context.Physics = physics;
             context.Contacts.Clear();
             context.ScoreEvents.Clear();
@@ -193,7 +195,8 @@ namespace MarblesECS
             context.FloatingText?.Reset();
             context.FloatingText = null;
             dayFlow?.Dispose();
-            context.Transients.Clear(context);
+            (context.Physics as IMarbleDevicePhysics)?.ClearDevices();
+            context.Transients.Clear();
             context.DeviceScripts.Clear();
             // Entities' global shutdown also disposes manually owned worlds before some MB callbacks.
             if (!context.World.IsCreated)

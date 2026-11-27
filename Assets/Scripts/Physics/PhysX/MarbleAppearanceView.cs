@@ -44,6 +44,7 @@ namespace MarblesECS.PhysX
         public bool SetAppearance(MarbleKey key, string label, Color color)
         {
             if (!bodies.TryGetValue(key, out var body) || body == null) return false;
+            if (!createVisuals) return true;
             var view = body.GetComponent<MarbleAppearanceView>();
             if (view == null) view = body.gameObject.AddComponent<MarbleAppearanceView>();
             view.Apply(label, color); return true;

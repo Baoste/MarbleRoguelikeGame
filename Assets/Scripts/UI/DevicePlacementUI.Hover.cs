@@ -7,25 +7,10 @@ public sealed partial class DevicePlacementUI
 {
     private sealed class PlacedDeviceView : IDisposable
     {
-        private readonly DeviceViewHandle handle;
         internal OwnedDeviceSnapshot Device;
-        internal readonly Collider[] Colliders;
         internal QuickOutline Outline;
-        internal GameObject Root => handle.Root;
-        internal bool IsVisible => Root && Root.activeInHierarchy;
-
-        internal PlacedDeviceView(DeviceViewHandle handle, OwnedDeviceSnapshot device)
-        {
-            this.handle = handle;
-            Device = device;
-            Colliders = Root.GetComponentsInChildren<Collider>(true);
-        }
-
-        public void Dispose()
-        {
-            Outline?.Dispose();
-            handle.Dispose();
-        }
+        internal GameObject OutlinedModel;
+        public void Dispose() => Outline?.Dispose();
     }
 
     private PlacedDeviceView hoveredView;
@@ -33,7 +18,7 @@ public sealed partial class DevicePlacementUI
     private float nextHoverRefresh;
 
     internal GameObject GetPlacedDeviceRoot(int instanceId) =>
-        placedObjects.TryGetValue(instanceId, out var view) ? view.Root : null;
+        Controller != null ? Controller.GetDeviceModel(instanceId) : null;
 
     internal bool UpdatePlacedDeviceHover(Vector2 pointer, out OwnedDeviceSnapshot device)
     {
@@ -69,12 +54,15 @@ public sealed partial class DevicePlacementUI
             nextHoverRefresh = Time.unscaledTime + .1f;
         }
 
-        if (view.Outline == null)
+        var model = GetPlacedDeviceRoot(view.Device.InstanceId);
+        if (view.OutlinedModel != model)
         {
-            view.Outline = new QuickOutline(view.Root);
-            view.Outline.SetColor(QuickOutline.HoverColor);
+            view.Outline?.Dispose();
+            view.OutlinedModel = model;
+            view.Outline = model != null ? new QuickOutline(model) : null;
+            view.Outline?.SetColor(QuickOutline.HoverColor);
         }
-        view.Outline.SetVisible(true);
+        view.Outline?.SetVisible(true);
         device = hoveredDevice;
         return true;
     }
@@ -91,26 +79,17 @@ public sealed partial class DevicePlacementUI
     {
         picked = null;
         Ray ray = ViewCamera.ScreenPointToRay(pointer);
-        float nearest = float.PositiveInfinity;
-        foreach (var view in placedObjects.Values)
-        {
-            if (!view.IsVisible) continue;
-            foreach (var collider in view.Colliders)
-            {
-                if (!collider || !collider.enabled || !collider.gameObject.activeInHierarchy ||
-                    !collider.Raycast(ray, out var hit, nearest)) continue;
-                picked = view;
-                nearest = hit.distance;
-            }
-        }
-        if (picked != null) return true;
+        int excluded = IsMovingPlacedDevice ? SelectedInstanceId : 0;
+        if (Controller.TryPickPlacedDevice(ray, excluded, out int id) && placedObjects.TryGetValue(id, out picked))
+            return true;
 
         // The footprint remains pickable when exhausted devices have disabled gameplay colliders.
         if (!TryGetBoardPoint(pointer, out var point)) return false;
+        float nearest = float.PositiveInfinity;
         foreach (var view in placedObjects.Values)
         {
-            if (!view.IsVisible) continue;
             var device = view.Device;
+            if (device.InstanceId == excluded) continue;
             float distance = new Vector2(point.x - device.PlacementX, point.z - device.PlacementZ).sqrMagnitude;
             if (distance > device.Radius * device.Radius || distance >= nearest) continue;
             picked = view;

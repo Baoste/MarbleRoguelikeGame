@@ -38,8 +38,8 @@ namespace MarblesECS
             if (!CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
             var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
             long price = CampaignStateUtility.SalePrice(context, device);
-            CampaignWalletSystem.Credit(context, GameCurrency.BiomassScrap, price);
             CampaignStateUtility.DestroyDevice(context, entity);
+            CampaignWalletSystem.Credit(context, GameCurrency.BiomassScrap, price);
             return true;
         }
     }

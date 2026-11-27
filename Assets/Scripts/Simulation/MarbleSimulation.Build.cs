@@ -1,4 +1,3 @@
-using System;
 using Unity.Collections;
 using Unity.Entities;
 
@@ -55,8 +54,7 @@ namespace MarblesECS
             return Entity.Null;
         }
 
-        internal bool TryInstallDevice(uint id, float x, float z, float clearance, float angle, out int instanceId,
-            Action projectLayout = null)
+        internal bool TryInstallDevice(uint id, float x, float z, float clearance, float angle, out int instanceId)
         {
             instanceId = 0;
             if (!TryPlanInstallation(id, out var definition, out var entity, out long price) ||
@@ -69,18 +67,20 @@ namespace MarblesECS
             placed.X = x;
             placed.Z = z;
             placed.Angle = definition.ResolvePlacementAngle(angle % 360);
+            int installed = createPack ? checked(context.Campaign.NextDeviceId + 1) : before.InstanceId;
+            int previousRevision = context.Campaign.LayoutRevision;
+            ulong previousStableId = context.NextStableId;
             bool committed = false;
             try
             {
-                if (createPack) entity = CampaignStateUtility.CreateDevice(context, definition, price, placed);
-                else
+                if (createPack)
                 {
-                    context.Manager.SetComponentData(entity, placed);
-                    DevicePlacementSystem.MarkLayoutChanged(context);
+                    if (!DevicePlacementSystem.TrySetPhysicsPlacement(context, installed, definition, placed)) return false;
+                    entity = CampaignStateUtility.CreateDevice(context, definition, price, placed);
+                    DeviceDurabilitySystem.Refresh(context);
                 }
+                else if (!DevicePlacementSystem.TryCommitPlacement(context, entity, placed)) return false;
                 if (!context.Manager.Exists(entity)) return false;
-                projectLayout?.Invoke();
-                int installed = context.Manager.GetComponentData<OwnedDeviceData>(entity).InstanceId;
                 if (context.IsRunning) DeviceScriptSystem.InstanceEvent(context, installed, "OnRoundStart");
                 if (!context.Manager.Exists(entity) ||
                     !CampaignWalletSystem.TrySpend(context, GameCurrency.BiomassScrap, price)) return false;
@@ -90,15 +90,24 @@ namespace MarblesECS
             }
             finally
             {
-                if (!committed && entity != Entity.Null)
+                if (!committed && createPack)
                 {
-                    if (createPack) CampaignStateUtility.DestroyDevice(context, entity);
-                    else if (context.Manager.Exists(entity))
-                    {
-                        context.Manager.SetComponentData(entity, before);
-                        DevicePlacementSystem.MarkLayoutChanged(context);
-                    }
-                    projectLayout?.Invoke();
+                    if (entity != Entity.Null) CampaignStateUtility.DestroyDevice(context, entity);
+                    DevicePlacementSystem.RemovePhysicsPlacement(context, installed);
+                    context.DeviceScripts.Remove(installed);
+                    var campaign = context.Campaign;
+                    campaign.NextDeviceId = installed - 1;
+                    campaign.LayoutRevision = previousRevision;
+                    context.Campaign = campaign;
+                    context.NextStableId = previousStableId;
+                }
+                else if (!committed && context.Manager.Exists(entity))
+                {
+                    DevicePlacementSystem.RemovePhysicsPlacement(context, installed);
+                    context.Manager.SetComponentData(entity, before);
+                    var campaign = context.Campaign;
+                    campaign.LayoutRevision = previousRevision;
+                    context.Campaign = campaign;
                 }
             }
         }
@@ -108,21 +117,12 @@ namespace MarblesECS
             return CanPlaceInstance(instanceId) && DevicePlacementSystem.CanPlace(context, instanceId, x, z, clearance, angle);
         }
 
-        /// <summary>Checks device spacing after the scene has accepted the placement plane and obstacle checks.</summary>
         public bool PlaceDevice(int instanceId, float x, float z, float clearance = 0.15f, float? angle = null)
-        {
-            return PlaceDevice(instanceId, x, z, clearance, angle, null);
-        }
-
-        internal bool PlaceDevice(int instanceId, float x, float z, float clearance, float? angle, Action projectLayout)
         {
             if (!CanPlaceInstance(instanceId) || !DevicePlacementSystem.Place(context, instanceId, x, z, clearance, angle))
                 return false;
             if (context.IsRunning)
-            {
-                projectLayout?.Invoke();
                 DeviceScriptSystem.InstanceEvent(context, instanceId, "OnRoundStart");
-            }
             return true;
         }
 
@@ -135,14 +135,10 @@ namespace MarblesECS
 
         public bool RemoveDevicePlacement(int instanceId) =>
             CanEditDevices && context.Campaign.Production.AllowDeviceReturn && DevicePlacementSystem.ReturnToInventory(context, instanceId);
-        public bool RotateDevice(int instanceId, float degrees)
-        {
-            if (!CanEditDevices || !MarbleRules.IsFinite(degrees) ||
-                !CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
-            var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
-            if (CampaignStateUtility.Device(context, device.DefinitionId).RotationLocked) return false;
-            device.Angle = (device.Angle + degrees) % 360; context.Manager.SetComponentData(entity, device);
-            var campaign = context.Campaign; campaign.LayoutRevision++; context.Campaign = campaign; return true;
-        }
+        public bool RotateDevice(int instanceId, float degrees) => RotateDevice(instanceId, degrees, 0.15f);
+
+        internal bool RotateDevice(int instanceId, float degrees, float clearance) =>
+            CanEditDevices && MarbleRules.IsFinite(degrees) &&
+            DevicePlacementSystem.Rotate(context, instanceId, degrees, clearance);
     }
 }

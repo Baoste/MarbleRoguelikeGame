@@ -176,7 +176,7 @@ namespace MarblesECS.Editor
             internal readonly DeviceBody Source;
             internal SimulationContext C => Simulation.Context;
             internal DevicePose Pose { get { Bridge.TryGetDevicePose(Source.InstanceId, out var pose); return pose; } }
-            private readonly List<DeviceViewHandle> views = new List<DeviceViewHandle>();
+            private readonly List<DevicePhysicsFixture> views = new List<DevicePhysicsFixture>();
             private readonly float dt;
             private int launches;
             internal Rig(float dt = .1f)
@@ -205,7 +205,7 @@ namespace MarblesECS.Editor
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last();
                 CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
-                var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                var view = DevicePhysicsFixture.Place(Simulation, owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 views.Add(view); view.Root.transform.localPosition = position; view.Root.SetActive(true); Physics.SyncTransforms();
                 return view.Root.GetComponent<DeviceBody>();
             }

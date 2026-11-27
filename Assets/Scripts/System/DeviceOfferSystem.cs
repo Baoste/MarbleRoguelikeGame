@@ -38,6 +38,7 @@ namespace MarblesECS
                 finally { api.Close(); }
             }
             CampaignStateUtility.DestroyDevice(c, offered);
+            DeviceDurabilitySystem.Refresh(c);
             DeviceScriptSystem.InstanceEvent(c, targetId, "OnOfferAccepted");
             return true;
         }

@@ -1,7 +1,35 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MarblesECS
 {
+    public readonly struct DevicePlacement
+    {
+        public readonly int InstanceId;
+        public readonly DeviceDefinition Definition;
+        public readonly float X, Z, Angle;
+
+        public DevicePlacement(int instanceId, DeviceDefinition definition, float x, float z, float angle)
+        {
+            InstanceId = instanceId;
+            Definition = definition;
+            X = x;
+            Z = z;
+            Angle = angle;
+        }
+    }
+
+    /// <summary>A session's physical placements. A rejected change leaves its previous bodies and poses intact.</summary>
+    public interface IMarbleDevicePhysics
+    {
+        bool CanPlaceDevice(DevicePlacement placement, float clearance, bool avoidMarbles);
+        bool TrySetDevicePlacement(DevicePlacement placement, Func<int, uint, DeviceLuaScript> getScript);
+        bool TryReplaceDevicePlacements(IReadOnlyList<DevicePlacement> placements, Func<int, uint, DeviceLuaScript> getScript);
+        void RemoveDevice(int instanceId);
+        void ClearDevices();
+    }
+
     /// <summary>Optional physics adapter hook for shared per-instance gameplay availability and usage.</summary>
     public interface IMarbleDeviceUsageSink
     {
@@ -49,12 +77,5 @@ namespace MarblesECS
     public interface IMarbleHeldVisibility
     {
         bool TrySetHeldVisible(MarbleKey key, bool visible);
-    }
-    /// <summary>Pure mesh presentation: transient visuals never collide or count as marbles.</summary>
-    public interface IDeviceTransientVisuals
-    {
-        bool TryCreateTransientVisual(int instanceId, int visualId, string nodePath, Vector3 position);
-        bool TryMoveTransientVisual(int visualId, Vector3 position);
-        void RemoveTransientVisual(int visualId);
     }
 }

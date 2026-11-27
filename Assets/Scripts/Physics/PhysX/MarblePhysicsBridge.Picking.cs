@@ -7,7 +7,9 @@ namespace MarblesECS.PhysX
     {
         private RaycastHit[] devicePickHits = new RaycastHit[32];
         /// <summary>Pick the nearest clickable device in this simulation's local physics scene, including trigger shapes.</summary>
-        public bool TryPickDevice(Ray ray, out int instanceId)
+        public bool TryPickDevice(Ray ray, out int instanceId) => TryPickDevice(ray, out instanceId, clickableOnly: true);
+
+        internal bool TryPickDevice(Ray ray, out int instanceId, bool clickableOnly, int excludedId = 0)
         {
             instanceId = 0;
             if (disposed || !Finite(ray.origin) || !Finite(ray.direction) || ray.direction.sqrMagnitude < 1e-12f) return false;
@@ -23,16 +25,17 @@ namespace MarblesECS.PhysX
             {
                 var hit = devicePickHits[i];
                 var device = hit.collider.GetComponentInParent<DeviceBody>();
-                if (device == null || !device.isActiveAndEnabled || !device.GameplayEnabled || device.Script == null ||
-                    !device.Script.HasFunction("OnActivate") || hit.distance >= nearest) continue;
+                if (device == null || device.Bridge != this || device.InstanceId == excludedId || !device.isActiveAndEnabled || !device.GameplayEnabled ||
+                    (clickableOnly && !IsClickable(device)) || hit.distance >= nearest) continue;
                 nearest = hit.distance; instanceId = device.InstanceId;
             }
             // Exhaustion disables gameplay colliders. A small logical pick volume still lets the player
             // complete previously accepted manual holds without enabling collisions or new effects.
-            foreach (var device in DeviceBody.Active)
+            if (!clickableOnly) return instanceId != 0;
+            foreach (var device in contentDevices)
             {
-                if (device == null || device.gameObject.scene != scene || !device.isActiveAndEnabled || device.GameplayEnabled ||
-                    device.Script == null || !device.Script.HasFunction("OnActivate") || !(canCompleteDevice?.Invoke(device.InstanceId) ?? false)) continue;
+                if (device == null || !device.isActiveAndEnabled || device.GameplayEnabled ||
+                    !IsClickable(device) || !(canCompleteDevice?.Invoke(device.InstanceId) ?? false)) continue;
                 var center = device.PlacementCenter;
                 float radius = device.Radius * 1.12f;
                 var offset = ray.origin - center;
@@ -46,5 +49,8 @@ namespace MarblesECS.PhysX
             }
             return instanceId != 0;
         }
+
+        private static bool IsClickable(DeviceBody device) =>
+            device.Script != null && device.Script.HasFunction("OnActivate");
     }
 }

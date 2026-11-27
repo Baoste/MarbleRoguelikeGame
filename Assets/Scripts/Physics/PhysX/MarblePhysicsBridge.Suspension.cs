@@ -7,6 +7,7 @@ namespace MarblesECS.PhysX
         public bool TrySetHeldVisible(MarbleKey key, bool visible)
         {
             if (!bodies.TryGetValue(key, out var view) || view == null || !view.Suspended) return false;
+            if (!createVisuals) return true;
             if (visible) RestoreHeldVisibility(view);
             else
             {

@@ -175,7 +175,7 @@ namespace MarblesECS.Editor
                 r.Bridge.TrySetVelocity(key, r.Board.transform.rotation * Vector3.forward * 2);
                 for (int i = 0; i < 10 && !r.Held(key); i++) r.Step(true);
                 Check(r.Held(key) && r.Body(key).GetComponent<Renderer>().forceRenderingOff, "real mine entrance sensor starts hidden transport");
-                Check(r.View.Root.transform.Find("Minecart") != null && r.View.Root.transform.Find("TimberBeam") != null, "runtime package contains the parked cart and artificial mine frame");
+                Check(r.View.Template.Find("Minecart") != null && r.View.Template.Find("TimberBeam") != null, "runtime package contains the parked cart and artificial mine frame");
                 r.Complete(key, 0);
                 VectorNear(r.Down * 2, r.Body(key).velocity, "physical entry preserves measured incoming speed");
                 Check(!r.Body(key).GetComponent<Renderer>().forceRenderingOff, "physical return reveals the original ball");
@@ -194,8 +194,8 @@ namespace MarblesECS.Editor
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly Entity Device;
-            internal readonly DeviceViewHandle View;
-            private readonly List<DeviceViewHandle> views = new List<DeviceViewHandle>();
+            internal readonly DevicePhysicsFixture View;
+            private readonly List<DevicePhysicsFixture> views = new List<DevicePhysicsFixture>();
             private int launches;
             internal SimulationContext C => Simulation.Context;
             internal int Id => View.Root.GetComponent<DeviceBody>().InstanceId;
@@ -216,12 +216,12 @@ namespace MarblesECS.Editor
                 Board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 37, 0));
                 View = Add(Vector3.zero); CampaignStateUtility.FindDevice(C, Id, out Device); Tick();
             }
-            internal DeviceViewHandle Add(Vector3 offset)
+            internal DevicePhysicsFixture Add(Vector3 offset)
             {
                 var definition = C.Balance.Devices.Single(d => d.Id == 9011); CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last(); CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
-                var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                var view = DevicePhysicsFixture.Place(Simulation, owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 view.Root.transform.localPosition = offset; views.Add(view); view.Root.SetActive(true); Physics.SyncTransforms(); return view;
             }
             internal Entity Ball(MarbleKey key) => C.Marbles[key];

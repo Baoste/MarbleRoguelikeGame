@@ -7324,6 +7324,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   PlacementSurface: {fileID: 935685560}
+  DevicePlacementRoot: {fileID: 935685558}
+  DevicePlacementPlane: {fileID: 935685558}
+  DevicePlaneDistance: 0.12
   BalanceJson: {fileID: 4900000, guid: 81ad9a4d7795d004f913d14a460a353e, type: 3}
   EnableCampaign: 1
   Tuning:
@@ -7363,6 +7366,7 @@ MonoBehaviour:
   LauncherMoveSpeed: 1.25
   GridSize: 0.5
   PlacementClearance: 0.05
+  ShowDevicePresentation: 1
   PlacementObstacleRoots:
   - {fileID: 767965330}
   - {fileID: 199552582}
@@ -74433,10 +74437,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Controller: {fileID: 130887919}
   ViewCamera: {fileID: 330585545}
-  BoardRoot: {fileID: 935685558}
-  PlacementPlane: {fileID: 935685558}
   PlacementPlaneSize: {x: 7.979034, y: 8.779388}
-  DevicePlaneDistance: 0.12
   SnapToGrid: 0
   BlockClicksOverUI: 1
   SellArea: {fileID: 724513393}

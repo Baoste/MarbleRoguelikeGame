@@ -12,8 +12,6 @@ namespace MarblesECS.PhysX
         public DayDefinition CurrentDayDefinition => IsReady ? simulation.CurrentDayDefinition : null;
         public bool ProductionCommandsAvailable => IsReady && simulation.ProductionCommandsAvailable;
         public bool HasProductionFeature(ProductionFeature feature) => IsReady && simulation.HasProductionFeature(feature);
-        internal event Action DayBoardResetting;
-        internal event Action DayBoardRestored;
 
         public void ConfigureDayCampaign(Func<GameBalance, DayCampaignDefinition, DayCampaignDefinition> configure)
         {
@@ -85,15 +83,11 @@ namespace MarblesECS.PhysX
         {
             accumulator = 0;
             externalFireHeld = submittedFireHeld = false;
-            DayBoardResetting?.Invoke();
         }
 
         private void AfterDayBoardRestore()
         {
             SyncLauncherTransform();
-            DayBoardRestored?.Invoke();
-            bridge.RefreshDeviceAvailability();
-            Physics.SyncTransforms();
         }
     }
 }

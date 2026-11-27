@@ -14,7 +14,7 @@ namespace MarblesECS.Editor
             var scene = SceneManager.CreateScene("CoolingTeaPhysics_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             var simulation = new MarbleSimulation(Balance()); int impacts = 0;
             var bridge = new MarblePhysicsBridge(scene, null, null, hit => { if (hit.HasImpact) impacts++; simulation.EnqueueContact(hit); });
-            var board = new GameObject("CoolingTeaBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
+            var board = new GameObject("CoolingTeaBoard"); SceneManager.MoveGameObjectToScene(board, scene); DevicePhysicsFixture view = null;
             try
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -24,11 +24,11 @@ namespace MarblesECS.Editor
                 var definition = c.Balance.Devices.Single(d => d.Id == 9030); CampaignStateUtility.CreateDevice(c, definition, definition.InstallPrice);
                 int id = c.Campaign.NextDeviceId; MorePlace(c, id, true);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
-                view = DeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));
+                view = DevicePhysicsFixture.Place(simulation, simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));
                 view.Root.SetActive(true); Physics.SyncTransforms();
                 var colliders = view.Root.GetComponentsInChildren<Collider>(true).Where(c => c.name != "PlacementVolume").ToArray();
                 Check(colliders.Length == 1 && !colliders[0].isTrigger, "teapot has solid collision");
-                Check(view.Root.transform.Find("Spout") != null && view.Root.transform.Find("Handle") != null && view.Root.transform.Find("Lid") != null, "packed teapot includes spout, handle and lid");
+                Check(view.Template.Find("Spout") != null && view.Template.Find("Handle") != null && view.Template.Find("Lid") != null, "packed teapot includes spout, handle and lid");
                 var spawn = board.transform.TransformPoint(new Vector3(0, .18f, .85f));
                 void Step() { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); simulation.AfterPhysics(bridge); }
                 simulation.FireOnce(); simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge); var key = c.Marbles.Keys.Single();

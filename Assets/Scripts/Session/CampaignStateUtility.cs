@@ -31,15 +31,23 @@ namespace MarblesECS
             int quantity = definition.PurchaseQuantity;
             int pair = quantity > 1 ? context.Campaign.NextDeviceId + 1 : 0;
             var first = Entity.Null;
-            for (int i = 0; i < quantity; i++)
+            try
             {
-                var device = i == 0 ? firstPlacement : default;
-                device.PurchasePrice = price / quantity + (i < price % quantity ? 1 : 0);
-                device.PairId = pair;
-                var entity = CreateSingleDevice(context, definition, device);
-                if (i == 0) first = entity;
+                for (int i = 0; i < quantity; i++)
+                {
+                    var device = i == 0 ? firstPlacement : default;
+                    device.PurchasePrice = price / quantity + (i < price % quantity ? 1 : 0);
+                    device.PairId = pair;
+                    var entity = CreateSingleDevice(context, definition, device);
+                    if (i == 0) first = entity;
+                }
+                return first;
             }
-            return first;
+            catch
+            {
+                if (first != Entity.Null) DestroyDevice(context, first);
+                throw;
+            }
         }
 
         internal static long SalePrice(SimulationContext context, OwnedDeviceData device)
@@ -82,13 +90,22 @@ namespace MarblesECS
             var campaign = context.Campaign;
             campaign.LayoutRevision++;
             context.Campaign = campaign;
-            DeviceDurabilitySystem.Refresh(context);
             // The whole pair is gone before its Lua teardown callbacks can observe the inventory.
+            foreach (int id in removed) DevicePlacementSystem.RemovePhysicsPlacement(context, id);
             foreach (int id in removed)
-            {
-                context.Transients.RemoveSource(context, id);
                 context.DeviceScripts.Remove(id);
+        }
+
+        internal static void ClearDevices(SimulationContext context)
+        {
+            (context.Physics as IMarbleDevicePhysics)?.ClearDevices();
+            context.Transients.Clear();
+            if (!context.DeviceQuery.IsEmptyIgnoreFilter)
+            {
+                context.Manager.DestroyEntity(context.DeviceQuery);
+                DevicePlacementSystem.MarkLayoutChanged(context);
             }
+            context.DeviceScripts.Clear();
         }
 
         internal static int CountPlacedDevices(SimulationContext context, int excludedInstanceId)

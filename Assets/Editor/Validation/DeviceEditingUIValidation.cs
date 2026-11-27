@@ -99,7 +99,7 @@ namespace MarblesECS.Editor
         {
             var snapshot = Device(id);
             var root = placement.GetPlacedDeviceRoot(id);
-            Vector2 pointer = rig.ViewCamera.WorldToScreenPoint(root.GetComponent<DeviceBody>().PlacementCenter);
+            Vector2 pointer = rig.ViewCamera.WorldToScreenPoint(root.GetComponentInParent<DeviceBody>().PlacementCenter);
             rig.UpdateTooltip(pointer);
             var fill = root.GetComponentsInChildren<MeshRenderer>().Where(renderer => renderer.enabled)
                 .SelectMany(renderer => renderer.sharedMaterials)
@@ -326,7 +326,7 @@ namespace MarblesECS.Editor
                 yield return null;
                 var originalFood = Device(food);
                 Vector2 pickup = Point(originalFood);
-                Vector2 receiver = rig.ViewCamera.WorldToScreenPoint(placement.GetPlacedDeviceRoot(bag).GetComponent<DeviceBody>().PlacementCenter);
+                Vector2 receiver = rig.ViewCamera.WorldToScreenPoint(placement.GetPlacedDeviceRoot(bag).GetComponentInParent<DeviceBody>().PlacementCenter);
                 int offerRevision = game.Session.LayoutRevision;
                 long scrapBeforeOffer = game.Session.BiomassScrapBalance;
                 int receiverDurability = Device(bag).RemainingDurability;

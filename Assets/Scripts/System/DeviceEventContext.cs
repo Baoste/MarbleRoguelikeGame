@@ -30,8 +30,11 @@ namespace MarblesECS
         internal void Close() { c = null; }
         private readonly DeviceTransientInfo transient;
         public DeviceTransientInfo Transient { get { _ = C; return transient; } }
-        public int TrySpawnVisual(string nodePath, Vector3 position, Vector3 velocity, float seconds, string callback)
+        public int TryScheduleTransient(Vector3 position, Vector3 velocity, float seconds, string callback, string nodePath)
             => C.Transients.Spawn(C, instanceId, nodePath, position, velocity, seconds, callback);
+
+        public int TrySpawnVisual(string nodePath, Vector3 position, Vector3 velocity, float seconds, string callback)
+            => TryScheduleTransient(position, velocity, seconds, callback, nodePath);
         public int ForEachBallInRadius(Vector3 center, float radius, string callback)
             => DeviceScriptSystem.ForEachBallInRadius(C, instanceId, center, radius, callback);
         public double RandomRange(double minimum, double maximum)
@@ -101,7 +104,7 @@ namespace MarblesECS
         /// <summary>Completes a snapshot of this device's holds, invoking fresh OnHoldEnd contexts in spawn order.</summary>
         public int ReleaseHeld() => HeldMotionSystem.Release(C, instanceId);
         private DevicePose Pose => C.Physics is IMarblePhysicsCommands commands && commands.TryGetDevicePose(instanceId, out var pose)
-            ? pose : throw new InvalidOperationException("The device has no placed physical view.");
+            ? pose : throw new InvalidOperationException("The device has no placed physics body.");
         public Vector3 Forward => Pose.Forward.normalized;
         public Vector3 Down => BallInteractionSystem.Down(Pose).normalized;
         public Vector3 Up => Pose.Up.normalized;

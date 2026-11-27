@@ -210,7 +210,7 @@ namespace MarblesECS.Editor
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly Entity Device;
-            internal readonly DeviceViewHandle View;
+            internal readonly DevicePhysicsFixture View;
             internal readonly OwnedDeviceSnapshot Owned;
             internal SimulationContext C => Simulation.Context;
             internal DevicePose Pose { get { Bridge.TryGetDevicePose(Owned.InstanceId, out var pose); return pose; } }
@@ -235,7 +235,7 @@ namespace MarblesECS.Editor
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(Device); data.Placed = true; C.Manager.SetComponentData(Device, data);
                 Board = new GameObject("CollectorBoard"); SceneManager.MoveGameObjectToScene(Board, Scene);
                 Board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 47, 0));
-                View = DeviceView.Create(Owned, Board.transform, C.DeviceScripts.Get(Owned.InstanceId, definition.Id));
+                View = DevicePhysicsFixture.Place(Simulation, Owned, Board.transform, C.DeviceScripts.Get(Owned.InstanceId, definition.Id));
                 View.Root.SetActive(true); Physics.SyncTransforms();
                 Check(View.Root.GetComponentInChildren<MeshCollider>().isTrigger, "package has a cylinder sensor rather than a solid obstruction");
             }

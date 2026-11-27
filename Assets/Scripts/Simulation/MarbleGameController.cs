@@ -33,6 +33,7 @@ namespace MarblesECS.PhysX
         [Header("Device Placement")]
         [Min(0f)] public float GridSize = 0.5f;
         [Min(0f)] public float PlacementClearance = 0.15f;
+        public bool ShowDevicePresentation = true;
         [Tooltip("固定钉等障碍物的根对象，检测其子对象的实际非 Trigger Collider。不要包含底板或运行时装置的父对象。")]
         public Transform[] PlacementObstacleRoots = Array.Empty<Transform>();
 
@@ -58,7 +59,7 @@ namespace MarblesECS.PhysX
         private int maxSteps;
         private bool quitting;
         private float publishedBlood = float.NaN;
-        private readonly DevicePlacementObstacles placementObstacles = new DevicePlacementObstacles();
+        private MarblesECS.Presentation.DevicePresentation devicePresentation;
 
 
         public void SetFireHeld(bool held)

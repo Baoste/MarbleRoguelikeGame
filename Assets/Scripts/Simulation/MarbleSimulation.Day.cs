@@ -1,5 +1,4 @@
 using System;
-using Unity.Collections;
 
 namespace MarblesECS
 {
@@ -127,16 +126,7 @@ namespace MarblesECS
         internal void ClearDailyProduction()
         {
             BeforeDayBoardRestore();
-            using (var devices = context.DeviceQuery.ToEntityArray(Allocator.Temp))
-                if (devices.Length != 0)
-                {
-                    context.Manager.DestroyEntity(devices);
-                    var campaign = context.Campaign;
-                    campaign.LayoutRevision++;
-                    context.Campaign = campaign;
-                    DeviceDurabilitySystem.Refresh(context);
-                }
-            context.DeviceScripts.Clear();
+            CampaignStateUtility.ClearDevices(context);
         }
 
         internal void PrepareDayProduction(DayDefinition day, bool firstDay)

@@ -105,7 +105,7 @@ namespace MarblesECS.Editor
                 var scene = SceneManager.CreateScene("MoneyTreePhysics_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
                 var simulation = new MarbleSimulation(Balance()); int contacts = 0;
                 var bridge = new MarblePhysicsBridge(scene, null, null, contact => { contacts++; simulation.EnqueueContact(contact); });
-                var board = new GameObject("MoneyTreeBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
+                var board = new GameObject("MoneyTreeBoard"); SceneManager.MoveGameObjectToScene(board, scene); DevicePhysicsFixture view = null;
                 try
                 {
                     simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -115,10 +115,10 @@ namespace MarblesECS.Editor
                     var tree = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, tree.InstanceId, out var e);
                     var data = c.Manager.GetComponentData<OwnedDeviceData>(e); data.Placed = true; c.Manager.SetComponentData(e, data);
                     board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(63, 121, 0));
-                    view = DeviceView.Create(tree, board.transform, c.DeviceScripts.Get(tree.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
+                    view = DevicePhysicsFixture.Place(simulation, tree, board.transform, c.DeviceScripts.Get(tree.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
                     var colliders = view.Root.GetComponentsInChildren<Collider>(true).Where(c => c.name != "PlacementVolume").ToArray();
                     Check(colliders.Length == 1 && colliders.All(x => x.isTrigger), "entire tree has no solid collider");
-                    Check(view.Root.transform.Find("Trunk") != null && view.Root.transform.Find("FruitCoin4") != null, "package supplies tree and scrap fruit");
+                    Check(view.Template.Find("Trunk") != null && view.Template.Find("FruitCoin4") != null, "package supplies tree and scrap fruit");
                     var spawn = board.transform.TransformPoint(new Vector3(0, .12f, .85f));
                     void Step() { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); simulation.AfterPhysics(bridge); }
                     simulation.FireOnce(); simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge);

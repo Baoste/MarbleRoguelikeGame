@@ -1,5 +1,4 @@
 using System;
-using Unity.Collections;
 
 namespace MarblesECS
 {
@@ -18,14 +17,12 @@ namespace MarblesECS
             ThrowIfDisposed();
             if (context.Balance == null) throw new InvalidOperationException("Construct with GameBalance to start a campaign.");
             ResetRound(physics, randomSeed: randomSeed);
-            context.DeviceScripts.Clear();
+            CampaignStateUtility.ClearDevices(context);
             if (AttributeRuntime.Enabled(context))
             {
                 context.Manager.GetBuffer<AttributeModifierData>(context.PlayerEntity).Clear();
                 AttributeRuntime.Initialize(context, context.PlayerEntity);
             }
-            using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
-                context.Manager.DestroyEntity(entities);
             context.Campaign = new CampaignData
             {
                 Production = production,

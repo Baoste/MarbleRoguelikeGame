@@ -14,25 +14,31 @@ namespace MarblesECS.Editor
         private static void DeviceEditingValidation()
         {
             int start = assertions;
-            using var f = new Fixture();
-            BagBuild(f.C);
             var scene = SceneManager.CreateScene("Device edit validation", new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             var board = new GameObject("Board"); SceneManager.MoveGameObjectToScene(board, scene);
+            using var simulation = new MarbleSimulation(Balance());
+            using var bridge = new MarblePhysicsBridge(scene, null, null, simulation.EnqueueContact);
+            simulation.StartSession(bridge);
+            var context = simulation.Context;
             var control = new GameObject("Controller");
             var cameraObject = new GameObject("Edit camera");
             var events = new GameObject("Edit events", typeof(EventSystem));
             var canvasObject = new GameObject("Edit UI", typeof(RectTransform), typeof(Canvas), typeof(UnityEngine.UI.GraphicRaycaster));
             var controller = control.AddComponent<MarbleGameController>(); controller.enabled = false;
             var simulationField = typeof(MarbleGameController).GetField("simulation", BindingFlags.Instance | BindingFlags.NonPublic);
-            simulationField.SetValue(controller, f.Simulation);
-            typeof(MarbleGameController).GetField("localPhysics", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(controller, scene.GetPhysicsScene());
+            simulationField.SetValue(controller, simulation);
+            typeof(MarbleGameController).GetField("bridge", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(controller, bridge);
             controller.PhysicsRoot = board.transform;
             var surface = board.AddComponent<BoardPlacementSurface>(); surface.Length = surface.BottomWidth = surface.TopWidth = 8;
             controller.PlacementSurface = surface;
+            var obstacle = new GameObject("Fixed obstacle"); obstacle.transform.SetParent(board.transform, false);
+            obstacle.transform.localPosition = new Vector3(-2, .1f, 0); obstacle.AddComponent<BoxCollider>().size = Vector3.one * .3f;
+            controller.PlacementObstacleRoots = new[] { obstacle.transform };
+            bridge.ConfigureDevicePlacement(board.transform, surface: surface, obstacles: controller.PlacementObstacleRoots);
             var camera = cameraObject.AddComponent<Camera>(); camera.orthographic = true; camera.orthographicSize = 5;
             camera.transform.SetPositionAndRotation(new Vector3(0, 10, 0), Quaternion.LookRotation(Vector3.down, Vector3.forward));
             var placement = control.AddComponent<DevicePlacementUI>(); placement.Controller = controller;
-            placement.BoardRoot = placement.PlacementPlane = board.transform; placement.ViewCamera = camera;
+            placement.ViewCamera = camera;
             var canvas = canvasObject.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             var panel = new GameObject("Sell", typeof(RectTransform), typeof(UnityEngine.UI.Image), typeof(CanvasGroup), typeof(DeviceSellAreaUI));
             var rect = (RectTransform)panel.transform; rect.SetParent(canvas.transform, false);
@@ -44,16 +50,16 @@ namespace MarblesECS.Editor
             Vector2 Point(float x, float z) => camera.WorldToScreenPoint(board.transform.TransformPoint(new Vector3(x, 0, z)));
             OwnedDeviceData Data(int id)
             {
-                Check(CampaignStateUtility.FindDevice(f.C, id, out var e), "edited instance still exists");
-                return f.C.Manager.GetComponentData<OwnedDeviceData>(e);
+                Check(CampaignStateUtility.FindDevice(context, id, out var e), "edited instance still exists");
+                return context.Manager.GetComponentData<OwnedDeviceData>(e);
             }
             int Create(uint definitionId, float x, float z, bool placed = true)
             {
-                var definition = f.C.Balance.Devices.Single(d => d.Id == definitionId);
-                CampaignStateUtility.CreateDevice(f.C, definition, definition.InstallPrice);
-                int id = f.C.Campaign.NextDeviceId;
-                Check(f.Simulation.PlaceDevice(id, x, z), "prepare owned device position");
-                if (!placed) Check(f.Simulation.RemoveDevicePlacement(id), "prepare inventory device");
+                var definition = context.Balance.Devices.Single(d => d.Id == definitionId);
+                CampaignStateUtility.CreateDevice(context, definition, definition.InstallPrice);
+                int id = context.Campaign.NextDeviceId;
+                Check(simulation.PlaceDevice(id, x, z), "prepare owned device position");
+                if (!placed) Check(simulation.RemoveDevicePlacement(id), "prepare inventory device");
                 return id;
             }
             GameObject View(int id) => placement.GetPlacedDeviceRoot(id);
@@ -72,12 +78,10 @@ namespace MarblesECS.Editor
             {
                 int id = Create(9008, 0, 0);
                 int other = Create(9002, 2, 0);
-                var original = Data(id); original.Angle = 45; original.UsesThisRound = 4; original.DurabilityRound = f.C.Round.RoundId; original.StoredValue = 7;
-                CampaignStateUtility.FindDevice(f.C, id, out var entity); f.C.Manager.SetComponentData(entity, original);
-                var script = f.C.DeviceScripts.Get(id, original.DefinitionId);
-                var obstacle = new GameObject("Fixed obstacle"); obstacle.transform.SetParent(board.transform, false);
-                obstacle.transform.localPosition = new Vector3(-2, .1f, 0); obstacle.AddComponent<BoxCollider>().size = Vector3.one * .3f;
-                controller.PlacementObstacleRoots = new[] { obstacle.transform };
+                Check(simulation.RotateDevice(id, 45), "prepare original layout angle");
+                var original = Data(id); original.UsesThisRound = 4; original.DurabilityRound = context.Round.RoundId; original.StoredValue = 7;
+                CampaignStateUtility.FindDevice(context, id, out var entity); context.Manager.SetComponentData(entity, original);
+                var script = context.DeviceScripts.Get(id, original.DefinitionId);
                 var glass = new GameObject("Glass cover"); glass.transform.SetParent(board.transform, false);
                 glass.layer = 2; var cover = glass.AddComponent<BoxCollider>(); cover.center = new Vector3(0, 1.55f, 0); cover.size = new Vector3(8, .1f, 8);
 
@@ -103,16 +107,16 @@ namespace MarblesECS.Editor
                 placement.CancelPlacement();
                 Check(View(id).activeSelf && placement.SelectedInstanceId == 0, "cancel restores the original view and clears selection");
                 Near(45, Data(id).Angle, "cancel restores original rotation without a rollback command");
-                Check(ReferenceEquals(script, f.C.DeviceScripts.Get(id, original.DefinitionId)), "cancel retains the same Lua state owner");
+                Check(ReferenceEquals(script, context.DeviceScripts.Get(id, original.DefinitionId)), "cancel retains the same Lua state owner");
 
-                int revision = f.C.Campaign.LayoutRevision;
+                int revision = context.Campaign.LayoutRevision;
                 foreach (var invalid in new[] { Point(2, 0), Point(-2, 0), Point(20, 20) })
                 {
                     Check(placement.HandleBoardPointerDown(Point(0, 0)), "pick up the device for an invalid drop");
                     Check(!placement.HandleBoardPointerUp(invalid) && placement.SelectedInstanceId == 0 && View(id).activeSelf,
                         "blocked or off-board release restores the device and clears the drag");
                 }
-                Near(revision, f.C.Campaign.LayoutRevision, "failed moves do not change layout revision");
+                Near(revision, context.Campaign.LayoutRevision, "failed moves do not change layout revision");
                 Check(Data(id).Placed && Data(id).X == 0 && Data(id).Z == 0, "failed moves keep the original placement");
                 Check(placement.HandleBoardPointerDown(Point(0, 0)), "pick up the device for a valid move");
                 placement.RotateSelected(45);
@@ -121,38 +125,39 @@ namespace MarblesECS.Editor
                 Check(placement.HandleBoardPointerUp(Point(-1, 1)), "releasing commits the new placement");
                 Check(!Highlight(), "confirming a move clears the preview outline");
                 Near(-1, Data(id).X, "committed X"); Near(1, Data(id).Z, "committed Z"); Near(90, Data(id).Angle, "position and rotation commit together");
-                Near(revision + 1, f.C.Campaign.LayoutRevision, "move publishes one layout revision");
+                Near(revision + 1, context.Campaign.LayoutRevision, "move publishes one layout revision");
                 Near(4, Data(id).UsesThisRound, "move preserves durability consumption"); Near(7, Data(id).StoredValue, "move preserves stored gameplay state");
-                Check(ReferenceEquals(script, f.C.DeviceScripts.Get(id, original.DefinitionId)), "move preserves Lua state owner");
+                Check(ReferenceEquals(script, context.DeviceScripts.Get(id, original.DefinitionId)), "move preserves Lua state owner");
                 Check(View(id).activeSelf && placement.SelectedInstanceId == 0, "committed view is active at its new pose");
-                Near(-1, View(id).transform.localPosition.x, "physical view follows moved instance");
+                Near(-1, View(id).transform.position.x, "model follows moved physical instance");
 
-                foreach (var c in View(id).GetComponentsInChildren<Collider>()) c.enabled = false;
+                bridge.TryGetDeviceBody(id, out var movedBody);
+                foreach (var collider in movedBody.GetComponentsInChildren<Collider>()) collider.enabled = false;
                 Check(placement.UpdatePlacedDeviceHover(Point(-1, 1), out hovered) && hovered.InstanceId == id,
                     "hover uses the footprint when an exhausted device has no enabled colliders");
                 Check(placement.HandleBoardPointerDown(Point(-1, 1)), "logical footprint picks up an exhausted device with disabled colliders");
                 placement.CancelPlacement();
                 Check(placement.HandleBoardPointerDown(Point(-1, 1)), "pick up the board device for a sale");
-                long scrap = f.C.Player.BiomassScrapBalance; long price = f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == id).SellPrice;
+                long scrap = context.Player.BiomassScrapBalance; long price = simulation.GetOwnedDevices().Single(d => d.InstanceId == id).SellPrice;
                 sale.Refresh(); Check(sale.Group.alpha == 1 && sale.Group.blocksRaycasts, "sale area is visible and receives input during Build");
                 placement.UpdatePlacementPointer(salePoint); sale.Refresh();
-                Near(scrap, f.C.Player.BiomassScrapBalance, "hovering the red area never sells");
+                Near(scrap, context.Player.BiomassScrapBalance, "hovering the red area never sells");
                 ClickSale(PointerEventData.InputButton.Left);
-                Near(scrap, f.C.Player.BiomassScrapBalance, "left click alone cannot sell the dragged device");
+                Near(scrap, context.Player.BiomassScrapBalance, "left click alone cannot sell the dragged device");
                 ClickSale(PointerEventData.InputButton.Right);
-                Near(scrap, f.C.Player.BiomassScrapBalance, "right click on sale area never sells");
+                Near(scrap, context.Player.BiomassScrapBalance, "right click on sale area never sells");
                 Check(placement.SelectedInstanceId == 0 && View(id).activeSelf, "right click on sale area cancels the move");
                 Check(placement.HandleBoardPointerDown(Point(-1, 1)) && placement.HandleBoardPointerUp(salePoint), "release in the sale area sells the board device");
-                Check(!CampaignStateUtility.FindDevice(f.C, id, out _) && placement.SelectedInstanceId == 0, "sale removes the dragged instance");
-                Near(scrap + price, f.C.Player.BiomassScrapBalance, "sale credits the quoted refund");
+                Check(!CampaignStateUtility.FindDevice(context, id, out _) && placement.SelectedInstanceId == 0, "sale removes the dragged instance");
+                Near(scrap + price, context.Player.BiomassScrapBalance, "sale credits the quoted refund");
                 Check(!placement.HandleBoardPointerUp(salePoint), "a repeated release cannot sell twice");
-                Near(scrap + price, f.C.Player.BiomassScrapBalance, "repeated release pays nothing");
+                Near(scrap + price, context.Player.BiomassScrapBalance, "repeated release pays nothing");
                 Check(board.GetComponentsInChildren<DeviceBody>(true).All(b => b.InstanceId != id || !b.gameObject.activeInHierarchy),
                     "sold view and colliders are inactive immediately, before deferred Unity destruction");
 
                 int stock = Create(9008, -1, 0, false);
-                scrap = f.C.Player.BiomassScrapBalance;
-                int dragRevision = f.C.Campaign.LayoutRevision;
+                scrap = context.Player.BiomassScrapBalance;
+                int dragRevision = context.Campaign.LayoutRevision;
                 Check(placement.BeginInventoryDrag(stock, Point(-1, 1)), "inventory drag still starts");
                 CheckHighlight(true, "dragging to clear space shows a green outline");
                 placement.UpdateInventoryDrag(Point(2, 0));
@@ -165,16 +170,16 @@ namespace MarblesECS.Editor
                 CheckHighlight(false, "dragging beyond the placement area keeps a visible red outline");
                 placement.UpdateInventoryDrag(Point(-1, 1));
                 CheckHighlight(true, "returning to clear space turns the outline green again");
-                Check(f.C.Campaign.LayoutRevision == dragRevision && !Data(stock).Placed, "highlight checks leave the layout and inventory untouched");
+                Check(context.Campaign.LayoutRevision == dragRevision && !Data(stock).Placed, "highlight checks leave the layout and inventory untouched");
                 Check(!placement.EndInventoryDrag(Point(2, 0)) && !Highlight(), "an invalid drop clears the outline and cancels the drag");
                 Check(placement.BeginInventoryDrag(stock, Point(-1, 1)), "inventory drag can restart after an invalid drop");
                 placement.UpdateInventoryDrag(salePoint);
                 Check(!Highlight() && placement.LastFeedback.Contains("松开出售"), "hovering over sale shows the release hint");
-                Near(scrap, f.C.Player.BiomassScrapBalance, "hovering during an inventory drag pays nothing");
-                price = f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == stock).SellPrice;
+                Near(scrap, context.Player.BiomassScrapBalance, "hovering during an inventory drag pays nothing");
+                price = simulation.GetOwnedDevices().Single(d => d.InstanceId == stock).SellPrice;
                 Check(placement.EndInventoryDrag(salePoint, panel) && placement.SelectedInstanceId == 0 &&
-                    !CampaignStateUtility.FindDevice(f.C, stock, out _), "inventory release in the sale area sells the dragged item");
-                Near(scrap + price, f.C.Player.BiomassScrapBalance, "inventory sale credits the quoted refund");
+                    !CampaignStateUtility.FindDevice(context, stock, out _), "inventory release in the sale area sells the dragged item");
+                Near(scrap + price, context.Player.BiomassScrapBalance, "inventory sale credits the quoted refund");
 
                 Check(placement.HandleBoardPointerDown(Point(2, 0)), "pick up the device before pausing");
                 controller.SetPaused(true); placement.UpdatePlacementPointer(Point(0, 1)); sale.Refresh();
@@ -183,28 +188,28 @@ namespace MarblesECS.Editor
                 Check(placement.HandleBoardPointerDown(Point(2, 0)), "pick up the device before disabling the UI");
                 placement.enabled = false;
                 Check(View(other).activeSelf && placement.SelectedInstanceId == 0, "disabling the UI restores the original view"); placement.enabled = true;
-                Check(placement.HandleBoardPointerDown(Point(2, 0)) && f.Simulation.BeginRound(), "begin round with a pending UI preview");
+                Check(placement.HandleBoardPointerDown(Point(2, 0)) && simulation.BeginRound(), "begin round with a pending UI preview");
                 placement.UpdatePlacementPointer(Point(0, 1)); sale.Refresh();
                 Check(placement.SelectedInstanceId == 0 && Data(other).X == 2 && sale.Group.alpha == 0, "phase transition cancels preview, keeps original pose and hides sale area");
                 Check(!placement.HandleBoardPointerDown(Point(2, 0)), "playing phase cannot start a board drag");
 
-                var round = f.C.Round;
+                var round = context.Round;
                 foreach (var phase in new[] { RoundPhase.Playing, RoundPhase.Draining, RoundPhase.Won })
                 {
-                    round.Phase = (byte)phase; f.C.Round = round;
+                    round.Phase = (byte)phase; context.Round = round;
                     Check(placement.UpdatePlacedDeviceHover(Point(2, 0), out hovered) && hovered.InstanceId == other &&
                         Highlight(View(other)), phase + " uses the same placed-device hover");
                 }
-                round.Phase = (byte)RoundPhase.Build; f.C.Round = round;
+                round.Phase = (byte)RoundPhase.Build; context.Round = round;
                 Near(2, Data(other).X, "entering Build preserves last committed layout");
-                Check(!f.Simulation.PlaceDevice(other, 1, 0, .15f, float.NaN), "invalid rotation cannot partially commit a move");
+                Check(!simulation.PlaceDevice(other, 1, 0, .15f, float.NaN), "invalid rotation cannot partially commit a move");
                 Near(2, Data(other).X, "invalid rotation leaves position unchanged");
                 Check(controller.SellDevice(other), "sell the remaining rotatable device");
                 int mushroom = Create(9016, 0, 0, false);
-                revision = f.C.Campaign.LayoutRevision;
+                revision = context.Campaign.LayoutRevision;
                 Check(!controller.RotateDevice(mushroom, 45), "direct rotation is rejected for a fixed device");
-                Check(!f.Simulation.PlaceDevice(mushroom, 0, 0, angle: 45), "placement cannot bypass the rotation lock");
-                Check(f.C.Campaign.LayoutRevision == revision && !Data(mushroom).Placed, "rejected rotation preserves inventory");
+                Check(!simulation.PlaceDevice(mushroom, 0, 0, angle: 45), "placement cannot bypass the rotation lock");
+                Check(context.Campaign.LayoutRevision == revision && !Data(mushroom).Placed, "rejected rotation preserves inventory");
                 Check(placement.BeginInventoryDrag(mushroom, Point(0, 0)), "fixed device can be dragged from inventory");
                 placement.RotateSelected(45);
                 Check(placement.EndInventoryDrag(Point(0, 0)), "fixed device can be placed after rotation input");

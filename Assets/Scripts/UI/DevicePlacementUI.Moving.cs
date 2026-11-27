@@ -39,7 +39,8 @@ public sealed partial class DevicePlacementUI
     {
         ClearPlacedDeviceHover();
         SyncPlacedObjects();
-        preview = DeviceView.Create(device, BoardRoot, null, true);
+        try { preview = DeviceView.CreatePreview(device, BoardRoot); }
+        catch (System.Exception error) { Debug.LogException(error, this); }
         SelectedInstanceId = device.InstanceId;
         selectionRound = Controller.Snapshot.RoundId;
         previewAngle = device.Angle;
@@ -92,7 +93,7 @@ public sealed partial class DevicePlacementUI
     public void UpdatePlacementPointer(Vector2 pointer)
     {
         ValidateSelection();
-        if (!previewObject) return;
+        if (!IsDraggingDevice) return;
         if (!ViewCamera) ViewCamera = Camera.main;
         var drop = FindDropTarget(pointer, null, out var receiver);
         if (drop == DropTarget.Sale || drop == DropTarget.Backpack)
@@ -101,7 +102,7 @@ public sealed partial class DevicePlacementUI
                 LastFeedback = $"松开出售{DeviceDisplayText.SaleTarget(device)}，获得 {device.SellPrice} 血肉残料。";
             else
                 LastFeedback = IsMovingPlacedDevice ? "松开收回背包" : "松开放回背包";
-            previewObject.SetActive(false);
+            if (previewObject) previewObject.SetActive(false);
             return;
         }
 
@@ -110,29 +111,35 @@ public sealed partial class DevicePlacementUI
             : string.Empty;
         if (!TryProjectOntoPlacementPlane(pointer, out var worldPoint))
         {
-            previewObject.SetActive(false);
+            if (previewObject) previewObject.SetActive(false);
             return;
         }
         var point = BoardRoot.InverseTransformPoint(worldPoint);
-        Transform pose = SetPreviewPose(ref point);
-        bool canPlace = drop == DropTarget.Board && IsInsidePlacementPlane(worldPoint) && IsInsidePlacementPlane(pose.position) &&
+        if (!TrySetPreviewPose(ref point, out var position))
+        {
+            if (previewObject) previewObject.SetActive(false);
+            return;
+        }
+        bool canPlace = drop == DropTarget.Board && IsInsidePlacementPlane(worldPoint) && IsInsidePlacementPlane(position) &&
             (SelectedDefinitionId != 0
-                ? Controller.CanInstallDevice(SelectedDefinitionId, point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation)
-                : Controller.CanPlaceDevice(SelectedInstanceId, point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation));
+                ? Controller.CanInstallDevice(SelectedDefinitionId, point.x, point.z, previewAngle)
+                : Controller.CanPlaceDevice(SelectedInstanceId, point.x, point.z, previewAngle));
         if (SelectedDefinitionId != 0 && drop == DropTarget.Board && !canPlace)
             LastFeedback = InstallFailure;
-        previewOutline ??= new QuickOutline(previewObject);
-        previewOutline.SetColor(canPlace || drop == DropTarget.Offer ? ValidOutline : InvalidOutline);
-        previewObject.SetActive(true);
+        if (previewObject)
+        {
+            previewOutline ??= new QuickOutline(previewObject);
+            previewOutline.SetColor(canPlace || drop == DropTarget.Offer ? ValidOutline : InvalidOutline);
+            previewObject.SetActive(true);
+        }
     }
 
-    private Transform SetPreviewPose(ref Vector3 point)
+    private bool TrySetPreviewPose(ref Vector3 point, out Vector3 position)
     {
         SnapPoint(ref point);
-        var pose = previewObject.transform;
-        SetDeviceTransform(pose, point.x, point.z);
-        pose.rotation *= Quaternion.Euler(0, previewAngle, 0);
-        return pose;
+        if (!Controller.TryGetDevicePlacementPose(point.x, point.z, previewAngle, out position, out var rotation)) return false;
+        if (previewObject) previewObject.transform.SetPositionAndRotation(position, rotation);
+        return true;
     }
 
     private void SnapPoint(ref Vector3 point)
@@ -190,22 +197,16 @@ public sealed partial class DevicePlacementUI
 
     private bool CommitSelected(Vector3 point)
     {
-        if (!TryGetSelectedDevice(out _) || !previewObject) return false;
-        Transform pose = SetPreviewPose(ref point);
-        return IsInsidePlacementPlane(pose.position) && Controller.PlaceDevice(SelectedInstanceId,
-            point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation);
+        return TryGetSelectedDevice(out _) && TrySetPreviewPose(ref point, out var position) &&
+            IsInsidePlacementPlane(position) && Controller.PlaceDevice(SelectedInstanceId, point.x, point.z, previewAngle);
     }
 
     private bool FinishInstall(Vector2 pointer, GameObject pointerTarget)
     {
         bool installed = false;
-        if (previewObject && FindDropTarget(pointer, pointerTarget, out _) == DropTarget.Board &&
-            TryGetBoardPoint(pointer, out var point))
-        {
-            var pose = SetPreviewPose(ref point);
-            installed = IsInsidePlacementPlane(pose.position) && Controller.TryInstallDevice(SelectedDefinitionId,
-                point.x, point.z, pose.position, PlacementRadiusScale, previewAngle, pose.rotation, out _);
-        }
+        if (FindDropTarget(pointer, pointerTarget, out _) == DropTarget.Board && TryGetBoardPoint(pointer, out var point) &&
+            TrySetPreviewPose(ref point, out var position) && IsInsidePlacementPlane(position))
+            installed = Controller.TryInstallDevice(SelectedDefinitionId, point.x, point.z, previewAngle, out _);
         LastFeedback = installed ? "装置已安装。" : InstallFailure;
         if (installed || !installByClick) CancelPlacement();
         DeviceDropFinished?.Invoke();
@@ -213,15 +214,5 @@ public sealed partial class DevicePlacementUI
     }
 
     private const string InstallFailure = "此处不可安装，或血肉残料不足。";
-
-    private float PlacementRadiusScale
-    {
-        get
-        {
-            // The footprint already includes the prefab's authored scale.
-            var scale = BoardRoot.lossyScale;
-            return Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
-        }
-    }
 
 }

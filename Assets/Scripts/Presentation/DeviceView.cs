@@ -1,5 +1,4 @@
 using System;
-using MarblesECS.PhysX;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -7,36 +6,24 @@ namespace MarblesECS.Presentation
 {
     public static class DeviceView
     {
-        /// <summary>Returns an inactive prefab instance. The caller positions it before activation.</summary>
-        public static DeviceViewHandle Create(OwnedDeviceSnapshot device, Transform parent, DeviceLuaScript script, bool preview = false)
+        public static DeviceViewHandle CreatePreview(OwnedDeviceSnapshot device, Transform parent)
+        {
+            var prefab = DeviceResourceCatalog.Current.Get(device.DefinitionId).Prefab;
+            var view = CreateModel(prefab.transform, parent, device.Name + " Preview");
+            view.Root.transform.localScale = prefab.transform.localScale;
+            return view;
+        }
+
+        internal static DeviceViewHandle CreateModel(Transform template, Transform parent, string name)
         {
             if (parent == null) throw new ArgumentNullException(nameof(parent));
-            if (!preview && script == null) throw new ArgumentNullException(nameof(script));
-
-            var resource = DeviceResourceCatalog.Current.Get(device.DefinitionId);
-            var root = InstantiateInactive(resource.Prefab, parent);
+            var root = new GameObject(name) { layer = template.gameObject.layer };
+            root.SetActive(false);
             var view = new DeviceViewHandle(root);
             try
             {
-                root.name = device.Name + (preview ? " Preview" : " #" + device.InstanceId);
-                root.transform.Find(DeviceResourceCatalog.PlacementVolumeName).GetComponent<SphereCollider>().enabled = false;
-                if (preview)
-                {
-                    foreach (var collider in root.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
-                    foreach (var body in root.GetComponentsInChildren<Rigidbody>(true))
-                    {
-                        body.isKinematic = true;
-                        body.detectCollisions = false;
-                    }
-                }
-                else
-                {
-                    var behaviour = root.AddComponent<DeviceLuaBehaviour>();
-                    behaviour.Initialize(script);
-                    DeviceLuaPhysicsRelay.Attach(root.GetComponentsInChildren<Transform>(true), behaviour);
-                    root.AddComponent<DeviceBody>().Initialize(device.InstanceId, resource.Definition, script);
-                    if (!string.IsNullOrEmpty(resource.Definition.LinkGroup)) root.AddComponent<DeviceLinkView>();
-                }
+                root.transform.SetParent(parent, false);
+                CopyMeshes(template, root.transform);
                 return view;
             }
             catch
@@ -46,22 +33,34 @@ namespace MarblesECS.Presentation
             }
         }
 
-        private static GameObject InstantiateInactive(GameObject prefab, Transform parent)
+        private static void CopyMeshes(Transform source, Transform target)
         {
-            if (!prefab.activeSelf) return Object.Instantiate(prefab, parent, false);
-
-            // Prevent Awake and OnEnable from running before the view has its board pose and script.
-            var staging = new GameObject("Device setup");
-            staging.SetActive(false);
-            staging.transform.SetParent(parent, false);
-            try
+            if (source.TryGetComponent<MeshFilter>(out var filter) && source.TryGetComponent<MeshRenderer>(out var renderer))
             {
-                var root = Object.Instantiate(prefab, staging.transform, false);
-                root.SetActive(false);
-                root.transform.SetParent(parent, false);
-                return root;
+                target.gameObject.AddComponent<MeshFilter>().sharedMesh = filter.sharedMesh;
+                var copy = target.gameObject.AddComponent<MeshRenderer>();
+                copy.sharedMaterials = renderer.sharedMaterials;
+                copy.enabled = renderer.enabled;
+                copy.shadowCastingMode = renderer.shadowCastingMode;
+                copy.receiveShadows = renderer.receiveShadows;
+                copy.lightProbeUsage = renderer.lightProbeUsage;
+                copy.reflectionProbeUsage = renderer.reflectionProbeUsage;
+                copy.motionVectorGenerationMode = renderer.motionVectorGenerationMode;
+                copy.allowOcclusionWhenDynamic = renderer.allowOcclusionWhenDynamic;
+                copy.renderingLayerMask = renderer.renderingLayerMask;
+                copy.sortingLayerID = renderer.sortingLayerID;
+                copy.sortingOrder = renderer.sortingOrder;
             }
-            finally { DeviceViewHandle.Destroy(staging); }
+            foreach (Transform child in source)
+            {
+                if (child.name == DeviceResourceCatalog.PlacementVolumeName) continue;
+                var node = new GameObject(child.name) { layer = child.gameObject.layer };
+                node.transform.SetParent(target, false);
+                node.transform.SetLocalPositionAndRotation(child.localPosition, child.localRotation);
+                node.transform.localScale = child.localScale;
+                CopyMeshes(child, node.transform);
+                node.SetActive(child.gameObject.activeSelf);
+            }
         }
     }
 
@@ -76,15 +75,9 @@ namespace MarblesECS.Presentation
             var root = Root;
             Root = null;
             if (root == null) return;
-            root.GetComponent<DeviceLuaBehaviour>()?.Release();
             root.SetActive(false);
-            Destroy(root);
-        }
-
-        internal static void Destroy(GameObject value)
-        {
-            if (Application.isPlaying) Object.Destroy(value);
-            else Object.DestroyImmediate(value);
+            if (Application.isPlaying) Object.Destroy(root);
+            else Object.DestroyImmediate(root);
         }
     }
 }

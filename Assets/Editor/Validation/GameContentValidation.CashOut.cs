@@ -157,7 +157,7 @@ namespace MarblesECS.Editor
                 var simulation = new MarbleSimulation(Balance());
                 var bridge = new MarblePhysicsBridge(scene, null, null, simulation.EnqueueContact);
                 var board = new GameObject("CashOutBoard"); SceneManager.MoveGameObjectToScene(board, scene);
-                DeviceViewHandle view = null, fieldView = null;
+                DevicePhysicsFixture view = null, fieldView = null;
                 try
                 {
                     simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -169,14 +169,14 @@ namespace MarblesECS.Editor
                         var owned = simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var e);
                         var data = c.Manager.GetComponentData<OwnedDeviceData>(e); data.Placed = true; c.Manager.SetComponentData(e, data); return owned;
                     }
-                    var cash = AddView(9013); view = DeviceView.Create(cash, board.transform, c.DeviceScripts.Get(cash.InstanceId, 9013)); view.Root.SetActive(true);
+                    var cash = AddView(9013); view = DevicePhysicsFixture.Place(simulation, cash, board.transform, c.DeviceScripts.Get(cash.InstanceId, 9013)); view.Root.SetActive(true);
                     Check(view.Root.GetComponent<BoxCollider>().isTrigger, "exchange gate has an entrance trigger");
                     var spawn = board.transform.TransformPoint(new Vector3(0, .1f, .8f));
                     simulation.FireOnce(); simulation.BeforePhysics(.02f, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge);
                     var key = c.Marbles.Keys.Single(); double scrap = c.Player.BiomassScrapBalance;
                     if (field)
                     {
-                        var ownedField = AddView(9004); fieldView = DeviceView.Create(ownedField, board.transform, c.DeviceScripts.Get(ownedField.InstanceId, 9004));
+                        var ownedField = AddView(9004); fieldView = DevicePhysicsFixture.Place(simulation, ownedField, board.transform, c.DeviceScripts.Get(ownedField.InstanceId, 9004));
                         fieldView.Root.transform.localPosition = new Vector3(2, 0, 0); fieldView.Root.SetActive(true); Physics.SyncTransforms();
                         Check(bridge.TryMove(key, board.transform.TransformPoint(new Vector3(2, .1f, 0)), Vector3.zero), "place inside separate force region");
                         simulation.BeforePhysics(.02f, bridge, spawn, Quaternion.identity); bridge.Simulate(.02f); simulation.AfterPhysics(bridge);

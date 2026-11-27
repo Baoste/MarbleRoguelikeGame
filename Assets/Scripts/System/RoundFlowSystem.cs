@@ -30,7 +30,7 @@ namespace MarblesECS
             round.ScoreStackExpiresAt = 0;
             round.ScoreStackWindowSeconds = 0;
             context.Round = round;
-            context.Transients.Clear(context);
+            context.Transients.Clear();
             context.BoardScores.Clear();
             context.BoardRush.Clear();
             context.ClearFireInput();

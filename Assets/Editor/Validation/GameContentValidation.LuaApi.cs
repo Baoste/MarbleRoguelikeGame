@@ -147,11 +147,16 @@ namespace MarblesECS.Editor
                     var d = c.Manager.GetComponentData<OwnedDeviceData>(entity); d.Placed = true; c.Manager.SetComponentData(entity, d);
                     var go = new GameObject("LuaPortalEndpoint"); objects.Add(go);
                     SceneManager.MoveGameObjectToScene(go, scene);
-                    go.transform.SetPositionAndRotation(new Vector3(owned.InstanceId * 3, 3, 0), Quaternion.Euler(61, 127, 19));
-                    go.AddComponent<DeviceBody>().Initialize(owned.InstanceId, definition, c.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                    if (objects.Count == 1)
+                    {
+                        go.transform.SetPositionAndRotation(new Vector3(3, 3, 0), Quaternion.Euler(61, 127, 19));
+                        bridge.ConfigureDevicePlacement(go.transform);
+                    }
+                    Check(bridge.TrySetDevicePlacement(new DevicePlacement(owned.InstanceId, definition,
+                        (owned.InstanceId - 1) * 3, 0, 0), c.DeviceScripts.Get), "create physical portal endpoint");
                 }
                 bridge.TryGetDevicePose(pair[1].InstanceId, out var exit);
-                VectorNear(objects[1].transform.rotation * Vector3.back, exit.Forward, "engine exit facing is local negative Z");
+                VectorNear(objects[0].transform.rotation * Vector3.back, exit.Forward, "engine exit facing is local negative Z");
                 simulation.FireOnce();
                 simulation.BeforePhysics(.1f, bridge, new Vector3(0, 3, 0), Quaternion.identity);
                 var key = c.Marbles.Keys.Single(); var ball = c.Marbles[key];
@@ -166,7 +171,8 @@ namespace MarblesECS.Editor
                     obstacle.AddComponent<BoxCollider>().size = Vector3.one;
                     Physics.SyncTransforms();
                 }
-                simulation.EnqueueContact(objects[0].GetComponent<DeviceBody>().Contact(key, before.Position));
+                bridge.TryGetDeviceBody(pair[0].InstanceId, out var source);
+                simulation.EnqueueContact(source.Contact(key, before.Position));
                 simulation.AfterPhysics(bridge);
                 bridge.TryGetState(key, out var after);
                 VectorNear(before.LinearVelocity, after.LinearVelocity, "Lua teleport retains real PhysX velocity whether successful or blocked");
@@ -179,8 +185,9 @@ namespace MarblesECS.Editor
             finally
             {
                 if (obstacle != null) UnityEngine.Object.DestroyImmediate(obstacle);
+                simulation.Dispose(); bridge.Dispose();
                 foreach (var go in objects) UnityEngine.Object.DestroyImmediate(go);
-                simulation.Dispose(); bridge.Dispose(); SceneManager.UnloadSceneAsync(scene);
+                SceneManager.UnloadSceneAsync(scene);
             }
         }
 

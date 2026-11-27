@@ -1,25 +1,18 @@
-using System;
 using System.Collections.Generic;
 using MarblesECS;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 public sealed partial class DevicePlacementUI : MonoBehaviour
 {
     public MarbleGameController Controller;
     public Camera ViewCamera;
-    [Tooltip("装置位置以此对象的局部 X/Z 坐标保存。")]
-    public Transform BoardRoot;
-    [Tooltip("用于控制放置平面位置和旋转的 Transform。未绑定时使用 BoardRoot。")]
-    public Transform PlacementPlane;
+    public Transform BoardRoot => Controller != null ? Controller.DeviceOrigin : null;
+    public Transform PlacementPlane => Controller != null ? Controller.DevicePlane : null;
+    public float DevicePlaneDistance => Controller != null ? Controller.DevicePlaneDistance : 0;
     public Vector2 PlacementPlaneSize = new Vector2(8f, 9.5f);
-    [FormerlySerializedAs("DeviceLocalY")]
-    [Tooltip("装置沿 PlacementPlane 法线方向与平面的距离。")]
-    public float DevicePlaneDistance;
     public bool SnapToGrid;
     [Tooltip("仅当 Canvas 没有全屏透明 Raycast 遮罩时开启。")]
     public bool BlockClicksOverUI;
@@ -35,7 +28,6 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
     private GameObject previewObject => preview?.Root;
     private int displayedRevision = -1;
     private int displayedRoundId = -1;
-    private MarbleGameController dayProjectionController;
 
     public void CancelPlacement()
     {
@@ -52,7 +44,6 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
 
     private void Update()
     {
-        BindDayProjection();
         if (!CanEdit)
         {
             CancelPlacement();
@@ -121,8 +112,15 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         int roundId = Controller.Snapshot.RoundId;
         if (revision == displayedRevision && roundId == displayedRoundId)
             return;
-        if (roundId != displayedRoundId) ClearPlacedObjects();
-        if (!Controller.HasProductionFeature(ProductionFeature.DevicePlacement)) return;
+        bool placementEnabled = Controller.HasProductionFeature(ProductionFeature.DevicePlacement);
+        if (roundId != displayedRoundId || !placementEnabled)
+        {
+            CancelPlacement();
+            ClearPlacedObjects();
+        }
+        displayedRevision = revision;
+        displayedRoundId = roundId;
+        if (!placementEnabled) return;
         var removed = new HashSet<int>(placedObjects.Keys);
         foreach (OwnedDeviceSnapshot device in Controller.GetOwnedDevices())
         {
@@ -130,21 +128,10 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
             if (placedObjects.TryGetValue(device.InstanceId, out var existing))
             {
                 removed.Remove(device.InstanceId);
-                if (existing.Device.X != device.X || existing.Device.Z != device.Z || existing.Device.Angle != device.Angle)
-                {
-                    ClearPlacedDeviceHover();
-                    SetDeviceTransform(existing.Root.transform, device.X, device.Z);
-                    existing.Root.transform.rotation *= Quaternion.Euler(0, device.Angle, 0);
-                }
                 existing.Device = device;
                 continue;
             }
-            var handle = DeviceView.Create(device, BoardRoot, Controller.DeviceScript(device));
-            var item = handle.Root;
-            SetDeviceTransform(item.transform, device.X, device.Z);
-            item.transform.rotation *= Quaternion.Euler(0, device.Angle, 0);
-            placedObjects.Add(device.InstanceId, new PlacedDeviceView(handle, device));
-            item.SetActive(true);
+            placedObjects.Add(device.InstanceId, new PlacedDeviceView { Device = device });
         }
         foreach (int id in removed)
         {
@@ -154,39 +141,11 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
             placedObjects.Remove(id);
         }
         HideSelectedView();
-        Physics.SyncTransforms();
-        displayedRevision = revision;
-        displayedRoundId = roundId;
-    }
-
-    private void SetDeviceTransform(Transform device, float boardX, float boardZ)
-    {
-        GetPlacementPlanePose(out Vector3 planePosition, out Quaternion planeRotation);
-        Vector3 planeUp = planeRotation * Vector3.up;
-        Vector3 boardPoint = BoardRoot.TransformPoint(new Vector3(boardX, 0f, boardZ));
-        var plane = new Plane(planeUp, planePosition);
-        Vector3 boardNormal = BoardRoot.up;
-        float denominator = Vector3.Dot(plane.normal, boardNormal);
-        Vector3 pointOnPlane;
-
-        if (Mathf.Abs(denominator) > 0.0001f)
-        {
-            float distance = -plane.GetDistanceToPoint(boardPoint) / denominator;
-            pointOnPlane = boardPoint + boardNormal * distance;
-        }
-        else
-        {
-            pointOnPlane = plane.ClosestPointOnPlane(boardPoint);
-        }
-
-        device.SetPositionAndRotation(
-            pointOnPlane + planeUp * DevicePlaneDistance,
-            planeRotation);
     }
 
     private void GetPlacementPlanePose(out Vector3 position, out Quaternion rotation)
     {
-        Transform planeTransform = PlacementPlane != null ? PlacementPlane : BoardRoot;
+        Transform planeTransform = PlacementPlane;
         position = planeTransform.position;
         rotation = planeTransform.rotation;
     }
@@ -210,28 +169,6 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         CancelPlacement();
     }
 
-    private void OnEnable() => BindDayProjection();
-
-    private void BindDayProjection()
-    {
-        if (ReferenceEquals(dayProjectionController, Controller)) return;
-        UnbindDayProjection();
-        dayProjectionController = Controller;
-        if (dayProjectionController == null) return;
-        dayProjectionController.DayBoardResetting += ResetDayProjection;
-        dayProjectionController.DayBoardRestored += RestoreDayProjection;
-        dayProjectionController.DeviceLayoutChanged += RestoreDayProjection;
-    }
-
-    private void UnbindDayProjection()
-    {
-        if (ReferenceEquals(dayProjectionController, null)) return;
-        dayProjectionController.DayBoardResetting -= ResetDayProjection;
-        dayProjectionController.DayBoardRestored -= RestoreDayProjection;
-        dayProjectionController.DeviceLayoutChanged -= RestoreDayProjection;
-        dayProjectionController = null;
-    }
-
     private void ClearPlacedObjects()
     {
         ClearPlacedDeviceHover();
@@ -240,23 +177,7 @@ public sealed partial class DevicePlacementUI : MonoBehaviour
         placedObjects.Clear();
     }
 
-    private void ResetDayProjection()
-    {
-        CancelPlacement();
-        ClearPlacedObjects();
-        displayedRevision = displayedRoundId = -1;
-    }
-
-    private void RestoreDayProjection()
-    {
-        if (Controller != null && Controller.IsReady && BoardRoot != null) SyncPlacedObjects();
-    }
-
-    private void OnDestroy()
-    {
-        UnbindDayProjection();
-        ResetDayProjection();
-    }
+    private void OnDestroy() => ClearPlacedObjects();
 
     private void OnDrawGizmos()
     {

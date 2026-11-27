@@ -13,6 +13,7 @@ namespace MarblesECS
         private readonly DeviceMetadata metadata;
         private readonly string name;
         private GameObject root;
+        private DeviceLuaObject self;
         private bool initialized, disposing;
         public bool IsDisposed { get; private set; }
         public DeviceMetadata Metadata => metadata;
@@ -31,8 +32,18 @@ namespace MarblesECS
             }
             catch (Exception e) { Dispose(); throw new DeviceLuaException("Lua initialization failed: " + name, e); }
         }
-        public void BindRoot(GameObject value)
-        { root = value; if (!IsDisposed) environment.Set("self", value == null ? null : new DeviceLuaObject(value, metadata)); }
+        public void BindRoot(GameObject value) => BindRoot(value, null);
+        internal void BindRoot(GameObject value, Transform authoredVisual)
+        {
+            if (IsDisposed) return;
+            root = value;
+            self = value == null ? null : new DeviceLuaObject(value, metadata, authoredVisual);
+            environment.Set("self", self);
+        }
+        internal void AttachPresentation(GameObject owner, Transform model)
+        {
+            if (ReferenceEquals(root, owner)) self?.AttachPresentation(model);
+        }
         internal void UnbindRoot(GameObject value) { if (ReferenceEquals(root, value)) BindRoot(null); }
         public bool HasFunction(string eventName)
         {
@@ -59,7 +70,7 @@ namespace MarblesECS
             {
                 IsDisposed = true;
                 foreach (var function in functions.Values) function?.Dispose();
-                functions.Clear(); environment?.Dispose(); environment = null; root = null;
+                functions.Clear(); environment?.Dispose(); environment = null; root = null; self = null;
                 DeviceLuaRuntime.Unregister(this);
             }
         }

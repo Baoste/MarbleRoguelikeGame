@@ -96,7 +96,7 @@ namespace MarblesECS
         {
             BoardScores.Clear();
             BoardRush.Clear();
-            Transients.Clear(this);
+            Transients.Clear();
             using (var entities = MarbleQuery.ToEntityArray(Allocator.Temp))
             {
                 for (int i = 0; i < entities.Length; i++)

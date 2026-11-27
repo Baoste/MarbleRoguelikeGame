@@ -240,9 +240,9 @@ namespace MarblesECS.Editor
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly Entity Device;
-            internal readonly DeviceViewHandle View;
+            internal readonly DevicePhysicsFixture View;
             internal readonly int Id;
-            private readonly List<DeviceViewHandle> views = new List<DeviceViewHandle>();
+            private readonly List<DevicePhysicsFixture> views = new List<DevicePhysicsFixture>();
             internal SimulationContext C => Simulation.Context;
             internal string Status => Simulation.GetDeviceStatus(Id);
             internal Rig(float dt = .02f, int durability = -1)
@@ -261,14 +261,14 @@ namespace MarblesECS.Editor
                 View = AddDevice(Vector3.zero); Id = View.Root.GetComponent<DeviceBody>().InstanceId;
                 CampaignStateUtility.FindDevice(C, Id, out Device);
             }
-            internal DeviceViewHandle AddDevice(Vector3 offset)
+            internal DevicePhysicsFixture AddDevice(Vector3 offset)
             {
                 var definition = C.Balance.Devices.Single(d => d.Id == 9005);
                 CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last();
                 CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
-                var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                var view = DevicePhysicsFixture.Place(Simulation, owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 view.Root.transform.localPosition = offset; views.Add(view); view.Root.SetActive(true); Physics.SyncTransforms(); return view;
             }
             internal Entity Ball(MarbleKey key) => C.Marbles[key];

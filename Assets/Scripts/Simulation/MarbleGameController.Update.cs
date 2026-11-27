@@ -5,6 +5,30 @@ namespace MarblesECS.PhysX
 {
     public sealed partial class MarbleGameController
     {
+        private void UpdateDevicePresentation()
+        {
+            if (EnsureDevicePresentation()) devicePresentation.Sync(simulation.Context);
+        }
+
+        internal GameObject GetDeviceModel(int id)
+        {
+            if (!EnsureDevicePresentation()) return null;
+            devicePresentation.SyncModels();
+            return devicePresentation.GetModel(id);
+        }
+
+        private bool EnsureDevicePresentation()
+        {
+            if (!IsReady || bridge == null || !ShowDevicePresentation)
+            {
+                devicePresentation?.Dispose();
+                devicePresentation = null;
+                return false;
+            }
+            devicePresentation ??= new MarblesECS.Presentation.DevicePresentation(bridge);
+            return true;
+        }
+
         private void Update()
         {
             if (!IsReady) return;

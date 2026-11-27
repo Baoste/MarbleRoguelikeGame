@@ -22,10 +22,8 @@ namespace MarblesECS.Editor
         { while (f.C.Round.Time + 1e-6 < time) f.Step(); }
         private static Vector3 BombDestination(Fixture f, OwnedDeviceData device)
         {
-            var id = f.Physics.Visuals.Single(v => v.Value.Path == "BombTemplate" && v.Value.Source == device.InstanceId).Key;
-            var origin = f.Physics.VisualOrigins[id]; var pose = f.Physics.Poses[device.InstanceId];
-            var direction = (origin - pose.Position - pose.Up * .12f).normalized;
-            return origin + direction * (float)f.C.Balance.Devices.Single(d => d.Id == 9017).Strength;
+            var flight = f.C.Transients.Items.Single(v => v.NodePath == "BombTemplate" && v.Source == device.InstanceId);
+            return flight.PositionAt(flight.StartedAt + flight.Duration);
         }
         private static void BombLuaApi()
         {
@@ -101,7 +99,6 @@ namespace MarblesECS.Editor
                     if (endRound) f.C.BeginDraining();
                     else { CampaignStateUtility.FindDevice(f.C, device.InstanceId, out var e); var data = f.C.Manager.GetComponentData<OwnedDeviceData>(e); data.Placed = false; f.C.Manager.SetComponentData(e, data); }
                     f.Step(); Near(0, f.C.Transients.Count, "unplaced source or completed round cancels in-flight visuals");
-                    Near(0, f.Physics.Visuals.Count, "cancel clears presentation immediately");
                     Near(20, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "cancellation is not an explosion");
                 }
             TransientApiValidation(); BombPhysics();
@@ -116,10 +113,11 @@ namespace MarblesECS.Editor
                 Near(3, api.RandomRange(3, 3), "equal random bounds return exact value"); Check(random == f.C.Round.RandomState, "equal bounds do not advance RNG");
                 ExpectArgument(() => api.RandomRange(2, 1)); ExpectArgument(() => api.ForEachBallInRadius(Vector3.zero, float.NaN, "Missing"));
                 Near(0, api.TrySpawnVisual("x", Vector3.zero, Vector3.one, 0, ""), "zero lifetime rejected");
-                f.Physics.BlockVisuals = true; Near(0, api.TrySpawnVisual("x", Vector3.zero, Vector3.one, 1, ""), "presentation failure creates no timer"); f.Physics.BlockVisuals = false;
-                int id = api.TrySpawnVisual("x", Vector3.one, Vector3.right, .2f, "Missing"); Check(id > 0, "generic moving visual accepted");
+                int id = api.TryScheduleTransient(Vector3.one, Vector3.right, .2f, "Missing", null);
+                Check(id > 0, "a timer can run without a presentation template");
                 api.Close(); ExpectExpired(() => api.TrySpawnVisual("x", Vector3.zero, Vector3.zero, 1, ""));
-                f.Step(); VectorNear(Vector3.one + Vector3.right * .1f, f.Physics.Visuals[id].Position, "visual moves on simulation time");
+                f.Step(); VectorNear(Vector3.one + Vector3.right * .1f,
+                    f.C.Transients.Items.Single(item => item.Id == id).PositionAt(f.C.Round.Time), "trajectory uses simulation time");
                 f.Step(); Near(0, f.C.Transients.Count, "missing callback still cleans visual");
                 var resource = DeviceResourceCatalog.Current.Get(9017);
                 var probe = resource.CreateScript(@"local saved, info, calls = nil, nil, 0
@@ -131,7 +129,7 @@ function Verify() assert(calls==2); assert(not pcall(function() return saved.Tim
                 api.TrySpawnVisual("x", Vector3.zero, Vector3.zero, .1f, "Done"); api.TrySpawnVisual("x", Vector3.one, Vector3.zero, .1f, "Done"); api.Close();
                 f.Step(); Near(0, f.C.Transients.Count, "throwing completion does not strand another visual"); probe.Invoke("Verify");
                 api = new DeviceEventContext(f.C, entity); api.TrySpawnVisual("x", Vector3.zero, Vector3.zero, 10, "Done"); api.Close();
-                f.Simulation.Dispose(); Near(0, f.Physics.Visuals.Count, "dispose cancels pending callbacks and visuals");
+                f.Simulation.Dispose(); Near(0, f.C.Transients.Count, "dispose cancels pending callbacks");
             }
         }
         private static void BombPhysics()
@@ -140,7 +138,8 @@ function Verify() assert(calls==2); assert(not pcall(function() return saved.Tim
             {
                 var scene = SceneManager.CreateScene("BombPhysics_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
                 var simulation = new MarbleSimulation(Balance()); var bridge = new MarblePhysicsBridge(scene, null, null, simulation.EnqueueContact);
-                var board = new GameObject("BombBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
+                using var presentation = new DevicePresentation(bridge);
+                var board = new GameObject("BombBoard"); SceneManager.MoveGameObjectToScene(board, scene); DevicePhysicsFixture view = null;
                 try
                 {
                     simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -149,10 +148,12 @@ function Verify() assert(calls==2); assert(not pcall(function() return saved.Tim
                     CampaignStateUtility.CreateDevice(c, def, def.InstallPrice); var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var e);
                     var data = c.Manager.GetComponentData<OwnedDeviceData>(e); data.Placed = true; c.Manager.SetComponentData(e, data);
                     board.transform.SetPositionAndRotation(new Vector3(0, 8, 0), Quaternion.Euler(-63, 121, 0));
-                    view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
-                    Check(!view.Root.transform.Find("BombTemplate").gameObject.activeSelf && !view.Root.transform.Find("BlastTemplate").gameObject.activeSelf, "templates hidden on original launcher");
+                    view = DevicePhysicsFixture.Place(simulation, owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
+                    presentation.Sync(c);
+                    var model = presentation.GetModel(owned.InstanceId).transform;
+                    Check(!model.Find("BombTemplate").gameObject.activeSelf && !model.Find("BlastTemplate").gameObject.activeSelf, "templates hidden on original launcher");
                     var spawn = board.transform.TransformPoint(new Vector3(0, .12f, -2));
-                    void Step() { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); simulation.AfterPhysics(bridge); }
+                    void Step() { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); simulation.AfterPhysics(bridge); presentation.Sync(c); }
                     simulation.FireOnce(); simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge);
                     var key = c.Marbles.Keys.Single(); bridge.TryMove(key, spawn, Vector3.zero);
                     while (c.Transients.Count == 0 && c.Round.Time < 5 + dt * 3) Step();

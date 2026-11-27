@@ -183,7 +183,7 @@ namespace MarblesECS.Editor
             var scene = SceneManager.CreateScene("PiggyBankPhysics_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             var simulation = new MarbleSimulation(Balance()); var hits = new List<MarbleContact>();
             var bridge = new MarblePhysicsBridge(scene, null, null, contact => { if (contact.HasImpact) hits.Add(contact); simulation.EnqueueContact(contact); });
-            var board = new GameObject("PiggyBankBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
+            var board = new GameObject("PiggyBankBoard"); SceneManager.MoveGameObjectToScene(board, scene); DevicePhysicsFixture view = null;
             try
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -194,10 +194,10 @@ namespace MarblesECS.Editor
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; c.Manager.SetComponentData(entity, data);
                 CampaignWalletSystem.Set(c, GameCurrency.BiomassScrap, 25);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
-                view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                view = DevicePhysicsFixture.Place(simulation, owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 view.Root.SetActive(true); Physics.SyncTransforms();
                 Check(view.Root.GetComponent<CapsuleCollider>() != null && !view.Root.GetComponent<CapsuleCollider>().isTrigger, "pig package supplies a solid collision body");
-                Check(view.Root.transform.Find("Snout") != null && view.Root.transform.Find("ScrapSlot") != null, "runtime package includes the pig snout and scrap slot");
+                Check(view.Template.Find("Snout") != null && view.Template.Find("ScrapSlot") != null, "runtime package includes the pig snout and scrap slot");
                 var spawn = board.transform.TransformPoint(new Vector3(0, .15f, .8f));
                 simulation.FireOnce(); simulation.BeforePhysics(.02f, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge); var key = c.Marbles.Keys.Single();
                 for (int pass = 0; pass < 2; pass++)

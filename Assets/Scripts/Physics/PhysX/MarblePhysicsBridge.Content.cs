@@ -6,7 +6,6 @@ namespace MarblesECS.PhysX
 {
     public sealed partial class MarblePhysicsBridge : IMarblePhysicsCommands, IMarbleDeviceUsageSink, IMarbleDeviceInteractionSink, IMarbleDeviceRotation, IMarbleDeviceEffectSink
     {
-        private readonly List<DeviceBody> contentDevices = new List<DeviceBody>();
         private RaycastHit[] pinHits = new RaycastHit[64];
         private readonly Dictionary<Collider, Renderer[]> brokenPins = new Dictionary<Collider, Renderer[]>();
         private readonly List<MarbleBody> orderedFieldBodies = new List<MarbleBody>();
@@ -29,32 +28,22 @@ namespace MarblesECS.PhysX
         public bool TrySetDeviceYaw(int instanceId, float degrees)
         {
             if (!MarbleRules.IsFinite(degrees)) return false;
-            foreach (var device in DeviceBody.Active)
-                if (device != null && device.gameObject.scene == scene && device.InstanceId == instanceId)
-                { device.SetYaw(degrees); return true; }
-            return false;
+            if (!TryGetDeviceBody(instanceId, out var device)) return false;
+            device.SetYaw(degrees);
+            return true;
         }
         public void BindDeviceUsage(Func<int, bool> available, Func<int, bool> tryUse)
         { deviceAvailable = available; useDevice = tryUse; RefreshDeviceAvailability(); }
         public void RefreshDeviceAvailability()
         {
-            foreach (var device in DeviceBody.Active)
-                if (device != null && device.gameObject.scene == scene)
+            foreach (var device in contentDevices)
+                if (device != null)
                     device.SetGameplayEnabled(deviceAvailable?.Invoke(device.InstanceId) ?? true);
-        }
-        private void RefreshContentDevices()
-        {
-            RefreshDeviceAvailability();
-            contentDevices.Clear();
-            foreach (var device in DeviceBody.Active)
-                if (device != null && device.InstanceId > 0 && device.gameObject.scene == scene) contentDevices.Add(device);
-            contentDevices.Sort((a,b) => a.InstanceId.CompareTo(b.InstanceId));
         }
         public bool TryGetDevicePose(int instanceId, out DevicePose pose)
         {
-            foreach (var device in DeviceBody.Active)
-                if (device != null && device.gameObject.scene == scene && device.InstanceId == instanceId)
-                { pose = new DevicePose { Position = device.transform.position, Forward = device.Forward, Up = device.Up, Radius = device.Radius }; return true; }
+            if (TryGetDeviceBody(instanceId, out var device))
+            { pose = new DevicePose { Position = device.transform.position, Forward = device.Forward, Up = device.Up, Radius = device.Radius }; return true; }
             pose = default; return false;
         }
         public bool TryMove(MarbleKey key, Vector3 position, Vector3 velocity)
@@ -188,7 +177,7 @@ namespace MarblesECS.PhysX
         internal void ReportDevice(MarbleBody view, DeviceBody device, ContactPoint? impact = null)
         {
             // Contact-dependent status lifetimes also need devices without an OnContact Lua handler.
-            if (view.Suspended || device == null || !device.isActiveAndEnabled || !device.GameplayEnabled) return;
+            if (view.Suspended || device == null || device.Bridge != this || !device.isActiveAndEnabled || !device.GameplayEnabled) return;
             view.StepDevices.Add(device.InstanceId);
             if (!view.InsideDevices.Add(device.InstanceId)) return;
             var contact = device.Contact(view.Key, view.Body.position, view.Body.velocity.magnitude);
@@ -206,11 +195,11 @@ namespace MarblesECS.PhysX
             for (int i = 0; i < contentDevices.Count; i++)
             {
                 var a = contentDevices[i];
-                if (!a.GameplayEnabled || string.IsNullOrEmpty(a.LinkGroup)) continue;
+                if (a == null || !a.isActiveAndEnabled || !a.GameplayEnabled || string.IsNullOrEmpty(a.LinkGroup)) continue;
                 for (int j = i + 1; j < contentDevices.Count; j++)
                 {
                     var b = contentDevices[j];
-                    if (!b.GameplayEnabled || b.LinkGroup != a.LinkGroup) continue;
+                    if (b == null || !b.isActiveAndEnabled || !b.GameplayEnabled || b.LinkGroup != a.LinkGroup) continue;
                     Vector3 line = b.transform.position - a.transform.position;
                     float length = line.magnitude;
                     if (length > a.Range || length < .001f) continue;

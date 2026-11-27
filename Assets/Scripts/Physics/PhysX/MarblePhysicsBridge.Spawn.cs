@@ -30,9 +30,7 @@ namespace MarblesECS.PhysX
             GameObject instance = null;
             try
             {
-                instance = view != null ? view.gameObject :
-                    (prefab == null ? GameObject.CreatePrimitive(PrimitiveType.Sphere) :
-                    UnityEngine.Object.Instantiate(prefab));
+                instance = view != null ? view.gameObject : CreateMarbleObject();
                 instance.SetActive(false);
                 instance.name = "Marble " + data.Key;
                 instance.transform.SetParent(null);
@@ -94,5 +92,19 @@ namespace MarblesECS.PhysX
             }
         }
 
+        private GameObject CreateMarbleObject()
+        {
+            if (createVisuals)
+                return prefab == null ? GameObject.CreatePrimitive(PrimitiveType.Sphere) : UnityEngine.Object.Instantiate(prefab);
+            var instance = new GameObject("Marble", typeof(SphereCollider));
+            if (prefab != null)
+            {
+                instance.layer = prefab.layer;
+                instance.tag = prefab.tag;
+                instance.GetComponent<SphereCollider>().contactOffset = prefab.GetComponent<SphereCollider>().contactOffset;
+                if (prefab.TryGetComponent<Rigidbody>(out var body)) DevicePhysicsGeometry.CopyBody(body, instance);
+            }
+            return instance;
+        }
     }
 }

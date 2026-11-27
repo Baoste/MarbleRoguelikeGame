@@ -111,7 +111,7 @@ namespace MarblesECS.Editor
                 if (hit.HasImpact) { impacts++; impactNormal = hit.Normal; }
                 simulation.EnqueueContact(hit);
             });
-            var board = new GameObject("IcedAmericanoBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
+            var board = new GameObject("IcedAmericanoBoard"); SceneManager.MoveGameObjectToScene(board, scene); DevicePhysicsFixture view = null;
             try
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -122,12 +122,12 @@ namespace MarblesECS.Editor
                 var surface = board.AddComponent<BoxCollider>();
                 surface.center = new Vector3(0, -.1f, 0);
                 surface.size = new Vector3(3, .2f, 3);
-                view = DeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));
+                view = DevicePhysicsFixture.Place(simulation, simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));
                 view.Root.SetActive(true); Physics.SyncTransforms();
                 var colliders = view.Root.GetComponentsInChildren<Collider>(true).Where(c => c.name != "PlacementVolume").ToArray();
                 Check(colliders.Length == 1 && !colliders[0].isTrigger, "coffee cup has one solid collider");
                 Near(definition.Bounce, colliders[0].sharedMaterial.bounciness, "cup uses its device.json bounce");
-                Check(view.Root.transform.Find("Cup") != null && view.Root.transform.Find("Ice6") != null && view.Root.transform.Find("Straw") != null, "package includes cup, six ice cubes and straw");
+                Check(view.Template.Find("Cup") != null && view.Template.Find("Ice6") != null && view.Template.Find("Straw") != null, "package includes cup, six ice cubes and straw");
                 float radius = AttributeRuntime.Prepare(c, c.Launcher.Flow).Quote.Radius;
                 var spawn = board.transform.TransformPoint(new Vector3(0, radius + .001f, .9f));
                 void Step() { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); simulation.AfterPhysics(bridge); }

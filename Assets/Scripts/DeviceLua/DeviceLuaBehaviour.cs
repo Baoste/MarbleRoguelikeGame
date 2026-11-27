@@ -10,10 +10,10 @@ namespace MarblesECS
             "OnCollisionExit", "OnTriggerEnter", "OnTriggerStay", "OnTriggerExit" };
         private DeviceLuaScript script;
         internal DeviceMetadata Metadata => script?.Metadata;
-        internal void Initialize(DeviceLuaScript value)
+        internal void Initialize(DeviceLuaScript value, Transform authoredVisual)
         {
             script = value;
-            script.BindRoot(gameObject);
+            script.BindRoot(gameObject, authoredVisual);
         }
         private void Invoke(int index, params object[] args)
         {

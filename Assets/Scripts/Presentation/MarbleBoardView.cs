@@ -1,28 +1,20 @@
-using System.Collections.Generic;
 using MarblesECS.PhysX;
 using UnityEngine;
 
 namespace MarblesECS.Presentation
 {
-    /// <summary>Projects owned ECS devices into collision geometry; requests edits through commands.</summary>
+    /// <summary>Legacy board controls for the immediate-mode campaign HUD.</summary>
     public sealed class MarbleBoardView : MonoBehaviour
     {
         public Camera ViewCamera;
         public int SelectedDeviceId { get; private set; }
         public string Feedback { get; private set; } = "选择库存中的钉子，再点击盘面放置。";
         private MarbleGameController controller;
-        private Transform board;
-        private int revision = -1;
-        private int roundId = -1;
-        private readonly Dictionary<int, DeviceViewHandle> devices = new Dictionary<int, DeviceViewHandle>();
+        private Transform Board => controller.DeviceOrigin;
 
         internal void Initialize(MarbleGameController game, Transform boardRoot, MarbleVisualPalette looks)
         {
-            UnbindDayProjection();
             controller = game;
-            board = boardRoot;
-            controller.DayBoardResetting += ResetDayProjection;
-            controller.DayBoardRestored += SyncBoard;
         }
 
         public void Select(int id)
@@ -31,54 +23,19 @@ namespace MarblesECS.Presentation
             Feedback = "点击空白盘面放置或移动；点击已有钉子可选中。";
         }
 
-        private void LateUpdate() => SyncBoard();
-
-        private void SyncBoard()
+        private int roundId = -1;
+        private int revision = -1;
+        private void LateUpdate()
         {
             if (controller == null || !controller.IsReady) return;
-            if (revision == controller.Session.LayoutRevision && roundId == controller.Snapshot.RoundId) return;
-            revision = controller.Session.LayoutRevision;
-            roundId = controller.Snapshot.RoundId;
-            foreach (var item in devices.Values) item.Dispose();
-            devices.Clear();
-            if (!controller.HasProductionFeature(ProductionFeature.DevicePlacement))
-            {
-                SelectedDeviceId = 0;
-                return;
-            }
-            bool selectedExists = false;
-            foreach (var owned in controller.GetOwnedDevices())
-            {
-                if (owned.InstanceId == SelectedDeviceId) selectedExists = true;
-                if (!owned.Placed) continue;
-                var handle = DeviceView.Create(owned, board, controller.DeviceScript(owned));
-                handle.Root.transform.localPosition = new Vector3(owned.X, 0, owned.Z);
-                handle.Root.transform.localRotation = Quaternion.Euler(0, owned.Angle, 0);
-                devices.Add(owned.InstanceId, handle);
-                handle.Root.SetActive(true);
-            }
-            if (!selectedExists) SelectedDeviceId = 0;
-            Physics.SyncTransforms();
-        }
-
-        private void OnDestroy()
-        {
-            UnbindDayProjection();
-            ResetDayProjection();
-        }
-
-        private void UnbindDayProjection()
-        {
-            if (ReferenceEquals(controller, null)) return;
-            controller.DayBoardResetting -= ResetDayProjection;
-            controller.DayBoardRestored -= SyncBoard;
-        }
-
-        private void ResetDayProjection()
-        {
-            foreach (var item in devices.Values) item.Dispose();
-            devices.Clear();
-            revision = roundId = -1;
+            int currentRound = controller.Snapshot.RoundId;
+            int currentRevision = controller.Session.LayoutRevision;
+            if (roundId == currentRound && revision == currentRevision) return;
+            if (roundId == currentRound && controller.HasProductionFeature(ProductionFeature.DevicePlacement))
+                foreach (var device in controller.GetOwnedDevices())
+                    if (device.InstanceId == SelectedDeviceId) { revision = currentRevision; return; }
+            roundId = currentRound;
+            revision = currentRevision;
             SelectedDeviceId = 0;
         }
 
@@ -99,9 +56,9 @@ namespace MarblesECS.Presentation
                 HandleClick(point);
                 input.Use();
             }
-            if (devices.TryGetValue(SelectedDeviceId, out var selected))
+            if (controller.TryGetDevicePose(SelectedDeviceId, out var pose))
             {
-                Vector3 screen = ViewCamera.WorldToScreenPoint(selected.Root.transform.position);
+                Vector3 screen = ViewCamera.WorldToScreenPoint(pose.Position);
                 Color previous = GUI.color;
                 GUI.color = Color.yellow;
                 GUI.Label(new Rect(screen.x - 12, Screen.height - screen.y - 38, 100, 25), "▼ 已选中");
@@ -112,8 +69,9 @@ namespace MarblesECS.Presentation
         private bool TryBoardPoint(Vector2 guiPoint, out Vector3 point)
         {
             Ray ray = ViewCamera.ScreenPointToRay(new Vector3(guiPoint.x, Screen.height - guiPoint.y));
-            if (new Plane(board.up, board.position).Raycast(ray, out float distance))
-            { point = board.InverseTransformPoint(ray.GetPoint(distance)); return true; }
+            var plane = controller.DevicePlane;
+            if (plane != null && new Plane(plane.up, plane.position).Raycast(ray, out float distance))
+            { point = Board.InverseTransformPoint(ray.GetPoint(distance)); return true; }
             point = default;
             return false;
         }
@@ -130,9 +88,7 @@ namespace MarblesECS.Presentation
                 point.x = Mathf.Round(point.x / grid) * grid;
                 point.z = Mathf.Round(point.z / grid) * grid;
             }
-            Vector3 scale = board.lossyScale;
-            Feedback = controller.PlaceDevice(SelectedDeviceId, point.x, point.z,
-                board.TransformPoint(point), Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z)))
+            Feedback = controller.PlaceDevice(SelectedDeviceId, point.x, point.z)
                 ? "布置成功。继续点击可移动。"
                 : "此处不能放置：请避开普通钉、其他装置、发射口和终点区域。";
         }

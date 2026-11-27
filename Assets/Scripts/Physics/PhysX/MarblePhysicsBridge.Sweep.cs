@@ -14,7 +14,7 @@ namespace MarblesECS.PhysX
             if (disposed) throw new ObjectDisposedException(nameof(MarblePhysicsBridge));
             if (!MarbleRules.IsFinite(seconds) || seconds <= 0) throw new ArgumentOutOfRangeException(nameof(seconds));
             float subdivisions = 1;
-            RefreshContentDevices();
+            RefreshDeviceAvailability();
             foreach (var view in bodies.Values)
                 if (view != null && view.Body != null)
                     subdivisions = Mathf.Max(subdivisions, view.Body.velocity.magnitude * seconds /

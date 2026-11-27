@@ -36,6 +36,12 @@ namespace MarblesECS
             statuses.Clear();
         }
 
+        internal void AdoptPreparedScripts(DeviceScriptSystem prepared)
+        {
+            foreach (var pair in prepared.scripts) scripts.Add(pair.Key, pair.Value);
+            prepared.scripts.Clear();
+        }
+
         internal void Remove(int instanceId)
         {
             statuses.Remove(instanceId);

@@ -16,16 +16,19 @@ namespace MarblesECS.Editor
             var scene = SceneManager.CreateScene("DentalPhysics_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             var simulation = new MarbleSimulation(Balance()); int contacts = 0;
             var bridge = new MarblePhysicsBridge(scene, null, null, hit => { if (hit.HasImpact) contacts++; simulation.EnqueueContact(hit); });
-            var board = new GameObject("DentalBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
+            using var presentation = new DevicePresentation(bridge);
+            var board = new GameObject("DentalBoard"); SceneManager.MoveGameObjectToScene(board, scene); DevicePhysicsFixture view = null;
             try
             {
                 simulation.StartSession(bridge); int id = DentalFood(simulation.Context); var c = simulation.Context; MorePlace(c, id, true);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
                 var script = c.DeviceScripts.Get(id, 9028);
+                view = DevicePhysicsFixture.Place(simulation, simulation.GetOwnedDevices().Single(), board.transform, script);
+                Transform Model() => presentation.GetModel(id).transform;
                 void Rebuild()
                 {
-                    view?.Dispose(); view = DeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, script);
-                    view.Root.SetActive(true); script.Invoke("Start"); Physics.SyncTransforms();
+                    presentation.Dispose();
+                    presentation.SyncModels();
                 }
                 Rebuild(); Check(simulation.BeginRound(), "begin physical hole round");
                 simulation.ApplyGlobalAttribute(993, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
@@ -43,7 +46,7 @@ namespace MarblesECS.Editor
                 for (int i = 0; i < Mathf.CeilToInt(1 / dt); i++) Step();
                 Near(0, contacts, "empty hole causes no physical impact");
                 Check(board.transform.InverseTransformPoint(body.position).z < -.5f, "ball physically crosses hole");
-                Check(view.Root.transform.Find("Hole").GetComponent<MeshRenderer>().enabled, "hole face visible");
+                Check(Model().Find("Hole").GetComponent<MeshRenderer>().enabled, "hole face visible");
                 BagBuild(c); Check(simulation.TryOfferDevice(DentalFood(c), id), "plant steel tooth into physical hole");
                 Rebuild(); Check(simulation.BeginRound(), "start planted round");
                 simulation.FireOnce(); simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge); key = c.Marbles.Keys.Single();
@@ -51,8 +54,8 @@ namespace MarblesECS.Editor
                 body.drag = body.angularDrag = 0;
                 collider = view.Root.GetComponentInChildren<MeshCollider>();
                 Check(collider.enabled && !collider.isTrigger, "planting restores physical bounce");
-                Check(view.Root.transform.Find("Steel").GetComponentsInChildren<Renderer>().All(r => r.enabled), "rebuilt view retains steel appearance");
-                Check(!view.Root.transform.Find("Hole").GetComponent<MeshRenderer>().enabled, "planted view hides empty hole");
+                Check(Model().Find("Steel").GetComponentsInChildren<Renderer>().All(r => r.enabled), "rebuilt view retains steel appearance");
+                Check(!Model().Find("Hole").GetComponent<MeshRenderer>().enabled, "planted view hides empty hole");
                 for (int use = 1; use <= 5; use++)
                 {
                     Check(bridge.TryMove(key, spawn, Vector3.zero), "leave tooth before next impact"); Step(); int previous = contacts;
@@ -63,9 +66,9 @@ namespace MarblesECS.Editor
                     Check(Vector3.Dot(body.velocity, incoming) < 0, "original ball bounces normally including last use");
                 }
                 Check(!collider.enabled, "final use disables collider immediately");
-                Check(view.Root.transform.Find("Hole").GetComponent<MeshRenderer>().enabled &&
-                    view.Root.transform.Find("Steel").GetComponentsInChildren<Renderer>().All(r => !r.enabled), "final use switches visual to hole");
-                Rebuild(); Check(view.Root.transform.Find("Hole").GetComponent<MeshRenderer>().enabled, "hole survives view replacement");
+                Check(Model().Find("Hole").GetComponent<MeshRenderer>().enabled &&
+                    Model().Find("Steel").GetComponentsInChildren<Renderer>().All(r => !r.enabled), "final use switches visual to hole");
+                Rebuild(); Check(Model().Find("Hole").GetComponent<MeshRenderer>().enabled, "hole survives view replacement");
                 Check(bridge.TryMove(key, spawn, incoming), "send ball back through exhausted hole");
                 int beforePass = contacts;
                 for (int i = 0; i < Mathf.CeilToInt(1 / dt); i++) Step();
@@ -75,7 +78,7 @@ namespace MarblesECS.Editor
                 foreach (string node in new[] { "Steel", "Ceramic", "Diamond" })
                 {
                     Check(simulation.TryOfferDevice(DentalFood(c), id), "successive physical model upgrade"); Rebuild();
-                    Check(view.Root.transform.Find(node).GetComponentsInChildren<Renderer>().All(r => r.enabled), "each stage restores selected appearance after view rebuild");
+                    Check(Model().Find(node).GetComponentsInChildren<Renderer>().All(r => r.enabled), "each stage restores selected appearance after view rebuild");
                 }
             }
             finally { view?.Dispose(); simulation.Dispose(); bridge.Dispose(); UnityEngine.Object.DestroyImmediate(board); SceneManager.UnloadSceneAsync(scene); }
@@ -94,7 +97,7 @@ namespace MarblesECS.Editor
                 var camera = cameraObject.AddComponent<Camera>(); camera.orthographic = true; camera.orthographicSize = 5;
                 camera.transform.SetPositionAndRotation(new Vector3(0, 10, 0), Quaternion.LookRotation(Vector3.down, Vector3.forward));
                 var placement = control.AddComponent<DevicePlacementUI>(); placement.Controller = controller;
-                placement.BoardRoot = root.transform; placement.PlacementPlane = root.transform; placement.ViewCamera = camera;
+                placement.ViewCamera = camera;
                 var card = cardObject.AddComponent<OwnedDeviceButtonUI>();
                 try
                 {

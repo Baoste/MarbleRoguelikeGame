@@ -301,7 +301,7 @@ function Verify() assert(count == 2) end"))
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly Entity Device;
-            internal readonly DeviceViewHandle View;
+            internal readonly DevicePhysicsFixture View;
             internal readonly OwnedDeviceSnapshot Owned;
             internal SimulationContext C => Simulation.Context;
             internal DeviceLuaScript Script => C.DeviceScripts.Get(Owned.InstanceId, Owned.DefinitionId);
@@ -329,7 +329,7 @@ function Verify() assert(count == 2) end"))
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(Device); data.Placed = true; C.Manager.SetComponentData(Device, data);
                 Board = new GameObject("StickyBoard"); SceneManager.MoveGameObjectToScene(Board, Scene);
                 Board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 47, 0));
-                View = DeviceView.Create(Owned, Board.transform, C.DeviceScripts.Get(Owned.InstanceId, definition.Id));
+                View = DevicePhysicsFixture.Place(Simulation, Owned, Board.transform, C.DeviceScripts.Get(Owned.InstanceId, definition.Id));
                 View.Root.SetActive(true); Physics.SyncTransforms();
                 Check(View.Root.GetComponentInChildren<MeshCollider>().isTrigger, "prefab contains a cylinder trigger");
             }

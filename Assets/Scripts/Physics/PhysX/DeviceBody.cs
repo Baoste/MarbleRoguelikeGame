@@ -6,8 +6,9 @@ namespace MarblesECS.PhysX
     /// <summary>Physics identity and device configuration. Lua decides gameplay effects.</summary>
     public sealed class DeviceBody : MonoBehaviour
     {
-        internal static readonly HashSet<DeviceBody> Active = new HashSet<DeviceBody>();
         public int InstanceId { get; private set; }
+        internal MarblePhysicsBridge Bridge { get; private set; }
+        internal DeviceResource Resource { get; private set; }
         private float placementRadius;
         private Vector3 placementOffset;
         public Vector3 PlacementCenter => transform.position + (transform.parent
@@ -15,13 +16,15 @@ namespace MarblesECS.PhysX
         public float Radius => placementRadius * (transform.parent ? Mathf.Max(Mathf.Abs(transform.parent.lossyScale.x),
             Mathf.Abs(transform.parent.lossyScale.y), Mathf.Abs(transform.parent.lossyScale.z)) : 1);
         public float Range { get; private set; }
-        public float Strength { get; private set; }
+        private DeviceDefinition definition;
+        public float Strength => definition.Strength;
         public string LinkGroup { get; private set; }
         public DeviceLuaScript Script { get; private set; }
         public bool GameplayEnabled { get; private set; } = true;
         private float? configuredBounce;
         internal float Bounce => configuredBounce.GetValueOrDefault();
         private List<PhysicMaterial> runtimeMaterials;
+        private Collider[] colliders;
         private readonly List<Collider> disabledByUsage = new List<Collider>();
         internal void SetGameplayEnabled(bool enabled)
         {
@@ -29,7 +32,7 @@ namespace MarblesECS.PhysX
             GameplayEnabled = enabled;
             if (!enabled)
             {
-                foreach (var collider in GetComponentsInChildren<Collider>(true))
+                foreach (var collider in colliders)
                     if (collider.enabled) { disabledByUsage.Add(collider); collider.enabled = false; }
             }
             else
@@ -40,14 +43,18 @@ namespace MarblesECS.PhysX
         }
         public Vector3 Forward => transform.rotation * Vector3.back;
         public Vector3 Up => transform.up;
-        private bool hasYawBasis;
-        private Quaternion yawBasis;
+        private Quaternion placementRotation;
+        internal void SetPlacement(Vector3 position, Quaternion rotation)
+        {
+            transform.SetPositionAndRotation(position, rotation);
+            placementRotation = transform.localRotation;
+        }
+
         internal void SetYaw(float degrees)
         {
-            if (!hasYawBasis) { yawBasis = transform.rotation; hasYawBasis = true; }
-            var rotation = yawBasis * Quaternion.AngleAxis(degrees % 360, Vector3.up);
-            if (Quaternion.Angle(transform.rotation, rotation) < .001f) return;
-            transform.rotation = rotation;
+            var rotation = placementRotation * Quaternion.AngleAxis(degrees % 360, Vector3.up);
+            if (Quaternion.Angle(transform.localRotation, rotation) < .001f) return;
+            transform.localRotation = rotation;
             Physics.SyncTransforms();
         }
         private readonly Dictionary<string, BoxCollider> fieldBoxes = new Dictionary<string, BoxCollider>();
@@ -60,26 +67,29 @@ namespace MarblesECS.PhysX
             if (box != null) fieldBoxes[nodePath] = box;
             return box;
         }
-        public void Initialize(int instanceId, DeviceDefinition definition, DeviceLuaScript script)
+        internal void Initialize(MarblePhysicsBridge bridge, int instanceId, DeviceDefinition definition,
+            DeviceResource resource, DeviceLuaScript script)
         {
+            Bridge = bridge;
+            Resource = resource;
+            this.definition = definition;
             InstanceId = instanceId; placementRadius = definition.PlacementRadius; Range = definition.Range;
             placementOffset = new Vector3(definition.PlacementOffsetX, definition.PlacementOffsetY, definition.PlacementOffsetZ);
-            Strength = definition.Strength; LinkGroup = definition.LinkGroup; Script = script;
+            LinkGroup = definition.LinkGroup; Script = script;
             configuredBounce = definition.Bounce;
-            if (isActiveAndEnabled) ApplyBounce();
-        }
-        private void OnEnable()
-        {
-            Active.Add(this);
+            colliders = GetComponentsInChildren<Collider>(true);
             if (configuredBounce.HasValue) ApplyBounce();
+            if (script == null) return;
+            var behaviour = gameObject.AddComponent<DeviceLuaBehaviour>();
+            behaviour.Initialize(script, resource.Prefab.transform);
+            DeviceLuaPhysicsRelay.Attach(GetComponentsInChildren<Transform>(true), behaviour);
         }
-        private void OnDisable() => Active.Remove(this);
         private void ApplyBounce()
         {
             if (runtimeMaterials == null)
             {
                 runtimeMaterials = new List<PhysicMaterial>();
-                foreach (var collider in GetComponentsInChildren<Collider>(true))
+                foreach (var collider in colliders)
                 {
                     if (collider.isTrigger) continue;
                     // Retain the authored friction settings and keep the shared asset untouched.
@@ -91,18 +101,20 @@ namespace MarblesECS.PhysX
             }
             foreach (var material in runtimeMaterials) material.bounciness = Bounce;
         }
-        private void OnDestroy()
+        private void OnDestroy() => Release();
+        internal void Release()
         {
+            GetComponent<DeviceLuaBehaviour>()?.Release();
+            Bridge = null;
             if (runtimeMaterials == null) return;
             foreach (var material in runtimeMaterials)
             {
                 if (Application.isPlaying) Destroy(material);
                 else DestroyImmediate(material);
             }
+            runtimeMaterials = null;
         }
         public MarbleContact Contact(MarbleKey key, Vector3 position, float speed = 0) => new MarbleContact
         { Key = key, TargetId = checked(100000 + InstanceId), Kind = MarbleContactKind.Device, Multiplier = 1, Position = position, Speed = speed, RushDisabled = true };
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetActiveDevices() => Active.Clear();
     }
 }

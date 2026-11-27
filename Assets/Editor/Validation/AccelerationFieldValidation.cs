@@ -194,9 +194,9 @@ namespace MarblesECS.Editor
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly Entity Device;
-            internal readonly DeviceViewHandle View;
+            internal readonly DevicePhysicsFixture View;
             internal readonly OwnedDeviceSnapshot Owned;
-            private readonly List<DeviceViewHandle> views = new List<DeviceViewHandle>();
+            private readonly List<DevicePhysicsFixture> views = new List<DevicePhysicsFixture>();
             internal SimulationContext C => Simulation.Context;
             internal DeviceBody DeviceBody => View.Root.GetComponent<DeviceBody>();
             internal BoxCollider Box => View.Root.transform.Find("Field").GetComponent<BoxCollider>();
@@ -219,20 +219,19 @@ namespace MarblesECS.Editor
                 Check(Box.isTrigger && Box.enabled, "package restores a non-solid box field");
                 VectorNear(new Vector3(.4f, .24f, 1.2f), Box.transform.localScale, "default region has the requested dimensions");
             }
-            internal DeviceViewHandle AddDevice()
+            internal DevicePhysicsFixture AddDevice()
             {
                 var definition = C.Balance.Devices.Single(d => d.Id == 9004);
                 CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last();
                 CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
-                var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                var view = DevicePhysicsFixture.Place(Simulation, owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 views.Add(view); view.Root.SetActive(true); Physics.SyncTransforms(); return view;
             }
             internal void SetStrength(float strength)
             {
-                var definition = C.Balance.Devices.Single(d => d.Id == 9004).Copy(); definition.Strength = strength;
-                DeviceBody.Initialize(Owned.InstanceId, definition, C.DeviceScripts.Get(Owned.InstanceId, definition.Id));
+                C.Balance.Devices.Single(d => d.Id == 9004).Strength = strength;
             }
             internal Entity Ball(MarbleKey key) => C.Marbles[key];
             internal MarbleBody Marble(MarbleKey key) => Scene.GetRootGameObjects().Select(go => go.GetComponent<MarbleBody>()).Single(b => b != null && b.Key.Equals(key));

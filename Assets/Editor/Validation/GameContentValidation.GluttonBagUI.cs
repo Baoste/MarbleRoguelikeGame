@@ -26,7 +26,7 @@ namespace MarblesECS.Editor
                 var camera = cameraObject.AddComponent<Camera>(); camera.orthographic = true; camera.orthographicSize = 5;
                 camera.transform.SetPositionAndRotation(new Vector3(0, 10, 0), Quaternion.LookRotation(Vector3.down, Vector3.forward));
                 var placement = controlObject.AddComponent<DevicePlacementUI>(); placement.Controller = controller;
-                placement.BoardRoot = root.transform; placement.PlacementPlane = root.transform; placement.ViewCamera = camera;
+                placement.ViewCamera = camera;
                 var card = cardObject.AddComponent<OwnedDeviceButtonUI>();
                 GameObject blockingCanvas = null, rigObject = null;
                 try

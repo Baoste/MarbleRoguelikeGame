@@ -13,14 +13,14 @@ namespace MarblesECS.Editor
         {
             var scene=SceneManager.CreateScene("Billiards_"+Guid.NewGuid(),new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             var simulation=new MarbleSimulation(Balance());var bridge=new MarblePhysicsBridge(scene,null,null,simulation.EnqueueContact);
-            var board=new GameObject("BilliardsBoard");SceneManager.MoveGameObjectToScene(board,scene);DeviceViewHandle view=null;
+            var board=new GameObject("BilliardsBoard");SceneManager.MoveGameObjectToScene(board,scene);DevicePhysicsFixture view=null;
             try
             {
                 simulation.StartSession(bridge);simulation.BeginRound();var c=simulation.Context;
                 simulation.ApplyGlobalAttribute(991,GameAttribute.BALL_GRAVITY_MOD,AttributeOperation.Set,0);
                 var definition=c.Balance.Devices.Single(x=>x.Id==9031);CampaignStateUtility.CreateDevice(c,definition,definition.InstallPrice);
                 int id=c.Campaign.NextDeviceId;MorePlace(c,id,true);board.transform.SetPositionAndRotation(new Vector3(0,3,0),Quaternion.Euler(60,127,0));
-                view=DeviceView.Create(simulation.GetOwnedDevices().Single(),board.transform,c.DeviceScripts.Get(id,definition.Id));view.Root.SetActive(true);Physics.SyncTransforms();
+                view=DevicePhysicsFixture.Place(simulation, simulation.GetOwnedDevices().Single(),board.transform,c.DeviceScripts.Get(id,definition.Id));view.Root.SetActive(true);Physics.SyncTransforms();
                 Check(view.Root.GetComponentsInChildren<Collider>().All(x=>x.isTrigger),"billiards package has only admission sensors");
                 var spawn=board.transform.TransformPoint(new Vector3(0,.15f,.85f));
                 void Step(){simulation.BeforePhysics(dt,bridge,spawn,Quaternion.identity);bridge.Simulate(dt);simulation.AfterPhysics(bridge);}

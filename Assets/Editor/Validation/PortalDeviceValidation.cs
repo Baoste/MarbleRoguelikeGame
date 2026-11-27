@@ -55,17 +55,17 @@ namespace MarblesECS.Editor
             long refund = MarbleRules.RoundScore((source.PurchasePrice + partner.PurchasePrice) * r.C.Balance.Campaign.SellRatio,
                 CampaignWalletSystem.MaxBalance);
             Check(source.SellPrice == refund && partner.SellPrice == refund, "both members quote one refund for the full pair");
+            var scripts = r.Owned.Take(2).Select(item => r.C.DeviceScripts.Get(item.InstanceId, item.DefinitionId)).ToArray();
             Check(r.Simulation.RemoveDevicePlacement(source.InstanceId) && r.Simulation.GetOwnedDevices().Length == 4,
                 "returning a portal to inventory keeps all placements and pair membership independently editable");
             int revision = r.C.Campaign.LayoutRevision;
             long scrap = r.C.Player.BiomassScrapBalance;
-            var scripts = r.Views.Take(2).Select(view => view.Root.GetComponent<DeviceBody>().Script).ToArray();
             Check(r.Simulation.SellDevice(source.InstanceId), "sell a stored portal whose partner is on the board");
             Check(r.Simulation.GetOwnedDevices().Select(device => device.InstanceId).SequenceEqual(r.Owned.Skip(2).Select(device => device.InstanceId)),
                 "selling removes the whole pair and preserves a different pair of the same definition");
             Check(r.C.Player.BiomassScrapBalance == scrap + refund && r.C.Campaign.LayoutRevision == revision + 1,
                 "selling the pair credits one refund and changes layout once");
-            Check(scripts.All(script => script.IsDisposed) && r.Views.Take(2).All(view => !view.Root.GetComponent<DeviceBody>().GameplayEnabled),
+            Check(scripts.All(script => script.IsDisposed) && r.Views.Take(2).All(view => !view.Root || !view.Root.activeInHierarchy),
                 "both scripts are disposed and both colliders are unavailable after the sale");
             Check(!r.Simulation.SellDevice(partner.InstanceId) && r.C.Player.BiomassScrapBalance == scrap + refund,
                 "the deleted partner cannot pay out again");
@@ -209,8 +209,8 @@ end";
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly OwnedDeviceSnapshot[] Owned;
-            internal readonly List<DeviceViewHandle> Views = new List<DeviceViewHandle>();
-            private readonly List<DeviceViewHandle> fields = new List<DeviceViewHandle>();
+            internal readonly List<DevicePhysicsFixture> Views = new List<DevicePhysicsFixture>();
+            private readonly List<DevicePhysicsFixture> fields = new List<DevicePhysicsFixture>();
             internal SimulationContext C => Simulation.Context;
             internal Rig(int pairCount = 1)
             {
@@ -226,13 +226,12 @@ end";
                 Owned = Simulation.GetOwnedDevices().OrderBy(x => x.InstanceId).ToArray();
                 Board = new GameObject("PortalBoard"); SceneManager.MoveGameObjectToScene(Board, Scene);
                 Board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 47, 13));
+                Bridge.ConfigureDevicePlacement(Board.transform);
                 for (int i = 0; i < Owned.Length; i++)
                 {
-                    Check(Simulation.PlaceDevice(Owned[i].InstanceId, i * 2, 0, 0), "place each purchased portal independently");
-                    var view = DeviceView.Create(Owned[i], Board.transform, C.DeviceScripts.Get(Owned[i].InstanceId, 103)); Views.Add(view);
-                    view.Root.transform.localPosition = new Vector3(i * 2, 0, 0);
-                    view.Root.transform.localRotation = Quaternion.Euler(0, i % 2 == 1 ? 130 : 0, 0);
-                    view.Root.SetActive(true);
+                    Check(Simulation.PlaceDevice(Owned[i].InstanceId, i * 2, 0, 0, i % 2 == 1 ? 130 : 0), "place each purchased portal independently");
+                    var owned = Simulation.GetOwnedDevices().Single(item => item.InstanceId == Owned[i].InstanceId);
+                    var view = DevicePhysicsFixture.Place(Simulation, owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, 103)); Views.Add(view);
                     Check(view.Root.GetComponentInChildren<MeshCollider>().isTrigger, "portal package uses a non-solid cylinder sensor");
                 }
                 Owned = Simulation.GetOwnedDevices().OrderBy(x => x.InstanceId).ToArray();
@@ -267,7 +266,7 @@ end";
                 var definition = C.Balance.Devices.Single(d => d.Id == 9004); CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last(); CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
-                var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id)); fields.Add(view);
+                var view = DevicePhysicsFixture.Place(Simulation, owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id)); fields.Add(view);
                 view.Root.transform.localPosition = new Vector3(x, 0, 0); view.Root.transform.localRotation = Quaternion.Euler(0, yaw, 0);
                 view.Root.SetActive(true); Physics.SyncTransforms(); return view.Root.transform.rotation * Vector3.back * definition.Strength;
             }

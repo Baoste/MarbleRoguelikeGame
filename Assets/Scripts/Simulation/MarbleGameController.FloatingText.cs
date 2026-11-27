@@ -39,6 +39,7 @@ namespace MarblesECS.PhysX
 
         private void LateUpdate()
         {
+            UpdateDevicePresentation();
             if (floatingText == null || !IsReady) return;
             try
             {

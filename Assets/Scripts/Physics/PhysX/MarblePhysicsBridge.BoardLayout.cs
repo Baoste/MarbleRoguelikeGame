@@ -116,12 +116,13 @@ namespace MarblesECS.PhysX
         private void AddLayoutPin(Transform parent, BoardLayoutProjection projection, BoardLayoutPin data,
             HashSet<int> ids, ref int nextPinId)
         {
-            var node = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            var node = createVisuals ? GameObject.CreatePrimitive(PrimitiveType.Cylinder) :
+                new GameObject("Pin", typeof(CapsuleCollider));
             node.name = (data.collisionOnly ? "Collision Pin " : "Pin ") + parent.childCount;
             node.transform.SetParent(parent, false);
             node.transform.localPosition = projection.ToSurfaceLocal(data.x, data.y, data.radius * 2);
             node.transform.localScale = Vector3.one * (data.radius * 2);
-            if (pinVisualMaterial) node.GetComponent<Renderer>().sharedMaterial = pinVisualMaterial;
+            if (createVisuals && pinVisualMaterial) node.GetComponent<Renderer>().sharedMaterial = pinVisualMaterial;
             if (pinPhysicsMaterial) node.GetComponent<CapsuleCollider>().sharedMaterial = pinPhysicsMaterial;
             if (data.collisionOnly) return;
             var pin = node.AddComponent<MarblePin>();
@@ -148,6 +149,7 @@ namespace MarblesECS.PhysX
             zone.RushEnabled = data.rushEnabled;
             zone.ScoreStackEnabled = data.scoreStackEnabled;
 
+            if (!createVisuals) return;
             var marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
             marker.name = "Zone Marker";
             marker.transform.SetParent(node.transform, false);

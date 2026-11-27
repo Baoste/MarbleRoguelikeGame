@@ -13,6 +13,7 @@ namespace MarblesECS.PhysX
         private readonly GameObject prefab;
         private readonly PhysicMaterial material;
         private readonly Action<MarbleContact> onContact;
+        private readonly bool createVisuals;
         private readonly Dictionary<MarbleKey, MarbleBody> bodies = new Dictionary<MarbleKey, MarbleBody>();
         private readonly Stack<MarbleBody> pool = new Stack<MarbleBody>();
         private readonly Collider[] overlap = new Collider[1];
@@ -21,13 +22,15 @@ namespace MarblesECS.PhysX
         public int ActiveBodyCount => bodies.Count;
         public int PooledBodyCount => pool.Count;
 
-        public MarblePhysicsBridge(Scene scene, GameObject prefab, PhysicMaterial material, Action<MarbleContact> onContact)
+        public MarblePhysicsBridge(Scene scene, GameObject prefab, PhysicMaterial material, Action<MarbleContact> onContact,
+            bool createVisuals = true)
         {
             this.scene = scene;
             physicsScene = scene.GetPhysicsScene();
             this.prefab = prefab;
             this.material = material;
             this.onContact = onContact;
+            this.createVisuals = createVisuals;
             if (!physicsScene.IsValid()) throw new ArgumentException("需要有效的本地3D物理场景。");
             if (prefab != null)
             {
@@ -79,10 +82,12 @@ namespace MarblesECS.PhysX
         public void Dispose()
         {
             if (disposed) return;
-            ClearTransientVisuals();
+            ClearDevices();
             RestorePins();
             RetireBodies();
             if (hiddenBoardObjects.Count > 0 || boardLayoutRoot != null) RemoveBoardLayout();
+            deviceAvailable = useDevice = canCompleteDevice = null;
+            recordDeviceEffect = null;
             disposed = true;
         }
 

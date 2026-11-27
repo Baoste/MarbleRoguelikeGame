@@ -52,7 +52,8 @@ namespace MarblesECS.Editor
                 Near(limits[stage] - 1, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "duplicate same-step report costs one use");
                 VectorNear(velocity, f.Physics.States[key].LinearVelocity, "tooth preserves solver velocity");
                 Near(0, f.C.Round.Score, "score awaits scoring area");
-                BagBuild(f.C); Check(f.Simulation.RemoveDevicePlacement(d.InstanceId), "retrieve grown tooth"); MorePlace(f.C, d.InstanceId, true);
+                BagBuild(f.C); Check(f.Simulation.RemoveDevicePlacement(d.InstanceId), "retrieve grown tooth");
+                Check(f.Simulation.PlaceDevice(d.InstanceId, 0, 0), "replace the retrieved tooth");
                 Check(f.Simulation.BeginRound(), "begin next tooth round"); key = f.Launch(); hit = PiggyHit(f, key, d);
                 Near(stage, DeviceInstanceState.Get(f.C, entity, "stage"), "stage survives retrieval and round change");
                 Near(limits[stage], f.Simulation.GetOwnedDevices().Single().RemainingDurability, "new round refills current stage");

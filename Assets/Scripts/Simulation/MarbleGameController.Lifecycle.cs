@@ -59,6 +59,7 @@ namespace MarblesECS.PhysX
                 simulation.ConfigureLauncherMovement(LaunchPoint.localPosition, LauncherMoveHalfWidth, LauncherMoveSpeed);
                 bridge = new MarblePhysicsBridge(localScene, MarblePrefab, material, simulation.EnqueueContact);
                 bridge.ConfigureBoardLayout(PhysicsRoot, PlacementSurface);
+                bridge.ConfigureDevicePlacement(DeviceOrigin, DevicePlane, DevicePlaneDistance, PlacementSurface, PlacementObstacleRoots);
                 simulation.DayBoardResetting += BeforeDayBoardRestore;
                 simulation.DayBoardRestored += AfterDayBoardRestore;
                 simulation.DeviceBroken += OnDeviceBroken;
@@ -119,6 +120,8 @@ namespace MarblesECS.PhysX
         private void Cleanup()
         {
             ReleaseFloatingText();
+            devicePresentation?.Dispose();
+            devicePresentation = null;
             var releasedBridge = bridge;
             var releasedSimulation = simulation;
             bridge = null;

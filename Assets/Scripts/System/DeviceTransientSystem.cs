@@ -28,48 +28,56 @@ namespace MarblesECS
             internal Vector3 Origin, Velocity;
             internal double StartedAt;
             internal float Duration;
-            internal string Callback;
+            internal string Callback, NodePath;
+
+            internal Vector3 PositionAt(double time) =>
+                Origin + Velocity * (float)Math.Min(Duration, Math.Max(0, time - StartedAt));
         }
         private readonly Dictionary<int, Item> items = new Dictionary<int, Item>();
+        private readonly List<int> ticking = new List<int>();
+        private readonly List<int> removing = new List<int>();
         private int nextId;
         internal int Count => items.Count;
+        internal Dictionary<int, Item>.ValueCollection Items => items.Values;
+        internal bool Contains(int id) => items.ContainsKey(id);
         internal int Spawn(SimulationContext c, int source, string path, Vector3 position, Vector3 velocity, float seconds, string callback)
         {
             if (!c.IsRunning || !DeviceDurabilitySystem.CanRun(c, source) ||
-                !(c.Physics is IDeviceTransientVisuals visuals) || string.IsNullOrEmpty(path) ||
+                (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(callback)) || (path != null && path.Length > 256) ||
                 !SimulationContext.IsFinite(position) || !SimulationContext.IsFinite(velocity) ||
                 !BallInteractionSystem.Finite(velocity.sqrMagnitude) || !BallInteractionSystem.Finite(seconds) || seconds <= 0 || seconds > 60 ||
                 items.Count >= 256 || nextId == int.MaxValue || (callback != null && callback.Length > 64) ||
                 !SimulationContext.IsFinite(position + velocity * seconds) ||
                 (c.Round.Phase == (byte)RoundPhase.Draining && c.Round.Time - c.Round.DrainStartedAt >= c.Tuning.DrainTimeoutSeconds)) return 0;
             int id = ++nextId;
-            if (!visuals.TryCreateTransientVisual(source, id, path, position)) return 0;
             items.Add(id, new Item { Id = id, Source = source, Round = c.Round.RoundId, Origin = position, Velocity = velocity,
-                StartedAt = c.Round.Time, Duration = seconds, Callback = callback });
+                StartedAt = c.Round.Time, Duration = seconds, Callback = callback, NodePath = path });
             return id;
         }
         internal void Tick(SimulationContext c)
         {
-            var ids = new List<int>(items.Keys); ids.Sort();
-            foreach (int id in ids)
+            if (items.Count == 0) return;
+            ticking.Clear();
+            ticking.AddRange(items.Keys);
+            ticking.Sort();
+            foreach (int id in ticking)
             {
                 if (!items.TryGetValue(id, out var item)) continue;
                 if (!c.IsRunning || item.Round != c.Round.RoundId || !DeviceDurabilitySystem.CanRun(c, item.Source) ||
-                    !(c.Physics is IDeviceTransientVisuals visuals) ||
                     (c.Round.Phase == (byte)RoundPhase.Draining && c.Round.Time - c.Round.DrainStartedAt >= c.Tuning.DrainTimeoutSeconds))
-                { Remove(c, id); continue; }
-                double elapsed = c.Round.Time - item.StartedAt;
-                var position = item.Origin + item.Velocity * (float)Math.Min(item.Duration, Math.Max(0, elapsed));
-                if (!visuals.TryMoveTransientVisual(id, position)) { Remove(c, id); continue; }
-                if (elapsed + 1e-7 < item.Duration) continue;
-                Remove(c, id); // Always remove before Lua; a missing/throwing callback cannot leak the visual.
+                { items.Remove(id); continue; }
+                if (c.Round.Time - item.StartedAt + 1e-7 < item.Duration) continue;
+                items.Remove(id);
                 if (!string.IsNullOrEmpty(item.Callback)) DeviceScriptSystem.DeviceEvent(c, item.Source, item.Callback, item);
             }
         }
-        private void Remove(SimulationContext c, int id)
-        { items.Remove(id); if (c.Physics is IDeviceTransientVisuals visuals) visuals.RemoveTransientVisual(id); }
-        internal void Clear(SimulationContext c) { foreach (int id in new List<int>(items.Keys)) Remove(c, id); }
-        internal void RemoveSource(SimulationContext c, int source)
-        { foreach (var item in new List<Item>(items.Values)) if (item.Source == source) Remove(c, item.Id); }
+        internal void Clear() => items.Clear();
+        internal void RemoveSource(int source)
+        {
+            removing.Clear();
+            foreach (var item in items.Values)
+                if (item.Source == source) removing.Add(item.Id);
+            foreach (int id in removing) items.Remove(id);
+        }
     }
 }

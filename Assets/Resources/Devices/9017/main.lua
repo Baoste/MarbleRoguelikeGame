@@ -14,7 +14,7 @@ function OnTick(api)
     nextThrow = api.Time + api.Parameter
     local direction = api.Vectors:Rotate(api.Forward, api.Up, api:RandomRange(0, 360))
     local position = api.Position + api.Up * 0.12 + direction * (api.Radius + 0.12)
-    local id = api:TrySpawnVisual("BombTemplate", position, direction * api.Strength, flightSeconds, "OnFuseEnd")
+    local id = api:TryScheduleTransient(position, direction * api.Strength, flightSeconds, "OnFuseEnd", "BombTemplate")
     if id ~= 0 then
         flights[id] = { up = api.Up, forward = api.Forward }
         api:SetStatus("炸弹 · 投掷中")

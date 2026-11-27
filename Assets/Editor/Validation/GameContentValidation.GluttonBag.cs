@@ -69,7 +69,7 @@ namespace MarblesECS.Editor
                 for (int n = 0; n < 4; n++) Check(f.Simulation.TryOfferDevice(BagFood(f.C, (DeviceRarity)n), first.InstanceId), "multiple foods accumulate");
                 Check(f.Simulation.TryOfferDevice(BagFood(f.C), second.InstanceId), "second receiver can grow independently");
                 Check(f.Simulation.RemoveDevicePlacement(first.InstanceId), "receiver can be retrieved");
-                MorePlace(f.C, first.InstanceId, true);
+                Check(f.Simulation.PlaceDevice(first.InstanceId, 2, 0), "replace the retrieved receiver");
                 Check(f.Simulation.BeginRound(), "prepared growth survives retrieval and start"); key = f.Launch(); var other = f.Launch();
                 f.Step(PiggyHit(f, key, first), PiggyHit(f, other, first));
                 Near(21, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "all four rarities sum to twenty");
@@ -211,7 +211,7 @@ function Verify() assert(not pcall(function() return saved.RoundId end)) end");
             var scene = SceneManager.CreateScene("GluttonBagPhysics_" + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             var simulation = new MarbleSimulation(Balance()); var hits = new List<MarbleContact>();
             var bridge = new MarblePhysicsBridge(scene, null, null, hit => { if (hit.HasImpact) hits.Add(hit); simulation.EnqueueContact(hit); });
-            var board = new GameObject("GluttonBagBoard"); SceneManager.MoveGameObjectToScene(board, scene); DeviceViewHandle view = null;
+            var board = new GameObject("GluttonBagBoard"); SceneManager.MoveGameObjectToScene(board, scene); DevicePhysicsFixture view = null;
             try
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -224,7 +224,7 @@ function Verify() assert(not pcall(function() return saved.RoundId end)) end");
                 BagBuild(c); Check(simulation.TryOfferDevice(BagFood(c), owned.InstanceId), "prepare physical bag by consuming common inventory");
                 Check(simulation.BeginRound(), "start physical prepared round");
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
-                view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
+                view = DevicePhysicsFixture.Place(simulation, owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
                 var collider = view.Root.GetComponentInChildren<MeshCollider>(); Check(collider != null && collider.convex && !collider.isTrigger, "glutton bag has solid cylindrical collision");
                 var spawn = board.transform.TransformPoint(new Vector3(0, .1f, .8f)); var incoming = board.transform.rotation * Vector3.back * 2;
                 simulation.FireOnce(); simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge); var key = c.Marbles.Keys.Single();

@@ -89,24 +89,24 @@ end
 | --- | --- | --- |
 | [ForEachPlacedDevice(definitionId, callback, value)](#foreachplaceddevice) | `callback(api, value)` | 新的 `DeviceEventContext`、`number` |
 | `ForEachBallInRadius(center, radius, callback)` | `callback(api)` | 新的 `DeviceContactContext`，无碰撞快照 |
-| `TrySpawnVisual(..., callback)` | `callback(api)` | 新的 `DeviceEventContext`，`Transient` 非空 |
+| `TryScheduleTransient(..., callback, nodePath)` | `callback(api)` | 新的 `DeviceEventContext`，`Transient` 非空 |
 
 回调名是当前接收实例脚本中的全局函数名。一次回调异常不会阻止列表中的其他接收者；异常前已完成的修改保持有效。
 
-### 装置表现事件
+### 装置 Unity 事件
 
-这组事件来自 装置的 Prefab 展示对象，不接收游戏上下文，不应代替固定模拟事件实现游戏计时。
+这组事件由会话中的装置物理实体转发。玩法计时使用固定步的 `OnTick` 或 `TryScheduleTransient`。
 
 | 签名 | 参数 | 说明 |
 | --- | --- | --- |
-| `Start()` | 无 | 展示对象启动时，可根据 Lua 普通缓存恢复外观。重建展示对象可能再次调用。 |
+| `Start()` | 无 | Unity 启动装置物理实体时调用。仅替换模型时，表现层重放此前设置的渲染可见性。 |
 | `Update(deltaTime)` | `number` | Unity 渲染更新秒数。 |
 | `FixedUpdate(deltaTime)` | `number` | Unity FixedUpdate 秒数，不等同于本游戏手动模拟的 `OnTick`。 |
 | `OnCollisionEnter(other)` / `OnCollisionStay(other)` / `OnCollisionExit(other)` | `DeviceLuaObject` | Unity 原始碰撞通知。 |
 | `OnTriggerEnter(other)` / `OnTriggerStay(other)` / `OnTriggerExit(other)` | `DeviceLuaObject` | Unity 原始触发器通知。 |
-| `OnDestroy()` | 无 | Lua 脚本实例被释放时调用；共享脚本的展示对象解绑不等于释放脚本。 |
+| `OnDestroy()` | 无 | Lua 脚本实例被释放时调用。装置返回库存后仍持有自己的 Lua 实例。 |
 
-原始碰撞通知不提供计分、耐久或 ECS 弹珠上下文。装置玩法使用游戏事件；表现事件使用[表现对象](#deviceluaobject)。装置表现回调抛错时，该展示行为组件会停止后续分发。
+计分和耐久使用带 ECS 上下文的游戏事件。此表中的回调收到 [DeviceLuaObject](#deviceluaobject) 或 Unity 时间参数，回调异常会停止该实体后续的 Unity 事件转发。
 
 <a id="shared"></a>
 
@@ -636,22 +636,23 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 相对摆放姿态，绕棋盘法向设置绝对旋转偏移；不累积旋转，不修改背包布局。成功返回 true；非法数值或无支持的物理视图返回 false。
 
 <a id="deviceeventcontext-tryspawnvisual"></a>
+<a id="deviceeventcontext-tryscheduletransient"></a>
 
-### TrySpawnVisual(nodePath, position, velocity, seconds, callback) → integer
+### TryScheduleTransient(position, velocity, seconds, callback, nodePath) → integer
 
 | 参数 | 类型 | 限制 |
 | --- | --- | --- |
-| `nodePath` | `string` | 当前 Prefab 根节点下非空模板路径，须存在并包含网格。 |
 | `position` | `Vector3` | 有限世界起点。 |
 | `velocity` | `Vector3` | 有限世界速度，可为零；终点也必须有限。 |
 | `seconds` | `number` | 有限 `(0, 60]`。 |
 | `callback` | `string?` | 最多 64 字符；nil / 空字符串表示不执行完成函数。 |
+| `nodePath` | `string?` | 最多 256 字符的 Prefab 相对模板路径。使用 nil 或空字符串时只登记计时。 |
 
-成功返回正整数视觉 ID，条件不满足返回 0。每个模拟最多 256 个活动视觉对象，需物理适配器提供 `IDeviceTransientVisuals`。
+成功返回正整数效果 ID，条件不满足返回 0。至少提供回调或模板路径之一。每个模拟最多同时登记 256 个效果。旧签名 `TrySpawnVisual(nodePath, position, velocity, seconds, callback)` 继续可用，采用相同的计时语义。
 
-只复制 Mesh、Material 和 Transform 层级；模板可以隐藏，不复制碰撞体、刚体或脚本。视觉按 `position + velocity × elapsed` 匀速运动，不受重力/障碍影响，不占弹珠数量、不计分、不扣耐久。
+模拟使用固定步计算 `position + velocity × elapsed`。表现层可用隐藏的模板复制网格、材质和变换层级。模板缺失、关闭表现层或移除特效时，计时继续。登记效果本身不占弹珠数量、不计分、不扣耐久。
 
-到期先移除视觉对象，再调用新上下文；无函数或函数异常也会清理。来源不可执行、视图丢失/重建、回合结束、排空超时或会话释放时取消，不补发完成效果。耗尽耐久后需要继续的效果应申请完成窗口。
+到期先移除模拟记录，再用新上下文执行回调。来源不可执行、回合结束、排空超时或会话释放时取消。耗尽耐久后需要继续的效果应申请完成窗口。
 
 <a id="deviceeventcontext-foreachballinradius"></a>
 
@@ -1185,7 +1186,7 @@ Generation 加 1，SpawnSourceId 改为本实例，等分祖先加入本实例�
 
 | 属性 | 类型 | 说明 |
 | --- | --- | --- |
-| `Id` | `integer` | TrySpawnVisual 返回的视觉 ID。 |
+| `Id` | `integer` | TryScheduleTransient 返回的效果 ID。 |
 | `Position` | `Vector3` | 精确寿命终点：起点 + 速度 × 请求时长。 |
 | `Velocity` | `Vector3` | 创建时的世界速度。 |
 | `Duration` | `number` | 创建时的请求秒数。 |
@@ -1194,9 +1195,9 @@ Generation 加 1，SpawnSourceId 改为本实例，等分祖先加入本实例�
 
 ## DeviceLuaObject
 
-脚本全局 `self` 指向当前绑定的 装置的 Prefab 展示对象；没有展示对象时为 nil。源码：[DeviceLuaObject.cs](../Scripts/DeviceLua/DeviceLuaObject.cs)。
+脚本全局 `self` 在装置放置期间绑定其物理实体。装置位于库存时，`self` 为 nil。[DeviceLuaObject.cs](../Scripts/DeviceLua/DeviceLuaObject.cs)
 
-self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通过 Motion 修改弹珠，避免绕过 ECS / PhysX 同步。
+弹珠运动通过 `Motion` 修改，装置的玩法偏航通过 `TrySetYaw` 设置。库存的放置、移动和旋转由模拟命令提交。
 
 <a id="deviceluaobject-trysetrenderersvisible"></a>
 
@@ -1206,7 +1207,7 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 
 设置目标节点及后代的 Renderer.enabled。路径最多 256 字符，不接受空路径段、反斜杠、"." 或 ".."。目标不存在、没有 Renderer、路径非法或对象销毁返回 false。
 
-不切换 GameObject 激活、碰撞体或刚体，不修改共享材质；可设置未激活节点的 Renderer，但不会激活它。重建展示对象后，可在 Start 中恢复缓存的外观状态。
+显示状态根据 Prefab 的渲染节点登记。节点有效时，无模型也返回 true。表现层在模型创建或替换时重放显示状态，碰撞体、刚体和共享材质由原有所有者管理。
 
 ### 配置查询
 
@@ -1218,9 +1219,9 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 | `GetDurability()` | `integer` | 配置的默认耐久，无 metadata 时为 20；不是剩余耐久。 |
 | `GetItemType()` | `string?` | 枚举名称 "Device" / "Medicine"，不是 JSON 小写类型值。 |
 
-### 原始表现操作
+### 原始 Unity 对象操作
 
-以下是 展示对象接口，均不提供游戏运动接口的障碍检查、限速和状态同步。
+这些兼容接口直接访问 Unity 对象。装置布局和弹珠玩法运动使用模拟命令与 `Motion`。
 
 | 签名 | 参数 / 返回值 | 说明 |
 | --- | --- | --- |

@@ -283,7 +283,7 @@ namespace MarblesECS.Editor
                     if (isDevice)
                     {
                         var definition = new DeviceDefinition { Bounce = deviceBounce.Value };
-                        surface.AddComponent<DeviceBody>().Initialize(1, definition, null);
+                        surface.AddComponent<DeviceBody>().Initialize(bridge, 1, definition, null, null);
                         Check(collider.sharedMaterial != null && collider.sharedMaterial != material, "device owns its physics material");
                         Near(deviceBounce.Value, collider.sharedMaterial.bounciness, "configured bounce reaches the PhysX solver");
                         if (material != null) Near(surfaceBounce.Value, material.bounciness, "shared material is preserved");
@@ -529,18 +529,17 @@ namespace MarblesECS.Editor
                 bridge.Remove(new MarbleKey(1,2));UnityEngine.Object.DestroyImmediate(pinObject);
                 var fieldObject=new GameObject("FieldValidation");SceneManager.MoveGameObjectToScene(fieldObject,scene);
                 fieldObject.transform.position=new Vector3(0,2,.15f);
-                var region=new GameObject("Field"); region.transform.SetParent(fieldObject.transform, false);
-                var box=region.AddComponent<BoxCollider>(); box.size=Vector3.one; box.isTrigger=true;
-                var field=fieldObject.AddComponent<DeviceBody>();
                 using var fieldScript = DeviceResourceCatalog.Current.Get(9004).CreateScript();
                 var fieldDefinition = DeviceResourceCatalog.Current.Get(9004).Definition.Copy(); fieldDefinition.Strength=1;
-                field.Initialize(1, fieldDefinition, fieldScript);
+                bridge.ConfigureDevicePlacement(fieldObject.transform);
+                Check(bridge.TrySetDevicePlacement(new DevicePlacement(1, fieldDefinition, 0, 0, 0), (_, _) => fieldScript),
+                    "field physics is installed without a model");
                 settings.PierceCount=0;settings.Magnetic=false;
                 Check(bridge.TrySpawn(new MarbleSpawnData{Key=new MarbleKey(1,3),Position=new Vector3(0,2,0),Rotation=Quaternion.identity,
                     Quote=new ShotQuote(1,1,.08f,.1f,10,1),LinearVelocity=Vector3.right*.01f,HasRestitution=true,Restitution=.6f,HasSettings=true,Settings=settings}),"field spawn");
                 bridge.Simulate(.02f);bridge.TryGetState(new MarbleKey(1,3),out state);
                 Check(state.LinearVelocity.z<0,"installed field applies force along local negative Z");
-                UnityEngine.Object.DestroyImmediate(fieldObject);
+                bridge.RemoveDevice(1); UnityEngine.Object.DestroyImmediate(fieldObject);
             }
             finally
             {
@@ -600,7 +599,7 @@ namespace MarblesECS.Editor
             try { api.RefundOnDespawn = true; }
             finally { api.Close(); }
         }
-        private sealed class FakePhysics : IMarblePhysics, IMarblePhysicsStateProvider, IMarblePhysicsCommands, IDeviceTransientVisuals,
+        private sealed class FakePhysics : IMarblePhysics, IMarblePhysicsStateProvider, IMarblePhysicsCommands, IMarbleDevicePhysics,
             IMarblePhysicsSuspension, IMarbleHeldVisibility, IMarbleDeviceRotation
         {
             internal readonly Dictionary<MarbleKey,MarbleSpawnData> Spawns=new Dictionary<MarbleKey,MarbleSpawnData>();
@@ -626,14 +625,25 @@ namespace MarblesECS.Editor
                 if (!yawBasis.TryGetValue(id, out var basis)) { basis = pose.Forward; yawBasis.Add(id, basis); }
                 pose.Forward = Quaternion.AngleAxis(degrees, pose.Up) * basis; Poses[id] = pose; return true;
             }
-            internal readonly Dictionary<int, (int Source, string Path, Vector3 Position)> Visuals = new Dictionary<int, (int, string, Vector3)>();
-            internal readonly Dictionary<int, Vector3> VisualOrigins = new Dictionary<int, Vector3>();
-            internal bool BlockVisuals;
-            public bool TryCreateTransientVisual(int source, int id, string path, Vector3 position)
-            { if (BlockVisuals || !Poses.ContainsKey(source)) return false; Visuals.Add(id, (source, path, position)); VisualOrigins.Add(id, position); return true; }
-            public bool TryMoveTransientVisual(int id, Vector3 position)
-            { if (!Visuals.TryGetValue(id, out var item)) return false; Visuals[id] = (item.Source, item.Path, position); return true; }
-            public void RemoveTransientVisual(int id) => Visuals.Remove(id);
+            public bool CanPlaceDevice(DevicePlacement placement, float clearance, bool avoidMarbles) => true;
+            public bool TrySetDevicePlacement(DevicePlacement placement, Func<int, uint, DeviceLuaScript> getScript)
+            {
+                Poses[placement.InstanceId] = new DevicePose
+                {
+                    Position = new Vector3(placement.X, 0, placement.Z), Up = Vector3.up,
+                    Forward = Quaternion.Euler(0, placement.Angle, 0) * Vector3.back, Radius = placement.Definition.PlacementRadius
+                };
+                yawBasis.Remove(placement.InstanceId);
+                return true;
+            }
+            public bool TryReplaceDevicePlacements(IReadOnlyList<DevicePlacement> placements, Func<int, uint, DeviceLuaScript> getScript)
+            {
+                ClearDevices();
+                foreach (var placement in placements) TrySetDevicePlacement(placement, getScript);
+                return true;
+            }
+            public void ClearDevices() { Poses.Clear(); yawBasis.Clear(); }
+            public void RemoveDevice(int id) { Poses.Remove(id); yawBasis.Remove(id); }
             public bool TrySpawn(MarbleSpawnData data)
             {
                 if(++Attempts==FailSpawnAt)return false;

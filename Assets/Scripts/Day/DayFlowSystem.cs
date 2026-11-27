@@ -245,7 +245,7 @@ namespace MarblesECS
             state.PreviousPhase = state.Phase;
             state.LastTransition = reason;
             state.Version = checked(state.Version + 1);
-            if (reason != DayTransitionReason.CampaignStarted)
+            if (reason != DayTransitionReason.CampaignStarted && reason != DayTransitionReason.ProductionFailed)
             {
                 rules.RemoveSource(Current.DayId, DayRuleScope.Phase);
                 if (state.Phase == DayPhase.Production) rules.RemoveSource(Current.DayId, DayRuleScope.Temporary);
@@ -339,11 +339,13 @@ namespace MarblesECS
             {
                 Debug.LogError($"Day '{state.DayId}' retry random policy failed. Restoring checkpoint RNG: {error}");
             }
-            rules.ClearAttempt(Snapshot);
-            rules.RemoveSource(definition.SequenceId, DayRuleScope.Campaign);
-            events.ClearAttempt();
-            simulation.BeforeDayBoardRestore();
-            checkpoint.Restore(context, random);
+            checkpoint.Restore(context, random, () =>
+            {
+                rules.ClearAttempt(Snapshot);
+                rules.RemoveSource(definition.SequenceId, DayRuleScope.Campaign);
+                events.ClearAttempt();
+                simulation.BeforeDayBoardRestore();
+            });
             state.Attempt = checked(state.Attempt + 1);
             InitializeWakeUp(ref state, Current);
             state.ShopStockReady = keepStock;

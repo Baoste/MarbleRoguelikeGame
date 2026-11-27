@@ -30,7 +30,8 @@ namespace MarblesECS.Editor
                 {
                     r.Time(i * .5); r.Tick();
                     Near(Quaternion.AngleAxis((i % 8) * 45, r.Pose.Up) * initial, r.Pose.Forward, "eight discrete headings on an inclined board");
-                    Near(r.Pose.Forward, (r.View.Root.transform.Find("Muzzle").position - r.View.Root.transform.TransformPoint(new Vector3(0, .16f, 0))).normalized,
+                    Near(r.Pose.Forward, r.View.Root.transform.TransformVector(
+                        r.View.Template.Find("Muzzle").localPosition - new Vector3(0, .16f, 0)).normalized,
                         "visible muzzle matches physical heading");
                 }
                 var api = new DeviceEventContext(r.C, r.Device);
@@ -229,8 +230,8 @@ function Verify() assert(completed == 2) end"))
             internal readonly MarbleSimulation Simulation;
             internal readonly MarblePhysicsBridge Bridge;
             internal readonly Entity Device;
-            internal readonly DeviceViewHandle View;
-            private readonly List<DeviceViewHandle> views = new List<DeviceViewHandle>();
+            internal readonly DevicePhysicsFixture View;
+            private readonly List<DevicePhysicsFixture> views = new List<DevicePhysicsFixture>();
             private int launches;
             internal SimulationContext C => Simulation.Context;
             internal int Id => View.Root.GetComponent<DeviceBody>().InstanceId;
@@ -253,12 +254,12 @@ function Verify() assert(completed == 2) end"))
                 Board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 37, 0));
                 View = Add(Vector3.zero); CampaignStateUtility.FindDevice(C, Id, out Device); Tick();
             }
-            internal DeviceViewHandle Add(Vector3 offset)
+            internal DevicePhysicsFixture Add(Vector3 offset)
             {
                 var definition = C.Balance.Devices.Single(d => d.Id == 9007); CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last(); CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
-                var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
+                var view = DevicePhysicsFixture.Place(Simulation, owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 view.Root.transform.localPosition = offset; views.Add(view); view.Root.SetActive(true); Physics.SyncTransforms(); return view;
             }
             internal Entity Ball(MarbleKey key) => C.Marbles[key];

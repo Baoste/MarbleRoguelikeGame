@@ -112,6 +112,49 @@ namespace MarblesECS.Tests
             Assert.That(game.Session.BiomassScrapBalance, Is.EqualTo(initialScrap - 2 * price));
         }
 
+#if UNITY_EDITOR
+        [UnityTest]
+        public IEnumerator FullDeviceStartupInstallsAPhysicalPairWithPresentationDisabled()
+        {
+            const string preference = "MarblesECS.EnableRandomStartingDevices";
+            bool previous = UnityEditor.SessionState.GetBool(preference, false);
+            UnityEditor.SessionState.SetBool(preference, true);
+            try
+            {
+                yield return LoadTestScene(game =>
+                {
+                    game.ShowDevicePresentation = false;
+                    InTestScene<DevicePlacementUI>().enabled = false;
+                });
+                var controller = InTestScene<MarbleGameController>();
+                yield return Until(() => controller.IsReady, "Full Device Startup");
+                localScene = controller.PhysicsRoot.gameObject.scene;
+                Assert.That(controller.GetDailyPegs().Select(device => device.DefinitionId),
+                    Is.EquivalentTo(controller.Balance.Devices.Select(device => device.Id)));
+                long wallet = controller.Session.BiomassScrapBalance;
+                Assert.That(wallet, Is.EqualTo(99999));
+                var pair = controller.Balance.Devices.Single(device => device.Id == 103);
+                var installed = new List<int>();
+                for (int i = -6; i <= 6 && installed.Count < 2; i++)
+                    for (int j = -6; j <= 6 && installed.Count < 2; j++)
+                        if (controller.TryInstallDevice(pair.Id, i * .5f, j * .5f, 0, out int id))
+                            installed.Add(id);
+
+                Assert.That(installed, Has.Count.EqualTo(2));
+                Assert.That(controller.Session.BiomassScrapBalance, Is.EqualTo(wallet - pair.InstallPrice));
+                Assert.That(controller.GetOwnedDevices().Select(device => device.PairId).Distinct(), Is.EqualTo(new[] { installed[0] }));
+                foreach (int id in installed)
+                {
+                    var body = FindDeviceBody(id);
+                    Assert.That(body, Is.Not.Null);
+                    Assert.That(body.GetComponentsInChildren<Collider>().Length, Is.GreaterThan(0));
+                    Assert.That(body.GetComponentsInChildren<Renderer>(true), Is.Empty);
+                }
+            }
+            finally { UnityEditor.SessionState.SetBool(preference, previous); }
+        }
+#endif
+
         [UnityTest]
         public IEnumerator ConfiguredDaysOpenTheLoadoutTerminalAndUnlockDrawsOnDayTwo()
         {
@@ -428,21 +471,19 @@ namespace MarblesECS.Tests
             Assert.That(game.TryCloseShop(version), Is.True);
             Assert.That(game.TryCompleteWakeUp(version, out error), Is.True, error);
             Assert.That(game.BeginRound(), Is.True);
-            Assert.That(game.TryInstallDevice(9033, 10, 0, new Vector3(10, 0, 0), 1, 0, Quaternion.identity, out _), Is.False);
+            Assert.That(game.TryInstallDevice(9033, 10, 0, 0, out _), Is.False);
             var launch = game.LaunchPoint.TransformPoint(game.LaunchOffset);
-            Assert.That(game.TryInstallDevice(9033, launch.x, launch.z, new Vector3(launch.x, 0, launch.z),
-                1, 0, Quaternion.identity, out int first), Is.True);
+            Assert.That(game.TryInstallDevice(9033, launch.x, launch.z, 0, out int first), Is.True);
             var firstBody = FindDeviceBody(first);
-            Assert.That(firstBody, Is.Not.Null, "projection is live when the install command returns");
+            Assert.That(firstBody, Is.Not.Null, "the installed collider is live when the command returns");
             var collider = firstBody.GetComponent<Collider>();
             Assert.That(collider.enabled, Is.True);
-            Assert.That(game.TryInstallDevice(9034, launch.x, launch.z, new Vector3(launch.x, 0, launch.z),
-                1, 0, Quaternion.identity, out _), Is.False);
-            Assert.That(game.TryInstallDevice(9034, 2, 0, new Vector3(2, 0, 0), 1, 0, Quaternion.identity, out int second), Is.True);
+            Assert.That(game.TryInstallDevice(9034, launch.x, launch.z, 0, out _), Is.False);
+            Assert.That(game.TryInstallDevice(9034, 2, 0, 0, out int second), Is.True);
             var secondBody = FindDeviceBody(second);
             Assert.That(FindDeviceBody(first), Is.SameAs(firstBody), "another purchase preserves the installed collider");
             Assert.That(game.Session.BiomassScrapBalance, Is.EqualTo(1));
-            Assert.That(game.TryInstallDevice(9034, -2, 0, new Vector3(-2, 0, 0), 1, 0, Quaternion.identity, out _), Is.False);
+            Assert.That(game.TryInstallDevice(9034, -2, 0, 0, out _), Is.False);
 
             var broken = new List<DeviceBrokenEvent>();
             game.DeviceBroken += broken.Add;
@@ -459,10 +500,9 @@ namespace MarblesECS.Tests
             Assert.That(game.GetOwnedDevices().Select(peg => peg.InstanceId), Is.EqualTo(new[] { second }));
             Assert.That(game.DailyLoadout.SelectedCount, Is.EqualTo(2));
 
-            var replacementPose = new Vector3(launch.x, 0, launch.z);
-            yield return Until(() => game.CanInstallDevice(9033, launch.x, launch.z, replacementPose, 1, 0, Quaternion.identity),
+            yield return Until(() => game.CanInstallDevice(9033, launch.x, launch.z, 0),
                 "the broken peg's slot is free as soon as the ball clears it");
-            Assert.That(game.TryInstallDevice(9033, launch.x, launch.z, replacementPose, 1, 0, Quaternion.identity, out int replacement), Is.True);
+            Assert.That(game.TryInstallDevice(9033, launch.x, launch.z, 0, out int replacement), Is.True);
             Assert.That(replacement, Is.Not.EqualTo(first));
             Assert.That(FindDeviceBody(replacement).GetComponent<Collider>().enabled, Is.True);
             Assert.That(game.GetOwnedDevices().Single(peg => peg.InstanceId == replacement).RemainingDurability, Is.EqualTo(1));
@@ -830,16 +870,13 @@ namespace MarblesECS.Tests
             using var bridge = new MarblePhysicsBridge(localScene, null, null, _ => { });
             var firstPin = AddPin(new Vector3(2, 0, 2));
             var secondPin = AddPin(new Vector3(2, 0, 0));
-            var tool = new GameObject("Fixture device");
-            SceneManager.MoveGameObjectToScene(tool, localScene);
-            tool.AddComponent<DeviceBody>().Initialize(1, new DeviceDefinition(), null);
-            Physics.SyncTransforms();
+            var definition = DeviceResourceCatalog.Current.Get(9001).Definition;
+            Assert.That(bridge.TrySetDevicePlacement(new DevicePlacement(1, definition, 0, 0, 0), (_, _) => null), Is.True);
             bridge.BreakPinsOnCross(1);
             Assert.That(firstPin.enabled, Is.False);
             Assert.That(secondPin.enabled, Is.True);
             var checkpoint = bridge.CaptureDayCheckpoint();
-            tool.transform.position = new Vector3(0, 0, 2);
-            Physics.SyncTransforms();
+            Assert.That(bridge.TrySetDevicePlacement(new DevicePlacement(1, definition, 0, 2, 0), (_, _) => null), Is.True);
             bridge.BreakPinsOnCross(1);
             Assert.That(secondPin.enabled, Is.False);
 
@@ -891,7 +928,6 @@ namespace MarblesECS.Tests
             game.ConfigureCampaign(balance);
             var placement = machine.AddComponent<DevicePlacementUI>();
             placement.Controller = game;
-            placement.BoardRoot = board.transform;
             return game;
         }
 
@@ -913,7 +949,8 @@ namespace MarblesECS.Tests
         }
 
         private DeviceBody FindDeviceBody(int id) =>
-            DeviceBody.Active.FirstOrDefault(item => item != null && item.InstanceId == id && item.gameObject.scene == localScene);
+            localScene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<DeviceBody>())
+                .FirstOrDefault(item => item.InstanceId == id);
 
         private static bool TryDragEconomyPeg(MarbleGameController game, DiegeticMachineUI rig)
         {
@@ -927,8 +964,7 @@ namespace MarblesECS.Tests
                     var point = plane.ClosestPointOnPlane(placement.BoardRoot.TransformPoint(new Vector3(x, 0, z)));
                     var pointer = rig.ViewCamera.WorldToScreenPoint(point);
                     if (pointer.z <= 0 || !rig.ViewCamera.pixelRect.Contains(pointer) ||
-                        !game.CanInstallDevice(9033, x, z, point + reference.up * placement.DevicePlaneDistance,
-                            1, 0, reference.rotation) || !rig.BeginDeviceDrag(0, pointer)) continue;
+                        !game.CanInstallDevice(9033, x, z, 0) || !rig.BeginDeviceDrag(0, pointer)) continue;
                     rig.EndDeviceDrag(pointer);
                     if (game.GetOwnedDevices().Length > before) return true;
                 }

@@ -14,6 +14,35 @@ namespace MarblesECS
             device.X = x;
             device.Z = z;
             device.Placed = true;
+            return TryCommitPlacement(context, entity, device);
+        }
+
+        internal static bool TryCommitPlacement(SimulationContext context, Entity entity, OwnedDeviceData device)
+        {
+            var definition = CampaignStateUtility.Device(context, device.DefinitionId);
+            if (!TrySetPhysicsPlacement(context, device.InstanceId, definition, device)) return false;
+            context.Manager.SetComponentData(entity, device);
+            DeviceDurabilitySystem.Refresh(context);
+            MarkLayoutChanged(context);
+            return true;
+        }
+
+        internal static bool TrySetPhysicsPlacement(SimulationContext context, int id, DeviceDefinition definition, OwnedDeviceData device)
+        {
+            return context.Physics is IMarbleDevicePhysics physics &&
+                physics.TrySetDevicePlacement(new DevicePlacement(id, definition, device.X, device.Z, device.Angle),
+                    context.DeviceScripts.Get);
+        }
+
+        internal static bool Rotate(SimulationContext context, int id, float degrees, float clearance)
+        {
+            if (!CampaignStateUtility.FindDevice(context, id, out var entity)) return false;
+            var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+            var definition = CampaignStateUtility.Device(context, device.DefinitionId);
+            if (definition.RotationLocked) return false;
+            float angle = (device.Angle + degrees) % 360;
+            if (device.Placed) return Place(context, id, device.X, device.Z, clearance, angle);
+            device.Angle = angle;
             context.Manager.SetComponentData(entity, device);
             MarkLayoutChanged(context);
             return true;
@@ -40,9 +69,16 @@ namespace MarblesECS
         {
             var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
             if (!device.Placed) return false;
+            RemovePhysicsPlacement(context, device.InstanceId);
             device.Placed = false;
             context.Manager.SetComponentData(entity, device);
             return true;
+        }
+
+        internal static void RemovePhysicsPlacement(SimulationContext context, int id)
+        {
+            (context.Physics as IMarbleDevicePhysics)?.RemoveDevice(id);
+            context.Transients.RemoveSource(id);
         }
 
         internal static void MarkLayoutChanged(SimulationContext context)
@@ -69,7 +105,8 @@ namespace MarblesECS
         internal static bool CanPlaceDefinition(SimulationContext context, DeviceDefinition definition, float x, float z,
             float clearance, float angle, int excludedInstanceId = 0)
         {
-            if (!MarbleRules.IsFinite(x) || !MarbleRules.IsFinite(z) || !MarbleRules.IsFinite(angle) ||
+            if (!(context.Physics is IMarbleDevicePhysics physics) ||
+                !MarbleRules.IsFinite(x) || !MarbleRules.IsFinite(z) || !MarbleRules.IsFinite(angle) ||
                 !MarbleRules.IsFinite(clearance) || clearance < 0) return false;
             float radius = definition.PlacementRadius;
             if (radius <= 0 || (definition.RotationLocked && angle % 360 != 0)) return false;
@@ -87,7 +124,8 @@ namespace MarblesECS
                     otherDefinition.PlacementCenter(other.X, other.Z, other.Angle, out float otherX, out float otherZ);
                     if (Overlaps(centerX, centerZ, otherX, otherZ, distance)) return false;
                 }
-            return true;
+            return physics.CanPlaceDevice(new DevicePlacement(excludedInstanceId, definition, x, z,
+                definition.ResolvePlacementAngle(angle % 360)), clearance, context.IsRunning);
         }
 
         private static bool Overlaps(float x, float z, float otherX, float otherZ, float distance)

@@ -19,6 +19,29 @@ namespace MarblesECS.Tests
         private const string Second = "{\"dayId\":\"fixture-second\",\"order\":2,\"targetScore\":450,\"clearCompanyScripReward\":45" + Features + "}";
 
         [Test]
+        public void RejectedPhysicsUpdateKeepsInventoryPlacementAndPose()
+        {
+            using var simulation = new MarbleSimulation(GameBalanceLoader.Load());
+            var physics = new PhysicsStub();
+            simulation.StartSession(physics);
+            var context = simulation.Context;
+            var definition = CampaignStateUtility.Device(context, 9001);
+            CampaignStateUtility.CreateDevice(context, definition, definition.InstallPrice);
+            int id = context.Campaign.NextDeviceId;
+            Assert.That(physics.TryGetDevicePose(id, out _), Is.False);
+            Assert.That(simulation.PlaceDevice(id, 0, 1), Is.True);
+            int revision = simulation.Session.LayoutRevision;
+            physics.RejectDevicePlacement = true;
+            Assert.That(simulation.PlaceDevice(id, 2, 3, angle: 45), Is.False);
+            Assert.That(simulation.RotateDevice(id, 45), Is.False);
+            Assert.That(simulation.Session.LayoutRevision, Is.EqualTo(revision));
+            var device = simulation.GetOwnedDevices().Single(item => item.InstanceId == id);
+            Assert.That((device.X, device.Z, device.Angle), Is.EqualTo((0f, 1f, 0f)));
+            Assert.That(physics.TryGetDevicePose(id, out var pose), Is.True);
+            Assert.That(pose.Position, Is.EqualTo(Vector3.forward));
+        }
+
+        [Test]
         public void SelectedDevicePacksUseTheSameWalletAndCompleteSafelyDuringProduction()
         {
             var balance = GameBalanceLoader.Load();
@@ -43,11 +66,14 @@ namespace MarblesECS.Tests
             Assert.That(simulation.GetOwnedDevices(), Is.Empty);
             Assert.That(simulation.Session.BiomassScrapBalance, Is.EqualTo(pair.InstallPrice));
             simulation.Context.Balance.Campaign.MaxOwnedDevices = capacity;
-            Assert.Throws<InvalidOperationException>(() => simulation.TryInstallDevice(pair.Id, -4, 0, .15f, 0, out _,
-                () => throw new InvalidOperationException("projection failed")));
+            physics.RejectDevicePlacement = true;
+            int revision = simulation.Session.LayoutRevision;
+            Assert.That(simulation.TryInstallDevice(pair.Id, -4, 0, .15f, 0, out _), Is.False);
             Assert.That(simulation.GetOwnedDevices(), Is.Empty);
             Assert.That(simulation.Session.BiomassScrapBalance, Is.EqualTo(pair.InstallPrice));
+            Assert.That(simulation.Session.LayoutRevision, Is.EqualTo(revision));
 
+            physics.RejectDevicePlacement = false;
             Assert.That(simulation.TryInstallDevice(pair.Id, -4, 0, .15f, 0, out int first), Is.True);
             Assert.That(simulation.GetOwnedDevices().Count(device => device.Placed), Is.EqualTo(1));
             Assert.That(simulation.Session.BiomassScrapBalance, Is.Zero);
@@ -1202,11 +1228,13 @@ namespace MarblesECS.Tests
         }
 
         private sealed class PhysicsStub : IMarbleDayPhysics, IMarbleDayPhysicsCheckpoint, IMarbleBoardLayoutPhysics,
-            IMarblePhysicsCommands, IMarblePhysicsSuspension
+            IMarblePhysicsCommands, IMarblePhysicsSuspension, IMarbleDevicePhysics
         {
             private readonly Dictionary<MarbleKey, Vector3> live = new Dictionary<MarbleKey, Vector3>();
+            private readonly Dictionary<int, DevicePose> devices = new Dictionary<int, DevicePose>();
             private int spawnCount;
             internal int RejectSpawnNumber { get; set; }
+            internal bool RejectDevicePlacement { get; set; }
             internal MarbleKey Last { get; private set; }
             internal BoardLayoutDefinition CurrentLayout { get; private set; }
             internal int LayoutChanges { get; private set; }
@@ -1233,11 +1261,29 @@ namespace MarblesECS.Tests
             public bool TrySetVelocity(MarbleKey key, Vector3 velocity) => live.ContainsKey(key);
             public bool TrySetSuspended(MarbleKey key, bool suspended) => live.ContainsKey(key);
             public void SetProperties(MarbleKey key, MarblePhysicalSettings settings) { }
-            public bool TryGetDevicePose(int instanceId, out DevicePose pose)
+            public bool CanPlaceDevice(DevicePlacement placement, float clearance, bool avoidMarbles) => true;
+
+            public bool TrySetDevicePlacement(DevicePlacement placement, Func<int, uint, DeviceLuaScript> getScript)
             {
-                pose = new DevicePose { Position = Vector3.zero, Up = Vector3.up, Forward = Vector3.forward, Radius = .13f };
+                if (RejectDevicePlacement) return false;
+                devices[placement.InstanceId] = new DevicePose
+                {
+                    Position = new Vector3(placement.X, 0, placement.Z), Up = Vector3.up,
+                    Forward = Quaternion.Euler(0, placement.Angle, 0) * Vector3.back, Radius = placement.Definition.PlacementRadius
+                };
                 return true;
             }
+
+            public bool TryReplaceDevicePlacements(IReadOnlyList<DevicePlacement> placements, Func<int, uint, DeviceLuaScript> getScript)
+            {
+                if (RejectDevicePlacement) return false;
+                ClearDevices();
+                foreach (var placement in placements) TrySetDevicePlacement(placement, getScript);
+                return true;
+            }
+            public void RemoveDevice(int id) => devices.Remove(id);
+            public void ClearDevices() => devices.Clear();
+            public bool TryGetDevicePose(int instanceId, out DevicePose pose) => devices.TryGetValue(instanceId, out pose);
             public void BreakPinsOnCross(int instanceId) { }
         }
 

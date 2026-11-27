@@ -113,7 +113,7 @@ namespace MarblesECS.Editor
                 var simulation = new MarbleSimulation(Balance());
                 var bridge = new MarblePhysicsBridge(scene, null, null, simulation.EnqueueContact);
                 var board = new GameObject("PuffMushroomBoard"); SceneManager.MoveGameObjectToScene(board, scene);
-                DeviceViewHandle view = null; GameObject obstacle = null;
+                DevicePhysicsFixture view = null; GameObject obstacle = null;
                 try
                 {
                     simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
@@ -122,9 +122,9 @@ namespace MarblesECS.Editor
                     var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var e);
                     var data = c.Manager.GetComponentData<OwnedDeviceData>(e); data.Placed = true; c.Manager.SetComponentData(e, data);
                     board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(-63, 121, 0));
-                    view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
+                    view = DevicePhysicsFixture.Place(simulation, owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
                     var colliders = view.Root.GetComponentsInChildren<Collider>().Where(c => c.name != "PlacementVolume").ToArray(); Check(colliders.Length == 1 && colliders[0].isTrigger, "mushroom has a single nonsolid entry sensor");
-                    var modelNodes = view.Root.GetComponentsInChildren<Transform>(true).Select(node => node.name).ToHashSet();
+                    var modelNodes = view.Template.GetComponentsInChildren<Transform>(true).Select(node => node.name).ToHashSet();
                     Check(modelNodes.Contains("Stem") && modelNodes.Contains("Cap"), "package contains mushroom model");
                     for (int i = 0; i < 8; i++) Check(modelNodes.Contains("Opening" + i), "model contains eight open mouths");
                     Check(bridge.TryGetDevicePose(owned.InstanceId, out var pose), "loaded mushroom has physics pose");
@@ -138,7 +138,7 @@ namespace MarblesECS.Editor
                     multiplierData.Placed = true;
                     c.Manager.SetComponentData(multiplierEntity, multiplierData);
                     var multiplierSnapshot = simulation.GetOwnedDevices().Single(d => d.InstanceId == multiplierData.InstanceId);
-                    using var multiplierView = DeviceView.Create(multiplierSnapshot, board.transform,
+                    using var multiplierView = DevicePhysicsFixture.Place(simulation, multiplierSnapshot, board.transform,
                         c.DeviceScripts.Get(multiplierData.InstanceId, multiplier.Id));
                     var target = multiplierView.Root.transform;
                     target.localPosition = new Vector3(2, 0, 0);

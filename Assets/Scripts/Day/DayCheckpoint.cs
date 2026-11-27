@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 
@@ -56,13 +57,37 @@ namespace MarblesECS
                 throw new InvalidOperationException("The physics adapter returned no Day checkpoint.");
         }
 
-        internal void Restore(SimulationContext context, uint randomState)
+        internal void Restore(SimulationContext context, uint randomState, Action beforeRestore = null)
         {
-            var manager = context.Manager;
             var current = context.Campaign;
             // Keep physical/contact identities fresh even when replaying the gameplay random stream.
             int nextRoundId = checked(context.Round.RoundId + 1);
             int nextRevision = checked(current.LayoutRevision + 1);
+            int roundDelta = checked(nextRoundId - round.RoundId);
+            var placements = new List<DevicePlacement>();
+            foreach (var device in devices)
+                if (device.TryGetPlacement(context, out var placement)) placements.Add(placement);
+            var prepared = new DeviceScriptSystem { CreateScript = context.DeviceScripts.CreateScript };
+            try
+            {
+                if (context.Physics is IMarbleDevicePhysics devicePhysics)
+                {
+                    if (!devicePhysics.TryReplaceDevicePlacements(placements, prepared.Get))
+                        throw new InvalidOperationException("Could not restore the checkpoint's device colliders.");
+                }
+                else if (placements.Count != 0)
+                    throw new InvalidOperationException("The physics adapter cannot restore placed devices.");
+
+                beforeRestore?.Invoke();
+                RestoreCommitted(context, randomState, current, nextRoundId, nextRevision, roundDelta, prepared);
+            }
+            finally { prepared.Clear(); }
+        }
+
+        private void RestoreCommitted(SimulationContext context, uint randomState, CampaignData current,
+            int nextRoundId, int nextRevision, int roundDelta, DeviceScriptSystem prepared)
+        {
+            var manager = context.Manager;
             context.ClearFireInput();
             context.RemoveAllMarbles();
             context.Contacts.Clear();
@@ -72,6 +97,7 @@ namespace MarblesECS
             context.RefundedFamilies.Clear();
             physics.Restore();
             context.DeviceScripts.Clear();
+            context.DeviceScripts.AdoptPreparedScripts(prepared);
             using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
                 manager.DestroyEntity(entities);
 
@@ -101,7 +127,8 @@ namespace MarblesECS
             WriteBuffer(manager, context.PlayerEntity, playerValues);
             WriteBuffer(manager, context.PlayerEntity, playerModifiers);
             foreach (var device in devices)
-                device.Restore(context, checked(nextRoundId - round.RoundId));
+                device.Restore(context, roundDelta);
+            DeviceDurabilitySystem.Refresh(context);
         }
 
         private sealed class Device
@@ -168,6 +195,14 @@ namespace MarblesECS
                 }
                 if (!string.IsNullOrEmpty(status))
                     context.DeviceScripts.SetStatus(data.InstanceId, DeviceRoundState.Round(context), status);
+            }
+
+            internal bool TryGetPlacement(SimulationContext context, out DevicePlacement placement)
+            {
+                placement = data.Placed
+                    ? new DevicePlacement(data.InstanceId, CampaignStateUtility.Device(context, data.DefinitionId), data.X, data.Z, data.Angle)
+                    : default;
+                return data.Placed;
             }
         }
 
