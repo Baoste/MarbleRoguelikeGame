@@ -1,12 +1,14 @@
 {
   "Id": 9020,
+  "SourceId": "MarbleMachineGun",
+  "Bounce": 0,
   "ScoreMultiplier": 1,
   "StartingCount": 0,
   "PurchaseQuantity": 1,
   "Cooldown": 0,
-  "MaxTriggersPerBall": 0,
-  "Range": 45,
-  "Strength": 6,
   "Value": 0.1,
-  "SourceId": "MarbleMachineGun"
+  "Strength": 6,
+  "RotationLocked": false,
+  "MaxTriggersPerBall": 0,
+  "Range": 45
 }

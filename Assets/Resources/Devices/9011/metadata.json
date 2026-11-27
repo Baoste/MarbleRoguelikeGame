@@ -1,10 +1,8 @@
 {
   "name": "淘金热",
   "description": "运走弹珠，稍后随机结算回报。",
-  "_descriptionDetail": "矿车运走一颗弹珠，10秒后等概率：返还弹珠并获得2金币、消耗弹珠获得5金币、或一无所获。运输期间不接收新弹珠，出结果扣1耐久。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 14,
+  "biomassScrapPrice": 14,
   "rarity": "uncommon",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

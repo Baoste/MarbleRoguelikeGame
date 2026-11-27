@@ -1,13 +1,14 @@
 {
   "Id": 9023,
+  "SourceId": "MoreIsMore",
   "Bounce": 0.6,
   "ScoreMultiplier": 1,
   "StartingCount": 0,
   "PurchaseQuantity": 1,
   "Cooldown": 0,
-  "MaxTriggersPerBall": 0,
-  "Range": 0.2,
-  "Strength": 2,
   "Value": 20,
-  "SourceId": "MoreIsMore"
+  "Strength": 2,
+  "RotationLocked": false,
+  "MaxTriggersPerBall": 0,
+  "Range": 0.2
 }

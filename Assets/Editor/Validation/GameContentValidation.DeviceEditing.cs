@@ -144,7 +144,7 @@ namespace MarblesECS.Editor
                 Check(placement.SelectedInstanceId == 0 && View(id).activeSelf, "right click on sale area cancels the move");
                 Check(placement.HandleBoardPointerDown(Point(-1, 1)) && placement.HandleBoardPointerUp(salePoint), "release in the sale area sells the board device");
                 Check(!CampaignStateUtility.FindDevice(f.C, id, out _) && placement.SelectedInstanceId == 0, "sale removes the dragged instance");
-                Near(coins + price, f.C.Campaign.Coins, "sale credits the metadata value");
+                Near(coins + price, f.C.Campaign.Coins, "sale credits the quoted refund");
                 Check(!placement.HandleBoardPointerUp(salePoint), "a repeated release cannot sell twice");
                 Near(coins + price, f.C.Campaign.Coins, "repeated release pays nothing");
                 Check(board.GetComponentsInChildren<DeviceBody>(true).All(b => b.InstanceId != id || !b.gameObject.activeInHierarchy),
@@ -174,7 +174,7 @@ namespace MarblesECS.Editor
                 price = f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == stock).SellPrice;
                 Check(placement.EndInventoryDrag(salePoint, panel) && placement.SelectedInstanceId == 0 &&
                     !CampaignStateUtility.FindDevice(f.C, stock, out _), "inventory release in the sale area sells the dragged item");
-                Near(coins + price, f.C.Campaign.Coins, "inventory sale credits the metadata value");
+                Near(coins + price, f.C.Campaign.Coins, "inventory sale credits the quoted refund");
 
                 Check(placement.HandleBoardPointerDown(Point(2, 0)), "pick up the device before pausing");
                 controller.SetPaused(true); placement.UpdatePlacementPointer(Point(0, 1)); sale.Refresh();

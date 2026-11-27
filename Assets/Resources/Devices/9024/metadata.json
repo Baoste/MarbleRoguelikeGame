@@ -1,10 +1,8 @@
 {
   "name": "less is more",
   "description": "盘面其他装置越少，倍率加成越高。",
-  "_descriptionDetail": "撞击时将当前倍率乘以max(1, 21−其他已放置装置数×2)。耗尽后仍在场的装置也计数。其他装置少于10个时扣1耐久，原球正常反弹。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 9,
+  "biomassScrapPrice": 9,
   "rarity": "common",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

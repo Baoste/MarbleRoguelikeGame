@@ -30,8 +30,6 @@ namespace MarblesECS
         }
         public string GetName() => metadata?.name;
         public string GetDescription() => metadata?.description;
-        public double GetValue() => metadata?.value ?? 0;
-        public double GetPurchasePrice() => metadata?.purchasePrice ?? 9;
         public string GetRarity() => metadata?.rarity ?? "common";
         public int GetDurability() => metadata?.durability ?? 20;
         public string GetItemType() => metadata?.type.ToString();

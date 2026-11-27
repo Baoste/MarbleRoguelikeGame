@@ -1,14 +1,15 @@
 {
   "Id": 9030,
+  "SourceId": "CoolingTea",
   "Bounce": 0.6,
   "ScoreMultiplier": 1,
   "StartingCount": 0,
   "PurchaseQuantity": 1,
-  "RushCategory": true,
   "Cooldown": 0,
-  "MaxTriggersPerBall": 1,
-  "Range": 0.1,
-  "Strength": 0.2,
   "Value": 5,
-  "SourceId": "CoolingTea"
+  "Strength": 0.2,
+  "RotationLocked": false,
+  "RushCategory": true,
+  "MaxTriggersPerBall": 1,
+  "Range": 0.1
 }

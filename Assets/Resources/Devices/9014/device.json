@@ -1,12 +1,14 @@
 {
   "Id": 9014,
+  "SourceId": "MoneyTree",
+  "Bounce": 0,
   "ScoreMultiplier": 1,
   "StartingCount": 0,
   "PurchaseQuantity": 1,
   "Cooldown": 0,
-  "MaxTriggersPerBall": 0,
-  "Range": 0.2,
-  "Strength": 5,
   "Value": 10,
-  "SourceId": "MoneyTree"
+  "Strength": 5,
+  "RotationLocked": false,
+  "MaxTriggersPerBall": 0,
+  "Range": 0.2
 }

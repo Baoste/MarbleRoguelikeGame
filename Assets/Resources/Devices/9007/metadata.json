@@ -1,10 +1,8 @@
 {
   "name": "大炮",
   "description": "储存弹珠，点击后沿炮口方向齐射。",
-  "_descriptionDetail": "每0.5秒旋转45°，最多存入5颗弹珠；点击后沿当前方向以速度6全数发射。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 14,
+  "biomassScrapPrice": 14,
   "rarity": "uncommon",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

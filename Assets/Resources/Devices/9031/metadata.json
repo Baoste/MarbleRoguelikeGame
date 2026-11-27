@@ -1,10 +1,8 @@
 {
   "name": "台球",
   "description": "换成编号台球，得分时增减RUSH条。",
-  "_descriptionDetail": "吞入一球后吐出一颗编号台球，保留原球价值。黑八概率20%，1至7号均分80%。进入得分区时黑八使RUSH条减100，其他编号增加编号×10，替代普通贡献结算。吐球后冷却15秒，成功吐出扣1耐久。RUSH期间不积累条值，黑八不终止已激活的RUSH。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 23,
+  "biomassScrapPrice": 23,
   "rarity": "rare",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

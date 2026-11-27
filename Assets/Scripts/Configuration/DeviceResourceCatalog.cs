@@ -59,9 +59,7 @@ namespace MarblesECS
                     throw new ArgumentException($"device.json must define Id {id}.");
                 definition.Name = metadata.name;
                 definition.Description = metadata.description;
-                definition.Price = checked((long)metadata.purchasePrice);
                 definition.BiomassScrapPrice = metadata.biomassScrapPrice;
-                definition.SellPrice = checked((long)metadata.value);
                 definition.Durability = metadata.durability;
                 definition.Rarity = metadata.Rarity;
                 definition.Validate();

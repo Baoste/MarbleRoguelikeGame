@@ -49,7 +49,7 @@ namespace MarblesECS
             if (!ShopCommandsAvailable && !CanEditDevices) return false;
             if (!CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
             var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
-            long price = CampaignStateUtility.Device(context, device.DefinitionId).SellPrice;
+            long price = CampaignStateUtility.SalePrice(context, device);
             CampaignWalletSystem.Credit(context, context.Campaign.Production.Currency, price);
             CampaignStateUtility.DestroyDevice(context, entity);
             return true;

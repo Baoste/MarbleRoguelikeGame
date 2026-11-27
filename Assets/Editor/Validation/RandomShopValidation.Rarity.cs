@@ -10,16 +10,15 @@ namespace MarblesECS.Editor
         private static void WeightedRarities(GameBalance original)
         {
             int before = assertions;
-            var uncommon = new HashSet<uint> { 103, 9003, 9007, 9008, 9009, 9011, 9012, 9014, 9016, 9017, 9019, 9021, 9022, 9026, 9028, 9029, 9030, 9032 };
-            var rare = new HashSet<uint> { 9005, 9006, 9018, 9027, 9031 };
+            var uncommon = new HashSet<uint> { 103, 9003, 9007, 9008, 9009, 9011, 9012, 9014, 9016, 9017, 9019, 9021, 9022, 9026, 9028, 9029, 9030, 9032, 9035, 9036 };
+            var rare = new HashSet<uint> { 9005, 9006, 9018, 9027, 9031, 9037 };
             foreach (var definition in original.Devices)
             {
                 var expected = uncommon.Contains(definition.Id) ? DeviceRarity.Uncommon : rare.Contains(definition.Id) ? DeviceRarity.Rare : DeviceRarity.Common;
                 Check(definition.Rarity == expected, "catalog matches the requested device tiers: " + definition.Name);
                 Check(definition.Price == DeviceRarityRules.StandardPurchasePrice(expected), "catalog has the tier purchase price: " + definition.Name);
                 var metadata = DeviceResourceCatalog.Current.Get(definition.Id).Metadata;
-                Check(metadata.rarity == expected.ToString().ToLowerInvariant() && metadata.purchasePrice == definition.Price,
-                    "metadata.json and shop definitions agree");
+                Check(metadata.rarity == expected.ToString().ToLowerInvariant(), "shop tier follows metadata.json");
             }
             Check(Presentation.DeviceDisplayText.Rarity(DeviceRarity.Uncommon) == "罕见" &&
                 Presentation.DeviceDisplayText.Rarity(DeviceRarity.Rare) == "稀有", "UI uses the new four-tier vocabulary");
@@ -31,10 +30,7 @@ namespace MarblesECS.Editor
             // accidentally become per-item weights or depend on the catalog's population ratios.
             var skewed = original.Copy();
             for (int i = 0; i < skewed.Devices.Length; i++)
-            {
                 skewed.Devices[i].Rarity = (DeviceRarity)Math.Min(i, 3);
-                skewed.Devices[i].Price = DeviceRarityRules.StandardPurchasePrice(skewed.Devices[i].Rarity);
-            }
             SampleRarities(skewed, "all four tiers with unequal populations", new[] { .6, .3, .07, .03 });
 
             var limited = original.Copy(); limited.Devices = limited.Devices.Take(4).ToArray(); limited.Campaign.ShopOfferCount = 4;

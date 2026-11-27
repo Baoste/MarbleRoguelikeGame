@@ -254,8 +254,7 @@ public sealed partial class ItemLibraryUI : MonoBehaviour
                 AddEntry(new Entry {
                     Id = d.Id, Type = Category.Devices, Name = d.Name, Description = d.Description,
                     Facts = "稀有度  " + DeviceDisplayText.Rarity(d.Rarity) +
-                            "\n购买价格  " + d.Price + " 金币 / " + d.PurchaseQuantity + " 件" +
-                            "\n单件售价  " + d.SellPrice + " 金币\n每回合耐久  " + durability,
+                            "\n每回合耐久  " + durability,
                     Guidance = "在布置阶段将库存装置放到盘面。具体触发、主动操作及特殊条件以本条说明为准。" +
                                "\n耐久按有效作用消耗；耗尽后的当前效果会按装置规则完成。"
                 });

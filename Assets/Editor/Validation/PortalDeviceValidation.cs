@@ -32,7 +32,7 @@ namespace MarblesECS.Editor
                 Check(owned.Length == 4 && owned.All(x => x.DefinitionId == 103), "two purchases give four portal devices");
                 Check(owned[0].PairId > 0 && owned[0].PairId == owned[1].PairId && owned[2].PairId == owned[3].PairId &&
                     owned[0].PairId != owned[2].PairId, "each purchase has its own nonzero pair ID");
-                Near(1000 - 2 * r.C.Balance.Devices.Single(d => d.Id == 103).Price, r.C.Campaign.Coins, "charge the metadata purchase price once per pair");
+                Near(1000 - 2 * r.C.Balance.Devices.Single(d => d.Id == 103).Price, r.C.Campaign.Coins, "charge the tier price once per pair");
                 Check(owned.All(x => x.Placed), "the two members of each purchase can be placed individually");
                 var key = r.Launch(new Vector3(0, .085f, .5f), Vector3.zero);
                 for (int i = 0; i < owned.Length; i++)
@@ -60,6 +60,9 @@ namespace MarblesECS.Editor
             r.C.Round = round;
             var source = r.Owned[0];
             var partner = r.Owned[1];
+            long refund = MarbleRules.RoundScore((source.PurchasePrice + partner.PurchasePrice) * r.C.Balance.Campaign.SellRatio,
+                CampaignStateUtility.MaxCoins);
+            Check(source.SellPrice == refund && partner.SellPrice == refund, "both members quote one refund for the full pair");
             Check(r.Simulation.RemoveDevicePlacement(source.InstanceId) && r.Simulation.GetOwnedDevices().Length == 4,
                 "returning a portal to inventory keeps all placements and pair membership independently editable");
             int revision = r.C.Campaign.LayoutRevision;
@@ -68,11 +71,11 @@ namespace MarblesECS.Editor
             Check(r.Simulation.SellDevice(source.InstanceId), "sell a stored portal whose partner is on the board");
             Check(r.Simulation.GetOwnedDevices().Select(device => device.InstanceId).SequenceEqual(r.Owned.Skip(2).Select(device => device.InstanceId)),
                 "selling removes the whole pair and preserves a different pair of the same definition");
-            Check(r.C.Campaign.Coins == coins + source.SellPrice && r.C.Campaign.LayoutRevision == revision + 1,
-                "selling the pair credits one sale value and changes layout once");
+            Check(r.C.Campaign.Coins == coins + refund && r.C.Campaign.LayoutRevision == revision + 1,
+                "selling the pair credits one refund and changes layout once");
             Check(scripts.All(script => script.IsDisposed) && r.Views.Take(2).All(view => !view.Root.GetComponent<DeviceBody>().GameplayEnabled),
                 "both scripts are disposed and both colliders are unavailable after the sale");
-            Check(!r.Simulation.SellDevice(partner.InstanceId) && r.C.Campaign.Coins == coins + source.SellPrice,
+            Check(!r.Simulation.SellDevice(partner.InstanceId) && r.C.Campaign.Coins == coins + refund,
                 "the deleted partner cannot pay out again");
         }
 

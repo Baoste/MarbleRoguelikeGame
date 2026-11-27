@@ -301,7 +301,7 @@ namespace MarblesECS.Editor
                 long coins = game.Session.Coins;
                 placement.UpdatePlacementPointer(viewport.Center((RectTransform)sale.transform));
                 Check(Device(id).Placed && game.Session.Coins == coins, size + " hover never sells or removes placement");
-                Check(sale.Title.text.Contains(Device(id).SellPrice.ToString()) && sale.Title.text.Contains(Device(id).Name), size + " sale label shows the selected name and metadata price");
+                Check(sale.Title.text.Contains(Device(id).SellPrice.ToString()) && sale.Title.text.Contains(Device(id).Name), size + " sale label shows the selected name and refund");
                 if (size.x == 1920) viewport.Capture(Path.Combine(Output, "sale-1920x1080.png"));
             }
             using (var viewport = new Viewport(rig.ViewCamera, 1920,1080))

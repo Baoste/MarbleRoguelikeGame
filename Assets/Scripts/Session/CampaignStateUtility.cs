@@ -43,6 +43,19 @@ namespace MarblesECS
             return first;
         }
 
+        internal static long SalePrice(SimulationContext context, OwnedDeviceData device)
+        {
+            long paidPrice = device.PurchasePrice;
+            if (device.PairId != 0)
+            {
+                paidPrice = 0;
+                using var devices = context.DeviceQuery.ToComponentDataArray<OwnedDeviceData>(Allocator.Temp);
+                foreach (var member in devices)
+                    if (member.PairId == device.PairId) paidPrice += member.PurchasePrice;
+            }
+            return MarbleRules.RoundScore(paidPrice * context.Balance.Campaign.SellRatio, MaxCoins);
+        }
+
         internal static void DestroyDevice(SimulationContext context, Entity entity)
         {
             var manager = context.Manager;

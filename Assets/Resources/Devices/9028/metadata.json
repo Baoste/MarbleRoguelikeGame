@@ -1,10 +1,8 @@
 {
   "name": "种植牙",
   "description": "投喂种植牙升级，提升倍率加成。",
-  "_descriptionDetail": "首次放置为洞，可投喂背包中的同类装置升级。不锈钢牙撞击乘以3、耐久5，陶瓷牙乘以6、耐久8，金刚钻牙乘以21、耐久20。每次有效撞击扣1耐久，耗尽后退回洞。升级及新回合补满当前阶段耐久，阶段可跨回合保留。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 14,
+  "biomassScrapPrice": 14,
   "rarity": "uncommon",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

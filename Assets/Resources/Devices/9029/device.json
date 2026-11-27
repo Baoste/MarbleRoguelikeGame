@@ -1,13 +1,15 @@
 {
   "Id": 9029,
+  "SourceId": "Wok",
+  "Bounce": 0,
   "ScoreMultiplier": 1,
   "StartingCount": 0,
   "PurchaseQuantity": 1,
-  "RushCategory": true,
   "Cooldown": 0,
-  "MaxTriggersPerBall": 0,
-  "Range": 60,
-  "Strength": 10,
   "Value": 1,
-  "SourceId": "Wok"
+  "Strength": 10,
+  "RotationLocked": false,
+  "RushCategory": true,
+  "MaxTriggersPerBall": 0,
+  "Range": 60
 }

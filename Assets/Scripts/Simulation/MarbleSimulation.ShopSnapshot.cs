@@ -14,27 +14,16 @@ namespace MarblesECS
             for (int i = 0; i < offers.Length; i++)
             {
                 var offer = offers[i];
-                string name, description;
-                long basePrice;
-                if (offer.Kind == ShopItemKind.Device)
-                {
-                    var definition = CampaignStateUtility.Device(context, offer.DefinitionId);
-                    name = definition.Name; description = definition.Description; basePrice = definition.Price;
-                }
-                else throw new InvalidOperationException("Unsupported shop item kind.");
-                if (!daily && !offer.Sold) offer.Price = CampaignShopSystem.Price(context, basePrice);
+                if (offer.Kind != ShopItemKind.Device) throw new InvalidOperationException("Unsupported shop item kind.");
+                var definition = CampaignStateUtility.Device(context, offer.DefinitionId);
+                if (!daily && !offer.Sold) offer.Price = CampaignShopSystem.Price(context, definition.Price);
                 result[i] = new ShopOfferSnapshot
                 {
                     Index = i, Kind = offer.Kind, DefinitionId = offer.DefinitionId,
-                    Name = name, Description = description, Price = offer.Price, Sold = offer.Sold,
+                    Name = definition.Name, Description = definition.Description, Price = offer.Price, Sold = offer.Sold,
+                    Rarity = definition.Rarity, Durability = definition.Durability,
                     Selected = daily && DailyLoadoutSystem.IsSelected(context, offer.DefinitionId)
                 };
-                if (offer.Kind == ShopItemKind.Device)
-                {
-                    var definition = CampaignStateUtility.Device(context, offer.DefinitionId);
-                    result[i].Rarity = definition.Rarity; result[i].Durability = definition.Durability;
-                    result[i].SellPrice = definition.SellPrice;
-                }
             }
             return result;
         }

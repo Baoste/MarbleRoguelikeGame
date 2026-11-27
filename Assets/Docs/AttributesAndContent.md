@@ -13,7 +13,7 @@
 - 当前 35 种装置位于 `Resources/Devices/<id>/`。Prefab 提供外观和碰撞体，Lua 文件提供玩法。详见 [装置资源](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
 - 传送门按一对购买，两门分别放置并共享配对 ID；两门都放置后才可传送。
 
-装置基础购买价 `metadata.purchasePrice` 按普通/罕见/稀有/传奇分别为 9/14/23/38，单件出售价格读取 `metadata.value`；普通/罕见/稀有/传奇由 `metadata.rarity` 表示，耐久读取 `metadata.durability`（默认 20，-1 无限）。旧 `Drugs` 配置已删除，装置初始赠送以包内配置为准。
+每日玩法的安装价读取 `metadata.biomassScrapPrice`，工票解锁价由当天的 `shopDrawCost` 决定。库存商店按 `metadata.rarity` 取购买基价，出售返还按库存记录的购入金额乘以 `Campaign.SellRatio` 后向下取整。耐久读取 `metadata.durability`（默认 20，-1 无限），开局赠送套数读取 `device.json.StartingCount`。
 
 `Multi Ding` 的定义 ID 为 113，行为通过 Lua 实现；当前包的 `StartingCount` 为 1，没有额外的 C# 开局赠送规则。Rush Ding 已移出当前装置目录。`SourceId` 继续记录原始来源编号。
 

@@ -1,13 +1,14 @@
 {
   "Id": 9000,
+  "SourceId": "PackerExample",
   "Bounce": 0.6,
   "ScoreMultiplier": 1,
   "StartingCount": 0,
   "PurchaseQuantity": 1,
   "Cooldown": 0.1,
-  "MaxTriggersPerBall": 0,
-  "Range": 0.3,
-  "Strength": 6,
   "Value": 1,
-  "SourceId": "PackerExample"
+  "Strength": 6,
+  "RotationLocked": false,
+  "MaxTriggersPerBall": 0,
+  "Range": 0.3
 }

@@ -12,6 +12,5 @@ namespace MarblesECS
         public bool Selected;
         public DeviceRarity Rarity;
         public int Durability;
-        public long SellPrice;
     }
 }

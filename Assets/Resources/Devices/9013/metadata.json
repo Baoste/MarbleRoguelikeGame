@@ -1,10 +1,8 @@
 {
   "name": "赚赚",
   "description": "将触发过其他装置的弹珠换成金币。",
-  "_descriptionDetail": "弹珠进入时，若此前成功触发过其他装置实例，则销毁并返还四舍五入后的当前价值×累计装置倍率金币；否则保持速度大小从棋盘下方射出。每次成功处理扣1耐久，不计回合分数。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 9,
+  "biomassScrapPrice": 9,
   "rarity": "common",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

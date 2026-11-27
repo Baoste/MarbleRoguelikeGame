@@ -1,10 +1,8 @@
 {
   "name": "示例弹射台",
   "description": "沿出口方向弹出，保速或加速。",
-  "_descriptionDetail": "保持或提高速度，并沿装置出口朝向弹出。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 9,
+  "biomassScrapPrice": 9,
   "rarity": "common",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

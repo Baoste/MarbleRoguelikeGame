@@ -55,7 +55,7 @@ IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白�
 | `pegPermissionScope` | `CampaignPermanent` 跨日有效，`DayOnly` 仅当日，`RunOnly` 在成功结束本次生产时到期。同日重试沿用已付费的抽取记录和所获权限。 |
 | `shopRefreshCost` | 可选付费刷新工票价。仍有货架外的未授权类型且可继续抽取时，允许刷新。默认 Day 2 已展示全部四个付费候选，采用固定当日货架。 |
 
-装置位于 `Resources/Devices/<id>/`。调 `metadata.json` 的 `biomassScrapPrice` 和 `durability`，生效值会显示在终端和生产物品板。未填写安装价的旧包沿用 Metadata 的 `purchasePrice` 数值，按血肉残料计价。`device.json` 管理弹性和 Lua 参数，`manifest.json` 可引用同目录的 PNG 图标。新 ID 需加入 `GameContent.json.Devices`，再加入对应日期的候选池。
+装置位于 `Resources/Devices/<id>/`。终端和生产物品板显示 `metadata.json` 的 `biomassScrapPrice` 和 `durability`。旧包缺省安装价时按同稀有度的库存购买基价收取血肉残料。`device.json` 管理弹性和 Lua 参数，`manifest.json` 可引用同目录的 PNG 图标。新 ID 需加入 `GameContent.json.Devices`，再加入对应日期的候选池。
 
 ### Board Layout
 

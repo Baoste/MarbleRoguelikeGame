@@ -1,13 +1,15 @@
 {
   "Id": 103,
-  "Kind": 4,
+  "SourceId": "D004",
+  "Bounce": 0,
   "ScoreMultiplier": 1,
   "StartingCount": 0,
   "PurchaseQuantity": 2,
   "Cooldown": 0.5,
-  "MaxTriggersPerBall": 2,
-  "Range": 0.2,
-  "Strength": 2,
   "Value": 1,
-  "SourceId": "D004"
+  "Strength": 2,
+  "RotationLocked": false,
+  "Kind": 4,
+  "MaxTriggersPerBall": 2,
+  "Range": 0.2
 }

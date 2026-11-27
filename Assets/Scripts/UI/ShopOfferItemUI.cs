@@ -95,8 +95,7 @@ public sealed class ShopOfferItemUI : MonoBehaviour, IPointerEnterHandler, IPoin
         bool affordable = availableCoins >= offer.Price;
         bool contentChanged = !hasOffer || displayedOffer.DefinitionId != offer.DefinitionId ||
             displayedOffer.Name != offer.Name || displayedOffer.Description != offer.Description ||
-            displayedOffer.Rarity != offer.Rarity || displayedOffer.Durability != offer.Durability ||
-            displayedOffer.SellPrice != offer.SellPrice;
+            displayedOffer.Rarity != offer.Rarity || displayedOffer.Durability != offer.Durability;
 
         if (contentChanged)
         {
@@ -108,8 +107,7 @@ public sealed class ShopOfferItemUI : MonoBehaviour, IPointerEnterHandler, IPoin
                 KindText.color = RarityColor(offer.Rarity);
             }
             if (MetadataText != null)
-                MetadataText.text = (offer.Durability == -1 ? "无限耐久" : "耐久 " + offer.Durability) +
-                    "  ·  出售 " + offer.SellPrice + " 金币";
+                MetadataText.text = offer.Durability == -1 ? "无限耐久" : "耐久 " + offer.Durability;
             if (DescriptionScroll != null)
             {
                 descriptionDirty = true;

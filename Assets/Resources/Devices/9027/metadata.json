@@ -1,10 +1,8 @@
 {
   "name": "星星灯",
   "description": "至少两盏灯全亮，临时提高全盘倍率。",
-  "_descriptionDetail": "弹珠穿过灯时切换开关。场上至少2盏且全部点亮后，所有弹珠的倍率临时乘以1+灯总数，持续5秒。灯在此期间保持亮起。到期熄灭并移除效果，参与的每盏灯扣1耐久。每回合初始关闭。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 23,
+  "biomassScrapPrice": 23,
   "rarity": "rare",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

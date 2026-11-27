@@ -1,10 +1,8 @@
 {
   "name": "黏黏",
   "description": "暂时黏住弹珠，再向下释放。",
-  "_descriptionDetail": "弹珠滞留 1 秒，然后保留速度大小沿棋盘向下释放。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 9,
+  "biomassScrapPrice": 9,
   "rarity": "common",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

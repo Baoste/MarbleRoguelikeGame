@@ -1,8 +1,6 @@
 {
   "name": "三重分裂钉子",
   "description": "保留原球，同时弹出 2 颗同价值弹珠。两颗均能生成时才消耗耐久。",
-  "value": 11,
-  "purchasePrice": 23,
   "biomassScrapPrice": 6,
   "rarity": "rare",
   "durability": 5,

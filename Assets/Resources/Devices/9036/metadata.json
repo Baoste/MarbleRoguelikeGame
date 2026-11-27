@@ -1,8 +1,6 @@
 {
   "name": "双生分裂钉子",
   "description": "保留原球，额外弹出 1 颗同价值弹珠。同一颗球对每台装置最多成功复制一次。",
-  "value": 7,
-  "purchasePrice": 14,
   "biomassScrapPrice": 5,
   "rarity": "uncommon",
   "durability": 6,

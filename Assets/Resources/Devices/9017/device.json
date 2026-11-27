@@ -1,13 +1,14 @@
 {
   "Id": 9017,
+  "SourceId": "Bomb",
   "Bounce": 0.6,
   "ScoreMultiplier": 1,
   "StartingCount": 0,
   "PurchaseQuantity": 1,
   "Cooldown": 0,
-  "MaxTriggersPerBall": 0,
-  "Range": 0.8,
-  "Strength": 3,
   "Value": 5,
-  "SourceId": "Bomb"
+  "Strength": 3,
+  "RotationLocked": false,
+  "MaxTriggersPerBall": 0,
+  "Range": 0.8
 }

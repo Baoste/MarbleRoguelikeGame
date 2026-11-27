@@ -9,16 +9,17 @@ namespace MarblesECS.Editor
         private static void MetadataAndDurability()
         {
             int start = assertions;
-            var defaults = DeviceMetadata.Read("{\"name\":\"Test\",\"description\":\"Test\",\"value\":0,\"type\":\"device\"}", "fixture");
+            var defaults = DeviceMetadata.Read("{\"name\":\"Test\",\"description\":\"Test\",\"type\":\"device\"}", "fixture");
             Near(20, defaults.durability, "missing metadata durability defaults to 20");
+            var legacy = new DeviceDefinition { BiomassScrapPrice = defaults.biomassScrapPrice, Rarity = DeviceRarity.Rare };
+            Near(23, legacy.InstallPrice, "a legacy package without an installation price uses its rarity price");
             foreach (var definition in DeviceResourceCatalog.Current.Definitions())
             {
                 var metadata = DeviceResourceCatalog.Current.Get(definition.Id).Metadata;
                 Check(metadata.rarity == definition.Rarity.ToString().ToLowerInvariant(), "catalog rarity follows metadata.json");
                 Near(metadata.durability, definition.Durability, "catalog durability follows metadata.json");
-                Near(metadata.purchasePrice, definition.Price, "catalog buys for purchasePrice"); Near(metadata.value, definition.SellPrice, "catalog sells for value");
-                Near(metadata.biomassScrapPrice > 0 ? metadata.biomassScrapPrice : metadata.purchasePrice,
-                    definition.InstallPrice, "daily installation uses the configured scrap price");
+                Check(metadata.biomassScrapPrice > 0, "current packages set an explicit scrap price");
+                Near(metadata.biomassScrapPrice, definition.InstallPrice, "daily installation uses the configured scrap price");
             }
             using (var f = new Fixture())
             {
@@ -58,13 +59,17 @@ namespace MarblesECS.Editor
                 var campaign = f.C.Campaign; campaign.Coins = 1000; f.C.Campaign = campaign;
                 var offers = f.C.Manager.GetBuffer<ShopOfferData>(f.C.RoundEntity); offers.Clear();
                 offers.Add(new ShopOfferData { Kind = ShopItemKind.Device, DefinitionId = definition.Id, Price = 999 });
-                Near(definition.Price, f.Simulation.GetShopOffers()[0].Price, "display replaces stale price with metadata purchase price");
-                Check(CampaignShopSystem.Buy(f.C, 0), "real shop buys the device"); Near(1000 - definition.Price, f.C.Campaign.Coins, "real purchase deducts its rarity price");
+                Near(9, f.Simulation.GetShopOffers()[0].Price, "display replaces stale price with the common tier price");
+                Check(f.Simulation.ApplyGlobalAttribute(77, GameAttribute.SHOP_PRICE_MOD, AttributeOperation.Set, .6),
+                    "legacy shop still accepts price modifiers");
+                Near(5, f.Simulation.GetShopOffers()[0].Price, "display applies the shop modifier to the rarity price");
+                Check(CampaignShopSystem.Buy(f.C, 0), "real shop buys the device");
+                Near(995, f.C.Campaign.Coins, "real purchase deducts the displayed price");
+                f.C.Balance.Campaign.SellRatio = .5;
                 var owned = f.Simulation.GetOwnedDevices().Single();
-                Near(definition.SellPrice, owned.SellPrice, "inventory displays metadata sale price");
-                f.C.Balance.Campaign.SellRatio = 0;
+                Near(2, owned.SellPrice, "inventory quotes the rounded refund from the discounted purchase");
                 Check(f.Simulation.SellDevice(owned.InstanceId), "real inventory can sell the device");
-                Near(1000 - definition.Price + definition.SellPrice, f.C.Campaign.Coins, "sale credits value independently of original paid price and old sale ratio");
+                Near(997, f.C.Campaign.Coins, "sale credits the quoted refund");
             }
             DeferredDurabilityApi();
             Debug.Log("METADATA_DURABILITY_VALIDATION_PASSED: " + (assertions - start) + " assertions; metadata authority, exact wear, deferred batch uses, unlimited use and real purchase/sale.");

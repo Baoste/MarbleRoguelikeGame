@@ -1,10 +1,8 @@
 {
   "name": "矿老板",
   "description": "减少弹珠价值，换取金币。",
-  "_descriptionDetail": "弹珠每次撞击基础价值-2（最低为0），金币+4；每座矿每回合最多产出20金币，每次产出扣1耐久。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 9,
+  "biomassScrapPrice": 9,
   "rarity": "common",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

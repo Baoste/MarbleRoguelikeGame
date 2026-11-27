@@ -1,10 +1,8 @@
 {
   "name": "传送门",
   "description": "成对购买，双向传送并保持原速。",
-  "_descriptionDetail": "购买一对门，双向传送；保持世界运动方向、速度和自身重力等属性，区域力按出口环境计算。",
-  "value": 15,
-  "type": "device",
-  "purchasePrice": 14,
+  "biomassScrapPrice": 14,
   "rarity": "uncommon",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

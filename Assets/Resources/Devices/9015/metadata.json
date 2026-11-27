@@ -1,10 +1,8 @@
 {
   "name": "分流器",
   "description": "将弹珠均分为3颗，向下方射出。",
-  "_descriptionDetail": "弹珠进入后均分为3颗小球，每颗价值和体积各为原球1/3，继承累计装置倍率，保持入口速度大小从向下及左右30°三口射出。成功分流扣1耐久，分出的球再次经过同一台时直接穿过。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 9,
+  "biomassScrapPrice": 9,
   "rarity": "common",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

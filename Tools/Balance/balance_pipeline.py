@@ -205,7 +205,7 @@ def read_game_content(path: Path, devices_path: Path) -> dict[str, Any]:
     if all(isinstance(device, dict) for device in ids):
         return content
 
-    tiers = {"common": 0, "uncommon": 1, "rare": 2, "legendary": 3}
+    tiers = {"common": (0, 9), "uncommon": (1, 14), "rare": (2, 23), "legendary": (3, 38)}
     devices = {}
     for value in ids:
         if type(value) not in (int, float) or not 1 <= value <= 2**32 - 1 or value != int(value):
@@ -221,13 +221,13 @@ def read_game_content(path: Path, devices_path: Path) -> dict[str, Any]:
         metadata = read_json(folder / manifest["metadata"])
         if definition["Id"] != device_id or metadata["type"] != "device":
             raise ValueError(f"{folder}: device ID or type mismatch")
+        rarity, price = tiers[metadata.get("rarity", "common")]
         devices[device_id] = dict(
             definition,
             Name=metadata["name"],
             Description=metadata["description"],
-            Price=metadata.get("purchasePrice", 9),
-            SellPrice=metadata["value"],
-            Rarity=tiers[metadata.get("rarity", "common")],
+            Price=price,
+            Rarity=rarity,
             Durability=metadata.get("durability", 20),
         )
     content["Devices"] = [devices[device_id] for device_id in sorted(devices)]

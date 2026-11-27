@@ -1,10 +1,8 @@
 {
   "name": "黑洞",
   "description": "吞球充能，点击释放引力并高倍结算。",
-  "_descriptionDetail": "吞噬10颗弹珠充能，点击释放10秒全局衰减引力；期间吞入的弹珠按当前价值×10直接结算。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 23,
+  "biomassScrapPrice": 23,
   "rarity": "rare",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

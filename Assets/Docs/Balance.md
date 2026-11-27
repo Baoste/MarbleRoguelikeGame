@@ -6,7 +6,7 @@
 
 布置阶段按住左键从盘面或背包拖动装置。拖到空位松开即可摆放，拖到左侧背包松开即可收回，拖到可接收装置上松开即可投入。拖动时按 `R` 旋转预览，右键或 `Esc` 取消。位置必须通过盘面边界、障碍物和装置间距检查，松在无效位置会退回原处。移动保留耐久、配对和 Lua 状态。即使没有待放置的新装置，只要仍拥有装置，商店结束后也会进入布置阶段。
 
-界面底部红色售出区仅在布置阶段显示。拖动时显示装置的 Metadata `value` 售价，拖入红区松开即可出售并获得金币。传送门按单件出售，配对的另一件保留。场景入口为 `DeviceEditCanvas/DeviceSellArea`，可用菜单 `Marbles ECS/UI/配置装置移动与售出区` 给其他场景配置相同界面。
+允许出售时，布置阶段的红色售出区显示预计返还。松手后按库存记录的购入金额乘以 `Campaign.SellRatio` 并向下取整，发放当前生产货币。出售成套装置会移除整套并结算一次。场景入口为 `DeviceEditCanvas/DeviceSellArea`，可用菜单 `Marbles ECS/UI/配置装置移动与售出区` 给其他场景配置相同界面。
 
 ## 属性的唯一入口
 
@@ -68,7 +68,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 2026-10-22：旧药物系统已移除，后续将用 Lua 重新实现。当前没有药物商品、初始库存、服药入口或药效计时；本次未接入新的 Lua 药物系统。
 
-装置名称、价格、稀有度和耐久在 `Resources/Devices/<id>/metadata.json` 设置。玩法参数和 `StartingCount` 在同目录的 `device.json` 设置。`StartingCount = 0` 不赠送，正整数表示开局数量。传送门每份生成一对，容量按两个实体计算。
+装置名称、残料安装价、稀有度和耐久在 `Resources/Devices/<id>/metadata.json` 设置。玩法参数和 `StartingCount` 在同目录的 `device.json` 设置。`StartingCount` 的正整数值表示开局赠送套数。传送门每套生成一对，容量按两个实体计算。
 
 游戏启动时读取 `GameContent.json.Devices` 并按 ID 查找各装置的 `manifest.json`。Manifest 指向同目录的配置、Prefab 和 Lua。目录按 ID 排序，重复 ID、缺少文件或无效配置会报告装置路径。
 

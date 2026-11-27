@@ -1,12 +1,14 @@
 {
   "Id": 9007,
+  "SourceId": "Cannon",
+  "Bounce": 0,
   "ScoreMultiplier": 1,
   "StartingCount": 0,
   "PurchaseQuantity": 1,
   "Cooldown": 0,
-  "MaxTriggersPerBall": 1,
-  "Range": 0.5,
-  "Strength": 6,
   "Value": 5,
-  "SourceId": "Cannon"
+  "Strength": 6,
+  "RotationLocked": false,
+  "MaxTriggersPerBall": 1,
+  "Range": 0.5
 }

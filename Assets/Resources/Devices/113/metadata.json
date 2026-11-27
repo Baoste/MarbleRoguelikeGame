@@ -1,10 +1,8 @@
 {
   "name": "Multi Ding",
   "description": "每球首次撞击时提高得分倍率。",
-  "_descriptionDetail": "每颗弹珠对本装置生效一次，将弹珠当前得分倍率乘以1.85，到得分区统一结算。",
-  "value": 27,
-  "type": "device",
+  "biomassScrapPrice": 9,
   "rarity": "common",
   "durability": 20,
-  "purchasePrice": 9
+  "type": "device"
 }

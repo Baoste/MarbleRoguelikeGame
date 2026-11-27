@@ -8,10 +8,9 @@ namespace MarblesECS
     {
         public uint Id;
         public string Name;
-        public long Price;
+        public long Price => DeviceRarityRules.StandardPurchasePrice(Rarity);
         [OptionalBalanceField] public long BiomassScrapPrice;
         public long InstallPrice => BiomassScrapPrice > 0 ? BiomassScrapPrice : Price;
-        [OptionalBalanceField] public long SellPrice;
         [OptionalBalanceField] public DeviceRarity Rarity;
         [OptionalBalanceField] public int Durability = 20;
         [OptionalBalanceField] public float Bounce;
@@ -62,9 +61,7 @@ namespace MarblesECS
         {
             BalanceGuard.Range(Id, 1, uint.MaxValue, nameof(Id));
             BalanceGuard.Text(Name, nameof(Name));
-            BalanceGuard.Range(Price, 1, BalanceGuard.MaxInteger, nameof(Price));
             BalanceGuard.Range(BiomassScrapPrice, 0, BalanceGuard.MaxInteger, nameof(BiomassScrapPrice));
-            BalanceGuard.Range(SellPrice, 0, BalanceGuard.MaxInteger, nameof(SellPrice));
             if (Durability != -1) BalanceGuard.Range(Durability, 1, 10000, nameof(Durability));
             if (!Enum.IsDefined(typeof(DeviceRarity), Rarity)) throw new ArgumentException("Invalid device rarity.");
             BalanceGuard.Range(StartingCount, 0, 200, nameof(StartingCount));

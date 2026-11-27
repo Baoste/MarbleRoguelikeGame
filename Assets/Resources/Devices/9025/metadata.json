@@ -1,10 +1,8 @@
 {
   "name": "雪糕机",
   "description": "每回合从×10开始，倍率逐次递减。",
-  "_descriptionDetail": "每台每回合首次撞击将当前倍率乘以10，之后依次乘以9至2，每次扣1耐久。降至×1后停止消耗耐久，新回合重置。倍率乘积在得分区结算，原球正常反弹。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 9,
+  "biomassScrapPrice": 9,
   "rarity": "common",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

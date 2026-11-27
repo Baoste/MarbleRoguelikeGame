@@ -1,10 +1,8 @@
 {
   "name": "故障装置",
   "description": "碰撞随机抽取倍率，可能归零。",
-  "_descriptionDetail": "碰撞后等概率抽取0、1、2、3、5、7、11、13，将当前倍率乘以抽到的数值。抽到0后，后续乘法得到的累计倍率仍为0。每次有效碰撞扣1耐久，原球正常反弹。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 14,
+  "biomassScrapPrice": 14,
   "rarity": "uncommon",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

@@ -1,10 +1,8 @@
 {
   "name": "大胃袋",
   "description": "投喂装置，提高本回合倍率加成。",
-  "_descriptionDetail": "布置时可投喂盘面或背包中的装置，按普通/罕见/稀有/传奇增加2/4/6/8点成长。撞击时将当前倍率乘以1+成长。有成长时每次有效撞击扣1耐久，投喂免费。下一轮布置清空成长，原球正常反弹。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 14,
+  "biomassScrapPrice": 14,
   "rarity": "uncommon",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

@@ -1,10 +1,8 @@
 {
   "name": "弹弹",
   "description": "保留球速，随机偏转反弹方向。",
-  "_descriptionDetail": "保留入射速度大小，在镜面反射方向的 ±30° 范围内随机弹出。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 9,
+  "biomassScrapPrice": 9,
   "rarity": "common",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

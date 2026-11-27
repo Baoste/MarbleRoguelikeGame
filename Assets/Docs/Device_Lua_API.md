@@ -1223,8 +1223,6 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 | --- | --- | --- |
 | `GetName()` | `string?` | Metadata 名称。 |
 | `GetDescription()` | `string?` | Metadata 描述。 |
-| `GetValue()` | `number` | 单件出售价格，无 metadata 时为 0。 |
-| `GetPurchasePrice()` | `number` | 基础购买价格，无 metadata 时为 9。 |
 | `GetRarity()` | `string` | 稀有度，无 metadata 时为 common。 |
 | `GetDurability()` | `integer` | 配置的默认耐久，无 metadata 时为 20；不是剩余耐久。 |
 | `GetItemType()` | `string?` | 枚举名称 "Device" / "Medicine"，不是 JSON 小写类型值。 |
@@ -1246,19 +1244,18 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 
 ## Metadata 与参数来源
 
-装置目录的 `metadata.json` 定义内容身份和交易基础值；脚本全局 `metadata` 是加载后的 DeviceMetadata 对象，按只读配置使用。
+装置目录的 `metadata.json` 定义内容身份、残料安装价、稀有度和耐久。脚本全局 `metadata` 是加载后的 DeviceMetadata 对象，按只读配置使用。
 
 | JSON 字段 | JSON 类型 | 默认 / 范围 | 含义 |
 | --- | --- | --- | --- |
 | `name` | `string` | 非空 | 展示名称。 |
 | `description` | `string` | 非空 | 展示描述。 |
-| `value` | `number` | 装置为非负整数 | 一次出售的基础金币，配对装置整对移除并按此值发放一次。 |
-| `purchasePrice` | `number` | 默认 9，装置为正整数 | 一次购买的基础价格；普通/罕见/稀有/传奇标准值为 9/14/23/38，商店修正另行计算。 |
+| `biomassScrapPrice` | `integer` | 配置为正整数，缺省时读取为 0 | 整套装置的残料安装价。旧包缺省时，运行时安装价取同稀有度的库存购买基价。 |
 | `rarity` | `string` | 默认 common | common / uncommon / rare / legendary。 |
 | `durability` | `integer` | 默认 20；-1 或 1–10000 | 每回合默认次数，-1 无限。包内不接受 0。 |
 | `type` | `string` | device / medicine | 包类型；当前装置目录只接受 device。 |
 
-缺少 purchasePrice、rarity、durability 时，加载器使用 9、common 和 20。运行时 `metadata.type` 是 C# DeviceItemType 枚举；需要名称可用 self:GetItemType()，返回 `Device`。
+缺省 `rarity` 和 `durability` 时，加载器使用 `common` 和 20。`metadata.type` 是 C# DeviceItemType 枚举，`self:GetItemType()` 返回名称 `Device`。
 
 附加业务文件 `device.json` 的参数映射：
 
@@ -1274,7 +1271,7 @@ self 不是游戏上下文，生命周期随展示对象绑定。游戏装置通
 | `Cooldown` / `MaxTriggersPerBall` | `Trigger` / `TryPrepareTrigger` | 公共冷却和每球访问上限。 |
 | `PurchaseQuantity` / `LinkGroup` | 库存与配对系统 | 由游戏购买/布置流程处理，不是弹珠属性。 |
 
-`metadata.value` 是售价，`api.Parameter` 是业务参数，`api.Value` 是弹珠基础价值，三者互不替代。完整业务配置定义见 [DeviceDefinition.cs](../Scripts/Marbles/Rules/DeviceDefinition.cs)。
+`api.Parameter` 读取装置的效果参数，`api.Value` 读取当前弹珠的基础价值。完整业务配置定义见 [DeviceDefinition.cs](../Scripts/Marbles/Rules/DeviceDefinition.cs)。
 
 <a id="compatibility"></a>
 

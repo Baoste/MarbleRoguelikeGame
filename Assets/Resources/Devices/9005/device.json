@@ -1,12 +1,14 @@
 {
   "Id": 9005,
+  "SourceId": "BlackHole",
+  "Bounce": 0,
   "ScoreMultiplier": 10,
   "StartingCount": 0,
   "PurchaseQuantity": 1,
   "Cooldown": 0,
-  "MaxTriggersPerBall": 0,
-  "Range": 1,
-  "Strength": 8,
   "Value": 10,
-  "SourceId": "BlackHole"
+  "Strength": 8,
+  "RotationLocked": false,
+  "MaxTriggersPerBall": 0,
+  "Range": 1
 }

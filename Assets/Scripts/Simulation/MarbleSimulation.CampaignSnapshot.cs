@@ -49,7 +49,7 @@ namespace MarblesECS
                         PlacementOffsetX = definition.PlacementOffsetX, PlacementOffsetY = definition.PlacementOffsetY,
                         PlacementOffsetZ = definition.PlacementOffsetZ,
                         PurchasePrice = item.PurchasePrice,
-                        SellPrice = definition.SellPrice,
+                        SellPrice = CampaignStateUtility.SalePrice(context, item),
                         Rarity = definition.Rarity, Durability = DeviceDurabilitySystem.Limit(context, item),
                         RemainingDurability = remaining,
                         CompletingEffect = remaining == 0 && item.Placed &&

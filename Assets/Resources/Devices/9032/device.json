@@ -1,14 +1,15 @@
 {
   "Id": 9032,
+  "SourceId": "IcedAmericano",
   "Bounce": 0.6,
   "ScoreMultiplier": 1,
   "StartingCount": 0,
   "PurchaseQuantity": 1,
-  "RushCategory": true,
   "Cooldown": 0,
-  "MaxTriggersPerBall": 0,
-  "Range": 0.35,
-  "Strength": 20,
   "Value": 0.5,
-  "SourceId": "IcedAmericano"
+  "Strength": 20,
+  "RotationLocked": false,
+  "RushCategory": true,
+  "MaxTriggersPerBall": 0,
+  "Range": 0.35
 }

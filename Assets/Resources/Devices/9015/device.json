@@ -1,12 +1,14 @@
 {
   "Id": 9015,
+  "SourceId": "Splitter",
+  "Bounce": 0,
   "ScoreMultiplier": 1,
   "StartingCount": 0,
   "PurchaseQuantity": 1,
   "Cooldown": 0,
-  "MaxTriggersPerBall": 0,
-  "Range": 30,
-  "Strength": 0,
   "Value": 1,
-  "SourceId": "Splitter"
+  "Strength": 0,
+  "RotationLocked": false,
+  "MaxTriggersPerBall": 0,
+  "Range": 30
 }

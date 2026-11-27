@@ -1,10 +1,8 @@
 {
   "name": "猪猪存钱罐",
   "description": "持有金币越多，倍率加成越高。",
-  "_descriptionDetail": "每次撞击将当前倍率乘以1+0.1×满10金币档数，到得分区统一结算。金币不足10时跳过效果，金币余额保持不变。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 14,
+  "biomassScrapPrice": 14,
   "rarity": "uncommon",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

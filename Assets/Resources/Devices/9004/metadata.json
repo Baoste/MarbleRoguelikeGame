@@ -1,10 +1,8 @@
 {
   "name": "加速力场",
   "description": "区域内弹珠沿箭头方向加速。",
-  "_descriptionDetail": "在长方形区域内，持续沿箭头方向对弹珠施加恒力。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 9,
+  "biomassScrapPrice": 9,
   "rarity": "common",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }

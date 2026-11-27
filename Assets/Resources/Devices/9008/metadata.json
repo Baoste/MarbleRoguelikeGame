@@ -1,10 +1,8 @@
 {
   "name": "沙包",
   "description": "连击越多，弹珠增加的价值越高。",
-  "_descriptionDetail": "撞击使连击数加1，并给弹珠增加连击数×1的基础价值；连击保留3/√连击数秒，最短0.3秒，超时清零。",
-  "value": 120,
-  "type": "device",
-  "purchasePrice": 14,
+  "biomassScrapPrice": 14,
   "rarity": "uncommon",
-  "durability": 20
+  "durability": 20,
+  "type": "device"
 }
