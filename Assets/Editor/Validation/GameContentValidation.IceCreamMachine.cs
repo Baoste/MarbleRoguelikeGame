@@ -23,7 +23,7 @@ namespace MarblesECS.Editor
             using (var f = new Fixture())
             {
                 var d = AddIceCreamMachine(f); var key = f.Launch();
-                var before = f.Physics.States[key]; double blood = f.C.Player.Blood, coins = f.C.Campaign.Coins;
+                var before = f.Physics.States[key]; double blood = f.C.Player.Blood, scrap = f.C.Player.BiomassScrapBalance;
                 var hit = PiggyHit(f, key, d); double expected = 1;
                 f.Step(); Check(f.Simulation.GetDeviceStatus(d.InstanceId).Contains("已触发 0 次 · 下次 ×10"), "new machine advertises its first full factor");
                 for (int i = 0; i < 12; i++)
@@ -42,7 +42,7 @@ namespace MarblesECS.Editor
                 readback.MultiplyScore(3628800);
                 readback.Close();
                 VectorNear(before.LinearVelocity, f.Physics.States[key].LinearVelocity, "Lua preserves bounce velocity");
-                Near(blood, f.C.Player.Blood, "machine does not spend blood"); Near(coins, f.C.Campaign.Coins, "machine does not spend coins");
+                Near(blood, f.C.Player.Blood, "machine does not spend blood"); Near(scrap, f.C.Player.BiomassScrapBalance, "machine does not spend scrap");
                 var unused = f.Launch(); f.Step(PiggyHit(f, unused, d));
                 Near(1, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(unused)).ScoreMultiplier, "new balls also receive no bonus after the machine is used up");
                 Near(0, f.C.Manager.GetComponentData<BallFeatures>(f.Ball(unused)).FirstTriggeredDeviceId, "neutral hit does not record a successful device effect");
@@ -122,7 +122,7 @@ namespace MarblesECS.Editor
                 simulation.ApplyGlobalAttribute(993, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                 simulation.ApplyGlobalAttribute(994, GameAttribute.BALL_BOUNCE, AttributeOperation.Set, 1);
                 simulation.ApplyGlobalAttribute(995, GameAttribute.BALL_FRICTION, AttributeOperation.Set, 0);
-                var def = c.Balance.Devices.Single(d => d.Id == 9025); CampaignStateUtility.CreateDevice(c, def, def.Price);
+                var def = c.Balance.Devices.Single(d => d.Id == 9025); CampaignStateUtility.CreateDevice(c, def, def.InstallPrice);
                 var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var entity);
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; c.Manager.SetComponentData(entity, data);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));

@@ -1,6 +1,6 @@
 {
   "name": "摇钱树",
-  "description": "弹珠穿过时计数，积满后发放金币。",
+  "description": "弹珠穿过时计数，积满后发放血肉残料。",
   "biomassScrapPrice": 14,
   "rarity": "uncommon",
   "durability": 20,

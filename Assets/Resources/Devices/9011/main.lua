@@ -1,6 +1,6 @@
 -- 淘金热：容量、等待、随机结果和耐久均由 Lua 组合；引擎只负责通用能力。
--- Value: trip seconds; Strength: coins with returned ball; Range: coins without ball.
-local returnWeight, coinsWeight, lossWeight = 1, 1, 1
+-- Value: trip seconds; Strength: scrap with returned ball; Range: scrap without ball.
+local returnWeight, scrapWeight, lossWeight = 1, 1, 1
 local roundId, activeBall, endsAt, trip = nil, nil, 0, 0
 local lastResult = "等待弹珠"
 
@@ -51,21 +51,21 @@ function OnHoldEnd(api)
     activeBall, endsAt = nil, 0
     lastResult = "运输取消 · 等待弹珠"
     if not api:CanUseOnce(useKey) then status(api); return end
-    local result = api:RandomRange(0, returnWeight + coinsWeight + lossWeight)
+    local result = api:RandomRange(0, returnWeight + scrapWeight + lossWeight)
     if result < returnWeight then
         local source, speed = api.Motion.Source, api.Hold.EntrySpeed
         local released = api.Motion:TryLaunch(source, source.Down, speed)
         if not released then released = api.Motion:TrySetVelocity(source.Down * speed) end
         if released then
             api:TryUseOnce(useKey)
-            api:AddCoins(math.floor(api.Strength))
-            lastResult = string.format("弹珠返回 · +%d 金币", math.floor(api.Strength))
+            local credited = api:AddBiomassScrap(api.Strength)
+            lastResult = string.format("弹珠返回 · +%d 血肉残料", credited)
         end
     elseif api:TryConsume(false) then
         api:TryUseOnce(useKey)
-        if result < returnWeight + coinsWeight then
-            api:AddCoins(math.floor(api.Range))
-            lastResult = string.format("矿车返回 · +%d 金币", math.floor(api.Range))
+        if result < returnWeight + scrapWeight then
+            local credited = api:AddBiomassScrap(api.Range)
+            lastResult = string.format("矿车返回 · +%d 血肉残料", credited)
         else
             lastResult = "一无所获"
         end

@@ -45,7 +45,7 @@ namespace MarblesECS.Tests
             Assert.That(game.Day.Status, Is.EqualTo(DayCampaignStatus.NotStarted));
             Assert.That(game.Snapshot.Phase, Is.EqualTo(RoundPhase.Playing));
             Assert.That(game.Session.TargetScore, Is.EqualTo(game.Balance.Marble.TargetScore));
-            Assert.That(game.Session.Coins, Is.EqualTo(game.Balance.Campaign.StartingCoins));
+            Assert.That(game.Session.BiomassScrapBalance, Is.Zero);
             game.AutoMoveLauncher = false;
             var score = AddZone(game.PhysicsRoot, game.LaunchPoint.TransformPoint(game.LaunchOffset), game.Session.TargetScore);
             score.Priority = int.MaxValue;
@@ -86,8 +86,7 @@ namespace MarblesECS.Tests
             Assert.That(game.Session.Phase, Is.EqualTo(RoundPhase.Build));
             Assert.That(game.CurrentDayDefinition.BoardLayoutFile, Is.EqualTo("Day0.json"));
             Assert.That(game.Snapshot.NextMarbleBaseValue, Is.EqualTo(.5));
-            Assert.That(game.Session.ProductionBalance, Is.EqualTo(initialScrap));
-            Assert.That(game.Session.Production.Currency, Is.EqualTo(GameCurrency.BiomassScrap));
+            Assert.That(game.Session.BiomassScrapBalance, Is.EqualTo(initialScrap));
             Assert.That(game.GetOwnedDevices(), Is.Empty);
             var brain = InTestScene<CinemachineBrain>();
             var rig = InTestScene<DiegeticMachineUI>();
@@ -99,12 +98,12 @@ namespace MarblesECS.Tests
             StringAssert.Contains($"血肉残料 {initialScrap}", wallet.text);
             long price = game.GetDailyPegs().Single().InstallPrice;
             Assert.That(TryDragEconomyPeg(game, rig), Is.True);
-            Assert.That(game.Session.ProductionBalance, Is.EqualTo(initialScrap - price));
+            Assert.That(game.Session.BiomassScrapBalance, Is.EqualTo(initialScrap - price));
             Assert.That(rig.TryContinue(), Is.True);
             yield return null;
             Assert.That(TryDragEconomyPeg(game, rig), Is.True, "the same type can be installed while playing");
             Assert.That(game.GetOwnedDevices().Count(device => device.DefinitionId == 9033 && device.Placed), Is.EqualTo(2));
-            Assert.That(game.Session.ProductionBalance, Is.EqualTo(initialScrap - 2 * price));
+            Assert.That(game.Session.BiomassScrapBalance, Is.EqualTo(initialScrap - 2 * price));
         }
 
         [UnityTest]
@@ -554,7 +553,6 @@ namespace MarblesECS.Tests
         public IEnumerator EnabledMorningShopOpensAtTheTerminalAndReturnsToTheRoom()
         {
             var balance = GameBalanceLoader.Load();
-            balance.Campaign.StartingCoins = 100;
             yield return LoadTestScene(controller =>
             {
                 controller.StartWithDayCampaign = false;
@@ -569,10 +567,14 @@ namespace MarblesECS.Tests
             localScene = game.PhysicsRoot.gameObject.scene;
             var terminalAnchor = prep.transform.Find("Shop Terminal Anchor");
             Assert.That(terminalAnchor.childCount, Is.EqualTo(1));
-            var definition = GameDaysLoader.Parse(@"{""schemaVersion"":2,""sequenceId"":""shop-test"",""days"":[
-                {""dayId"":""fixture-shop"",""order"":1,""targetScore"":50,""rewardCoins"":0,""productionFeatures"":[""Shop""],
-                ""morningPrep"":[{""objectiveId"":""read-note"",""type"":""ReadNote"",""anchorId"":""desk"",""text"":""fixture note""}]},
-                {""dayId"":""fixture-closed"",""order"":2,""targetScore"":50,""rewardCoins"":0}]}", balance);
+            var enabled = GameDaysLoader.Parse(@"{""schemaVersion"":3,""sequenceId"":""shop-test"",""startingCompanyScrip"":100,""days"":[
+                {""dayId"":""fixture-shop"",""order"":1,""targetScore"":50,""initialBiomassScrap"":8,""clearCompanyScripReward"":0,
+                ""unlockedPegIds"":[9033,9034,9035],""defaultPegIds"":[9033],""requiredPegIds"":[9033],""maxLoadoutTypeCount"":2,
+                ""shopEnabled"":true,""shopDrawCost"":2,""shopOfferCount"":2,
+                ""morningPrep"":[{""objectiveId"":""read-note"",""type"":""ReadNote"",""anchorId"":""desk"",""text"":""fixture note""}]}]}", balance);
+            var closed = GameDaysLoader.Parse(@"{""schemaVersion"":2,""sequenceId"":""closed-test"",""days"":[
+                {""dayId"":""fixture-closed"",""order"":2,""targetScore"":50}]}", balance);
+            var definition = enabled.WithDays(enabled.Days[0], closed.Days[0]);
             Assert.That(game.TryStartDayCampaign(definition, out string error, 71), Is.True, error);
             yield return Until(() => walker.CanMove, "room fades in");
             Assert.That(prep.TryInteract(), Is.False, "the terminal requires proximity");
@@ -595,16 +597,20 @@ namespace MarblesECS.Tests
             Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.False);
             var stock = game.GetShopOffers();
             Assert.That(stock, Is.Not.Empty);
-            var firstCard = shop.OfferContainer.GetComponentsInChildren<ShopOfferItemUI>().First();
-            Assert.That(firstCard.BuyButton.IsInteractable(), Is.True);
-            long coins = game.Session.Coins;
-            firstCard.BuyButton.onClick.Invoke();
+            var firstCard = shop.ShopCanvasGroup.GetComponentsInChildren<Button>()
+                .Single(button => button.GetComponentsInChildren<TMP_Text>().Any(label => label.text == stock[0].Name));
+            Assert.That(firstCard.IsInteractable(), Is.True);
+            long scrip = game.Session.CompanyScripBalance;
+            long scrap = game.Session.BiomassScrapBalance;
+            firstCard.onClick.Invoke();
             Assert.That(game.GetShopOffers()[0].Sold, Is.True);
-            Assert.That(game.GetOwnedDevices().Any(device => device.DefinitionId == stock[0].DefinitionId), Is.True);
-            Assert.That(game.Session.Coins, Is.EqualTo(coins - stock[0].Price));
+            Assert.That(game.GetDailyPegs().Single(peg => peg.DefinitionId == stock[0].DefinitionId).Permitted, Is.True);
+            Assert.That(game.GetOwnedDevices(), Is.Empty);
+            Assert.That(game.Session.CompanyScripBalance, Is.EqualTo(scrip - stock[0].Price));
+            Assert.That(game.Session.BiomassScrapBalance, Is.EqualTo(scrap));
             uint afterPurchase = game.Day.RandomState;
 
-            shop.ContinueButton.onClick.Invoke();
+            shop.ShopCanvasGroup.transform.Find("Daily Loadout/返回房间").GetComponent<Button>().onClick.Invoke();
             yield return Until(() => walker.CanMove && !shop.ShopCanvasGroup.blocksRaycasts, "Return to room closes the shop");
             Assert.That(walker.transform.position, Is.EqualTo(roomPosition));
             Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.WakeUp));
@@ -613,6 +619,9 @@ namespace MarblesECS.Tests
             Assert.That(game.Day.RandomState, Is.EqualTo(afterPurchase));
             Assert.That(game.GetShopOffers()[0].Sold, Is.True);
             Assert.That(prep.TryInteract(), Is.True, "E also closes the shop");
+            Assert.That(prep.TryInteract(), Is.True);
+            shop.ShopCanvasGroup.transform.Find("Daily Loadout/确认背包").GetComponent<Button>().onClick.Invoke();
+            Assert.That(game.LoadoutConfirmed, Is.True);
 
             yield return Until(() => walker.CanMove, "walking resumes");
             WalkTo(walker, notePoint.x - 5, notePoint.z);
@@ -625,11 +634,12 @@ namespace MarblesECS.Tests
             WalkTo(walker, -14, -13);
             WalkTo(walker, -14, -2);
             Assert.That(prep.TryInteract(), Is.True);
-            yield return Until(() => game.Day.Phase == DayPhase.Production && game.Session.Phase == RoundPhase.Playing,
+            yield return Until(() => game.Day.Phase == DayPhase.Production && game.Session.Phase == RoundPhase.Build,
                 "machine blend completes");
             Assert.That(brain.ActiveVirtualCamera.Name, Is.EqualTo("VCamera_Machine"));
             Assert.That(game.TryOpenShop(game.Day.Version), Is.False);
             Assert.That(shop.ShopCanvasGroup.alpha, Is.Zero);
+            Assert.That(game.BeginRound(), Is.True);
             game.AutoMoveLauncher = false;
             var score = AddZone(game.PhysicsRoot, game.LaunchPoint.TransformPoint(game.LaunchOffset), game.Session.TargetScore);
             score.Priority = int.MaxValue;
@@ -684,7 +694,6 @@ namespace MarblesECS.Tests
             var starter = balance.Devices.First(device => device.PurchaseQuantity == 1 && device.PlacementRadius > 0 &&
                 !device.RotationLocked && device.StartingCount == 0);
             starter.StartingCount = 1;
-            balance.Campaign.StartingCoins = 200;
             balance.Marble.InitialBlood = balance.Marble.BloodCapacity = 2;
             balance.Marble.MinInvestment = balance.Marble.MaxInvestment = 1;
             balance.Marble.FireIntervalSeconds = balance.Marble.MaxFireIntervalSeconds = .01f;
@@ -719,19 +728,13 @@ namespace MarblesECS.Tests
             Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.WakeUp));
             var checkpoint = game.Day;
             var savedDevice = game.GetOwnedDevices().Single();
-            long savedCoins = game.Session.Coins;
+            long savedScrap = game.Session.BiomassScrapBalance;
+            long savedScrip = game.Session.CompanyScripBalance;
             Assert.That(savedDevice.InstanceId, Is.EqualTo(placedDevice.InstanceId));
             Assert.That(savedDevice.PurchasePrice, Is.EqualTo(placedDevice.PurchasePrice));
             Assert.That(savedDevice.Placed, Is.False, "the next morning starts with the same device in the backpack");
             Assert.That(FindDeviceBody(starterId), Is.Null);
 
-            Assert.That(game.TryOpenShop(game.Day.Version), Is.True);
-            Assert.That(log.Single(notice => notice.Trigger == DayTrigger.ShopEntered).Day.Phase, Is.EqualTo(DayPhase.WakeUp));
-            var offers = game.GetShopOffers();
-            Assert.That(game.RefreshShop(), Is.True);
-            Assert.That(game.BuyOffer(0), Is.True);
-            Assert.That(game.GetShopOffers()[0].Sold, Is.True);
-            Assert.That(game.TryCloseShop(game.Day.Version), Is.True);
             Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.True);
             Assert.That(game.Session.Phase, Is.EqualTo(RoundPhase.Build));
             Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.Production));
@@ -761,7 +764,8 @@ namespace MarblesECS.Tests
             Assert.That(game.Day.Phase, Is.EqualTo(DayPhase.WakeUp));
             Assert.That(game.Day.RandomState, Is.EqualTo(checkpoint.RandomState));
             Assert.That(game.Session.TotalScore, Is.Zero);
-            Assert.That(game.Session.Coins, Is.EqualTo(savedCoins));
+            Assert.That(game.Session.BiomassScrapBalance, Is.EqualTo(savedScrap));
+            Assert.That(game.Session.CompanyScripBalance, Is.EqualTo(savedScrip));
             Assert.That(game.Session.ShopRefreshCount, Is.Zero);
             Assert.That(game.GetShopOffers(), Is.Empty);
             Assert.That(game.Snapshot.Blood, Is.EqualTo(2));
@@ -784,10 +788,7 @@ namespace MarblesECS.Tests
             Assert.That(game.Day.Attempt, Is.EqualTo(2));
 
             score.Kind = MarbleContactKind.Score;
-            Assert.That(game.TryOpenShop(game.Day.Version), Is.True);
-            Assert.That(game.GetShopOffers().Select(offer => offer.DefinitionId),
-                Is.EqualTo(offers.Select(offer => offer.DefinitionId)), "retry replays the same shop draws");
-            Assert.That(game.TryCloseShop(game.Day.Version), Is.True);
+            Assert.That(game.TryOpenShop(game.Day.Version), Is.False, "an inventory-only day has no permission terminal");
             Assert.That(game.TryCompleteWakeUp(game.Day.Version, out _), Is.True);
             Assert.That(game.PlaceDevice(starterId, 3, 2), Is.True);
             yield return Until(() => FindDeviceBody(starterId) != null, "device can be placed again from the backpack");
@@ -960,11 +961,10 @@ namespace MarblesECS.Tests
         }
 
         private const string FixtureJson = "{\"schemaVersion\":2,\"sequenceId\":\"fixture\"," +
-            "\"days\":[{\"dayId\":\"fixture-first\",\"order\":1,\"targetScore\":4,\"rewardCoins\":35,\"productionFeatures\":[\"Shop\",\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]}," +
-            "{\"dayId\":\"fixture-second\",\"order\":2,\"targetScore\":24,\"rewardCoins\":45,\"eventIds\":[\"round\",\"retry\",\"shop\"]," +
-            "\"productionFeatures\":[\"Shop\",\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]}]," +
+            "\"days\":[{\"dayId\":\"fixture-first\",\"order\":1,\"targetScore\":4,\"clearCompanyScripReward\":35,\"productionFeatures\":[\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]}," +
+            "{\"dayId\":\"fixture-second\",\"order\":2,\"targetScore\":24,\"clearCompanyScripReward\":45,\"initialBiomassScrap\":8,\"eventIds\":[\"round\",\"retry\"]," +
+            "\"productionFeatures\":[\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]}]," +
             "\"events\":[{\"eventId\":\"round\",\"trigger\":\"RoundSettled\",\"executionPolicy\":\"EveryOccurrence\",\"actions\":[{\"type\":\"record\"}]}," +
-            "{\"eventId\":\"retry\",\"trigger\":\"DayRetried\",\"actions\":[{\"type\":\"record\"}]}," +
-            "{\"eventId\":\"shop\",\"trigger\":\"ShopEntered\",\"actions\":[{\"type\":\"record\"}]}]}";
+            "{\"eventId\":\"retry\",\"trigger\":\"DayRetried\",\"actions\":[{\"type\":\"record\"}]}]}";
     }
 }

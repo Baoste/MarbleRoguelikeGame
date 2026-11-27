@@ -63,7 +63,7 @@ namespace MarblesECS
         public void SetDurabilityLimit(int maximum) => DeviceDurabilitySystem.SetLimit(C, deviceEntity, maximum);
         public void RestoreDurability() => DeviceDurabilitySystem.Restore(C, deviceEntity);
         /// <summary>Current wallet balance, readable without an associated ball.</summary>
-        public double Coins => C.Campaign.Coins;
+        public double BiomassScrapBalance => C.Player.BiomassScrapBalance;
         public double Blood => C.Player.Blood;
         public double BloodCapacity => C.BloodCapacity;
         public double RestoreBlood(double amount)

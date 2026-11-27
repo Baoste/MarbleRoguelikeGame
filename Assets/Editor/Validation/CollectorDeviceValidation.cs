@@ -229,7 +229,7 @@ namespace MarblesECS.Editor
                 Simulation.StartSession(Bridge); Simulation.BeginRound();
                 Simulation.ApplyGlobalAttribute(994, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                 var definition = C.Balance.Devices.Single(d => d.Id == 9003);
-                CampaignStateUtility.CreateDevice(C, definition, definition.Price);
+                CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 Owned = Simulation.GetOwnedDevices().Single();
                 CampaignStateUtility.FindDevice(C, Owned.InstanceId, out Device);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(Device); data.Placed = true; C.Manager.SetComponentData(Device, data);

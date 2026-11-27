@@ -3,7 +3,7 @@ using Unity.Entities;
 
 namespace MarblesECS
 {
-    public enum GameCurrency : byte { CompanyScrip, BiomassScrap, Coins }
+    public enum GameCurrency : byte { CompanyScrip, BiomassScrap }
     internal struct DayScripReward : IBufferElementData { internal FixedString128Bytes DayId; }
 
     internal static class CampaignWalletSystem
@@ -14,7 +14,6 @@ namespace MarblesECS
         {
             GameCurrency.CompanyScrip => context.Campaign.CompanyScripBalance,
             GameCurrency.BiomassScrap => context.Player.BiomassScrapBalance,
-            GameCurrency.Coins => context.Campaign.Coins,
             _ => throw new System.ArgumentOutOfRangeException(nameof(currency))
         };
 
@@ -31,11 +30,6 @@ namespace MarblesECS
                     var player = context.Player;
                     player.BiomassScrapBalance = balance;
                     context.Player = player;
-                    break;
-                case GameCurrency.Coins:
-                    var session = context.Campaign;
-                    session.Coins = balance;
-                    context.Campaign = session;
                     break;
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(currency));

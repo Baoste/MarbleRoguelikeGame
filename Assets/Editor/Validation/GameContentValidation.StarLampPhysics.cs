@@ -26,7 +26,7 @@ namespace MarblesECS.Editor
                 var ids = new int[3];
                 for (int i = 0; i < 3; i++)
                 {
-                    CampaignStateUtility.CreateDevice(c, def, def.Price); ids[i] = c.Campaign.NextDeviceId;
+                    CampaignStateUtility.CreateDevice(c, def, def.InstallPrice); ids[i] = c.Campaign.NextDeviceId;
                     MorePlace(c, ids[i], true); var owned = simulation.GetOwnedDevices().Single(x => x.InstanceId == ids[i]);
                     views[i] = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(ids[i], def.Id));
                     views[i].Root.transform.localPosition = Vector3.right * (i == 2 ? 0 : (i == 0 ? -2 : 2));

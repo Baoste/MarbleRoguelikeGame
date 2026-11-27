@@ -16,7 +16,6 @@ namespace MarblesECS
                 var offer = offers[i];
                 if (offer.Kind != ShopItemKind.Device) throw new InvalidOperationException("Unsupported shop item kind.");
                 var definition = CampaignStateUtility.Device(context, offer.DefinitionId);
-                if (!daily && !offer.Sold) offer.Price = CampaignShopSystem.Price(context, definition.Price);
                 result[i] = new ShopOfferSnapshot
                 {
                     Index = i, Kind = offer.Kind, DefinitionId = offer.DefinitionId,

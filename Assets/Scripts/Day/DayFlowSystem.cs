@@ -118,7 +118,7 @@ namespace MarblesECS
         {
             var state = State;
             if (state.Version != version || state.Status != DayCampaignStatus.Active || state.Phase != DayPhase.WakeUp ||
-                state.ShopOpen || Busy || (Current.DailyLoadout == null && !context.HasProductionFeature(ProductionFeature.Shop))) return false;
+                state.ShopOpen || Busy || Current.DailyLoadout == null) return false;
 
             if (!state.ShopStockReady) CampaignShopSystem.Generate(context, Current.DailyLoadout);
             state.ShopStockReady = true;

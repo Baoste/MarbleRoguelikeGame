@@ -323,7 +323,7 @@ function Verify() assert(count == 2) end"))
                     C.DeviceScripts.CreateScript = resource => resource.CreateScript(resource.Definition.Id == 9001 ? lua : null);
                 Simulation.StartSession(Bridge); Simulation.BeginRound();
                 var definition = C.Balance.Devices.Single(d => d.Id == 9001);
-                CampaignStateUtility.CreateDevice(C, definition, definition.Price);
+                CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 Owned = Simulation.GetOwnedDevices().Single();
                 CampaignStateUtility.FindDevice(C, Owned.InstanceId, out Device);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(Device); data.Placed = true; C.Manager.SetComponentData(Device, data);

@@ -13,12 +13,12 @@ namespace MarblesECS.Presentation
             string dayLabel = day.Status == DayCampaignStatus.NotStarted ? string.Empty : day.DayId + "　";
             string wallet = Controller.CurrentDayDefinition?.DailyLoadout != null && day.Phase != DayPhase.Production
                 ? "　公司工票 " + session.CompanyScripBalance
-                : "　" + DeviceDisplayText.CurrencyName(session.Production.Currency) + " " + session.ProductionBalance;
+                : "　血肉残料 " + session.BiomassScrapBalance;
             GUILayout.Label(dayLabel + PhaseName(session.Phase) + wallet);
             GUILayout.Label("血量 Blood  " + marble.Blood.ToString("0.0") + " / " + marble.BloodCapacity.ToString("0") +
                 "　场内 " + marble.ActiveMarbles);
             GUILayout.Label("累计已结算 " + session.TotalScore);
-            GUILayout.Label("当前确认分 " + session.ConfirmedScore + " / " + session.TargetScore + "（奖池未开奖不计入提现门槛）");
+            GUILayout.Label("当前确认分 " + session.ConfirmedScore + " / " + session.TargetScore + "（奖池未开奖不计入结算门槛）");
             GUILayout.Label("Rush " + marble.RushSecondsRemaining.ToString("0.0") + "s");
             GUILayout.Label("下一颗碰撞系数 e = " + marble.NextMarbleRestitution.ToString("0.00"));
             GUILayout.Space(6);
@@ -35,9 +35,8 @@ namespace MarblesECS.Presentation
         {
             var session = Controller.Session;
             GUILayout.Label("本轮结算 " + session.RoundScore + "　累计 " + session.TotalScore);
-            GUILayout.Label(Controller.CurrentDayDefinition?.DailyLoadout != null
-                ? "通关奖励 +" + session.LastCompanyScripReward + " 公司工票"
-                : "通关奖励 +" + session.LastRewardCoins + " 金币　提现 +" + session.LastCashoutCoins);
+            if (session.LastCompanyScripReward > 0)
+                GUILayout.Label("通关奖励 +" + session.LastCompanyScripReward + " 公司工票");
         }
 
         private static string PhaseName(RoundPhase phase)
@@ -56,7 +55,7 @@ namespace MarblesECS.Presentation
         {
             GUILayout.Label("操作：空格连发；A / D 或滑条移动发射口。提高抽血档位会提高单珠耗血与大小，基础分独立配置。");
             GUILayout.Label("金钉：该珠倍率 ×2；蓝钉：该珠入区 Rush 概率增加。同一颗血珠对同一枚钉子只生效一次。");
-            GUILayout.Label("绿区即时得分；紫区积累待定分，回合排空后共同开奖一次；红区无分回收。达成当前目标才可提现。");
+            GUILayout.Label("绿区即时得分；紫区积累待定分，回合排空后共同开奖一次；红区无分回收。达成当前目标才可结算。");
         }
     }
 }

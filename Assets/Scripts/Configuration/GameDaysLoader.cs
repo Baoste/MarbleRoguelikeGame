@@ -30,7 +30,7 @@ namespace MarblesECS
                 bool dailyLoadouts = schemaVersion == DayCampaignDefinition.CurrentSchemaVersion;
                 if (!dailyLoadouts && schemaVersion != DayCampaignDefinition.LegacySchemaVersion)
                     throw new ArgumentException($"schemaVersion: expected {DayCampaignDefinition.CurrentSchemaVersion} or {DayCampaignDefinition.LegacySchemaVersion}.");
-                long startingScrip = dailyLoadouts && input.Has("startingCompanyScrip")
+                long startingScrip = input.Has("startingCompanyScrip")
                     ? ReadInteger(input, "startingCompanyScrip", 0, CampaignWalletSystem.MaxBalance) : 0;
                 string sequenceId = Id(input.String("sequenceId"), "sequenceId");
                 var defaultFeatures = ReadProductionFeatures(input, "defaultProductionFeatures");
@@ -50,7 +50,6 @@ namespace MarblesECS
                     int order = entry.Int("order");
                     if (order <= 0) throw new ArgumentException($"{path}.order: expected a positive integer.");
                     long targetScore = ReadInteger(entry, "targetScore", 1, balance.Marble.MaxRoundScore);
-                    long rewardCoins = dailyLoadouts ? 0 : ReadInteger(entry, "rewardCoins", 0, CampaignStateUtility.MaxCoins);
                     var loadout = dailyLoadouts ? ReadDailyLoadout(entry, devices) : null;
                     var blood = entry.Has("bloodProgression")
                         ? ReadBloodProgression(entry.Object("bloodProgression"), balance, defaultBlood) : defaultBlood;
@@ -64,18 +63,16 @@ namespace MarblesECS
                         catch (ArgumentException error) { throw new ArgumentException($"{path}.boardLayout: {error.Message}", error); }
                     }
                     var features = defaultFeatures | ReadProductionFeatures(entry, "productionFeatures");
-                    if (loadout != null)
-                    {
-                        features = (features | ProductionFeature.DevicePlacement) & ~ProductionFeature.Shop;
-                        if (loadout.Shop != null) features |= ProductionFeature.Shop;
-                    }
+                    features &= ~ProductionFeature.Shop;
+                    if (loadout != null) features |= ProductionFeature.DevicePlacement;
+                    if (loadout?.Shop != null) features |= ProductionFeature.Shop;
                     long scrap = dailyLoadouts || entry.Has("initialBiomassScrap")
                         ? ReadInteger(entry, "initialBiomassScrap", 0, CampaignWalletSystem.MaxBalance) : 0;
                     long clearScrip = dailyLoadouts || entry.Has("clearCompanyScripReward")
                         ? ReadInteger(entry, "clearCompanyScripReward", 0, CampaignWalletSystem.MaxBalance) : 0;
                     var production = entry.Has("productionSettings")
                         ? ReadProductionSettings(entry.Object("productionSettings"), defaultProduction) : defaultProduction;
-                    return new DayDefinition(id, order, targetScore, rewardCoins, features, boardLayoutFile,
+                    return new DayDefinition(id, order, targetScore, features, boardLayoutFile,
                         boardLayout, ReadMorningPrep(entry), ReadRefs(entry, "eventIds", events), dayRules, loadout, blood,
                         scrap, clearScrip, entry.Bool("skipMorningPrep", false), production);
                 }, required: true);
@@ -92,15 +89,18 @@ namespace MarblesECS
             }
         }
 
-        private static ProductionSettings ReadProductionSettings(ConfigFields entry, ProductionSettings fallback) =>
-            new ProductionSettings(
+        private static ProductionSettings ReadProductionSettings(ConfigFields entry, ProductionSettings fallback)
+        {
+            if (entry.String("currency", nameof(GameCurrency.BiomassScrap), optional: true) != nameof(GameCurrency.BiomassScrap))
+                throw entry.Error("currency (expected BiomassScrap)");
+            return new ProductionSettings(
                 ReadEnum<DeviceSupply>(entry.String("deviceSupply", fallback.Supply.ToString(), optional: true), entry.Context + ".deviceSupply"),
-                ReadEnum<GameCurrency>(entry.String("currency", fallback.Currency.ToString(), optional: true), entry.Context + ".currency"),
                 entry.Bool("installDuringProduction", fallback.InstallDuringProduction),
                 entry.Bool("destroyExhaustedDevices", fallback.DestroyExhaustedDevices),
                 entry.Bool("allowDeviceReturn", fallback.AllowDeviceReturn),
                 entry.Bool("allowDeviceSale", fallback.AllowDeviceSale),
                 entry.Bool("clearDevicesOnDaySettlement", fallback.ClearDevicesOnDaySettlement));
+        }
 
         private static BloodProgressionDefinition ReadBloodProgression(ConfigFields fields, GameBalance balance,
             BloodProgressionDefinition fallback)

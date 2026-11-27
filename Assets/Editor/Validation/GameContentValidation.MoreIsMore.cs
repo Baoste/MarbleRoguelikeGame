@@ -20,7 +20,7 @@ namespace MarblesECS.Editor
         private static int MoreCompanion(SimulationContext c, bool placed, bool exhausted = false)
         {
             var definition = c.Balance.Devices.Single(d => d.Id == 9008);
-            CampaignStateUtility.CreateDevice(c, definition, definition.Price);
+            CampaignStateUtility.CreateDevice(c, definition, definition.InstallPrice);
             int id = c.Campaign.NextDeviceId;
             CampaignStateUtility.FindDevice(c, id, out var entity);
             var data = c.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = placed;
@@ -41,14 +41,14 @@ namespace MarblesECS.Editor
                 var d = AddMoreIsMore(f); var key = f.Launch();
                 for (int n = 0; n < count; n++) MoreCompanion(f.C, true, n % 2 == 0);
                 for (int n = 0; n < 3; n++) MoreCompanion(f.C, false);
-                var before = f.Physics.States[key]; double blood = f.C.Player.Blood, coins = f.C.Campaign.Coins;
+                var before = f.Physics.States[key]; double blood = f.C.Player.Blood, scrap = f.C.Player.BiomassScrapBalance;
                 var hit = PiggyHit(f, key, d); f.Step(hit, hit);
                 double bonus = Math.Min(20, count * 2);
                 Near(1 + bonus, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "other placed devices add two each, capped at twenty per hit");
                 Near(count == 0 ? 20 : 19, f.Simulation.GetOwnedDevices().Single(x => x.InstanceId == d.InstanceId).RemainingDurability, "zero bonus is free, positive bonus uses once");
                 Near(10, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "device count does not change ball value");
                 VectorNear(before.LinearVelocity, f.Physics.States[key].LinearVelocity, "Lua leaves normal bounce unchanged");
-                Near(blood, f.C.Player.Blood, "count multiplier does not spend blood"); Near(coins, f.C.Campaign.Coins, "count multiplier does not spend coins");
+                Near(blood, f.C.Player.Blood, "count multiplier does not spend blood"); Near(scrap, f.C.Player.BiomassScrapBalance, "count multiplier does not spend scrap");
                 Near(0, f.C.Round.Score, "bonus waits for score area");
                 Check(f.Simulation.GetDeviceStatus(d.InstanceId).Contains("其他装置 " + count + " · 碰撞倍率 ×" + (1 + bonus)), "status reflects live count and factor");
                 double product = Math.Pow(1 + bonus, 2);
@@ -137,7 +137,7 @@ namespace MarblesECS.Editor
                 MorePlace(f.C, placed, false); Near(2, tick.CountPlacedDevices(), "live event query sees retrieval");
                 CampaignStateUtility.FindDevice(f.C, inventory, out var removed); f.C.Manager.DestroyEntity(removed); Near(1, api.CountPlacedDevices(), "query sees entity deletion");
                 // Paired purchases are two logical device instances, counted only when individually placed.
-                var portal = f.C.Balance.Devices.Single(x => x.Id == 103); CampaignStateUtility.CreateDevice(f.C, portal, portal.Price);
+                var portal = f.C.Balance.Devices.Single(x => x.Id == 103); CampaignStateUtility.CreateDevice(f.C, portal, portal.InstallPrice);
                 var pair = f.Simulation.GetOwnedDevices().Where(x => x.DefinitionId == 103).ToArray();
                 Near(2, pair.Length, "portal purchase yields two independent instances");
                 MorePlace(f.C, pair[0].InstanceId, true); Near(2, api.CountPlacedDevices(), "one placed portal counts as one");
@@ -159,7 +159,7 @@ namespace MarblesECS.Editor
                 simulation.ApplyGlobalAttribute(993, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                 simulation.ApplyGlobalAttribute(994, GameAttribute.BALL_BOUNCE, AttributeOperation.Set, 1);
                 simulation.ApplyGlobalAttribute(995, GameAttribute.BALL_FRICTION, AttributeOperation.Set, 0);
-                var def = c.Balance.Devices.Single(d => d.Id == 9023); CampaignStateUtility.CreateDevice(c, def, def.Price);
+                var def = c.Balance.Devices.Single(d => d.Id == 9023); CampaignStateUtility.CreateDevice(c, def, def.InstallPrice);
                 var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var entity);
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; c.Manager.SetComponentData(entity, data);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));

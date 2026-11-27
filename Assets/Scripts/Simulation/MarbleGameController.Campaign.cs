@@ -144,9 +144,6 @@ namespace MarblesECS.PhysX
         public bool RemoveDevicePlacement(int id) => simulation != null && simulation.RemoveDevicePlacement(id);
         public bool RotateDevice(int id, float degrees) => simulation != null && simulation.RotateDevice(id, degrees);
         public ShotQuote QuoteShot(float flow) => simulation != null ? simulation.QuoteShot(flow) : default;
-        public long ShopRefreshPrice => !IsReady ? 0 : CurrentDayDefinition?.DailyLoadout is DailyLoadoutDefinition loadout
-            ? loadout.Shop?.RefreshCost ?? 0
-            : CampaignShopSystem.Price(simulation.Context, Balance.Campaign.ShopRefreshCost);
         public OwnedDeviceSnapshot[] GetOwnedDevices() => simulation?.GetOwnedDevices() ?? Array.Empty<OwnedDeviceSnapshot>();
         public ShopOfferSnapshot[] GetShopOffers() => simulation?.GetShopOffers() ?? Array.Empty<ShopOfferSnapshot>();
 

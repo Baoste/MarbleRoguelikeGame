@@ -145,12 +145,10 @@ namespace MarblesECS
             if (context.Physics is IMarbleBoardLayoutPhysics boardPhysics) boardPhysics.ApplyBoardLayout(day.BoardLayout);
             context.BloodProgression = day.BloodProgression;
             var campaign = context.Campaign;
-            campaign.RewardCoins = day.RewardCoins;
             campaign.Production = day.Production;
             campaign.RepeatRounds = false;
             campaign.DisabledFeatures = ProductionFeature.All & ~day.ProductionFeatures;
             campaign.TotalScore = 0;
-            campaign.LastRewardCoins = campaign.LastCashoutCoins = 0;
             campaign.LastCompanyScripReward = 0;
             campaign.ShopRefreshCount = 0;
             context.Campaign = campaign;

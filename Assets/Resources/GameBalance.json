@@ -21,9 +21,6 @@
         "RandomSeed": 12345
     },
     "Campaign": {
-        "StartingCoins": 30,
-        "ShopRefreshCost": 2,
-        "ShopOfferCount": 4,
         "SellRatio": 0.5,
         "MaxOwnedDevices": 20,
         "MaxTotalScore": 9000000000000000

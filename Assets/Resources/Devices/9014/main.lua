@@ -1,16 +1,16 @@
 -- 摇钱树：只计进入次数，不改变弹珠运动；每批产出才扣耐久。
--- Value: entries per payout; Strength: coins per payout. Range is unused.
-local roundId, progress, payouts = nil, 0, 0
+-- Value: entries per payout; Strength: scrap per payout. Range is unused.
+local roundId, progress, produced = nil, 0, 0
 
 local function sync(api)
     if roundId ~= api.RoundId then
-        roundId, progress, payouts = api.RoundId, 0, 0
+        roundId, progress, produced = api.RoundId, 0, 0
     end
 end
 
 local function status(api)
-    api:SetStatus(string.format("摇钱树 · %d/%d · 已产出 %d 金币", progress,
-        math.max(1, math.floor(api.Parameter)), payouts * math.floor(api.Strength)))
+    api:SetStatus(string.format("摇钱树 · %d/%d · 已产出 %d 血肉残料", progress,
+        math.max(1, math.floor(api.Parameter)), produced))
 end
 
 function OnTick(api)
@@ -27,8 +27,8 @@ function OnContact(api)
     progress = progress + 1
     api:MarkTriggered() -- Successful Lua-only accumulation, independent of durability.
     if progress >= required and api:TryUse() then
-        api:AddCoins(reward)
-        progress, payouts = progress - required, payouts + 1
+        produced = produced + api:AddBiomassScrap(reward)
+        progress = progress - required
     end
     status(api)
 end

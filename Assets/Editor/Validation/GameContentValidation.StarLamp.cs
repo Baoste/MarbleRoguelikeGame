@@ -105,8 +105,8 @@ namespace MarblesECS.Editor
                 var api = CashApi(f, key, a); api.AddScoreMultiplier(2); api.Close();
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.RandomScore, TargetId = 700, Multiplier = 1, RushDisabled = true });
                 Near(60, f.C.Round.PendingScore, "gambling area multiplies the aura and carried factor");
-                var cash = AddCashOut(f); key = f.Launch(); double coins = f.C.Campaign.Coins;
-                f.Step(f.Hit(key, cash)); Near(coins + 30, f.C.Campaign.Coins, "cashout uses live temporary multiplier for fresh ball");
+                var cash = AddCashOut(f); key = f.Launch(); double scrap = f.C.Player.BiomassScrapBalance;
+                f.Step(f.Hit(key, cash)); Near(scrap + 30, f.C.Player.BiomassScrapBalance, "cashout uses live temporary multiplier for fresh ball");
                 CampaignStateUtility.FindDevice(f.C, b.InstanceId, out var entity); f.C.Manager.DestroyEntity(entity);
                 f.Step(); Near(0, LampState(f.C, a.InstanceId), "loss of aura source cancels remaining lamp window");
                 Near(20, f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == a.InstanceId).RemainingDurability, "cancelled window costs no wear");

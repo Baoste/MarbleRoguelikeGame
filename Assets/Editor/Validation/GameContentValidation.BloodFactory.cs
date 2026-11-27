@@ -28,14 +28,14 @@ namespace MarblesECS.Editor
                 var device = AddBloodFactory(f); var key = f.Launch(); var ball = f.Ball(key);
                 AttributeRuntime.SetBase(f.C, ball, GameAttribute.BALL_BASE_VALUE, value); SetTestBlood(f, 100);
                 var api = CashApi(f, key, device); api.AddScoreMultiplier(1.5); api.AddScoreMultiplier(1.5); api.Close();
-                double coins = f.C.Campaign.Coins; var motion = f.Physics.States[key];
+                double scrap = f.C.Player.BiomassScrapBalance; var motion = f.Physics.States[key];
                 var hit = GoldMineHit(f, key, device); f.Step(hit, hit);
                 double remaining = Math.Floor(value / 2);
                 Near(remaining, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "factory floors half the current value once per collision");
                 Near(Math.Min(1000, 100 + remaining * 5), f.C.Player.Blood, "heal uses remaining value, excluding score multipliers, capped at capacity");
                 Near(f.C.Player.Blood, f.Simulation.Snapshot.Blood, "HUD snapshot exposes restored spendable blood");
                 Near(value > 0 ? 19 : 20, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "positive value conversion uses once; zero value is free");
-                Near(coins, f.C.Campaign.Coins, "factory gives blood rather than coins"); Near(0, f.C.Round.Score, "factory does not settle score");
+                Near(scrap, f.C.Player.BiomassScrapBalance, "factory gives blood rather than scrap"); Near(0, f.C.Round.Score, "factory does not settle score");
                 Near(2.25, f.C.Manager.GetComponentData<MarbleScore>(ball).ScoreMultiplier, "value reduction keeps accumulated multiplier");
                 Check(f.C.Marbles.ContainsKey(key), "factory retains the original ball");
                 VectorNear(motion.LinearVelocity, f.Physics.States[key].LinearVelocity, "Lua leaves natural bounce alone");
@@ -140,7 +140,7 @@ namespace MarblesECS.Editor
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
                 simulation.ApplyGlobalAttribute(978, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                 simulation.ApplyGlobalAttribute(979, GameAttribute.BALL_BOUNCE, AttributeOperation.Set, 0);
-                var def = c.Balance.Devices.Single(d => d.Id == 9019); CampaignStateUtility.CreateDevice(c, def, def.Price);
+                var def = c.Balance.Devices.Single(d => d.Id == 9019); CampaignStateUtility.CreateDevice(c, def, def.InstallPrice);
                 var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var entity);
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; c.Manager.SetComponentData(entity, data);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));

@@ -9,7 +9,7 @@ namespace MarblesECS.Editor
         private static int DentalFood(SimulationContext c)
         {
             var definition = c.Balance.Devices.Single(d => d.Id == 9028);
-            CampaignStateUtility.CreateDevice(c, definition, definition.Price); return c.Campaign.NextDeviceId;
+            CampaignStateUtility.CreateDevice(c, definition, definition.InstallPrice); return c.Campaign.NextDeviceId;
         }
         private static OwnedDeviceData AddDental(Fixture f)
         {
@@ -29,10 +29,10 @@ namespace MarblesECS.Editor
                 BagBuild(f.C);
                 for (int upgrade = 1; upgrade <= stage; upgrade++)
                 {
-                    int food = DentalFood(f.C); double coins = f.C.Campaign.Coins;
+                    int food = DentalFood(f.C); double scrap = f.C.Player.BiomassScrapBalance;
                     Check(f.Simulation.TryOfferDevice(food, d.InstanceId), "same-type inventory advances one stage");
                     Check(!CampaignStateUtility.FindDevice(f.C, food, out _), "upgrade consumes exactly one item");
-                    Near(coins, f.C.Campaign.Coins, "upgrade does not award sale coins");
+                    Near(scrap, f.C.Player.BiomassScrapBalance, "upgrade does not award sale scrap");
                     Near(upgrade, DeviceInstanceState.Get(f.C, entity, "stage"), "stage is persisted on receiver");
                     Near(limits[upgrade], f.Simulation.GetOwnedDevices().Single().RemainingDurability, "upgrade fills stage capacity");
                 }

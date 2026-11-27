@@ -15,16 +15,16 @@ namespace MarblesECS.Editor
         public static void Validate()
         {
             assertions = 0;
-            PurchasePairs();
+            PairedInstallations();
             SellPair();
             DestroyPairFromLua();
             PreserveMotion();
             PhysicalCrossing();
             for (int fields = 0; fields < 4; fields++) ForceEnvironment((fields & 1) != 0, (fields & 2) != 0);
-            Debug.Log("PORTAL_VALIDATION_PASSED: " + assertions + " assertions; paired purchases, world motion, physical bidirectional travel and local force recalculation.");
+            Debug.Log("PORTAL_VALIDATION_PASSED: " + assertions + " assertions; paired installations, world motion, physical bidirectional travel and local force recalculation.");
         }
 
-        private static void PurchasePairs()
+        private static void PairedInstallations()
         {
             using (var r = new Rig(2))
             {
@@ -32,7 +32,8 @@ namespace MarblesECS.Editor
                 Check(owned.Length == 4 && owned.All(x => x.DefinitionId == 103), "two purchases give four portal devices");
                 Check(owned[0].PairId > 0 && owned[0].PairId == owned[1].PairId && owned[2].PairId == owned[3].PairId &&
                     owned[0].PairId != owned[2].PairId, "each purchase has its own nonzero pair ID");
-                Near(1000 - 2 * r.C.Balance.Devices.Single(d => d.Id == 103).Price, r.C.Campaign.Coins, "charge the tier price once per pair");
+                Near(2 * r.C.Balance.Devices.Single(d => d.Id == 103).InstallPrice,
+                    owned.Sum(device => device.PurchasePrice), "each pair records one installation price");
                 Check(owned.All(x => x.Placed), "the two members of each purchase can be placed individually");
                 var key = r.Launch(new Vector3(0, .085f, .5f), Vector3.zero);
                 for (int i = 0; i < owned.Length; i++)
@@ -40,15 +41,6 @@ namespace MarblesECS.Editor
                     var api = r.Api(key, i);
                     Check(api.Motion.FindPartner().InstanceId == owned[i ^ 1].InstanceId, "partner lookup never crosses purchase groups"); api.Close();
                 }
-                r.Offer();
-                int nextId = r.C.Campaign.NextDeviceId;
-                r.C.Balance.Campaign.MaxOwnedDevices = 5;
-                Check(!CampaignShopSystem.Buy(r.C, 0), "one remaining inventory slot cannot accept half a pair");
-                Check(r.Simulation.GetOwnedDevices().Length == 4 && r.C.Campaign.NextDeviceId == nextId, "failed pair purchase creates no partial device");
-                Near(1000 - 2 * r.C.Balance.Devices.Single(d => d.Id == 103).Price, r.C.Campaign.Coins, "rejected purchase does not charge coins");
-                r.C.Balance.Campaign.MaxOwnedDevices = 100;
-                var campaign = r.C.Campaign; campaign.Coins = r.C.Balance.Devices.Single(d => d.Id == 103).Price - 1; r.C.Campaign = campaign;
-                Check(!CampaignShopSystem.Buy(r.C, 0) && r.Simulation.GetOwnedDevices().Length == 4, "insufficient funds cannot create either portal");
             }
         }
 
@@ -61,21 +53,21 @@ namespace MarblesECS.Editor
             var source = r.Owned[0];
             var partner = r.Owned[1];
             long refund = MarbleRules.RoundScore((source.PurchasePrice + partner.PurchasePrice) * r.C.Balance.Campaign.SellRatio,
-                CampaignStateUtility.MaxCoins);
+                CampaignWalletSystem.MaxBalance);
             Check(source.SellPrice == refund && partner.SellPrice == refund, "both members quote one refund for the full pair");
             Check(r.Simulation.RemoveDevicePlacement(source.InstanceId) && r.Simulation.GetOwnedDevices().Length == 4,
                 "returning a portal to inventory keeps all placements and pair membership independently editable");
             int revision = r.C.Campaign.LayoutRevision;
-            long coins = r.C.Campaign.Coins;
+            long scrap = r.C.Player.BiomassScrapBalance;
             var scripts = r.Views.Take(2).Select(view => view.Root.GetComponent<DeviceBody>().Script).ToArray();
             Check(r.Simulation.SellDevice(source.InstanceId), "sell a stored portal whose partner is on the board");
             Check(r.Simulation.GetOwnedDevices().Select(device => device.InstanceId).SequenceEqual(r.Owned.Skip(2).Select(device => device.InstanceId)),
                 "selling removes the whole pair and preserves a different pair of the same definition");
-            Check(r.C.Campaign.Coins == coins + refund && r.C.Campaign.LayoutRevision == revision + 1,
+            Check(r.C.Player.BiomassScrapBalance == scrap + refund && r.C.Campaign.LayoutRevision == revision + 1,
                 "selling the pair credits one refund and changes layout once");
             Check(scripts.All(script => script.IsDisposed) && r.Views.Take(2).All(view => !view.Root.GetComponent<DeviceBody>().GameplayEnabled),
                 "both scripts are disposed and both colliders are unavailable after the sale");
-            Check(!r.Simulation.SellDevice(partner.InstanceId) && r.C.Campaign.Coins == coins + refund,
+            Check(!r.Simulation.SellDevice(partner.InstanceId) && r.C.Player.BiomassScrapBalance == scrap + refund,
                 "the deleted partner cannot pay out again");
         }
 
@@ -110,7 +102,7 @@ end";
                 scripts[i] = r.C.DeviceScripts.Get(id, r.Owned[i].DefinitionId);
             }
 
-            long coins = r.C.Campaign.Coins;
+            long scrap = r.C.Player.BiomassScrapBalance;
             int revision = r.C.Campaign.LayoutRevision;
             var key = r.Launch(new Vector3(0, .085f, .5f), Vector3.zero);
             bool prematureTeardown = false;
@@ -124,8 +116,8 @@ end";
             Check(!prematureTeardown && scripts.All(script => script.IsDisposed), "both scripts are disposed after nested Lua callbacks close");
             Check(r.Simulation.GetOwnedDevices().All(device => device.PairId == r.Owned[2].PairId) &&
                 r.Simulation.GetOwnedDevices().Length == 2, "Lua destruction removes exactly the source pair");
-            Check(r.C.Campaign.Coins == coins && r.C.Campaign.LayoutRevision == revision + 1,
-                "repeated Lua removal changes layout once without crediting sale coins");
+            Check(r.C.Player.BiomassScrapBalance == scrap && r.C.Campaign.LayoutRevision == revision + 1,
+                "repeated Lua removal changes layout once without crediting sale scrap");
         }
 
         private static void PreserveMotion()
@@ -227,13 +219,9 @@ end";
                 balance.Marble.InitialBlood = balance.Marble.BloodCapacity = 1000; balance.Marble.FireIntervalSeconds = balance.Marble.MaxFireIntervalSeconds = .01f;
                 Simulation = new MarbleSimulation(balance); Bridge = new MarblePhysicsBridge(Scene, null, null, Simulation.EnqueueContact);
                 Simulation.StartSession(Bridge);
-                var campaign = C.Campaign; campaign.Coins = 1000; C.Campaign = campaign;
+                var definition = C.Balance.Devices.Single(d => d.Id == 103);
                 for (int i = 0; i < pairCount; i++)
-                {
-                    Offer(); Check(CampaignShopSystem.Buy(C, 0), "shop purchases portal pair");
-                    Check(!CampaignShopSystem.Buy(C, 0), "a sold offer cannot duplicate its pair");
-                    Check(Simulation.GetOwnedDevices().Length == (i + 1) * 2, "one purchase adds exactly two devices");
-                }
+                    CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 var round = C.Round; round.Phase = (byte)RoundPhase.Build; C.Round = round;
                 Owned = Simulation.GetOwnedDevices().OrderBy(x => x.InstanceId).ToArray();
                 Board = new GameObject("PortalBoard"); SceneManager.MoveGameObjectToScene(Board, Scene);
@@ -250,11 +238,6 @@ end";
                 Owned = Simulation.GetOwnedDevices().OrderBy(x => x.InstanceId).ToArray();
                 Physics.SyncTransforms(); Simulation.BeginRound();
                 Simulation.ApplyGlobalAttribute(974, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
-            }
-            internal void Offer()
-            {
-                var offers = C.Manager.GetBuffer<ShopOfferData>(C.RoundEntity); offers.Clear();
-                offers.Add(new ShopOfferData { DefinitionId = 103, Kind = ShopItemKind.Device, Price = 15 });
             }
             internal Entity Ball(MarbleKey key) => C.Marbles[key];
             internal Rigidbody Body(MarbleKey key) => Scene.GetRootGameObjects().Select(go => go.GetComponent<MarbleBody>()).Single(b => b != null && b.Key.Equals(key)).Body;
@@ -281,7 +264,7 @@ end";
             }
             internal Vector3 AddField(float x, float yaw)
             {
-                var definition = C.Balance.Devices.Single(d => d.Id == 9004); CampaignStateUtility.CreateDevice(C, definition, definition.Price);
+                var definition = C.Balance.Devices.Single(d => d.Id == 9004); CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last(); CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
                 var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id)); fields.Add(view);

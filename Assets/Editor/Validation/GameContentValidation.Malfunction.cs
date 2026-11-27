@@ -36,7 +36,7 @@ namespace MarblesECS.Editor
             using (var f = new Fixture())
             {
                 var d = AddMalfunction(f); var key = f.Launch(); var api = CashApi(f, key, d); api.AddScoreMultiplier(4); api.Close();
-                var motion = f.Physics.States[key]; double blood = f.C.Player.Blood, coins = f.C.Campaign.Coins;
+                var motion = f.Physics.States[key]; double blood = f.C.Player.Blood, scrap = f.C.Player.BiomassScrapBalance;
                 MalfunctionRandom(f, factor); uint expectedRandom = f.C.Round.RandomState; MarbleRules.NextRandom(ref expectedRandom);
                 var hit = PiggyHit(f, key, d); f.Step(hit, hit);
                 double expected = 4 * factor;
@@ -44,7 +44,7 @@ namespace MarblesECS.Editor
                 Near(expectedRandom, f.C.Round.RandomState, "one effective collision uses exactly one round RNG draw");
                 Near(19, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "all eight outcomes including zero and one cost one use");
                 Near(10, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "random factor does not alter base value");
-                Near(0, f.C.Round.Score, "collision never settles score early"); Near(blood, f.C.Player.Blood, "collision does not change blood"); Near(coins, f.C.Campaign.Coins, "collision does not change coins");
+                Near(0, f.C.Round.Score, "collision never settles score early"); Near(blood, f.C.Player.Blood, "collision does not change blood"); Near(scrap, f.C.Player.BiomassScrapBalance, "collision does not change scrap");
                 VectorNear(motion.LinearVelocity, f.Physics.States[key].LinearVelocity, "normal solver bounce remains unchanged");
                 Check(f.Simulation.GetDeviceStatus(d.InstanceId).Contains(factor == 0 ? "归零" : "×" + factor), "status displays the sampled result");
                 var other = AddCashOut(f); api = CashApi(f, key, other); Check(api.HasTriggeredOtherDevice, "zero and neutral outcomes both record successful history"); api.Close();
@@ -73,7 +73,7 @@ namespace MarblesECS.Editor
             }
             using (var f = new Fixture())
             {
-                var d = AddMalfunction(f); var pig = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, 50);
+                var d = AddMalfunction(f); var pig = AddPiggyBank(f); var key = f.Launch(); SetScrap(f, 50);
                 f.Step(PiggyHit(f, key, pig)); MalfunctionRandom(f, 0); f.Step(PiggyHit(f, key, d));
                 Near(0, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "zero removes contributions from all previous devices");
                 f.Step(PiggyHit(f, key, pig)); Near(0, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "positive factor from another device preserves zero");
@@ -180,7 +180,7 @@ namespace MarblesECS.Editor
                 simulation.ApplyGlobalAttribute(993, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                 simulation.ApplyGlobalAttribute(994, GameAttribute.BALL_BOUNCE, AttributeOperation.Set, 1);
                 simulation.ApplyGlobalAttribute(995, GameAttribute.BALL_FRICTION, AttributeOperation.Set, 0);
-                var def = c.Balance.Devices.Single(d => d.Id == 9022); CampaignStateUtility.CreateDevice(c, def, def.Price);
+                var def = c.Balance.Devices.Single(d => d.Id == 9022); CampaignStateUtility.CreateDevice(c, def, def.InstallPrice);
                 var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var entity);
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; c.Manager.SetComponentData(entity, data);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));

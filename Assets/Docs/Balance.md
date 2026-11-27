@@ -6,7 +6,7 @@
 
 布置阶段按住左键从盘面或背包拖动装置。拖到空位松开即可摆放，拖到左侧背包松开即可收回，拖到可接收装置上松开即可投入。拖动时按 `R` 旋转预览，右键或 `Esc` 取消。位置必须通过盘面边界、障碍物和装置间距检查，松在无效位置会退回原处。移动保留耐久、配对和 Lua 状态。即使没有待放置的新装置，只要仍拥有装置，商店结束后也会进入布置阶段。
 
-允许出售时，布置阶段的红色售出区显示预计返还。松手后按库存记录的购入金额乘以 `Campaign.SellRatio` 并向下取整，发放当前生产货币。出售成套装置会移除整套并结算一次。场景入口为 `DeviceEditCanvas/DeviceSellArea`，可用菜单 `Marbles ECS/UI/配置装置移动与售出区` 给其他场景配置相同界面。
+允许出售时，布置阶段的红色售出区显示预计返还。松手后按装置实付的血肉残料乘以 `Campaign.SellRatio` 后向下取整并返还。出售成套装置会移除整套并结算一次。场景入口为 `DeviceEditCanvas/DeviceSellArea`，可用菜单 `Marbles ECS/UI/配置装置移动与售出区` 给其他场景配置相同界面。
 
 ## 属性的唯一入口
 
@@ -30,13 +30,12 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 | 机器倍率 | `MACHINE_MULT` | `Marble.LauncherScoreMultiplier` |
 | RUSH 条值及持续时间 | `RushSystem`：上限 666，6 秒 + 触发球额外时长，结束后冷却 3 秒；条值不衰减 | 旧概率、时长和衰减字段仅兼容 |
 | 赌博转盘 | `GamblingWheelRules`：八档等概率，2 秒起步、最短 0.2 秒 | 旧输/返还/双倍/四倍规则、概率和赌池修正均停用 |
-| 剩余血量兑换率 | `BLOOD_DIVIDEND_RATE` | `Campaign.CashoutCoinsPerBlood` |
 
 半径按现有单位转换：**实际世界半径 = 最终 BALL_RADIUS × 0.16**。最低档默认属性值 `0.5` 对应半径 `0.08`、直径 `0.16`。高档位以 `Investment / MinInvestment` 为投入倍率：半径按立方根增长，质量线性增长，基础价值按 `FlowValueExponent` 次方增长；当前指数为 `1.15`。每日曲线先提供最低发射档的基础价值，再应用投入倍率和属性修正。阈值与初始血量见[每日内容制作指南](DayFramework_Content_Guide.md#血量与血珠升值)。通用体积缩放按体积倍率的立方根换算半径。旧药物不再影响发射参数。
 
 发射速度直接采用 `BALL_LAUNCH_SPEED`，单位为 m/s，最终仍受 `BALL_MAX_SPEED` 限制。静态或运动学棋盘障碍按 `BALL_BOUNCE` 校正反弹，实体装置取该值与自身 `device.json.Bounce` 的较大值。超过 `1` 的弹珠属性值提供额外反弹增益。各装置的 `Bounce` 见 [装置一览](Device_Overview.md)。
 
-抽血档位仍在 `MinInvestment/MaxInvestment` 间选择投入量。基础耗血为「投入量 × BLOOD_COST」，随后应用属性 ADD/MUL/SET 和上下限。批量发射按球数收费。低档位用于增加携带 RUSH 贡献的球数，高档位用于 Rush 窗口内快速兑现价值。提现为「剩余血量 × BLOOD_DIVIDEND_RATE × COIN_GAIN_RATE」，金币向下取整。
+抽血档位仍在 `MinInvestment/MaxInvestment` 间选择投入量。基础耗血为「投入量 × BLOOD_COST」，随后应用属性 ADD/MUL/SET 和上下限。批量发射按球数收费。低档位用于增加携带 RUSH 贡献的球数，高档位用于 Rush 窗口内快速兑现价值。达标后可关闭供血并按场内弹珠排空的结果结算。
 
 发射频率跟随空格操作：点按一次最多发射一次，按得越快出球越快；超过上限的请求直接丢弃。按下时请求第一发，继续长按则让自动连发频率从 0 线性增加，`Marble.HoldAccelerationSeconds` 默认 **2 秒**达到极速。松开立即取消未消费请求和连发进度，再按重新加速；暂停、回合结束和重开也会清空输入。每个模拟步最多消费一次发射请求，冷却、满球、血量不足或生成失败均不排队补发。
 
@@ -60,7 +59,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 场景节点为 `StatusHudCanvas/StatusBars`，使用屏幕空间 Canvas 和 1920×1080 比例缩放，位置沿用场景当前设置；面板不拦截点击。文字与条的引用在 `ScoreListener`，菜单 `Marbles ECS/UI/配置右上角状态进度条` 可对当前场景重新配置，完成后手动保存场景。
 
-物理采样报告升级为 `SchemaVersion = 2`，JSON 与 CSV 不再输出基础 RUSH 概率。项目根目录 `Tools/Balance` 的历史概率模型尚未迁移至贡献累加机制，不能用新采样报告推导当前 RUSH 平衡；遇到新格式会明确报错，旧报告仍可用于历史分析。
+物理采样报告升级为 `SchemaVersion = 2`，JSON 与 CSV 不再输出基础 RUSH 概率。Unity 的 `Tools → Pachinko → Balance Dashboard` 运行真实物理采样。旧经济报告归档在项目根目录的 `docs/Balance`。
 
 装置条目的 `Cooldown` 是每种装置的基础秒数，初始化到该装置的 `DEVICE_COOLDOWN`；属性效果在此基础上修改。`DEVICE_TRIGGER_RATE` 和 `MACHINE_MULT` 在球与装置上各有作用域，装置初始乘数为中性值 `1`，避免把属性默认值重复计算。装置 `Radius` 表示装置占地半径，与弹珠 `BALL_RADIUS` 含义不同。
 
@@ -73,7 +72,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 游戏启动时读取 `GameContent.json.Devices` 并按 ID 查找各装置的 `manifest.json`。Manifest 指向同目录的配置、Prefab 和 Lua。目录按 ID 排序，重复 ID、缺少文件或无效配置会报告装置路径。
 
 
-商店在每次 Morning Prep 首次打开和付费刷新时，按普通/罕见/稀有/传奇权重 60/30/7/3 选择档位，再在该档剩余装置中等概率、无重复抽取 `Campaign.ShopOfferCount` 个装置（默认 4），不设 RUSH 保底；目录不足时只显示实际可用装置。无货或已抽空的档位不参与，剩余权重归一化；当前无传奇时为 60:30:7。基础购买价分别为 9/14/23/38，分档见 [装置一览](Device_Overview.md)。关店后重开保留现有货架，购买不会重抽其他货位。商店与初始装置、装置 Lua、赌博开奖共用整局唯一随机序列；生成和刷新商品会推进后续玩法的随机状态。目录按 ID 排序，相同种子和调用次序可复现抽取结果。旧药物商品、初始库存、服药和药效代码保持删除，后续药物将改用 Lua。
+启用权限商店时，生成货架会从当天候选池抽取最多 `shopOfferCount` 个未获权限的装置。先按默认 60/30/7/3 权重选择有货档位，再在该档内等概率选择。每个货位推进一次整局共享随机序列。同一货架不重复。权限抽取按 `shopDrawCost` 支付公司工票，允许刷新时按 `shopRefreshCost` 支付工票。盘面装置按 `metadata.biomassScrapPrice` 支付血肉残料。当天的货架、候选池和价格见 [每日内容制作指南](DayFramework_Content_Guide.md)。
 
 每日玩法从已确认的类型反复安装装置。每次按 `InstallPrice` 从生产钱包扣费，装置容量按实际实例计入 `MaxOwnedDevices`。成套装置首次安装支付整套费用，后续再次选择同类型可放置套装的其余成员。独立机台用 `device.json` 的 `StartingCount` 设置初始库存。 [每日内容配置](DayFramework_Content_Guide.md)
 
@@ -81,7 +80,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 `GameBalance` 的装置列表直接引用同一份内容目录；会话复制时深拷贝整个目录。基础 JSON 和基础 Excel 不再保存旧装置、药物列表。
 
-当前共 34 个属性、35 种装置、0 种药物；装置包含 BouncePad、黏黏、弹弹、吸吸、加速力场、传送门、黑洞、反重力、大炮、沙包、大石碎胸口、矿老板、淘金热、猪猪存钱罐、赚赚、摇钱树、分流器、大喷菇、炸弹、复制体、造血工厂、弹珠机关枪、草皮、故障装置、more is more、less is more、雪糕机、大胃袋、星星灯、种植牙、有锅气、降降火、台球、超大杯全冰美式和 Multi Ding。装置数量以 `GameContent.json.Devices` 为准，详见 [装置资源](../Resources/Devices/README.md)。
+当前共 30 个属性，装置名单和安装价见 [装置一览](Device_Overview.md)。运行时装置数量由 `GameContent.json.Devices` 决定。
 
 装置倍率从 1 开始，每次有效撞击将当前倍率乘以完整因子。两次 ×1.5 得到 ×2.25，两次 ÷2 等同于两次 ×0.5，最终为 ×0.25。Lua 使用 `MultiplyScore`，通用装置修正与固定倍率钉都应用相同规则。得分区结算时乘入当前有效的全盘倍率，并应用机台、得分区和全局的结算规则。
 
@@ -91,7 +90,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 每次进球把本轮球数 `n` 加 1，并刷新等待时间为 `max(0.2, 2 / sqrt(n))` 秒。第 1 球为 2 秒，第 4 球为 1 秒，第 16 球为 0.5 秒；到期或回合结束时统一开奖。本轮归零后，下轮重新从 2 秒开始，一回合可多次开奖。恰在截止时到达的球先结算旧池，再进入新池。零价值球也计数，空池不开奖。暂停冻结倒计时；重开清空奖池、计数和结果。
 
-八档为 **−2、−1、0、1、5、10、20、50**，每档 **12.5%**；开奖只消耗整局共享随机序列的一次抽取。`奖池总值 × 开奖倍率` 加到本回合分；负结果扣本回合分，最低 0，不扣金币、血量或已完成回合累计分。小数先参与乘法，再沿用得分整数与余数规则；正向结果仍受回合得分上限约束。最后一轮开奖在通关判断前完成，UI 不延迟结算。
+八档为 **−2、−1、0、1、5、10、20、50**，每档 **12.5%**；开奖只消耗整局共享随机序列的一次抽取。`奖池总值 × 开奖倍率` 加到本回合分；负结果扣本回合分，最低 0，只影响当前回合的得分。小数先参与乘法，再沿用得分整数与余数规则；正向结果仍受回合得分上限约束。最后一轮开奖在通关判断前完成，UI 不延迟结算。
 
 `TestScene` 左上角的 `GamblingWheelCanvas` 显示持续旋转的八扇区模型、奖池/球数、倒计时条和最近实际增减分。最近中奖扇区高亮，动画不调用随机数。模型源资产为 `Prefabs/UI/GamblingWheel.prefab`、`Art/UI/GamblingWheel`；配置入口为 `Marbles ECS/UI/配置左上角赌博转盘`。模型由独立相机绘制，展示不拦截鼠标；商店/布置阶段隐藏。
 
@@ -129,4 +128,4 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 ## 验证
 
-Unity 菜单 `Marbles ECS/Validate Attribute and Content Runtime` 验证 JSON 属性、装置 ID 列表和 Prefab 来源、旧 JSON 字段忽略、基础 Excel 输出、库存、赌博、提现、放置和物理表现。测试会进入 Play，可在独立临时项目中运行。
+Unity 菜单 `Marbles ECS/Validate Attribute and Content Runtime` 验证 JSON 属性、装置 ID 列表和 Prefab 来源、旧 JSON 字段忽略、基础 Excel 输出、权限商店、残料产出、赌博、放置和物理表现。测试会进入 Play，可在独立临时项目中运行。

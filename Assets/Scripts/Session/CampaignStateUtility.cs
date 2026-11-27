@@ -5,7 +5,6 @@ namespace MarblesECS
 {
     internal static class CampaignStateUtility
     {
-        internal const long MaxCoins = 9000000000000000L;
 
         internal static DeviceDefinition Device(SimulationContext context, uint id)
         {
@@ -53,7 +52,7 @@ namespace MarblesECS
                 foreach (var member in devices)
                     if (member.PairId == device.PairId) paidPrice += member.PurchasePrice;
             }
-            return MarbleRules.RoundScore(paidPrice * context.Balance.Campaign.SellRatio, MaxCoins);
+            return MarbleRules.RoundScore(paidPrice * context.Balance.Campaign.SellRatio, CampaignWalletSystem.MaxBalance);
         }
 
         internal static void DestroyDevice(SimulationContext context, Entity entity)

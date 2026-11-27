@@ -8,9 +8,8 @@ namespace MarblesECS
     {
         public uint Id;
         public string Name;
-        public long Price => DeviceRarityRules.StandardPurchasePrice(Rarity);
         [OptionalBalanceField] public long BiomassScrapPrice;
-        public long InstallPrice => BiomassScrapPrice > 0 ? BiomassScrapPrice : Price;
+        public long InstallPrice => BiomassScrapPrice > 0 ? BiomassScrapPrice : DeviceRarityRules.DefaultScrapInstallPrice(Rarity);
         [OptionalBalanceField] public DeviceRarity Rarity;
         [OptionalBalanceField] public int Durability = 20;
         [OptionalBalanceField] public float Bounce;

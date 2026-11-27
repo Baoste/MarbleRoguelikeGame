@@ -9,7 +9,7 @@
 | 根对象 | `schemaVersion` 为 3，`sequenceId` 是固定序列 ID，`days` 按 `order` 排序。`startingCompanyScrip` 控制新 Campaign 的工票初始值，默认 0。可配置 `defaultProductionFeatures`、`events`、`rules` 和 `campaignRuleIds`。 |
 | `days[]` | `dayId` 唯一，`order` 为唯一正整数，`targetScore` 范围为 1 到 `Marble.MaxRoundScore`。`boardLayout` 指定盘面 JSON。可用 `eventIds`、`ruleIds` 引用当天行为和规则，`morningPrep` 定义房间前置目标。 |
 
-根对象的 `defaultProductionSettings` 定义生产规则，每天可用 `productionSettings` 覆盖个别字段。规则包括 `deviceSupply`（库存实例 `OwnedInventory` 或已选种类 `SelectedTypes`）、`currency`、`installDuringProduction`、`destroyExhaustedDevices`、`allowDeviceReturn`、`allowDeviceSale` 和 `clearDevicesOnDaySettlement`。当天的 `initialBiomassScrap` 设置起始残料，`unlockedPegIds` 和 `defaultPegIds` 设置类型范围与初始权限。`skipMorningPrep` 默认关闭。开启时，由状态机确认已预选的背包并进入生产，预选类型须满足最低数量要求。
+根对象的 `defaultProductionSettings` 定义生产规则，每天可用 `productionSettings` 覆盖个别字段。规则包括 `deviceSupply`（库存实例 `OwnedInventory` 或已选种类 `SelectedTypes`）、`installDuringProduction`、`destroyExhaustedDevices`、`allowDeviceReturn`、`allowDeviceSale` 和 `clearDevicesOnDaySettlement`。生产货币固定为血肉残料，可省略 `currency` 或填写 `BiomassScrap`。当天的 `initialBiomassScrap` 设置起始残料，`unlockedPegIds` 和 `defaultPegIds` 设置类型范围与初始权限。`skipMorningPrep` 默认关闭。开启时，由状态机确认已预选的背包并进入生产，预选类型须满足最低数量要求。
 
 IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白。菜单 `Marbles ECS → Validate Day Configuration` 检查配置字段、重复 ID、冲突顺序、事件、规则与行为类型。可用 `GameDaysLoader.Parse` 在测试中从字符串加载同一 Schema。
 
@@ -17,7 +17,7 @@ IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白�
 
 场景逻辑在 Controller 就绪后调用 `TryStartConfiguredDayCampaign`。调用者也能用 `TryStartDayCampaign` 安装已校验的定义。显示当前状态时读取 `Controller.Day`，以展示时读取的 `Version` 提交起床、结算和休息完成命令。清空日期后，配置仍可校验，显式启动会报告未配置。
 
-`defaultProductionFeatures` 和各日的 `productionFeatures` 取并集，可配置 `Rush` 和 `GamblingWheel`。版本 3 自动接入装置安装，局外抽取由 `shopEnabled` 控制。得分区用 `rushEnabled` 控制进球是否为 RUSH 充能。版本 2 继续读取 `rewardCoins` 和原有生产功能列表，供旧流程和夹具使用。
+`defaultProductionFeatures` 和各日的 `productionFeatures` 取并集，可配置 `Rush` 和 `GamblingWheel`。版本 3 自动接入装置安装，局外抽取由 `shopEnabled` 控制。得分区用 `rushEnabled` 控制进球是否为 RUSH 充能。使用版本 2 的库存关卡可设置 `clearCompanyScripReward` 和 `initialBiomassScrap`，并使用其原有布置流程。
 
 ### 血量与血珠升值
 
@@ -42,7 +42,7 @@ IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白�
 
 | 每日字段 | 配置方式 |
 | --- | --- |
-| `unlockedPegIds` | 当天候选池。从 GameContent 选用具备独立放置体积且 `PurchaseQuantity` 为 1 的类型。 |
+| `unlockedPegIds` | 当天候选池。从 GameContent 选用具备放置体积的类型，成套装置按套安装计价。 |
 | `defaultPegIds` | 当日免费权限，填写候选池中的 ID。Day 1 填全部五种供试用。 |
 | `requiredPegIds` | 从免费权限选出开局预填且必带的类型。 |
 | `minLoadoutTypeCount` / `maxLoadoutTypeCount` | 确认时最少携带的种类数和可携带上限，最少默认 1。允许配置最少为 0。 |
@@ -55,7 +55,7 @@ IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白�
 | `pegPermissionScope` | `CampaignPermanent` 跨日有效，`DayOnly` 仅当日，`RunOnly` 在成功结束本次生产时到期。同日重试沿用已付费的抽取记录和所获权限。 |
 | `shopRefreshCost` | 可选付费刷新工票价。仍有货架外的未授权类型且可继续抽取时，允许刷新。默认 Day 2 已展示全部四个付费候选，采用固定当日货架。 |
 
-装置位于 `Resources/Devices/<id>/`。终端和生产物品板显示 `metadata.json` 的 `biomassScrapPrice` 和 `durability`。旧包缺省安装价时按同稀有度的库存购买基价收取血肉残料。`device.json` 管理弹性和 Lua 参数，`manifest.json` 可引用同目录的 PNG 图标。新 ID 需加入 `GameContent.json.Devices`，再加入对应日期的候选池。
+装置位于 `Resources/Devices/<id>/`。终端和生产物品板显示 `metadata.json` 的 `biomassScrapPrice` 和 `durability`。旧包缺省安装价时回退到同稀有度的默认残料安装价。`device.json` 管理弹性和 Lua 参数，`manifest.json` 可引用同目录的 PNG 图标。新 ID 需加入 `GameContent.json.Devices`，再加入对应日期的候选池。
 
 ### Board Layout
 

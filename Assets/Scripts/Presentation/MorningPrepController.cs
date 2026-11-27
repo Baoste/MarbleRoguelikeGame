@@ -96,7 +96,7 @@ namespace MarblesECS.Presentation
             view.ShowPrompt(FindNearbyInteraction(day, out _) switch
             {
                 RoomInteraction.Note => "E  Read note",
-                RoomInteraction.Shop => controller.CurrentDayDefinition.DailyLoadout != null ? "E  装置选择与商店" : "E  Open shop",
+                RoomInteraction.Shop => "E  装置选择与商店",
                 RoomInteraction.Machine => "E  Use marble machine",
                 _ => day.MorningPrepRemaining > 0
                     ? "Morning Prep   ·   Read the note by the machine"
@@ -114,7 +114,7 @@ namespace MarblesECS.Presentation
             machineCamera.Priority = authoredMachinePriority;
             view.Fade(1);
             view.ShowNote(null);
-            ShowShopTerminal(controller.CurrentDayDefinition.DailyLoadout != null || controller.HasProductionFeature(ProductionFeature.Shop));
+            ShowShopTerminal(controller.CurrentDayDefinition.DailyLoadout != null);
             foreach (var objective in controller.CurrentDayDefinition.MorningPrep)
             {
                 var anchor = FindAnchor(objective.AnchorId);

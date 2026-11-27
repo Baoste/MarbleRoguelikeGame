@@ -13,17 +13,17 @@ namespace MarblesECS.Editor
         private static void PiggyBankLuaApi()
         {
             int start = assertions;
-            foreach (long coins in new long[] { 0, 9, 10, 19, 20, 25, 100, 1000 })
+            foreach (long scrap in new long[] { 0, 9, 10, 19, 20, 25, 100, 1000 })
                 using (var f = new Fixture())
                 {
-                    var device = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, coins);
+                    var device = AddPiggyBank(f); var key = f.Launch(); SetScrap(f, scrap);
                     var motion = f.Physics.States[key].LinearVelocity;
                     f.Step(PiggyHit(f, key, device));
-                    double factor = 1 + .1 * (coins / 10);
-                    Near(factor, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "pig uses whole ten-coin tiers");
-                    Near(coins, f.C.Campaign.Coins, "pig never spends or awards coins");
+                    double factor = 1 + .1 * (scrap / 10);
+                    Near(factor, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "pig uses whole ten-scrap tiers");
+                    Near(scrap, f.C.Player.BiomassScrapBalance, "pig never spends or awards scrap");
                     Near(10, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "pig multiplies score without changing base value");
-                    Near(coins < 10 ? 20 : 19, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "unit multiplier costs no durability");
+                    Near(scrap < 10 ? 20 : 19, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "unit multiplier costs no durability");
                     Near(0, f.C.Round.Score, "multiplier is applied at later settlement");
                     VectorNear(motion, f.Physics.States[key].LinearVelocity, "pig does not rewrite physical motion");
                     f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 10, Multiplier = 1, RushDisabled = true });
@@ -31,16 +31,16 @@ namespace MarblesECS.Editor
                 }
             using (var f = new Fixture())
             {
-                var device = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, 25);
+                var device = AddPiggyBank(f); var key = f.Launch(); SetScrap(f, 25);
                 var hit = PiggyHit(f, key, device); f.Step(hit, hit); f.Step(hit);
                 Near(1.44, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "reentry multiplies the factor once even with duplicate same-step events");
-                PiggyCoins(f, 15); f.Step(hit);
+                SetScrap(f, 15); f.Step(hit);
                 Near(1.584, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "next impact multiplies by the current wallet factor");
-                PiggyCoins(f, 9); f.Step(hit);
+                SetScrap(f, 9); f.Step(hit);
                 Near(1.584, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "low balance never removes earlier gains");
                 Near(17, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "only three effective impacts spend durability");
-                PiggyCoins(f, 30); f.Step();
-                Check(f.Simulation.GetDeviceStatus(device.InstanceId).Contains("1.3"), "status refreshes when coins change without a collision");
+                SetScrap(f, 30); f.Step();
+                Check(f.Simulation.GetDeviceStatus(device.InstanceId).Contains("1.3"), "status refreshes when scrap change without a collision");
                 var other = AddPiggyBank(f); var second = f.Launch();
                 f.Step(PiggyHit(f, key, other), PiggyHit(f, second, other));
                 Near(2.0592, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "independent pig multiplies the same score factor");
@@ -50,7 +50,7 @@ namespace MarblesECS.Editor
                 f.Step(f.Hit(key, other), link);
                 Near(18, f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == other.InstanceId).RemainingDurability, "trigger and link contacts do not count as impacts");
                 var round = f.C.Round; round.Phase = (byte)RoundPhase.Build; f.C.Round = round;
-                Check(f.Simulation.BeginRound(), "pig survives round reset"); var fresh = f.Launch(); PiggyCoins(f, 10);
+                Check(f.Simulation.BeginRound(), "pig survives round reset"); var fresh = f.Launch(); SetScrap(f, 10);
                 f.Step(PiggyHit(f, fresh, device));
                 Near(1.1, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(fresh)).ScoreMultiplier, "fresh ball has no previous round multiplier");
                 Near(19, f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == device.InstanceId).RemainingDurability, "new round restores wear");
@@ -59,7 +59,7 @@ namespace MarblesECS.Editor
                 using (var f = new Fixture())
                 {
                     f.C.Balance.Devices.Single(d => d.Id == 9012).Durability = durability;
-                    var device = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, 10);
+                    var device = AddPiggyBank(f); var key = f.Launch(); SetScrap(f, 10);
                     for (int i = 0; i < 22; i++) f.Step(PiggyHit(f, key, device));
                     int uses = durability == -1 ? 22 : durability;
                     Near(Math.Pow(1.1, uses), f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "each effective use multiplies once");
@@ -67,7 +67,7 @@ namespace MarblesECS.Editor
                 }
             using (var f = new Fixture())
             {
-                var device = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, CampaignStateUtility.MaxCoins);
+                var device = AddPiggyBank(f); var key = f.Launch(); SetScrap(f, CampaignWalletSystem.MaxBalance);
                 f.Step(PiggyHit(f, key, device));
                 Near(1000, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "maximum wallet saturates the multiplier without throwing");
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 10, Multiplier = 1, RushDisabled = true });
@@ -83,7 +83,7 @@ namespace MarblesECS.Editor
             var latest = f.Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last(); CampaignStateUtility.FindDevice(f.C, latest.InstanceId, out var entity);
             return f.C.Manager.GetComponentData<OwnedDeviceData>(entity);
         }
-        private static void PiggyCoins(Fixture f, long value) { var campaign = f.C.Campaign; campaign.Coins = value; f.C.Campaign = campaign; }
+        private static void SetScrap(Fixture f, long value) => CampaignWalletSystem.Set(f.C, GameCurrency.BiomassScrap, value);
         private static MarbleContact PiggyHit(Fixture f, MarbleKey key, OwnedDeviceData device)
         { var hit = f.Hit(key, device); hit.HasImpact = true; hit.Normal = Vector3.back; hit.IncomingVelocity = Vector3.forward * 2; return hit; }
         private static void PiggyWalletApi()
@@ -93,10 +93,13 @@ namespace MarblesECS.Editor
                 var device = AddPiggyBank(f); var key = f.Launch(); CampaignStateUtility.FindDevice(f.C, device.InstanceId, out var entity);
                 var api = new DeviceContactContext(f.C, f.Ball(key), entity, f.Hit(key, device), f.Physics.Poses[device.InstanceId]);
                 var tick = new DeviceEventContext(f.C, entity);
-                PiggyCoins(f, CampaignStateUtility.MaxCoins - 1);
-                Near(CampaignStateUtility.MaxCoins - 1, api.Coins, "contact wallet read is exact at the largest odd balance");
-                Near(api.Coins, tick.Coins, "event wallet read agrees without requiring a ball");
-                PiggyCoins(f, 17); Near(17, api.Coins, "wallet getter reads the current state rather than a cached value");
+                SetScrap(f, CampaignWalletSystem.MaxBalance - 1);
+                Near(CampaignWalletSystem.MaxBalance - 1, api.BiomassScrapBalance, "contact wallet read is exact at the largest odd balance");
+                Near(api.BiomassScrapBalance, tick.BiomassScrapBalance, "event wallet read agrees without requiring a ball");
+                Near(1, api.AddBiomassScrap(4), "scrap API returns the actual credit at the cap");
+                Near(0, api.AddBiomassScrap(4), "full wallet cannot accept another reward");
+                ExpectArgument(() => api.AddBiomassScrap(-1));
+                SetScrap(f, 17); Near(17, api.BiomassScrapBalance, "wallet getter reads the current state rather than a cached value");
                 api.AddScoreMultiplier(1.2); api.MultiplyScore(1.2);
                 Near(1.44, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "both API names multiply the supplied factor");
                 ExpectArgument(() => api.AddScoreMultiplier(-1)); ExpectArgument(() => api.AddScoreMultiplier(double.NaN)); ExpectArgument(() => api.MultiplyScore(double.PositiveInfinity));
@@ -111,7 +114,7 @@ namespace MarblesECS.Editor
                 api.MultiplyScore(double.MaxValue);
                 Near(1000, api.DeviceScoreMultiplier, "large finite factor respects the read cap");
                 api.Close(); tick.Close();
-                ExpectExpired(() => { _ = api.Coins; }); ExpectExpired(() => { _ = tick.Coins; }); ExpectExpired(() => api.AddScoreMultiplier(2)); ExpectExpired(() => api.MultiplyScore(2)); ExpectExpired(() => api.TryMultiplyScore(2));
+                ExpectExpired(() => { _ = api.BiomassScrapBalance; }); ExpectExpired(() => { _ = tick.BiomassScrapBalance; }); ExpectExpired(() => api.AddBiomassScrap(2)); ExpectExpired(() => api.AddScoreMultiplier(2)); ExpectExpired(() => api.MultiplyScore(2)); ExpectExpired(() => api.TryMultiplyScore(2));
             }
         }
 
@@ -120,7 +123,7 @@ namespace MarblesECS.Editor
             using (var f = new Fixture())
             {
                 var pig = AddPiggyBank(f); var multi = f.Add(f.C.Balance.Devices.Single(d => d.Id == 113));
-                var key = f.Launch(); PiggyCoins(f, 25);
+                var key = f.Launch(); SetScrap(f, 25);
                 f.Step(PiggyHit(f, key, pig)); f.Step(f.Hit(key, multi)); f.Step(PiggyHit(f, key, pig));
                 Near(2.664, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "pig and Multi Ding give 1.2 * 1.85 * 1.2");
                 Near(0, f.C.Round.Score, "all device contributions wait for settlement");
@@ -138,7 +141,7 @@ namespace MarblesECS.Editor
             }
             using (var f = new Fixture())
             {
-                var bounce = f.Add(f.C.Balance.Devices.Single(d => d.Id == 9000)); var pig = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, 25);
+                var bounce = f.Add(f.C.Balance.Devices.Single(d => d.Id == 9000)); var pig = AddPiggyBank(f); var key = f.Launch(); SetScrap(f, 25);
                 f.Simulation.ApplyDeviceAttribute(bounce.InstanceId, 991, GameAttribute.MACHINE_MULT, AttributeOperation.Set, 2);
                 f.Step(f.Hit(key, bounce)); f.Step(PiggyHit(f, key, pig));
                 Near(2.4, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "generic Trigger factor and Lua factor share the same product");
@@ -146,7 +149,7 @@ namespace MarblesECS.Editor
             }
             using (var f = new Fixture())
             {
-                var pig = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, 25);
+                var pig = AddPiggyBank(f); var key = f.Launch(); SetScrap(f, 25);
                 f.Simulation.ApplyMarbleEffect(key, MarbleModifierAttribute.ScoreMul, 2); f.Step(PiggyHit(f, key, pig));
                 Near(2.4, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "permanent non-device modifier scales the contribution total");
                 f.Simulation.ApplyMarbleEffect(key, MarbleModifierAttribute.ScoreMul, 2); f.Step(PiggyHit(f, key, pig));
@@ -155,7 +158,7 @@ namespace MarblesECS.Editor
             using (var f = new Fixture())
             {
                 var pig = AddPiggyBank(f); var multi = f.Add(f.C.Balance.Devices.Single(d => d.Id == 113));
-                var key = f.Launch(); PiggyCoins(f, 25); f.Step(PiggyHit(f, key, pig)); f.Step(f.Hit(key, multi));
+                var key = f.Launch(); SetScrap(f, 25); f.Step(PiggyHit(f, key, pig)); f.Step(f.Hit(key, multi));
                 Check(ContentSpawnSystem.Children(f.C, f.Ball(key), 1, false, Vector3.forward, Vector3.up), "create a child after multiple device contributions");
                 var child = f.C.Marbles.Keys.Single(k => !k.Equals(key)); f.Step(PiggyHit(f, child, pig));
                 Near(2.664, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(child)).ScoreMultiplier, "child inherits the product and multiplies it again");
@@ -166,7 +169,7 @@ namespace MarblesECS.Editor
             Near(12, standalone.ScoreMultiplier, "launcher multiplier scales the complete device product");
             using (var f = new Fixture())
             {
-                var pig = AddPiggyBank(f); var key = f.Launch(); PiggyCoins(f, 50);
+                var pig = AddPiggyBank(f); var key = f.Launch(); SetScrap(f, 50);
                 f.Step(PiggyHit(f, key, pig)); f.Step(PiggyHit(f, key, pig));
                 Near(2.25, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "two factors of 1.5 give 2.25");
                 Near(0, f.C.Round.Score, "both hits only record the multiplier");
@@ -186,15 +189,15 @@ namespace MarblesECS.Editor
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
                 simulation.ApplyGlobalAttribute(982, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                 simulation.ApplyGlobalAttribute(983, GameAttribute.BALL_BOUNCE, AttributeOperation.Set, 0);
-                var definition = c.Balance.Devices.Single(d => d.Id == 9012); CampaignStateUtility.CreateDevice(c, definition, definition.Price);
+                var definition = c.Balance.Devices.Single(d => d.Id == 9012); CampaignStateUtility.CreateDevice(c, definition, definition.InstallPrice);
                 var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var entity);
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; c.Manager.SetComponentData(entity, data);
-                var campaign = c.Campaign; campaign.Coins = 25; c.Campaign = campaign;
+                CampaignWalletSystem.Set(c, GameCurrency.BiomassScrap, 25);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
                 view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, definition.Id));
                 view.Root.SetActive(true); Physics.SyncTransforms();
                 Check(view.Root.GetComponent<CapsuleCollider>() != null && !view.Root.GetComponent<CapsuleCollider>().isTrigger, "pig package supplies a solid collision body");
-                Check(view.Root.transform.Find("Snout") != null && view.Root.transform.Find("CoinSlot") != null, "runtime package includes the pig snout and coin slot");
+                Check(view.Root.transform.Find("Snout") != null && view.Root.transform.Find("ScrapSlot") != null, "runtime package includes the pig snout and scrap slot");
                 var spawn = board.transform.TransformPoint(new Vector3(0, .15f, .8f));
                 simulation.FireOnce(); simulation.BeforePhysics(.02f, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge); var key = c.Marbles.Keys.Single();
                 for (int pass = 0; pass < 2; pass++)
@@ -208,7 +211,7 @@ namespace MarblesECS.Editor
                     { simulation.BeforePhysics(.02f, bridge, spawn, Quaternion.identity); bridge.Simulate(.02f); simulation.AfterPhysics(bridge); }
                     Check(hits.Count == pass + 1, "resting on the pig does not repeatedly multiply score");
                 }
-                Near(25, c.Campaign.Coins, "real impacts leave the wallet unchanged");
+                Near(25, c.Player.BiomassScrapBalance, "real impacts leave the wallet unchanged");
                 Near(18, simulation.GetOwnedDevices().Single().RemainingDurability, "real impacts spend one use each");
             }
             finally { view?.Dispose(); simulation.Dispose(); bridge.Dispose(); UnityEngine.Object.DestroyImmediate(board); SceneManager.UnloadSceneAsync(scene); }

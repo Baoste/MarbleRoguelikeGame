@@ -58,7 +58,7 @@ public sealed partial class DevicePlacementUI
         {
             case DropTarget.Sale:
                 committed = Controller.SellDevice(device.InstanceId);
-                LastFeedback = committed ? $"已出售{DeviceDisplayText.SaleTarget(device)}，获得 {device.SellPrice} {CurrencyName}。" : "出售未完成。";
+                LastFeedback = committed ? $"已出售{DeviceDisplayText.SaleTarget(device)}，获得 {device.SellPrice} 血肉残料。" : "出售未完成。";
                 break;
             case DropTarget.Backpack:
                 committed = device.Placed && Controller.RemoveDevicePlacement(device.InstanceId);
@@ -117,7 +117,6 @@ public sealed partial class DevicePlacementUI
     }
     private static bool IsControl(GameObject target) => target != null &&
         (target.GetComponentInParent<UnityEngine.UI.Selectable>() != null ||
-         target.GetComponentInParent<ShopOfferItemUI>() != null ||
          ExecuteEvents.GetEventHandler<IPointerClickHandler>(target) != null ||
          ExecuteEvents.GetEventHandler<IBeginDragHandler>(target) != null);
 }

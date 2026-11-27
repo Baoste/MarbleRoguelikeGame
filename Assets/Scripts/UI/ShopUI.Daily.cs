@@ -109,7 +109,6 @@ public sealed partial class ShopUI
     private void BuildDailyView()
     {
         var group = ShopCanvasGroup.transform;
-        for (int i = 0; i < group.childCount; i++) group.GetChild(i).gameObject.SetActive(false);
         dailyRoot = Panel("Daily Loadout", group, new Rect(.055f, .055f, .89f, .89f), new Color(.065f, .086f, .086f));
         dayTitle = Label(dailyRoot, "日期", new Rect(.027f, .883f, .59f, .09f), 44, TerminalInk);
         var ticket = Panel("工票图标", dailyRoot, new Rect(.653f, .924f, .025f, .026f), TicketColor);
@@ -161,7 +160,7 @@ public sealed partial class ShopUI
     {
         var rect = Area(name, parent, anchors);
         var label = rect.gameObject.AddComponent<TextMeshProUGUI>();
-        if (CoinsText) label.font = CoinsText.font;
+        if (TerminalFont) label.font = TerminalFont;
         label.fontSize = size;
         label.color = color;
         label.alignment = TextAlignmentOptions.MidlineLeft;

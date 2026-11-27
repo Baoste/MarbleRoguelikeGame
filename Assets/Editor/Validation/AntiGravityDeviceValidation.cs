@@ -201,7 +201,7 @@ namespace MarblesECS.Editor
             internal DeviceBody Add(uint id, Vector3 position)
             {
                 var definition = C.Balance.Devices.Single(d => d.Id == id);
-                CampaignStateUtility.CreateDevice(C, definition, definition.Price);
+                CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last();
                 CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);

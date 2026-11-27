@@ -91,9 +91,8 @@ namespace MarblesECS.Editor
                 BilliardsValidation();
                 IcedAmericanoLuaApi();
                 MetadataAndDurability();
-                EconomyAndGambling();
                 GamblingWheelValidation();
-                ShopGuarantees();
+                RandomShopValidation.Run();
                 SharedRandomSequence();
                 Boundaries();
                 PhysicalBridge();
@@ -124,7 +123,7 @@ namespace MarblesECS.Editor
         private static void Rules()
         {
             var b = Balance(); var content = b.Content;
-            Check(content.Attributes.Length == 34 && content.Devices.Length == DeviceResourceCatalog.Current.Definitions().Length, "catalog coverage");
+            Check(content.Attributes.Length == (int)GameAttribute.Count && content.Devices.Length == DeviceResourceCatalog.Current.Definitions().Length, "catalog coverage");
             foreach (var a in content.Attributes) a.Validate();
             var effects = new[] { new AttributeEffect { Attribute = GameAttribute.BLOOD_COST, Operation = AttributeOperation.Add, Value = 1 },
                 new AttributeEffect { Attribute = GameAttribute.BLOOD_COST, Operation = AttributeOperation.Multiply, Value = 2 } };
@@ -171,15 +170,13 @@ namespace MarblesECS.Editor
             balance.Content.Definition(GameAttribute.BALL_LAUNCH_SPEED).DefaultValue = 3;
             balance.Content.Definition(GameAttribute.BALL_LIFETIME).DefaultValue = 4;
             balance.Content.Definition(GameAttribute.BLOOD_COST).DefaultValue = 1.5;
-            balance.Content.Definition(GameAttribute.BLOOD_DIVIDEND_RATE).DefaultValue = 1.25;
-            balance.Content.Definition(GameAttribute.COIN_GAIN_RATE).DefaultValue = 1.1;
             balance.Marble.MinInvestment = 1; balance.Marble.MaxInvestment = 5;
             // Deliberately disagree with every obsolete tuning input.
             balance.Marble.MinRadius = .24f; balance.Marble.MaxRadius = .36f;
             balance.Marble.MassPerBlood = 7; balance.Marble.BaseScore = 999;
             balance.Marble.BloodCostMultiplier = 4; balance.Marble.LaunchSpeed = 8;
             balance.Marble.LauncherScoreMultiplier = 6; balance.Marble.BaseRestitution = .9f;
-            balance.Marble.MaxLifeSeconds = 70; balance.Campaign.CashoutCoinsPerBlood = 3.5;
+            balance.Marble.MaxLifeSeconds = 70;
             var copied = balance.Copy();
             Check(ReferenceEquals(copied.Devices, copied.Content.Devices), "catalogs share the copied content source");
             Check(!ReferenceEquals(copied.Content.Devices, balance.Content.Devices), "session catalog remains isolated from authoring");
@@ -201,10 +198,11 @@ namespace MarblesECS.Editor
                 Near(3, spawn.LinearVelocity.magnitude, "launch speed is absolute content speed");
                 Near(.4, spawn.Settings.Bounce, "content bounce overrides obsolete restitution");
                 Near(4, simulation.GetMarbleAttribute(spawn.Key, GameAttribute.BALL_LIFETIME), "content lifetime");
-                var c = simulation.Context; var player = c.Player; player.Blood = 100; c.Player = player;
+                var c = simulation.Context; var player = c.Player; player.Blood = 100; player.BiomassScrapBalance = 7; c.Player = player;
                 var round = c.Round; round.Score = round.TargetScore; c.Round = round;
                 Check(simulation.CashOut(), "content cashout accepted");
-                Near(137, c.Campaign.LastCashoutCoins, "cashout uses content dividend and coin gain exactly once");
+                Near(7, c.Player.BiomassScrapBalance, "ending production does not convert leftover blood into scrap");
+                Near(0, c.Campaign.CompanyScripBalance, "a standalone round does not grant company scrip");
             }
             using (var standalone = new MarbleSimulation(balance.Marble, balance.Content))
             {
@@ -216,7 +214,7 @@ namespace MarblesECS.Editor
             string output = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "MarbleBalanceAuthority.json");
             GameBalanceImporter.Import(GameBalanceImporter.WorkbookPath, output);
             string exported = System.IO.File.ReadAllText(output);
-            foreach (string field in new[] { "MinRadius", "MaxRadius", "MassPerBlood", "BaseScore", "BloodCostMultiplier", "LaunchSpeed", "LauncherScoreMultiplier", "MaxLifeSeconds", "BaseRestitution", "RushDurationSeconds", "CashoutCoinsPerBlood", "GamblingWinChance", "GamblingWinMultiplier", "Devices", "Drugs", "Board", "Zones", "Stages", "RewardCoins", "SkipRewardCoins", "CashoutRate" })
+            foreach (string field in new[] { "MinRadius", "MaxRadius", "MassPerBlood", "BaseScore", "BloodCostMultiplier", "LaunchSpeed", "LauncherScoreMultiplier", "MaxLifeSeconds", "BaseRestitution", "RushDurationSeconds", "GamblingWinChance", "GamblingWinMultiplier", "Devices", "Drugs", "Board", "Zones", "Stages", "CashoutRate" })
                 Check(!exported.Contains("\"" + field + "\""), "base import cannot restore " + field);
             var legacyJson = new TextAsset(exported.Replace("\"Marble\": {", "\"Marble\": {\"MinRadius\":9,\"BaseScore\":999,"));
             try
@@ -360,7 +358,7 @@ namespace MarblesECS.Editor
             }
             internal OwnedDeviceData Add(DeviceDefinition definition)
             {
-                CampaignStateUtility.CreateDevice(C, definition, definition.Price);
+                CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 var snapshots = Simulation.GetOwnedDevices().Where(x => x.DefinitionId == definition.Id).ToArray();
                 foreach (var snapshot in snapshots)
                 {
@@ -395,30 +393,6 @@ namespace MarblesECS.Editor
             }
         }
 
-        private static void ShopGuarantees()
-        {
-            using (var f = new Fixture())
-            {
-                for (uint seed = 1; seed <= 64; seed++)
-                {
-                    var round = f.C.Round; round.RandomState = seed; f.C.Round = round;
-                    uint expected = seed;
-                    CampaignShopSystem.Generate(f.C);
-                    var offers = f.C.Manager.GetBuffer<ShopOfferData>(f.C.RoundEntity);
-                    Check(offers.Length == f.C.Balance.Campaign.ShopOfferCount, "shop offer count");
-                    var unique = new HashSet<uint>();
-                    for (int i = 0; i < offers.Length; i++)
-                    {
-                        var offer = offers[i];
-                        Check(offer.Kind == ShopItemKind.Device, "only device offers remain");
-                        Check(unique.Add(offer.DefinitionId), "shop offers are unique");
-                        Check(CampaignStateUtility.Device(f.C, offer.DefinitionId) != null, "shop device is in catalog");
-                    }
-                    for (int i = 0; i < offers.Length; i++) MarbleRules.NextRandom(ref expected);
-                    Check(f.C.Round.RandomState == expected, "shop consumes the shared gameplay RNG");
-                }
-            }
-        }
         private static void SharedRandomSequence()
         {
             int start = assertions;
@@ -436,8 +410,11 @@ namespace MarblesECS.Editor
                 Check(f.C.Round.RandomState == expected, "constant range consumes no random draw");
                 api.Close();
 
-                CampaignShopSystem.Generate(f.C);
+                DailyLoadoutSystem.Initialize(f.C);
+                var campaign = f.C.Campaign; campaign.DisabledFeatures &= ~ProductionFeature.Shop; f.C.Campaign = campaign;
+                CampaignShopSystem.Generate(f.C, RandomShopValidation.CreateLoadout(f.C.Balance, 4));
                 var stock = f.Simulation.GetShopOffers();
+                Check(stock.Length == 4, "four shop slots draw from the shared stream");
                 for (int i = 0; i < stock.Length; i++) MarbleRules.NextRandom(ref expected);
                 Check(f.C.Round.RandomState == expected, "shop continues after Lua random calls");
                 CampaignStateUtility.FindDevice(f.C, device.InstanceId, out var entity);
@@ -518,17 +495,6 @@ namespace MarblesECS.Editor
                 var key=f.Launch(); GrantRefund(f, key);
                 f.Step(new MarbleContact { Key=key,TargetId=1,Kind=MarbleContactKind.Drain,Multiplier=0 });
                 Near(1000,f.C.Player.Blood,"generic refund API refunds on drain");
-            }
-        }
-        private static void EconomyAndGambling()
-        {
-            using(var f=new Fixture())
-            {
-                f.Simulation.ApplyGlobalAttribute(77,GameAttribute.SHOP_PRICE_MOD,AttributeOperation.Set,.5);
-                Near(5,CampaignShopSystem.Price(f.C,10),"shop discount");
-                f.Add(DeviceKind.Portal);
-                var pair=f.Simulation.GetOwnedDevices();
-                Check(pair.Length==2 && pair[0].PairId==pair[1].PairId,"purchase a portal pair");
             }
         }
         private static void PhysicalBridge()

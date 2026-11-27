@@ -9,7 +9,7 @@ namespace MarblesECS
         public void StartSession(IMarblePhysics physics, uint? randomSeed = null)
         {
             if (dayFlow != null || startingDay) throw new InvalidOperationException("The Day campaign owns this production session.");
-            StartSessionCore(physics, randomSeed, ProductionFeature.All, ProductionSettings.Inventory, 0);
+            StartSessionCore(physics, randomSeed, ProductionFeature.All & ~ProductionFeature.Shop, ProductionSettings.Inventory, 0);
         }
 
         private void StartSessionCore(IMarblePhysics physics, uint? randomSeed, ProductionFeature features,
@@ -28,7 +28,6 @@ namespace MarblesECS
                 context.Manager.DestroyEntity(entities);
             context.Campaign = new CampaignData
             {
-                Coins = production.Currency == GameCurrency.Coins ? context.Balance.Campaign.StartingCoins : 0,
                 Production = production,
                 CompanyScripBalance = startingCompanyScrip,
                 RepeatRounds = true,
@@ -38,7 +37,7 @@ namespace MarblesECS
             if (production.Supply == DeviceSupply.OwnedInventory && context.HasProductionFeature(ProductionFeature.DevicePlacement))
                 foreach (var device in context.Balance.Devices)
                     for (int i = 0; i < device.StartingCount; i++)
-                        CampaignStateUtility.CreateDevice(context, device, device.Price);
+                        CampaignStateUtility.CreateDevice(context, device, 0);
             var round = context.Round;
             round.Phase = (byte)RoundPhase.Build;
             context.Round = round;
@@ -56,9 +55,6 @@ namespace MarblesECS
             round.TargetScore = before.TargetScore;
             context.Round = round;
             FillBlood();
-            var campaign = context.Campaign;
-            campaign.LastCashoutCoins = 0;
-            context.Campaign = campaign;
             if (context.HasProductionFeature(ProductionFeature.DevicePlacement)) DeviceScriptSystem.RoundStart(context);
             dayFlow?.ObserveRound(before, context.Round, stepped: false);
             return true;
@@ -68,16 +64,6 @@ namespace MarblesECS
         {
             if (!CanCampaignAct(RoundPhase.Playing) || !CampaignStateUtility.CanCashOut(context)) return false;
             var before = context.Round;
-            var campaign = context.Campaign;
-            if (campaign.Production.Currency == GameCurrency.Coins)
-            {
-                double dividend = AttributeRuntime.Enabled(context)
-                    ? AttributeRuntime.Global(context, GameAttribute.BLOOD_DIVIDEND_RATE) * AttributeRuntime.Global(context, GameAttribute.COIN_GAIN_RATE)
-                    : context.Balance.Campaign.CashoutCoinsPerBlood;
-                campaign.LastCashoutCoins = MarbleRules.RoundScore(context.Player.Blood * dividend, CampaignStateUtility.MaxCoins);
-                campaign.Coins = MarbleRules.AddScore(campaign.Coins, campaign.LastCashoutCoins, CampaignStateUtility.MaxCoins);
-                context.Campaign = campaign;
-            }
             var player = context.Player;
             player.Blood = 0;
             context.Player = player;

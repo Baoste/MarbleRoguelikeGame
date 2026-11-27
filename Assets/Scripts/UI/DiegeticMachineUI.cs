@@ -215,8 +215,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     {
         if (!ItemGroup || DeviceButtons == null) return;
         if (installIcons == null) CreateInstallIcons();
-        string currency = DeviceDisplayText.CurrencyName(session.Production.Currency);
-        ShowWalletBalance($"♦  {currency} {session.ProductionBalance}  ·  用于安装");
+        ShowWalletBalance($"♦  血肉残料 {session.BiomassScrapBalance}  ·  用于安装");
         unplacedDevices.Clear();
         Array.Clear(deviceIds, 0, deviceIds.Length);
         dailyDevices = Controller.GetDailyPegs().Where(peg => peg.Selected).ToArray();
@@ -232,12 +231,12 @@ public sealed class DiegeticMachineUI : MonoBehaviour
             installIds[i] = occupied ? dailyDevices[slot].DefinitionId : 0;
             if (!occupied) continue;
             var peg = dailyDevices[slot];
-            bool affordable = session.ProductionBalance >= peg.InstallPrice;
+            bool affordable = session.BiomassScrapBalance >= peg.InstallPrice;
             VisibleDeviceCount++;
             button.interactable = IsBoardOpen && Controller.CanInstallDevices && affordable;
             DeviceNames[i].text = peg.Name;
             string durability = peg.Durability < 0 ? "无限耐久" : $"耐久 {peg.Durability}";
-            DeviceDescriptions[i].text = $"安装 {peg.InstallPrice}  ·  {durability}\n" + (!affordable ? currency + "不足\n" : "") + peg.Description;
+            DeviceDescriptions[i].text = $"安装 {peg.InstallPrice}  ·  {durability}\n" + (!affordable ? "血肉残料不足\n" : "") + peg.Description;
             var icon = DeviceResourceCatalog.Current.Get(peg.DefinitionId).Icon;
             installIcons[i].texture = icon;
             installIcons[i].enabled = icon;
@@ -346,7 +345,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         {
             var peg = Array.Find(dailyDevices, item => item.DefinitionId == installIds[hoverIndex] && item.DefinitionId != 0);
             if (peg.DefinitionId != 0)
-                text = $"<b>{peg.Name}</b>\n安装 {peg.InstallPrice} {DeviceDisplayText.CurrencyName(Controller.Session.Production.Currency)}" +
+                text = $"<b>{peg.Name}</b>\n安装 {peg.InstallPrice} 血肉残料" +
                     $" · 耐久 {(peg.Durability < 0 ? "无限" : peg.Durability.ToString())}\n{peg.Description}";
             var device = unplacedDevices.Find(x => x.InstanceId == deviceIds[hoverIndex]);
             if (device.InstanceId != 0)

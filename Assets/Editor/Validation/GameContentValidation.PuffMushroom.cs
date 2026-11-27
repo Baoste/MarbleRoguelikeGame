@@ -118,7 +118,7 @@ namespace MarblesECS.Editor
                 {
                     simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
                     simulation.ApplyGlobalAttribute(997, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
-                    var def = c.Balance.Devices.Single(d => d.Id == 9016); CampaignStateUtility.CreateDevice(c, def, def.Price);
+                    var def = c.Balance.Devices.Single(d => d.Id == 9016); CampaignStateUtility.CreateDevice(c, def, def.InstallPrice);
                     var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var e);
                     var data = c.Manager.GetComponentData<OwnedDeviceData>(e); data.Placed = true; c.Manager.SetComponentData(e, data);
                     board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(-63, 121, 0));
@@ -132,7 +132,7 @@ namespace MarblesECS.Editor
                     void Step() { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); simulation.AfterPhysics(bridge); }
 
                     var multiplier = c.Balance.Devices.Single(d => d.Id == 113);
-                    CampaignStateUtility.CreateDevice(c, multiplier, multiplier.Price);
+                    CampaignStateUtility.CreateDevice(c, multiplier, multiplier.InstallPrice);
                     Check(CampaignStateUtility.FindDevice(c, c.Campaign.NextDeviceId, out var multiplierEntity), "create Multi Ding in the test scene");
                     var multiplierData = c.Manager.GetComponentData<OwnedDeviceData>(multiplierEntity);
                     multiplierData.Placed = true;

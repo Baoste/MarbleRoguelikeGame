@@ -314,7 +314,7 @@ GameObject:
   - component: {fileID: 7061269136668041123}
   - component: {fileID: 2162865520102672535}
   m_Layer: 0
-  m_Name: Coin
+  m_Name: ScrapIcon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

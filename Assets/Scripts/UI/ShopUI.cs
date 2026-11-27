@@ -1,167 +1,30 @@
-using System.Collections.Generic;
-using MarblesECS;
 using MarblesECS.PhysX;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 [DisallowMultipleComponent]
 public sealed partial class ShopUI : MonoBehaviour
 {
-    [Header("References")]
     public MarbleGameController Controller;
     public CanvasGroup ShopCanvasGroup;
-    public Transform OfferContainer;
-    public ShopOfferItemUI OfferPrefab;
+    public TMP_FontAsset TerminalFont;
 
-    [Header("Header")]
-    public TMP_Text CoinsText;
-    public TMP_Text RefreshCostText;
-    public Button RefreshButton;
-    public Button ContinueButton;
-    public TMP_Text FeedbackText;
+    private void OnEnable() => RefreshView();
+    private void Update() => RefreshView();
 
-    private readonly List<ShopOfferItemUI> offerItems = new List<ShopOfferItemUI>();
-    private bool wasOpen;
-    private int displayedRefreshCount = -1;
-    private int displayedOfferCount = -1;
-
-    private void OnEnable()
+    private void RefreshView()
     {
-        if (RefreshButton != null)
-            RefreshButton.onClick.AddListener(HandleRefreshClicked);
-        if (ContinueButton != null)
-            ContinueButton.onClick.AddListener(HandleCloseClicked);
-        RefreshView(true);
-    }
-
-    private void OnDisable()
-    {
-        if (RefreshButton != null)
-            RefreshButton.onClick.RemoveListener(HandleRefreshClicked);
-        if (ContinueButton != null)
-            ContinueButton.onClick.RemoveListener(HandleCloseClicked);
-    }
-
-    private void Update()
-    {
-        RefreshView(false);
-    }
-
-    private void RefreshView(bool forceOffers)
-    {
-        bool open = Controller != null && Controller.ShopOpen;
-        SetShopVisible(open);
-
-        if (Controller != null && Controller.IsReady && Controller.CurrentDayDefinition?.DailyLoadout != null)
-        {
-            RefreshDailyView(open);
-            wasOpen = false;
-            return;
-        }
-
-        if (!open)
-        {
-            wasOpen = false;
-            return;
-        }
-
-        SessionSnapshot session = Controller.Session;
-        long refreshCost = Controller.ShopRefreshPrice;
-
-        if (CoinsText != null)
-            CoinsText.text = session.Coins.ToString();
-        if (RefreshCostText != null)
-            RefreshCostText.text = "刷新商品 · " + refreshCost + " 金币";
-        if (RefreshButton != null)
-            RefreshButton.interactable = session.Coins >= refreshCost;
-        if (ContinueButton != null)
-            ContinueButton.interactable = true;
-
-        bool offersChanged = forceOffers || !wasOpen ||
-            displayedRefreshCount != session.ShopRefreshCount;
-        if (!wasOpen && FeedbackText != null)
-            FeedbackText.text = "每件商品限购一次，购买后可在布置阶段放置。";
-        if (offersChanged)
-        {
-            RebuildOffers();
-            displayedRefreshCount = session.ShopRefreshCount;
-        }
-        else
-        {
-            RefreshOfferStates();
-        }
-
-        wasOpen = true;
-    }
-
-    private void SetShopVisible(bool visible)
-    {
-        if (ShopCanvasGroup == null) return;
-        ShopCanvasGroup.alpha = visible ? 1f : 0f;
-        ShopCanvasGroup.interactable = visible && Controller.ShopCommandsAvailable;
-        ShopCanvasGroup.blocksRaycasts = visible;
-    }
-
-    private void RebuildOffers()
-    {
-        if (Controller == null || OfferContainer == null || OfferPrefab == null) return;
-
-        ShopOfferSnapshot[] offers = Controller.GetShopOffers();
-        while (offerItems.Count < offers.Length)
-        {
-            ShopOfferItemUI item = Instantiate(OfferPrefab, OfferContainer);
-            item.gameObject.SetActive(true);
-            offerItems.Add(item);
-        }
-
-        for (int i = 0; i < offerItems.Count; i++)
-        {
-            bool active = i < offers.Length;
-            offerItems[i].gameObject.SetActive(active);
-            if (active)
-                offerItems[i].Bind(offers[i], Controller.Session.Coins, HandleBuyRequested);
-        }
-        displayedOfferCount = offers.Length;
-    }
-
-    private void RefreshOfferStates()
-    {
-        if (Controller == null) return;
-        ShopOfferSnapshot[] offers = Controller.GetShopOffers();
-        if (offers.Length != displayedOfferCount)
-        {
-            RebuildOffers();
-            return;
-        }
-
-        long coins = Controller.Session.Coins;
-        for (int i = 0; i < offers.Length; i++)
-            offerItems[i].Bind(offers[i], coins, HandleBuyRequested);
-    }
-
-    private void HandleBuyRequested(int offerIndex)
-    {
-        if (Controller == null) return;
-        bool bought = Controller.BuyOffer(offerIndex);
-        RefreshView(true);
-        if (FeedbackText != null)
-            FeedbackText.text = bought ? "购买成功，装置已加入背包。" : "购买失败，请检查金币、库存容量或商品状态。";
-    }
-
-    private void HandleRefreshClicked()
-    {
-        if (Controller == null) return;
-        bool refreshed = Controller.RefreshShop();
-        RefreshView(true);
-        if (FeedbackText != null)
-            FeedbackText.text = refreshed ? "商品已刷新。" : "金币不足，无法刷新商品。";
+        if (!ShopCanvasGroup) return;
+        bool open = Controller && Controller.ShopOpen;
+        ShopCanvasGroup.alpha = open ? 1f : 0f;
+        ShopCanvasGroup.interactable = open && Controller.ShopCommandsAvailable;
+        ShopCanvasGroup.blocksRaycasts = open;
+        RefreshDailyView(open);
     }
 
     private void HandleCloseClicked()
     {
-        if (Controller != null)
-            Controller.TryCloseShop(Controller.Day.Version);
-        RefreshView(false);
+        Controller.TryCloseShop(Controller.Day.Version);
+        RefreshView();
     }
 }

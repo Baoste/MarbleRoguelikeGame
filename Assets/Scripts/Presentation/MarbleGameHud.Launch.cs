@@ -27,10 +27,10 @@ namespace MarblesECS.Presentation
             { autoFire = !autoFire; Controller.SetFireHeld(autoFire); }
             GUILayout.EndHorizontal();
             GUI.enabled = !Controller.Paused && Controller.Session.CanCashOut;
-            if (GUILayout.Button("提现并结束回合 Cash out"))
+            if (GUILayout.Button("结束生产并结算"))
             { autoFire = false; Controller.SetFireHeld(false); Controller.CashOut(); }
             GUI.enabled = true;
-            GUILayout.Label(Controller.Session.CanCashOut ? "目标已达成；提现把剩余血量换成金币，仍会等待场内球排空。" : "继续得分达到当前累计目标后，可提前提现。");
+            GUILayout.Label(Controller.Session.CanCashOut ? "目标已达成。结算会停止供血，等待场内弹珠排空。" : "达到本回合目标后，可以结束生产并结算。");
             GUILayout.Label(lastScore);
         }
 

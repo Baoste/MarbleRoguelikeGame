@@ -132,7 +132,7 @@ namespace MarblesECS.Editor
                 simulation.ApplyGlobalAttribute(987, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                 simulation.ApplyGlobalAttribute(988, GameAttribute.BALL_BOUNCE, AttributeOperation.Set, 1);
                 simulation.ApplyGlobalAttribute(989, GameAttribute.BALL_FRICTION, AttributeOperation.Set, 0);
-                var definition = c.Balance.Devices.Single(d => d.Id == 9018); CampaignStateUtility.CreateDevice(c, definition, definition.Price);
+                var definition = c.Balance.Devices.Single(d => d.Id == 9018); CampaignStateUtility.CreateDevice(c, definition, definition.InstallPrice);
                 var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var entity);
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; c.Manager.SetComponentData(entity, data);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));

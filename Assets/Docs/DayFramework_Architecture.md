@@ -34,7 +34,7 @@ flowchart LR
 
 ## 生产与结算
 
-每次尝试运行一个生产回合。`CampaignSettlementSystem` 用该回合最终分数判定是否达成 `targetScore`。主动拨动开关会停止供血并进入排空。旧独立机台及版本 2 Day 继续使用原有库存和金币结算规则。
+每次尝试运行一个生产回合。`CampaignSettlementSystem` 用该回合最终分数判定是否达成 `targetScore`。主动拨动开关会停止供血并进入排空。独立机台及版本 2 Day 可以使用实例库存。装置出售按实付血肉残料计算返还，每日达标奖励由外层结算发放公司工票。
 
 `defaultProductionFeatures` 启用整段序列共用的功能，各日可以通过 `productionFeatures` 增设功能。当前序列从 Day0 起启用 RUSH。关闭转盘时，分区按普通得分区即时计分。Day 0、Day 1、Day 2 的目标依次为 50、200、240 分，权限抽取由各日的 `shopEnabled` 控制。
 

@@ -20,9 +20,7 @@ namespace MarblesECS.Editor
             assertions = 0;
             var balance = GameBalanceLoader.Load();
             foreach (var device in balance.Devices) device.StartingCount = 0;
-            balance.Campaign.StartingCoins = 100000;
             balance.Campaign.MaxOwnedDevices = 200;
-            balance.Campaign.ShopOfferCount = 4;
             Check(balance.Devices.Length >= 4, "full shop catalog exists");
             balance.Validate();
 
@@ -32,7 +30,7 @@ namespace MarblesECS.Editor
             WeightedRarities(balance);
             Debug.Log("RANDOM_SHOP_VALIDATION_PASSED: " + assertions + " assertions; " +
                 balance.Devices.Length + " devices reachable; 4 device offers, shared run seed, exact draw counts, " +
-                "purchases, sold-out protection, refresh inventory and stock across days.");
+                "permission purchases, sold-out protection, refresh and stock across days.");
         }
 
         private static void SamplingAndSeeds(GameBalance balance)
@@ -41,14 +39,14 @@ namespace MarblesECS.Editor
             using (var simulation = new MarbleSimulation(balance))
             {
                 const uint seed = 240127;
-                simulation.StartSession(physics, seed);
+                StartShopCampaign(simulation, balance, physics, seed);
                 var devices = new HashSet<uint>();
                 bool withoutRushDevice = false;
                 int draws = Math.Max(256, balance.Devices.Length * 12);
                 for (int i = 0; i < draws; i++)
                 {
                     uint expected = Advance(simulation.Context.Round.RandomState, 4);
-                    CampaignShopSystem.Generate(simulation.Context);
+                    CampaignShopSystem.Generate(simulation.Context, simulation.CurrentDayDefinition.DailyLoadout);
                     var offers = CheckOffers(simulation, 4);
                     foreach (var offer in offers)
                         devices.Add(offer.DefinitionId);
@@ -61,35 +59,31 @@ namespace MarblesECS.Editor
                 if (balance.Devices.Count(d => !IsRush(d)) >= 4)
                     Check(withoutRushDevice, "a Rush device is not forced into every shop");
 
-                var first = DrawSequence(simulation, physics, seed, 8);
-                var replay = DrawSequence(simulation, physics, seed, 8);
+                var first = DrawSequence(balance, physics, seed, 8);
+                var replay = DrawSequence(balance, physics, seed, 8);
                 Check(first.SequenceEqual(replay), "one run seed reproduces the complete shop sequence");
-                Check(!first.SequenceEqual(DrawSequence(simulation, physics, seed + 1, 8)), "different seeds produce different sequences");
+                Check(!first.SequenceEqual(DrawSequence(balance, physics, seed + 1, 8)), "different seeds produce different sequences");
 
                 var reordered = balance.Copy();
                 Array.Reverse(reordered.Devices);
-                using (var other = new MarbleSimulation(reordered))
-                    Check(first.SequenceEqual(DrawSequence(other, physics, seed, 8)),
-                        "catalog enumeration order does not alter seeded offers");
-
-                simulation.StartSession(physics);
-                Check(simulation.Context.Round.RandomState == balance.Marble.RandomSeed,
-                    "a simulation without an override starts from the one configured seed");
-                CampaignShopSystem.Generate(simulation.Context);
-                simulation.StartSession(physics);
-                Check(simulation.Context.Round.RandomState == balance.Marble.RandomSeed,
-                    "new run resets the shared stream instead of retaining the last shop state");
+                Check(first.SequenceEqual(DrawSequence(reordered, physics, seed, 8)),
+                    "catalog enumeration order does not alter seeded offers");
             }
+
+            using var fresh = new MarbleSimulation(balance);
+            StartShopCampaign(fresh, balance, physics);
+            Check(fresh.Day.RandomState == balance.Marble.RandomSeed, "a new run uses the configured seed without an override");
         }
 
-        private static string[] DrawSequence(MarbleSimulation simulation, IMarblePhysics physics, uint seed, int count)
+        private static string[] DrawSequence(GameBalance balance, IMarblePhysics physics, uint seed, int count)
         {
-            simulation.StartSession(physics, seed);
+            using var simulation = new MarbleSimulation(balance);
+            StartShopCampaign(simulation, balance, physics, seed);
             Check(simulation.Context.Round.RandomState == seed, "explicit run seed initializes the shared RNG");
             var sequence = new string[count];
             for (int i = 0; i < count; i++)
             {
-                CampaignShopSystem.Generate(simulation.Context);
+                CampaignShopSystem.Generate(simulation.Context, simulation.CurrentDayDefinition.DailyLoadout);
                 sequence[i] = string.Join(",", simulation.GetShopOffers().Select(o => (int)o.Kind + ":" + o.DefinitionId));
             }
             return sequence;
@@ -97,15 +91,10 @@ namespace MarblesECS.Editor
 
         private static void PurchaseAndRoundFlow(GameBalance balance)
         {
-            balance = balance.Copy();
-            balance.Campaign.StartingCoins = 1000;
-            const string sequence = @"{""schemaVersion"":2,""sequenceId"":""shop-validation"",""days"":[
-                {""dayId"":""first"",""order"":1,""targetScore"":50,""rewardCoins"":22,""productionFeatures"":[""Shop""]},
-                {""dayId"":""second"",""order"":2,""targetScore"":80,""rewardCoins"":28,""productionFeatures"":[""Shop""]}]}";
             using (var simulation = new MarbleSimulation(balance))
             {
-                var definition = GameDaysLoader.Parse(sequence, balance);
-                Check(simulation.TryStartDayCampaign(definition, new EmptyPhysics(), out string error, 77031), error);
+                StartShopCampaign(simulation, balance, new EmptyPhysics(), 77031, days: 2);
+                string error;
                 long morning = simulation.Day.Version;
                 Check(simulation.Day.Phase == DayPhase.WakeUp && simulation.GetShopOffers().Length == 0,
                     "a new morning has no stock until the shop is visited");
@@ -116,27 +105,27 @@ namespace MarblesECS.Editor
                 var offers = CheckOffers(simulation, 4);
                 BuyAndCheck(simulation, offers[0]);
                 BuyAndCheck(simulation, offers[1]);
-                int[] owned = simulation.GetOwnedDevices().Select(d => d.InstanceId).OrderBy(id => id).ToArray();
-                long coins = simulation.Session.Coins;
-                long refreshCost = CampaignShopSystem.Price(simulation.Context, balance.Campaign.ShopRefreshCost);
+                uint[] permissions = OwnedPermissions(simulation);
+                long scrip = simulation.Session.CompanyScripBalance;
+                long refreshCost = simulation.CurrentDayDefinition.DailyLoadout.Shop.RefreshCost.Value;
                 uint expected = Advance(simulation.Context.Round.RandomState, 4);
                 int refreshCount = simulation.Session.ShopRefreshCount;
                 Check(simulation.RefreshShop(), "paid shop refresh succeeds");
-                Check(simulation.Session.Coins == coins - refreshCost &&
+                Check(simulation.Session.CompanyScripBalance == scrip - refreshCost &&
                     simulation.Session.ShopRefreshCount == refreshCount + 1, "refresh charges once and increments its counter");
                 Check(simulation.Context.Round.RandomState == expected, "paid refresh advances the shared RNG four times");
-                Check(owned.SequenceEqual(simulation.GetOwnedDevices().Select(d => d.InstanceId).OrderBy(id => id)),
-                    "refresh preserves purchased devices");
+                Check(permissions.SequenceEqual(OwnedPermissions(simulation)), "refresh preserves purchased permissions");
                 Check(CheckOffers(simulation, 4).All(o => !o.Sold), "refresh replaces sold offers with fresh stock");
 
                 BuyAndCheck(simulation, simulation.GetShopOffers()[0]);
-                owned = simulation.GetOwnedDevices().Select(d => d.InstanceId).OrderBy(id => id).ToArray();
+                permissions = OwnedPermissions(simulation);
                 Check(simulation.TryCloseShop(morning) && simulation.Day.Phase == DayPhase.WakeUp,
                     "closing the shop returns to the same morning");
                 uint beforeReopen = simulation.Day.RandomState;
                 Check(simulation.TryOpenShop(morning) && simulation.GetShopOffers()[0].Sold && simulation.Day.RandomState == beforeReopen,
                     "reopening retains sold stock and uses no draws");
-                Check(simulation.TryCloseShop(morning) && simulation.TryCompleteWakeUp(morning, out error), "production starts after closing the shop");
+                Check(simulation.TryConfirmLoadout(morning) && simulation.TryCloseShop(morning) &&
+                    simulation.TryCompleteWakeUp(morning, out error), "production starts after confirming and closing the terminal");
                 Check(!simulation.BuyOffer(0) && !simulation.RefreshShop() && !simulation.TryOpenShop(simulation.Day.Version),
                     "production cannot access the shop or reroll stock");
                 CompleteDayProduction(simulation);
@@ -147,8 +136,8 @@ namespace MarblesECS.Editor
                 Check(simulation.TryOpenShop(simulation.Day.Version) && CheckOffers(simulation, 4).All(o => !o.Sold),
                     "the next morning generates new stock on its first visit");
                 Check(simulation.Day.RandomState == Advance(secondMorning, 4), "new stock continues the run RNG");
-                Check(owned.SequenceEqual(simulation.GetOwnedDevices().Select(d => d.InstanceId).OrderBy(id => id)),
-                    "moving to the next day preserves purchased inventory");
+                Check(permissions.SequenceEqual(OwnedPermissions(simulation)), "moving to the next day preserves purchased permissions");
+                Check(simulation.GetOwnedDevices().Length == 0, "morning purchases grant permissions without installing any device");
             }
         }
 
@@ -169,24 +158,40 @@ namespace MarblesECS.Editor
         private static void BuyAndCheck(MarbleSimulation simulation, ShopOfferSnapshot offer)
         {
             uint before = simulation.Context.Round.RandomState;
-            long coins = simulation.Session.Coins;
-            int devices = simulation.GetOwnedDevices().Length;
-            Check(simulation.BuyOffer(offer.Index), "available offer can be purchased");
-            Check(simulation.Session.Coins == coins - offer.Price, "purchase deducts its displayed price once");
-            Check(offer.Kind == ShopItemKind.Device, "purchased offer is a device");
-            {
-                int quantity = CampaignStateUtility.Device(simulation.Context, offer.DefinitionId).PurchaseQuantity;
-                Check(simulation.GetOwnedDevices().Length == devices + quantity, "device purchase adds its entire pack");
-                Check(simulation.GetOwnedDevices().Count(d => d.DefinitionId == offer.DefinitionId) >= quantity,
-                    "purchased device definition enters inventory");
-            }
+            long scrip = simulation.Session.CompanyScripBalance;
+            Check(simulation.BuyOffer(offer.Index, offer.DefinitionId), "available permission can be purchased");
+            Check(simulation.Session.CompanyScripBalance == scrip - offer.Price, "purchase deducts its displayed price once");
+            Check(simulation.GetDailyPegs().Single(peg => peg.DefinitionId == offer.DefinitionId).Permitted,
+                "permission makes the device selectable in the daily loadout");
             Check(simulation.GetShopOffers()[offer.Index].Sold, "purchased offer is marked sold");
-            coins = simulation.Session.Coins;
-            devices = simulation.GetOwnedDevices().Length;
-            Check(!simulation.BuyOffer(offer.Index), "sold offer cannot be purchased again");
-            Check(simulation.Session.Coins == coins && simulation.GetOwnedDevices().Length == devices,
-                "rejected repeat purchase changes no wallet or inventory");
+            scrip = simulation.Session.CompanyScripBalance;
+            Check(!simulation.BuyOffer(offer.Index, offer.DefinitionId) && simulation.Session.CompanyScripBalance == scrip,
+                "rejected repeat purchase changes no wallet");
             Check(simulation.Context.Round.RandomState == before, "purchase and rejected repeat purchase consume no randomness");
+        }
+
+        private static uint[] OwnedPermissions(MarbleSimulation simulation) =>
+            simulation.GetDailyPegs().Where(peg => peg.Permitted).Select(peg => peg.DefinitionId).OrderBy(id => id).ToArray();
+
+        internal static DailyLoadoutDefinition CreateLoadout(GameBalance balance, int offerCount)
+        {
+            var ids = balance.Devices.Select(device => device.Id).ToArray();
+            var weights = Enum.GetValues(typeof(DeviceRarity)).Cast<DeviceRarity>().Select(DeviceRarityRules.ShopWeight).ToArray();
+            var shop = new DailyShopDefinition(2, 3, offerCount, 200, 0, PegPermissionScope.CampaignPermanent,
+                Array.Empty<uint>(), ids, weights);
+            return new DailyLoadoutDefinition(ids, Array.Empty<uint>(), Array.Empty<uint>(), ids.Length, 0, LoadoutSelectionMode.Manual, shop);
+        }
+
+        private static void StartShopCampaign(MarbleSimulation simulation, GameBalance balance, IMarblePhysics physics,
+            uint? seed = null, int offers = 4, int days = 1)
+        {
+            var loadout = CreateLoadout(balance, offers);
+            var definitions = Enumerable.Range(1, days).Select(index => new DayDefinition("shop-" + index, index, 50,
+                ProductionFeature.Shop | ProductionFeature.DevicePlacement, null, null, Array.Empty<MorningPrepDefinition>(),
+                Array.Empty<DayEventDefinition>(), Array.Empty<DayRuleDefinition>(), loadout, null, 8, 2, false, ProductionSettings.Daily)).ToArray();
+            var campaign = new DayCampaignDefinition(DayCampaignDefinition.CurrentSchemaVersion, "shop-validation", 100,
+                definitions, Array.Empty<DayRuleDefinition>());
+            Check(simulation.TryStartDayCampaign(campaign, physics, out string error, seed), error);
         }
 
         private static void CatalogShortages(GameBalance original)
@@ -197,8 +202,8 @@ namespace MarblesECS.Editor
                 balance.Devices = balance.Devices.Take(available).ToArray();
                 using (var simulation = new MarbleSimulation(balance))
                 {
-                    simulation.StartSession(new EmptyPhysics(), 91);
-                    CampaignShopSystem.Generate(simulation.Context);
+                    StartShopCampaign(simulation, balance, new EmptyPhysics(), 91);
+                    CampaignShopSystem.Generate(simulation.Context, simulation.CurrentDayDefinition.DailyLoadout);
                     CheckOffers(simulation, available);
                     Check(simulation.Context.Round.RandomState == Advance(91, available),
                         "catalog shortage consumes only actual offers, not missing slots");

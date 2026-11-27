@@ -1,8 +1,8 @@
--- 猪猪存钱罐：按撞击时持有的金币计算倍率，不花费金币。
--- Value: coins per tier; Strength: multiplier bonus per tier.
+-- 猪猪存钱罐：按撞击时持有的血肉残料计算倍率，不花费血肉残料。
+-- Value: scrap per tier; Strength: multiplier bonus per tier.
 local function multiplier(api)
     if api.Parameter <= 0 or api.Strength <= 0 then return 1 end
-    return 1 + math.floor(api.Coins / api.Parameter) * api.Strength
+    return 1 + math.floor(api.BiomassScrapBalance / api.Parameter) * api.Strength
 end
 
 local function status(api)

@@ -50,7 +50,7 @@ namespace MarblesECS.Editor
             int Create(uint definitionId, float x, float z, bool placed = true)
             {
                 var definition = f.C.Balance.Devices.Single(d => d.Id == definitionId);
-                CampaignStateUtility.CreateDevice(f.C, definition, definition.Price);
+                CampaignStateUtility.CreateDevice(f.C, definition, definition.InstallPrice);
                 int id = f.C.Campaign.NextDeviceId;
                 Check(f.Simulation.PlaceDevice(id, x, z), "prepare owned device position");
                 if (!placed) Check(f.Simulation.RemoveDevicePlacement(id), "prepare inventory device");
@@ -133,25 +133,25 @@ namespace MarblesECS.Editor
                 Check(placement.HandleBoardPointerDown(Point(-1, 1)), "logical footprint picks up an exhausted device with disabled colliders");
                 placement.CancelPlacement();
                 Check(placement.HandleBoardPointerDown(Point(-1, 1)), "pick up the board device for a sale");
-                long coins = f.C.Campaign.Coins; long price = f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == id).SellPrice;
+                long scrap = f.C.Player.BiomassScrapBalance; long price = f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == id).SellPrice;
                 sale.Refresh(); Check(sale.Group.alpha == 1 && sale.Group.blocksRaycasts, "sale area is visible and receives input during Build");
                 placement.UpdatePlacementPointer(salePoint); sale.Refresh();
-                Near(coins, f.C.Campaign.Coins, "hovering the red area never sells");
+                Near(scrap, f.C.Player.BiomassScrapBalance, "hovering the red area never sells");
                 ClickSale(PointerEventData.InputButton.Left);
-                Near(coins, f.C.Campaign.Coins, "left click alone cannot sell the dragged device");
+                Near(scrap, f.C.Player.BiomassScrapBalance, "left click alone cannot sell the dragged device");
                 ClickSale(PointerEventData.InputButton.Right);
-                Near(coins, f.C.Campaign.Coins, "right click on sale area never sells");
+                Near(scrap, f.C.Player.BiomassScrapBalance, "right click on sale area never sells");
                 Check(placement.SelectedInstanceId == 0 && View(id).activeSelf, "right click on sale area cancels the move");
                 Check(placement.HandleBoardPointerDown(Point(-1, 1)) && placement.HandleBoardPointerUp(salePoint), "release in the sale area sells the board device");
                 Check(!CampaignStateUtility.FindDevice(f.C, id, out _) && placement.SelectedInstanceId == 0, "sale removes the dragged instance");
-                Near(coins + price, f.C.Campaign.Coins, "sale credits the quoted refund");
+                Near(scrap + price, f.C.Player.BiomassScrapBalance, "sale credits the quoted refund");
                 Check(!placement.HandleBoardPointerUp(salePoint), "a repeated release cannot sell twice");
-                Near(coins + price, f.C.Campaign.Coins, "repeated release pays nothing");
+                Near(scrap + price, f.C.Player.BiomassScrapBalance, "repeated release pays nothing");
                 Check(board.GetComponentsInChildren<DeviceBody>(true).All(b => b.InstanceId != id || !b.gameObject.activeInHierarchy),
                     "sold view and colliders are inactive immediately, before deferred Unity destruction");
 
                 int stock = Create(9008, -1, 0, false);
-                coins = f.C.Campaign.Coins;
+                scrap = f.C.Player.BiomassScrapBalance;
                 int dragRevision = f.C.Campaign.LayoutRevision;
                 Check(placement.BeginInventoryDrag(stock, Point(-1, 1)), "inventory drag still starts");
                 CheckHighlight(true, "dragging to clear space shows a green outline");
@@ -170,11 +170,11 @@ namespace MarblesECS.Editor
                 Check(placement.BeginInventoryDrag(stock, Point(-1, 1)), "inventory drag can restart after an invalid drop");
                 placement.UpdateInventoryDrag(salePoint);
                 Check(!Highlight() && placement.LastFeedback.Contains("松开出售"), "hovering over sale shows the release hint");
-                Near(coins, f.C.Campaign.Coins, "hovering during an inventory drag pays nothing");
+                Near(scrap, f.C.Player.BiomassScrapBalance, "hovering during an inventory drag pays nothing");
                 price = f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == stock).SellPrice;
                 Check(placement.EndInventoryDrag(salePoint, panel) && placement.SelectedInstanceId == 0 &&
                     !CampaignStateUtility.FindDevice(f.C, stock, out _), "inventory release in the sale area sells the dragged item");
-                Near(coins + price, f.C.Campaign.Coins, "inventory sale credits the quoted refund");
+                Near(scrap + price, f.C.Player.BiomassScrapBalance, "inventory sale credits the quoted refund");
 
                 Check(placement.HandleBoardPointerDown(Point(2, 0)), "pick up the device before pausing");
                 controller.SetPaused(true); placement.UpdatePlacementPointer(Point(0, 1)); sale.Refresh();

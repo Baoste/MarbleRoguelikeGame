@@ -187,8 +187,6 @@ public sealed partial class ItemLibraryUI : MonoBehaviour
             if (shop.Controller == Controller) QueueSuspend(shop);
         foreach (var panel in FindObjectsOfType<OwnedDevicePanelUI>(true))
             if (panel.Controller == Controller) QueueSuspend(panel);
-        foreach (var item in FindObjectsOfType<ShopOfferItemUI>(true))
-            if (item.gameObject.scene == Controller.gameObject.scene) QueueSuspend(item);
         foreach (var item in FindObjectsOfType<OwnedDeviceButtonUI>(true))
             if (item.gameObject.scene == Controller.gameObject.scene) QueueSuspend(item);
         // Legacy board views do not expose their Controller and process OnGUI outside uGUI.

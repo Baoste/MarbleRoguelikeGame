@@ -1,6 +1,6 @@
 # MarbleRoguelikeGame 接手文档
 
-本文档集面向第一次接手本项目的程序、系统策划和数值策划。内容按仓库当前代码与资源核对，不把 `Assets/Docs` 中的历史说明直接当作现状。
+本目录归档 2026-10-02 版本的玩法、数值和模拟结果。现行双货币与每日玩法见 [游戏文档](../Assets/Docs/README.md)。
 
 2026-10-02 已整合 Balance V6：当前项目的合并范围、验证结果及 Unity 菜单入口见 [Unity 整合记录](Balance/integration_2026-10-02.md)。
 
@@ -20,9 +20,9 @@
 - URP：`14.0.12`
 - 唯一启用的构建场景：`Assets/Scenes/TestScene.unity`
 
-## 当前调优基线
+## 历史调优基线
 
-`Assets/Config/GameBalance.xlsx` 与 `Assets/Resources/GameBalance.json` 已同步。当前每回合 100 血，正式阶段目标为 `120/380/815/1410/2200/3145`，商店刷新基础价为 `2`。阶段目标采用 Recommended V5：首回合降至 120，并以该点为锚将后续曲线斜率降低约 10%；商品价格沿用 Recommended V3（约下调 15%）。
+`Assets/Config/GameBalance.xlsx` 与 `Assets/Resources/GameBalance.json` 已同步。该版本每回合 100 血，正式阶段目标为 `120/380/815/1410/2200/3145`，商店刷新基础价为 `2`。阶段目标采用 Recommended V5：首回合降至 120，并以该点为锚将后续曲线斜率降低约 10%；商品价格沿用 Recommended V3（约下调 15%）。
 
-可重复工作流位于 `Tools/Balance/balance_pipeline.py` 与 `Assets/Editor/BalanceSimulator/`。在 Unity 使用 `Tools > Pachinko > Balance Dashboard` 可执行真实物理采样、固定 Seed 经济模拟、CSV 导出和配置比较。旧 `rush_balance_model.py` 仅保留作历史原型，不应再用于正式结论。
+旧经济模拟的报告与配置快照仍可在此查阅。Unity 的 Tools → Pachinko → Balance Dashboard 提供当前场景的真实物理采样。
 

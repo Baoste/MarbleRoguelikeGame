@@ -139,7 +139,7 @@ namespace MarblesECS.Editor
                 simulation.StartSession(bridge); simulation.BeginRound();
                 var c = simulation.Context;
                 var definition = c.Balance.Devices.Single(x => x.Kind == DeviceKind.Portal);
-                CampaignStateUtility.CreateDevice(c, definition, definition.Price);
+                CampaignStateUtility.CreateDevice(c, definition, definition.InstallPrice);
                 var pair = simulation.GetOwnedDevices().OrderBy(x => x.InstanceId).ToArray();
                 foreach (var owned in pair)
                 {

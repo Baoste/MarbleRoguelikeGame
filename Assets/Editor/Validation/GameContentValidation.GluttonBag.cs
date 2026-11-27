@@ -23,7 +23,7 @@ namespace MarblesECS.Editor
         private static int BagFood(SimulationContext c, DeviceRarity rarity = DeviceRarity.Common)
         {
             var definition = c.Balance.Devices.Single(d => d.Id == 9008); definition.Rarity = rarity;
-            CampaignStateUtility.CreateDevice(c, definition, definition.Price); return c.Campaign.NextDeviceId;
+            CampaignStateUtility.CreateDevice(c, definition, definition.InstallPrice); return c.Campaign.NextDeviceId;
         }
         private static void GluttonBagLuaApi()
         {
@@ -33,12 +33,12 @@ namespace MarblesECS.Editor
             {
                 var d = AddGluttonBag(f); var source = BagFood(f.C, rarity);
                 Check(!f.Simulation.TryOfferDevice(source, d.InstanceId), "feeding during play is rejected");
-                BagBuild(f.C); int revision = f.C.Campaign.LayoutRevision; double coins = f.C.Campaign.Coins;
+                BagBuild(f.C); int revision = f.C.Campaign.LayoutRevision; double scrap = f.C.Player.BiomassScrapBalance;
                 Check(f.Simulation.CanOfferDevice(source, d.InstanceId), "placed receiver advertises generic OnOffer");
                 Check(f.Simulation.TryOfferDevice(source, d.InstanceId), "inventory offer commits");
                 Check(!CampaignStateUtility.FindDevice(f.C, source, out _), "exactly the offered inventory instance is consumed");
                 Near(revision + 1, f.C.Campaign.LayoutRevision, "offer refreshes inventory and placement projection once");
-                Near(coins, f.C.Campaign.Coins, "feeding grants no sale coins");
+                Near(scrap, f.C.Player.BiomassScrapBalance, "feeding grants no sale scrap");
                 Near(20, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "feeding does not consume durability");
                 Check(!f.Simulation.TryOfferDevice(source, d.InstanceId), "same instance cannot be offered twice");
                 double gain = 2 * ((int)rarity + 1);
@@ -163,14 +163,14 @@ function Verify() assert(not pcall(function() return saved.RoundId end)) end");
             {
                 var bag = AddGluttonBag(f);
                 var portal = f.C.Balance.Devices.Single(device => device.Id == 103);
-                CampaignStateUtility.CreateDevice(f.C, portal, portal.Price);
-                CampaignStateUtility.CreateDevice(f.C, portal, portal.Price);
+                CampaignStateUtility.CreateDevice(f.C, portal, portal.InstallPrice);
+                CampaignStateUtility.CreateDevice(f.C, portal, portal.InstallPrice);
                 var portals = f.Simulation.GetOwnedDevices().Where(device => device.DefinitionId == portal.Id).ToArray();
                 int source = portals[0].InstanceId, partner = portals[1].InstanceId;
                 MorePlace(f.C, source, sourcePlaced);
                 MorePlace(f.C, partner, !sourcePlaced);
                 BagBuild(f.C);
-                long coins = f.C.Campaign.Coins;
+                long scrap = f.C.Player.BiomassScrapBalance;
                 int revision = f.C.Campaign.LayoutRevision;
                 Check(f.Simulation.TryOfferDevice(source, bag.InstanceId), "feeding accepts a portal from the board or inventory");
                 var remaining = f.Simulation.GetOwnedDevices();
@@ -180,7 +180,7 @@ function Verify() assert(not pcall(function() return saved.RoundId end)) end");
                 CampaignStateUtility.FindDevice(f.C, bag.InstanceId, out var receiver);
                 double gain = ((int)portal.Rarity + 1) * f.C.Balance.Devices.Single(device => device.Id == bag.DefinitionId).Strength;
                 Near(gain, DeviceRoundState.Get(f.C, receiver, "bonus"), "pair consumption grants the packaged bag a single rarity bonus");
-                Check(f.C.Campaign.Coins == coins && f.C.Campaign.LayoutRevision == revision + 1,
+                Check(f.C.Player.BiomassScrapBalance == scrap && f.C.Campaign.LayoutRevision == revision + 1,
                     "pair feeding changes layout once without granting a sale payout");
             }
         }
@@ -218,7 +218,7 @@ function Verify() assert(not pcall(function() return saved.RoundId end)) end");
                 simulation.ApplyGlobalAttribute(993, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                 simulation.ApplyGlobalAttribute(994, GameAttribute.BALL_BOUNCE, AttributeOperation.Set, 1);
                 simulation.ApplyGlobalAttribute(995, GameAttribute.BALL_FRICTION, AttributeOperation.Set, 0);
-                var def = c.Balance.Devices.Single(d => d.Id == 9026); CampaignStateUtility.CreateDevice(c, def, def.Price);
+                var def = c.Balance.Devices.Single(d => d.Id == 9026); CampaignStateUtility.CreateDevice(c, def, def.InstallPrice);
                 var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var entity);
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; c.Manager.SetComponentData(entity, data);
                 BagBuild(c); Check(simulation.TryOfferDevice(BagFood(c), owned.InstanceId), "prepare physical bag by consuming common inventory");

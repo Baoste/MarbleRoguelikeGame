@@ -255,7 +255,7 @@ function Verify() assert(completed == 2) end"))
             }
             internal DeviceViewHandle Add(Vector3 offset)
             {
-                var definition = C.Balance.Devices.Single(d => d.Id == 9007); CampaignStateUtility.CreateDevice(C, definition, definition.Price);
+                var definition = C.Balance.Devices.Single(d => d.Id == 9007); CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last(); CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
                 var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));

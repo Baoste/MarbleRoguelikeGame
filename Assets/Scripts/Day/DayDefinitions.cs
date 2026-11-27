@@ -45,7 +45,6 @@ namespace MarblesECS
         public string DayId { get; }
         public int Order { get; }
         public long TargetScore { get; }
-        public long RewardCoins { get; }
         public long InitialBiomassScrap { get; }
         public long ClearCompanyScripReward { get; }
         public bool SkipMorningPrep { get; }
@@ -59,7 +58,7 @@ namespace MarblesECS
         public IReadOnlyList<DayEventDefinition> Events { get; }
         public IReadOnlyList<DayRuleDefinition> Rules { get; }
 
-        internal DayDefinition(string id, int order, long targetScore, long rewardCoins, ProductionFeature features,
+        internal DayDefinition(string id, int order, long targetScore, ProductionFeature features,
             string boardLayoutFile, BoardLayoutDefinition boardLayout, MorningPrepDefinition[] morningPrep,
             DayEventDefinition[] events, DayRuleDefinition[] rules, DailyLoadoutDefinition dailyLoadout,
             BloodProgressionDefinition bloodProgression, long initialBiomassScrap, long clearCompanyScripReward, bool skipMorningPrep,
@@ -68,7 +67,6 @@ namespace MarblesECS
             DayId = id;
             Order = order;
             TargetScore = targetScore;
-            RewardCoins = rewardCoins;
             InitialBiomassScrap = initialBiomassScrap;
             ClearCompanyScripReward = clearCompanyScripReward;
             SkipMorningPrep = skipMorningPrep;
@@ -85,7 +83,7 @@ namespace MarblesECS
 
         public DayDefinition WithSetup(string boardLayoutFile, BoardLayoutDefinition boardLayout, long initialBiomassScrap,
             DailyLoadoutDefinition loadout, bool skipMorningPrep, ProductionSettings? production = null) =>
-            new DayDefinition(DayId, Order, TargetScore, RewardCoins, ProductionFeatures, boardLayoutFile, boardLayout,
+            new DayDefinition(DayId, Order, TargetScore, ProductionFeatures, boardLayoutFile, boardLayout,
                 MorningPrep.ToArray(), Events.ToArray(), Rules.ToArray(), loadout, BloodProgression, initialBiomassScrap, ClearCompanyScripReward,
                 skipMorningPrep, production ?? Production);
     }

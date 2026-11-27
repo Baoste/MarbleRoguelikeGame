@@ -98,7 +98,7 @@ public sealed partial class DevicePlacementUI
         if (drop == DropTarget.Sale || drop == DropTarget.Backpack)
         {
             if (drop == DropTarget.Sale && TryGetSelectedDevice(out var device))
-                LastFeedback = $"松开出售{DeviceDisplayText.SaleTarget(device)}，获得 {device.SellPrice} {CurrencyName}。";
+                LastFeedback = $"松开出售{DeviceDisplayText.SaleTarget(device)}，获得 {device.SellPrice} 血肉残料。";
             else
                 LastFeedback = IsMovingPlacedDevice ? "松开收回背包" : "松开放回背包";
             previewObject.SetActive(false);
@@ -212,8 +212,7 @@ public sealed partial class DevicePlacementUI
         return installed;
     }
 
-    private string CurrencyName => DeviceDisplayText.CurrencyName(Controller.Session.Production.Currency);
-    private string InstallFailure => $"此处不可安装，或{CurrencyName}不足。";
+    private const string InstallFailure = "此处不可安装，或血肉残料不足。";
 
     private float PlacementRadiusScale
     {

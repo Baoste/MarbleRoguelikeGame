@@ -100,7 +100,7 @@ namespace MarblesECS
         }
         internal bool RecordEffect(bool success) { if (success) MarkTriggered(); return success; }
         /// <summary>Current wallet balance as a Lua number; read only and exact through the wallet cap.</summary>
-        public double Coins => C.Campaign.Coins;
+        public double BiomassScrapBalance => C.Player.BiomassScrapBalance;
         public double Blood => C.Player.Blood;
         public double BloodCapacity => C.BloodCapacity;
         public double RestoreBlood(double amount)
@@ -300,29 +300,17 @@ namespace MarblesECS
             return ContentSettlementSystem.TrySettleAmount(C, ball, contact, score);
         }
         public void SetStatus(string text) => C.DeviceScripts.SetStatus(Device.InstanceId, RoundId, text);
-        public void AddCoins(double value)
+        public double AddBiomassScrap(double value)
         {
             var context = C;
-            if (context.Campaign.Production.Currency != GameCurrency.Coins) return;
-            long credited = CampaignWalletSystem.Credit(context, GameCurrency.Coins,
-                MarbleRules.RoundScore(value, CampaignWalletSystem.MaxBalance));
-            if (value >= 1) MarkTriggered();
-            if (credited != 0)
-                context.FloatingText?.Enqueue(FloatingTextEvent.FromInteger(TextPosition, FloatingTextSource.Device, sourceId,
-                    FloatingTextType.Currency, credited, contact.Key));
-        }
-
-        public void AddBiomassScrap(double value)
-        {
-            var context = C;
-            if (context.Campaign.Production.Currency != GameCurrency.BiomassScrap) return;
             long amount = MarbleRules.RoundScore(value, CampaignWalletSystem.MaxBalance);
-            if (amount == 0) return;
+            if (amount == 0) return 0;
             long credited = CampaignWalletSystem.Credit(context, GameCurrency.BiomassScrap, amount);
-            if (credited == 0) return;
+            if (credited == 0) return 0;
             MarkTriggered();
             context.FloatingText?.Enqueue(FloatingTextEvent.FromInteger(TextPosition, FloatingTextSource.Device, sourceId,
                 FloatingTextType.Currency, credited, contact.Key));
+            return credited;
         }
         // Compatibility aliases for previously authored packages. New Lua uses Motion directly.
         public bool ScaleVelocity(float scale) => Motion.TryScaleSpeed(scale);

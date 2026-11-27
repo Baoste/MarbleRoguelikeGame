@@ -16,7 +16,7 @@ namespace MarblesECS
                 default: throw new ArgumentOutOfRangeException(nameof(rarity));
             }
         }
-        public static long StandardPurchasePrice(DeviceRarity rarity)
+        public static long DefaultScrapInstallPrice(DeviceRarity rarity)
         {
             switch (rarity)
             {

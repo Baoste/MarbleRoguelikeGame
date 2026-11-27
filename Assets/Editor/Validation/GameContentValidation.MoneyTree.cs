@@ -21,13 +21,13 @@ namespace MarblesECS.Editor
             int start = assertions;
             using (var f = new Fixture())
             {
-                var tree = AddMoneyTree(f); var key = f.Launch(); double coins = f.C.Campaign.Coins;
+                var tree = AddMoneyTree(f); var key = f.Launch(); double scrap = f.C.Player.BiomassScrapBalance;
                 var state = f.Physics.States[key]; double blood = f.C.Player.Blood;
                 var hit = f.Hit(key, tree);
                 for (int i = 1; i <= 21; i++)
                 {
                     f.Step(hit, hit); // Duplicate reports within one step are a single entry.
-                    Near(coins + 5 * (i / 10), f.C.Campaign.Coins, "one payout per ten entries");
+                    Near(scrap + 5 * (i / 10), f.C.Player.BiomassScrapBalance, "one payout per ten entries");
                     Near(20 - i / 10, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "counting is free; only payout spends durability");
                     Check(f.Simulation.GetDeviceStatus(tree.InstanceId).Contains((i % 10) + "/10"), "progress remainder is visible");
                 }
@@ -37,7 +37,7 @@ namespace MarblesECS.Editor
                 VectorNear(state.Position, f.Physics.States[key].Position, "Lua does not reposition the ball");
                 VectorNear(state.LinearVelocity, f.Physics.States[key].LinearVelocity, "Lua does not alter speed or direction");
                 Near(0, f.Physics.Moves, "tree issues no move commands"); Near(blood, f.C.Player.Blood, "tree neither costs nor refunds blood");
-                Near(0, f.C.Round.Score, "coins are awarded directly, not through round score");
+                Near(0, f.C.Round.Score, "scrap are awarded directly, not through round score");
                 var link = hit; link.LinkKey = 123; var impact = hit; impact.HasImpact = true; impact.Normal = Vector3.up;
                 f.Step(link); f.Step(impact);
                 Check(f.Simulation.GetDeviceStatus(tree.InstanceId).Contains("1/10"), "link and solid impact events do not count");
@@ -48,17 +48,17 @@ namespace MarblesECS.Editor
                 Check(f.Simulation.BeginRound(), "tree survives another round"); var fresh = f.Launch();
                 Check(f.Simulation.GetDeviceStatus(tree.InstanceId).Contains("0/10"), "round reset discards partial progress");
                 Near(20, f.Simulation.GetOwnedDevices().Single(d => d.InstanceId == tree.InstanceId).RemainingDurability, "round reset restores wear");
-                coins = f.C.Campaign.Coins;
+                scrap = f.C.Player.BiomassScrapBalance;
                 for (int i = 0; i < 9; i++) f.Step(f.Hit(fresh, tree));
-                Near(coins, f.C.Campaign.Coins, "nine fresh entries cannot use the previous round remainder");
-                f.Step(f.Hit(fresh, tree)); Near(coins + 5, f.C.Campaign.Coins, "tenth fresh entry pays");
+                Near(scrap, f.C.Player.BiomassScrapBalance, "nine fresh entries cannot use the previous round remainder");
+                f.Step(f.Hit(fresh, tree)); Near(scrap + 5, f.C.Player.BiomassScrapBalance, "tenth fresh entry pays");
             }
             using (var f = new Fixture())
             {
                 var tree = AddMoneyTree(f); var keys = Enumerable.Range(0, 21).Select(_ => f.Launch()).ToArray();
-                double coins = f.C.Campaign.Coins;
+                double scrap = f.C.Player.BiomassScrapBalance;
                 f.Step(keys.Select(k => f.Hit(k, tree)).ToArray());
-                Near(coins + 10, f.C.Campaign.Coins, "simultaneous distinct balls can complete several batches");
+                Near(scrap + 10, f.C.Player.BiomassScrapBalance, "simultaneous distinct balls can complete several batches");
                 Near(18, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "two simultaneous batches spend two uses");
                 Check(f.C.Marbles.Count == 21 && f.Simulation.GetDeviceStatus(tree.InstanceId).Contains("1/10"), "all balls pass with one remainder");
             }
@@ -66,22 +66,22 @@ namespace MarblesECS.Editor
                 using (var f = new Fixture())
                 {
                     f.C.Balance.Devices.Single(d => d.Id == 9014).Durability = wear;
-                    var tree = AddMoneyTree(f); var key = f.Launch(); double coins = f.C.Campaign.Coins;
+                    var tree = AddMoneyTree(f); var key = f.Launch(); double scrap = f.C.Player.BiomassScrapBalance;
                     for (int i = 0; i < 210; i++) f.Step(f.Hit(key, tree));
-                    Near(coins + (wear == -1 ? 21 : wear) * 5, f.C.Campaign.Coins, "finite/infinite tree pays every full batch including the last use");
+                    Near(scrap + (wear == -1 ? 21 : wear) * 5, f.C.Player.BiomassScrapBalance, "finite/infinite tree pays every full batch including the last use");
                     Near(wear == -1 ? -1 : 0, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "durability is per payout, not per entry");
                     Check(f.C.Marbles.ContainsKey(key), "depletion never consumes the ball");
                 }
             using (var f = new Fixture())
             {
                 var def = f.C.Balance.Devices.Single(d => d.Id == 9014); def.Value = 3; def.Strength = 7;
-                var tree = AddMoneyTree(f); var key = f.Launch(); double coins = f.C.Campaign.Coins;
+                var tree = AddMoneyTree(f); var key = f.Launch(); double scrap = f.C.Player.BiomassScrapBalance;
                 for (int i = 0; i < 7; i++) f.Step(f.Hit(key, tree));
-                Near(coins + 14, f.C.Campaign.Coins, "authoring parameters control threshold and reward");
+                Near(scrap + 14, f.C.Player.BiomassScrapBalance, "authoring parameters control threshold and reward");
                 Check(f.Simulation.GetDeviceStatus(tree.InstanceId).Contains("1/3"), "custom progress shown");
-                PiggyCoins(f, CampaignStateUtility.MaxCoins - 1);
+                SetScrap(f, CampaignWalletSystem.MaxBalance - 1);
                 f.Step(f.Hit(key, tree)); f.Step(f.Hit(key, tree));
-                Near(CampaignStateUtility.MaxCoins, f.C.Campaign.Coins, "reward respects wallet cap");
+                Near(CampaignWalletSystem.MaxBalance, f.C.Player.BiomassScrapBalance, "reward respects wallet cap");
                 var cash = AddCashOut(f); f.Step(f.Hit(key, cash));
                 Check(!f.C.Marbles.ContainsKey(key), "counted ball qualifies as having triggered another device for CashOut");
             }
@@ -95,7 +95,7 @@ namespace MarblesECS.Editor
                     Near(0, f.C.Manager.GetComponentData<BallFeatures>(f.Ball(key)).FirstTriggeredDeviceId, "invalid parameters do not register an effective trigger");
                 }
             MoneyTreePhysics();
-            Debug.Log("MONEY_TREE_VALIDATION_PASSED: " + (assertions - start) + " assertions; entry batches, coins, payout durability, independent rounds/instances, real pass-through, stay deduplication and fast sweeps.");
+            Debug.Log("MONEY_TREE_VALIDATION_PASSED: " + (assertions - start) + " assertions; entry batches, scrap, payout durability, independent rounds/instances, real pass-through, stay deduplication and fast sweeps.");
         }
 
         private static void MoneyTreePhysics()
@@ -111,18 +111,18 @@ namespace MarblesECS.Editor
                     simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
                     simulation.ApplyGlobalAttribute(993, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                     simulation.ApplyGlobalAttribute(994, GameAttribute.BALL_MAX_SPEED, AttributeOperation.Set, 100);
-                    var def = c.Balance.Devices.Single(d => d.Id == 9014); CampaignStateUtility.CreateDevice(c, def, def.Price);
+                    var def = c.Balance.Devices.Single(d => d.Id == 9014); CampaignStateUtility.CreateDevice(c, def, def.InstallPrice);
                     var tree = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, tree.InstanceId, out var e);
                     var data = c.Manager.GetComponentData<OwnedDeviceData>(e); data.Placed = true; c.Manager.SetComponentData(e, data);
                     board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(63, 121, 0));
                     view = DeviceView.Create(tree, board.transform, c.DeviceScripts.Get(tree.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();
                     var colliders = view.Root.GetComponentsInChildren<Collider>(true).Where(c => c.name != "PlacementVolume").ToArray();
                     Check(colliders.Length == 1 && colliders.All(x => x.isTrigger), "entire tree has no solid collider");
-                    Check(view.Root.transform.Find("Trunk") != null && view.Root.transform.Find("FruitCoin4") != null, "package supplies tree and coin fruit");
+                    Check(view.Root.transform.Find("Trunk") != null && view.Root.transform.Find("FruitCoin4") != null, "package supplies tree and scrap fruit");
                     var spawn = board.transform.TransformPoint(new Vector3(0, .12f, .85f));
                     void Step() { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); simulation.AfterPhysics(bridge); }
                     simulation.FireOnce(); simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge);
-                    var key = c.Marbles.Keys.Single(); double coins = c.Campaign.Coins;
+                    var key = c.Marbles.Keys.Single(); double scrap = c.Player.BiomassScrapBalance;
                     // Spawn overlapping the trigger, remain stationary, and verify stay reports do not accumulate.
                     Check(bridge.TryMove(key, board.transform.TransformPoint(new Vector3(0, .12f, 0)), Vector3.zero), "place ball inside tree");
                     for (int i = 0; i < 30; i++) Step();
@@ -146,7 +146,7 @@ namespace MarblesECS.Editor
                         VectorNear(velocity.normalized, output.LinearVelocity.normalized, "tree produces no deflection or reflection");
                         Check(output.LinearVelocity.magnitude > speed * .9f && output.LinearVelocity.magnitude <= speed + .001f, "passage has only existing natural damping");
                         Near(pass + 1, contacts, "each reentry counts once including high speed sweeps");
-                        Near(coins + 5 * ((pass + 1) / 10), c.Campaign.Coins, "real traversal completes ten-entry batches");
+                        Near(scrap + 5 * ((pass + 1) / 10), c.Player.BiomassScrapBalance, "real traversal completes ten-entry batches");
                     }
                     Near(18, simulation.GetOwnedDevices().Single().RemainingDurability, "twenty real passages spend exactly two uses");
                     Near(0, c.Round.Score, "physical passages do not settle score");

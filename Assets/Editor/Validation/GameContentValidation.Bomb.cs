@@ -146,7 +146,7 @@ function Verify() assert(calls==2); assert(not pcall(function() return saved.Tim
                     simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
                     simulation.ApplyGlobalAttribute(999, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                     var def = c.Balance.Devices.Single(d => d.Id == 9017); def.Durability = 1;
-                    CampaignStateUtility.CreateDevice(c, def, def.Price); var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var e);
+                    CampaignStateUtility.CreateDevice(c, def, def.InstallPrice); var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var e);
                     var data = c.Manager.GetComponentData<OwnedDeviceData>(e); data.Placed = true; c.Manager.SetComponentData(e, data);
                     board.transform.SetPositionAndRotation(new Vector3(0, 8, 0), Quaternion.Euler(-63, 121, 0));
                     view = DeviceView.Create(owned, board.transform, c.DeviceScripts.Get(owned.InstanceId, def.Id)); view.Root.SetActive(true); Physics.SyncTransforms();

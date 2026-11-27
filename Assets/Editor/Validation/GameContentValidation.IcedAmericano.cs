@@ -18,14 +18,14 @@ namespace MarblesECS.Editor
                 var device = f.Add(f.C.Balance.Devices.Single(d => d.Id == 9032)); var key = f.Launch(); var ball = f.Ball(key);
                 AttributeRuntime.SetBase(f.C, ball, GameAttribute.BALL_BASE_VALUE, value);
                 var score = f.C.Manager.GetComponentData<MarbleScore>(ball); score.SetDeviceMultiplier(3); f.C.Manager.SetComponentData(ball, score);
-                var motion = f.Physics.States[key]; double blood = f.C.Player.Blood, coins = f.C.Campaign.Coins;
+                var motion = f.Physics.States[key]; double blood = f.C.Player.Blood, scrap = f.C.Player.BiomassScrapBalance;
                 var hit = GoldMineHit(f, key, device); f.Step(hit, hit);
                 Near(value / 2, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "coffee halves current base value without rounding");
                 Near(27, f.C.Manager.GetComponentData<MarbleRush>(ball).Contribution, "extra twenty plus generic five counted once, including zero-value balls");
                 Near(19, f.Simulation.GetOwnedDevices().Single().RemainingDurability, "one valid impact spends one wear");
                 Near(0, f.C.Round.RushMeter, "coffee records contribution without immediate deposit");
                 Near(3, f.C.Manager.GetComponentData<MarbleScore>(ball).ScoreMultiplier, "coffee preserves accumulated multiplier");
-                Near(blood, f.C.Player.Blood, "coffee does not change blood"); Near(coins, f.C.Campaign.Coins, "coffee does not grant coins");
+                Near(blood, f.C.Player.Blood, "coffee does not change blood"); Near(scrap, f.C.Player.BiomassScrapBalance, "coffee does not grant scrap");
                 VectorNear(motion.LinearVelocity, f.Physics.States[key].LinearVelocity, "coffee leaves physical bounce unchanged");
                 f.Step(hit);
                 Near(value / 4, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "later valid collision halves again");
@@ -116,7 +116,7 @@ namespace MarblesECS.Editor
             {
                 simulation.StartSession(bridge); simulation.BeginRound(); var c = simulation.Context;
                 simulation.ApplyGlobalAttribute(998, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
-                var definition = c.Balance.Devices.Single(d => d.Id == 9032); CampaignStateUtility.CreateDevice(c, definition, definition.Price);
+                var definition = c.Balance.Devices.Single(d => d.Id == 9032); CampaignStateUtility.CreateDevice(c, definition, definition.InstallPrice);
                 int id = c.Campaign.NextDeviceId; MorePlace(c, id, true);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
                 var surface = board.AddComponent<BoxCollider>();

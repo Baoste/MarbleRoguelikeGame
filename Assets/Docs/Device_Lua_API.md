@@ -129,7 +129,7 @@ end
 | `DeltaTime` | `number` | 只读 | C / E | 固定模拟步秒数；E 在尚未运行固定步时可能为 0。 |
 | `Range` | `number` | 只读 | C / E | `device.json.Range`，不会自动筛选范围。 |
 | `ScoreMultiplier` | `number` | 只读 | C / E | 当前装置配置倍率，不是球的累计倍率。 |
-| `Coins` | `number` | 只读 | C / E | 旧机台金币余额。每日构筑流程使用独立货币。 |
+| `BiomassScrapBalance` | `number` | 只读 | C / E | 玩家当前的血肉残料余额，供装置读取并计算效果。 |
 | `Blood` / `BloodCapacity` | `number` | 只读 | C / E | 玩家当前血量 / 容量。每日配置了 `bloodProgression.initialBlood` 时使用当天的容量。 |
 | `HeldCount` | `integer` | 只读 | C / E | 当前装置拥有的存活滞留球数量。 |
 | `Vectors` | [DeviceVectorApi](#devicevectorapi) | 只读 | C / E | 纯向量计算。 |
@@ -166,7 +166,7 @@ end
 
 C 使用世界坐标接触点，滞留完成使用装置的新位置。E 使用已放置装置的位置，瞬态完成回调使用瞬态终点。接口仅提交视觉事件，耐久、随机数和得分由原玩法 API 管理。
 
-`MultiplyScore`、`TryMultiplyScore`、`SetDeviceScoreMultiplier`、`Board:MultiplyScore`、基础价值修改、`AddBiomassScrap`、`AddCoins`、`RestoreBlood` 和 `TrySettleAmount` 已在有效执行时提供默认反馈。自定义复合效果可以在确认生效的分支调用 `api:EmitFloatingText("critical", amount)`。[样式和图集使用说明](FloatingTextSystem_Codex.md#18-实际接入与使用)
+`MultiplyScore`、`TryMultiplyScore`、`SetDeviceScoreMultiplier`、`Board:MultiplyScore`、基础价值修改、`AddBiomassScrap`、`RestoreBlood` 和 `TrySettleAmount` 已在有效执行时提供默认反馈。自定义复合效果可以在确认生效的分支调用 `api:EmitFloatingText("critical", amount)`。[样式和图集使用说明](FloatingTextSystem_Codex.md#18-实际接入与使用)
 
 <a id="getroundvalue"></a>
 
@@ -268,7 +268,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 返回实际回复量，超过血量容量的部分舍弃；满血、0 回复或已结束的回合返回 0。负数或非有限数抛出异常。不扣耐久、不修改球价值或家族返还记录。C 实际回复大于 0 时记录有效作用。
 
-因缺血进入排空的回合，在血量足够支付最低档发射时恢复可发射状态；不自动发射。主动提现后不恢复发射。
+因缺血进入排空的回合，在血量足够支付最低档发射时恢复可发射状态；不自动发射。主动结算后不恢复发射。
 
 <a id="countplaceddevices"></a>
 
@@ -372,8 +372,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 | [SetScoreRushContribution(amount)](#setscorerushcontribution) / [ClearScoreRushContribution()](#clearscorerushcontribution) | `void` | 设置 / 清除得分区固定贡献。 |
 | [SetAppearance(label, red, green, blue)](#setappearance) | `void` | 修改球文字和颜色。 |
 | [TryConsume(refund)](#tryconsume) / [TrySettleAmount(score)](#trysettleamount) | `boolean` | 消耗球 / 按最终金额结算球。 |
-| [AddBiomassScrap(value)](#addbiomassscrap) | `void` | 向当前生产局增加血肉残料。 |
-| [AddCoins(value)](#addcoins) | `void` | 旧机台使用的金币接口。 |
+| [AddBiomassScrap(value)](#addbiomassscrap) | `number` | 增加血肉残料，返回实际入账数量。 |
 | [Roll(probability)](#roll) | `boolean` | 概率抽取。 |
 | [CreateCopy(count = 1)](#createcopy) | `DeviceCopy` | 保留原球的单颗或整批复制请求。 |
 | [CreatePortion(value)](#createportion) | `DevicePortion` | 按价值分出请求。 |
@@ -537,19 +536,11 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 不额外套用机器、全局、区域或 RUSH 倍率，不增加 RUSH 条或刷新得分区限时叠加，不扣耐久。成功后停止操作当前球；仍可更新装置状态文字。
 
-<a id="addcoins"></a>
-
-### AddCoins(value) → void
-
-参数：`value: number`，有限且非负。
-
-旧机台中向下取整后增加金币，并遵守钱包上限。不消费弹珠、不计回合分数、不扣耐久。负数或非有限数抛出异常；输入至少为 1 时登记有效作用。每日构筑流程会忽略旧金币调用。
-
 <a id="addbiomassscrap"></a>
 
-### AddBiomassScrap(value) → void
+### AddBiomassScrap(value) → number
 
-仅作用于每日构筑生产局。把有限的非负数 `value` 向下取整，增加 `BiomassScrap`，余额上限为 9,000,000,000,000,000。实际到账时登记作用并提供浮字反馈。装置用 `TryUse` 或 `TryUseOnce` 单独登记耐久。接口只操作血肉残料账户。
+将有限的非负数 `value` 向下取整后计入血肉残料余额，上限为 9,000,000,000,000,000。返回实际入账数量，满额或取整为 0 时返回 0。负数和非有限数会报错。入账大于 0 时登记装置作用，并显示相同数量的浮字。装置通过 `TryUse` 或 `TryUseOnce` 单独登记耐久。
 
 <a id="roll"></a>
 
@@ -605,7 +596,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 ### RemoveDevice() → void
 
-无参数。销毁当前装置，有配对 ID 时同时销毁同组成员。一次调用更新一次布局版本，金币保持原值。之后结束对已移除实例的访问，来源效果由生命周期系统清理。
+无参数。销毁当前装置，有配对 ID 时同时销毁同组成员。一次调用更新一次布局版本，本操作用于销毁实例。之后结束对已移除实例的访问，来源效果由生命周期系统清理。
 
 <a id="deviceeventcontext"></a>
 
@@ -613,7 +604,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 不绑定当前弹珠的装置上下文。用于生命周期、固定步、激活、跨装置通知和视觉完成事件。
 
-源码：[DeviceEventContext.cs](../Scripts/System/DeviceEventContext.cs)。共享属性及方法见[共享成员](#shared)中的 E。此类型没有 `Motion`、`Value`、`AddCoins` 或弹珠消费/结算接口。
+源码：[DeviceEventContext.cs](../Scripts/System/DeviceEventContext.cs)。共享属性及方法见[共享成员](#shared)中的 E。此类型没有 `Motion`、`Value`、`AddBiomassScrap` 或弹珠消费/结算接口。
 
 ### 属性
 
@@ -749,7 +740,7 @@ Build 阶段的一次库存提交上下文。源码：[DeviceOfferContext.cs](..
 
 无参数。标记接受本次提交，重复调用仍只处理这一件物品。
 
-回调正常结束且已接受时，提交暂存的回合/实例数值、耐久和状态文字，销毁来源装置并更新布局与可用性，再分发新的 `OnOfferAccepted`。配对来源整对消耗，由被拖入的装置确定一次 `OfferedRarity`，只提交一次投喂收益。出售金币由出售入口处理，接收方耐久只应用暂存的改动，来源成长随来源装置一并清除。
+回调正常结束且已接受时，提交暂存的回合/实例数值、耐久和状态文字，销毁来源装置并更新布局与可用性，再分发新的 `OnOfferAccepted`。配对来源整对消耗，由被拖入的装置确定一次 `OfferedRarity`，只提交一次投喂收益。血肉残料返还由出售入口处理，接收方耐久只应用暂存的改动，来源成长随来源装置一并清除。
 
 未调用 Accept 或回调异常时，上述暂存数据不提交，物品保留。Lua 局部变量不属于事务；需要与物品消耗一起提交的成长使用 `SetRoundValue` / `SetInstanceValue`。提交后的 `OnOfferAccepted` 异常不会撤销已完成事务。
 
@@ -1342,7 +1333,7 @@ OnHoldEnd 的 TryUse 兼容提前计数的旧效果，不会补扣。延后计�
 
 ### 有效作用历史
 
-HasTriggeredOtherDevice 按实例查询成功效果，不是访问尝试。成功运动、出射、滞留、临时重力、实际属性变化、非中性倍率、整数金币奖励、有效回血和非零场力会记录相应作用。纯 Lua 状态效果用 MarkTriggered。
+HasTriggeredOtherDevice 按实例查询成功效果，不是访问尝试。成功运动、出射、滞留、临时重力、实际属性变化、非中性倍率、血肉残料实际入账、有效回血和非零场力会记录相应作用。纯 Lua 状态效果用 MarkTriggered。
 
 单纯访问、耐久登记、中性触发、状态文字或失败请求不等于有效作用历史。记录不因装置移除或效果到期撤销；复制/分出继承，独立新球为空。
 

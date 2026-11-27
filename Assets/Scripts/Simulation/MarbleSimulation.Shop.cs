@@ -21,25 +21,13 @@ namespace MarblesECS
         public bool RefreshShop()
         {
             ThrowIfDisposed();
-            if (!ShopCommandsAvailable) return false;
+            if (!CanRefreshDailyShop) return false;
             var loadout = CurrentDayDefinition.DailyLoadout;
-            if (loadout != null)
-            {
-                if (!CanRefreshDailyShop ||
-                    !CampaignWalletSystem.TrySpend(context, loadout.Shop.Currency, loadout.Shop.RefreshCost.Value)) return false;
-                var updated = context.Campaign;
-                updated.ShopRefreshCount++;
-                context.Campaign = updated;
-                CampaignShopSystem.Generate(context, loadout);
-                return true;
-            }
+            if (!CampaignWalletSystem.TrySpend(context, loadout.Shop.Currency, loadout.Shop.RefreshCost.Value)) return false;
             var campaign = context.Campaign;
-            long price = CampaignShopSystem.Price(context, context.Balance.Campaign.ShopRefreshCost);
-            if (campaign.Coins < price) return false;
-            campaign.Coins -= price;
             campaign.ShopRefreshCount++;
             context.Campaign = campaign;
-            CampaignShopSystem.Generate(context);
+            CampaignShopSystem.Generate(context, loadout);
             return true;
         }
 
@@ -50,7 +38,7 @@ namespace MarblesECS
             if (!CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
             var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
             long price = CampaignStateUtility.SalePrice(context, device);
-            CampaignWalletSystem.Credit(context, context.Campaign.Production.Currency, price);
+            CampaignWalletSystem.Credit(context, GameCurrency.BiomassScrap, price);
             CampaignStateUtility.DestroyDevice(context, entity);
             return true;
         }

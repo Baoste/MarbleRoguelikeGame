@@ -32,7 +32,7 @@ namespace MarblesECS
                 pegs[i] = new DailyPegSnapshot
                 {
                     DefinitionId = id, Name = definition.Name, Description = definition.Description,
-                    InstallPrice = UnplacedInstallation(definition) == Entity.Null ? InstallationPrice(definition) : 0,
+                    InstallPrice = UnplacedInstallation(definition) == Entity.Null ? definition.InstallPrice : 0,
                     Durability = definition.Durability, Required = required,
                     Permitted = DailyLoadoutSystem.HasPermission(context, loadout, id),
                     Selected = DailyLoadoutSystem.IsSelected(context, id)

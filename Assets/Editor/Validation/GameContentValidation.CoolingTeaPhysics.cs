@@ -21,7 +21,7 @@ namespace MarblesECS.Editor
                 simulation.ApplyGlobalAttribute(993, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                 simulation.ApplyGlobalAttribute(994, GameAttribute.BALL_BOUNCE, AttributeOperation.Set, .8);
                 simulation.ApplyGlobalAttribute(995, GameAttribute.BALL_FRICTION, AttributeOperation.Set, .4);
-                var definition = c.Balance.Devices.Single(d => d.Id == 9030); CampaignStateUtility.CreateDevice(c, definition, definition.Price);
+                var definition = c.Balance.Devices.Single(d => d.Id == 9030); CampaignStateUtility.CreateDevice(c, definition, definition.InstallPrice);
                 int id = c.Campaign.NextDeviceId; MorePlace(c, id, true);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));
                 view = DeviceView.Create(simulation.GetOwnedDevices().Single(), board.transform, c.DeviceScripts.Get(id, definition.Id));

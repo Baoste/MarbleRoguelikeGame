@@ -68,11 +68,7 @@ namespace MarblesECS.Presentation
         private void DrawReady()
         {
             DrawStatus();
-            if (Controller.ShopOpen)
-            {
-                DrawShop();
-                return;
-            }
+            if (Controller.ShopOpen) return;
             if (!Controller.ProductionCommandsAvailable) return;
             RoundPhase phase = Controller.Snapshot.Phase;
             if (phase == RoundPhase.Playing) DrawLaunch();
@@ -95,7 +91,7 @@ namespace MarblesECS.Presentation
                 Controller.SetFireHeld(false);
                 Controller.RestartRound();
                 Controller.SetFlow(flow);
-                feedback = "已重开，金币、库存、布局和累计分数重置。";
+                feedback = "已重开，血肉残料、库存、布局和累计分数重置。";
             }
         }
 

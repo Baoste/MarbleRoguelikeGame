@@ -13,18 +13,6 @@
             "StackOrder": 20
         },
         {
-            "Id": "BLOOD_DIVIDEND_RATE",
-            "Name": "剩余血液兑换率",
-            "Unit": "ratio",
-            "Operators": "ADD,MUL,SET",
-            "StackRule": "ADD→MUL→CLAMP",
-            "AppliesTo": "Item,Global",
-            "DefaultValue": 0.65,
-            "MinValue": 0.0,
-            "MaxValue": 3.0,
-            "StackOrder": 30
-        },
-        {
             "Id": "BALL_SPAWN_COUNT",
             "Name": "单次生成数量",
             "Unit": "count",
@@ -253,18 +241,6 @@
             "StackOrder": 30
         },
         {
-            "Id": "SCORE_OVERKILL_RATE",
-            "Name": "超额收益转化率",
-            "Unit": "ratio",
-            "Operators": "ADD,MUL,SET",
-            "StackRule": "ADD→MUL→CLAMP",
-            "AppliesTo": "Item,Global",
-            "DefaultValue": 0.5,
-            "MinValue": 0.0,
-            "MaxValue": 5.0,
-            "StackOrder": 30
-        },
-        {
             "Id": "RUSH_DURATION",
             "Name": "RUSH持续时间",
             "Unit": "sec",
@@ -373,30 +349,6 @@
             "StackOrder": 20
         },
         {
-            "Id": "SHOP_PRICE_MOD",
-            "Name": "商店价格修正",
-            "Unit": "x",
-            "Operators": "ADD,MUL,SET",
-            "StackRule": "ADD→MUL→CLAMP",
-            "AppliesTo": "Item,Global",
-            "DefaultValue": 1.0,
-            "MinValue": 0.1,
-            "MaxValue": 5.0,
-            "StackOrder": 20
-        },
-        {
-            "Id": "COIN_GAIN_RATE",
-            "Name": "金币获取率",
-            "Unit": "x",
-            "Operators": "ADD,MUL,SET",
-            "StackRule": "ADD→MUL→CLAMP",
-            "AppliesTo": "Item,Global",
-            "DefaultValue": 1.0,
-            "MinValue": 0.0,
-            "MaxValue": 10.0,
-            "StackOrder": 30
-        },
-        {
             "Id": "GAMBLE_QUADRUPLE_CHANCE",
             "Name": "四倍概率",
             "Unit": "%",
@@ -452,7 +404,6 @@
         9037
     ],
     "RushThreshold": 100.0,
-    "OverkillCoinsPerScore": 0.01,
     "FlowValueExponent": 1.15,
     "CentimetersToUnits": 0.009999999776482582,
     "MaxSplitGeneration": 2

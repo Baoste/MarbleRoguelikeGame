@@ -120,7 +120,7 @@ namespace MarblesECS.Editor
                 simulation.ApplyGlobalAttribute(988, GameAttribute.BALL_BOUNCE, AttributeOperation.Set, 0);
                 simulation.ApplyGlobalAttribute(989, GameAttribute.BALL_FRICTION, AttributeOperation.Set, 0);
                 var definition = c.Balance.Devices.Single(d => d.Id == 9002);
-                CampaignStateUtility.CreateDevice(c, definition, definition.Price);
+                CampaignStateUtility.CreateDevice(c, definition, definition.InstallPrice);
                 var owned = simulation.GetOwnedDevices().Single();
                 CampaignStateUtility.FindDevice(c, owned.InstanceId, out var device);
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(device); data.Placed = true; c.Manager.SetComponentData(device, data);

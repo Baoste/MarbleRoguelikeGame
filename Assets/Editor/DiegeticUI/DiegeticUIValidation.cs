@@ -120,7 +120,7 @@ namespace MarblesECS.Editor.Diegetic
             Click(Hit(0));Check(rig.Controller.Snapshot.Blood==0&&rig.Controller.Session.Phase!=RoundPhase.Playing,"Lever closes supply and starts real cashout flow");Check(!rig.TryCashOut(),"Double activation cannot settle twice");
             context.RemoveAllMarbles();round=context.Round;round.Phase=(byte)RoundPhase.Build;context.Round=round;
             var device=context.Balance.Devices[0];
-            CampaignStateUtility.CreateDevice(context,device,device.Price);
+            CampaignStateUtility.CreateDevice(context,device,device.InstallPrice);
             rig.RefreshInventory();Check(rig.Controller.GetOwnedDevices().Any(d=>!d.Placed),"Next Build shows the unplaced device");
             yield return null;Check(rig.ItemGroup.alpha==0,"Board UI waits until slide-out has finished");
             wait=Wait(.75f);while(wait.MoveNext())yield return null;Check(rig.ItemGroup.alpha==1&&rig.IsBoardOpen,"Next Build correctly opens the board again");

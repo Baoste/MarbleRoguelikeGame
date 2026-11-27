@@ -16,12 +16,10 @@ namespace MarblesECS
                 {
                     IsCampaign = context.Balance != null, Phase = (RoundPhase)round.Phase,
                     TotalScore = campaign.TotalScore, ConfirmedScore = round.Score,
-                    RoundScore = round.Score, TargetScore = round.TargetScore, Coins = campaign.Coins,
+                    RoundScore = round.Score, TargetScore = round.TargetScore,
                     Production = campaign.Production, CompanyScripBalance = campaign.CompanyScripBalance,
-                    ProductionBalance = CampaignWalletSystem.Balance(context, campaign.Production.Currency),
                     BiomassScrapBalance = context.Player.BiomassScrapBalance, LastCompanyScripReward = campaign.LastCompanyScripReward,
-                    LastRewardCoins = campaign.LastRewardCoins,
-                    LastCashoutCoins = campaign.LastCashoutCoins, ShopRefreshCount = campaign.ShopRefreshCount,
+                    ShopRefreshCount = campaign.ShopRefreshCount,
                     LayoutRevision = campaign.LayoutRevision,
                     CanCashOut = ProductionCommandsAvailable && CampaignStateUtility.CanCashOut(context)
                 };

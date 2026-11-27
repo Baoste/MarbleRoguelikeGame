@@ -6,18 +6,16 @@ namespace MarblesECS
     public readonly struct ProductionSettings
     {
         public DeviceSupply Supply { get; }
-        public GameCurrency Currency { get; }
         public bool InstallDuringProduction { get; }
         public bool DestroyExhaustedDevices { get; }
         public bool AllowDeviceReturn { get; }
         public bool AllowDeviceSale { get; }
         public bool ClearDevicesOnDaySettlement { get; }
 
-        public ProductionSettings(DeviceSupply supply, GameCurrency currency, bool installDuringProduction,
+        public ProductionSettings(DeviceSupply supply, bool installDuringProduction,
             bool destroyExhaustedDevices, bool allowDeviceReturn, bool allowDeviceSale, bool clearDevicesOnDaySettlement)
         {
             Supply = supply;
-            Currency = currency;
             InstallDuringProduction = installDuringProduction;
             DestroyExhaustedDevices = destroyExhaustedDevices;
             AllowDeviceReturn = allowDeviceReturn;
@@ -26,12 +24,12 @@ namespace MarblesECS
         }
 
         public ProductionSettings WithSupply(DeviceSupply supply) =>
-            new ProductionSettings(supply, Currency, InstallDuringProduction, DestroyExhaustedDevices,
+            new ProductionSettings(supply, InstallDuringProduction, DestroyExhaustedDevices,
                 AllowDeviceReturn, AllowDeviceSale, ClearDevicesOnDaySettlement);
 
         internal static ProductionSettings Inventory =>
-            new ProductionSettings(DeviceSupply.OwnedInventory, GameCurrency.Coins, false, false, true, true, false);
+            new ProductionSettings(DeviceSupply.OwnedInventory, false, false, true, true, false);
         internal static ProductionSettings Daily =>
-            new ProductionSettings(DeviceSupply.SelectedTypes, GameCurrency.BiomassScrap, true, true, false, false, true);
+            new ProductionSettings(DeviceSupply.SelectedTypes, true, true, false, false, true);
     }
 }

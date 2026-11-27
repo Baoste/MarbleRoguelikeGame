@@ -1,8 +1,8 @@
 # 弹珠机玩法流程设计
 
-> 本文记录早期玩法设计。当前每日目标与通关奖励见 [每日内容制作指南](DayFramework_Content_Guide.md)。
+> 历史设计稿。当前每日流程、公司工票和血肉残料规则见 [每日内容制作指南](DayFramework_Content_Guide.md)。
 
-> 首版代码已经按下方第 12 节的最新确认落实；仍标注待定的边界、数值和架构取舍见 [Implementation.md](Implementation.md)，策划配置见 [Balance.md](Balance.md)。
+> 首版实现记录见 [Implementation.md](Implementation.md)，现行数值配置见 [Balance.md](Balance.md)。
 
 > 文档状态：玩法概念整理稿  
 > 目的：统一核心循环、资源、结算规则与内容分类。原始记录中尚未明确的规则集中列在“待确认项”中。

@@ -502,7 +502,7 @@ namespace MarblesECS.Editor
                     "Settlement result cannot intercept card clicks");
                 var device = game.Balance.Devices.Single(d => d.Id == 9002 && d.SourceId == "Reflector");
                 int instanceId = context.Campaign.NextDeviceId + 1;
-                CampaignStateUtility.CreateDevice(context, device, device.Price);
+                CampaignStateUtility.CreateDevice(context, device, device.InstallPrice);
                 wait = WaitFor(() => rig.IsBoardOpen && rig.ItemGroup.interactable &&
                     !shop.ShopCanvasGroup.blocksRaycasts, "Physical item board is interactive after settlement");
                 while (wait.MoveNext()) yield return null;

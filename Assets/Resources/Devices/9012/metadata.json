@@ -1,6 +1,6 @@
 {
   "name": "猪猪存钱罐",
-  "description": "持有金币越多，倍率加成越高。",
+  "description": "持有血肉残料越多，倍率加成越高。",
   "biomassScrapPrice": 14,
   "rarity": "uncommon",
   "durability": 20,

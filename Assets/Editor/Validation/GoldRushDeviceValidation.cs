@@ -28,11 +28,11 @@ namespace MarblesECS.Editor
                 using (var r = new Rig(1))
                 {
                     var key = r.Launch(); var body = r.Body(key); var renderer = body.GetComponent<Renderer>();
-                    double coins = r.C.Campaign.Coins, value = r.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), blood = r.C.Player.Blood;
+                    double scrap = r.C.Player.BiomassScrapBalance, value = r.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), blood = r.C.Player.Blood;
                     r.Contact(key);
                     Check(r.Held(key) && body.isKinematic && !body.detectCollisions && renderer.forceRenderingOff, "transport suspends and hides the input ball");
                     Check(r.Remaining == 1, "admission spends no durability, even on the final use");
-                    Near(coins, r.C.Campaign.Coins, "no payout at admission");
+                    Near(scrap, r.C.Player.BiomassScrapBalance, "no payout at admission");
                     double deadline = r.C.Manager.GetComponentData<HeldMotion>(r.Ball(key)).ReleaseAt;
                     var extra = r.Launch(); uint untouched = r.C.Round.RandomState; r.Contact(extra);
                     blood = r.C.Player.Blood;
@@ -47,7 +47,7 @@ namespace MarblesECS.Editor
                     r.Step();
                     Check(r.C.Round.RandomState == state, "each completed trip consumes exactly one seeded random sample");
                     Check(!r.Held(key) && r.Remaining == 0, "each outcome consumes exactly the final durability");
-                    Near(coins + (outcome == 0 ? 2 : outcome == 1 ? 5 : 0), r.C.Campaign.Coins, "three outcomes award two, five or zero coins");
+                    Near(scrap + (outcome == 0 ? 2 : outcome == 1 ? 5 : 0), r.C.Player.BiomassScrapBalance, "three outcomes award two, five or zero scrap");
                     Near(blood, r.C.Player.Blood, "resolution itself neither costs nor refunds blood");
                     Near(0, r.C.Round.Score, "trip resolution never awards round score");
                     if (outcome == 0)
@@ -59,7 +59,7 @@ namespace MarblesECS.Editor
                     }
                     else Check(!r.C.Marbles.ContainsKey(key) && !renderer.forceRenderingOff, "lost or exchanged ball is consumed and restored before pooling");
                     Check(r.View.Root.GetComponentsInChildren<Collider>().All(c => !c.enabled), "resolved final use disables the sensor");
-                    r.Step(); Near(coins + (outcome == 0 ? 2 : outcome == 1 ? 5 : 0), r.C.Campaign.Coins, "completion cannot pay twice");
+                    r.Step(); Near(scrap + (outcome == 0 ? 2 : outcome == 1 ? 5 : 0), r.C.Player.BiomassScrapBalance, "completion cannot pay twice");
                 }
             using (var r = new Rig())
             {
@@ -91,25 +91,25 @@ namespace MarblesECS.Editor
                 r.Step(); r.Step();
                 r.Contact(new[] { keys[1] }, other.Root.GetComponent<DeviceBody>());
                 Check(r.Held(keys[0]) && r.Held(keys[1]) && !r.Held(keys[2]), "each mine has independent capacity and deadline");
-                double coins = r.C.Campaign.Coins;
+                double scrap = r.C.Player.BiomassScrapBalance;
                 r.Complete(keys[0], 1);
                 Check(r.Held(keys[1]) && r.Remaining == 19, "one mine completes without releasing the other's cargo");
-                Near(coins + 5, r.C.Campaign.Coins, "independent mine pays only its own result");
+                Near(scrap + 5, r.C.Player.BiomassScrapBalance, "independent mine pays only its own result");
                 r.Contact(keys[2]); Check(r.Held(keys[2]), "mine accepts another trip after completion");
                 var round = r.C.Round; round.Phase = (byte)RoundPhase.Build; r.C.Round = round;
                 Check(r.Simulation.BeginRound(), "new round can start with pending trips");
                 r.Tick();
                 Check(r.C.Marbles.Count == 0 && r.Remaining == 20 && r.Simulation.GetDeviceStatus(r.Id).Contains("等待弹珠"), "new round clears pending trips and restores durability");
-                Near(coins + 5, r.C.Campaign.Coins, "round reset never pays cancelled cargo");
+                Near(scrap + 5, r.C.Player.BiomassScrapBalance, "round reset never pays cancelled cargo");
                 var fresh = r.Launch(); r.Contact(fresh); r.Complete(fresh, 0);
                 Check(r.C.Marbles.ContainsKey(fresh) && r.Remaining == 19, "new round creates fresh transport state");
             }
             using (var r = new Rig(-1, .1))
             {
-                var key = r.Launch(); double coins = r.C.Campaign.Coins;
+                var key = r.Launch(); double scrap = r.C.Player.BiomassScrapBalance;
                 for (int i = 0; i < 22; i++)
                 { r.Contact(key); r.Complete(key, 0); Check(r.C.Marbles.ContainsKey(key) && r.Remaining == -1, "unlimited mine supports repeated trips of the same ball"); }
-                Near(coins + 44, r.C.Campaign.Coins, "every trip has a new use key and exactly one payout");
+                Near(scrap + 44, r.C.Player.BiomassScrapBalance, "every trip has a new use key and exactly one payout");
             }
         }
 
@@ -140,24 +140,24 @@ namespace MarblesECS.Editor
             for (int mode = 0; mode < 3; mode++)
                 using (var r = new Rig())
                 {
-                    var key = r.Launch(); r.Contact(key); var body = r.Body(key); double coins = r.C.Campaign.Coins;
+                    var key = r.Launch(); r.Contact(key); var body = r.Body(key); double scrap = r.C.Player.BiomassScrapBalance;
                     if (mode == 0) r.C.Manager.DestroyEntity(r.Device);
                     else if (mode == 1) { var d = r.C.Manager.GetComponentData<OwnedDeviceData>(r.Device); d.Placed = false; r.C.Manager.SetComponentData(r.Device, d); }
                     else r.View.Root.SetActive(false);
                     r.Step();
                     Check(!r.Held(key) && !body.isKinematic && !body.GetComponent<Renderer>().forceRenderingOff, "remove, recall or missing view restores visibility and motion");
                     VectorNear(new Vector3(3, 0, 4), body.velocity, "cancellation preserves original motion instead of producing an outcome");
-                    Near(coins, r.C.Campaign.Coins, "cancelled transport never pays");
+                    Near(scrap, r.C.Player.BiomassScrapBalance, "cancelled transport never pays");
                     if (mode != 0) Check(r.Remaining == 20, "cancelled transport never spends durability");
                 }
             using (var r = new Rig())
             {
-                var key = r.Launch(); r.Contact(key); var body = r.Body(key); double coins = r.C.Campaign.Coins;
+                var key = r.Launch(); r.Contact(key); var body = r.Body(key); double scrap = r.C.Player.BiomassScrapBalance;
                 var features = r.C.Manager.GetComponentData<BallFeatures>(r.Ball(key)); features.BirthTick = r.C.Round.Tick - 599;
                 r.C.Manager.SetComponentData(r.Ball(key), features);
                 r.Complete(key, 1);
                 Check(!r.C.Marbles.ContainsKey(key) && !body.GetComponent<Renderer>().forceRenderingOff, "expiry at the deadline returns hidden cargo to the pool without an outcome");
-                Near(coins, r.C.Campaign.Coins, "expiry at the deadline does not pay");
+                Near(scrap, r.C.Player.BiomassScrapBalance, "expiry at the deadline does not pay");
                 Check(r.Remaining == 20, "expired cargo does not spend durability");
                 var next = r.Launch(); Check(r.Body(next) == body && !r.Held(next) && !body.GetComponent<Renderer>().forceRenderingOff, "pool reuse starts visible and unsuspended");
                 r.Contact(next); Check(r.Held(next), "expired cargo frees the mine's capacity");
@@ -218,7 +218,7 @@ namespace MarblesECS.Editor
             }
             internal DeviceViewHandle Add(Vector3 offset)
             {
-                var definition = C.Balance.Devices.Single(d => d.Id == 9011); CampaignStateUtility.CreateDevice(C, definition, definition.Price);
+                var definition = C.Balance.Devices.Single(d => d.Id == 9011); CampaignStateUtility.CreateDevice(C, definition, definition.InstallPrice);
                 var owned = Simulation.GetOwnedDevices().OrderBy(d => d.InstanceId).Last(); CampaignStateUtility.FindDevice(C, owned.InstanceId, out var entity);
                 var data = C.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; C.Manager.SetComponentData(entity, data);
                 var view = DeviceView.Create(owned, Board.transform, C.DeviceScripts.Get(owned.InstanceId, definition.Id));

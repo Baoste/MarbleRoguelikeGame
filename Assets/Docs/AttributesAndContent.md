@@ -7,17 +7,17 @@
 - `Resources/GameContent.json` 配置属性、内容规则和启用装置的 ID。装置资源位于 `Resources/Devices/<id>/`。半径、质量、基础分、弹性、发射速度、寿命、Rush 和赌博等属性不再叠乘旧数值；完整对应关系见 `Balance.md`。
 - `Resources/GameBalance.json` 只保留血量、抽血档位、发射间隔、容量、阶段及战役参数，不再保存重复属性、`Devices`、`Drugs`、`Board`、`Zones`。
 - 盘面由场景手工搭建，区域在 `MarbleZone` 和 Trigger Collider 中配置；网格和间距在 `MarbleGameController.GridSize/PlacementClearance` 配置，固定钉避让检测 `PlacementObstacleRoots` 下实际启用的非 Trigger Collider。`TestScene` 已绑定 `PhysicsRoot/MarblePins`，完整迁移说明见 `Balance.md`。
-- `Resources/GameContent.json` 保存 34 个属性定义和内容规则；其中 `Devices` 是游戏加载的数字 ID 列表。添加或停用装置时编辑此列表。
+- `Resources/GameContent.json` 保存 30 个属性定义和内容规则；其中 `Devices` 是游戏加载的数字 ID 列表。添加或停用装置时编辑此列表。
 - `GameBalanceLoader` 加载基础配置、属性配置和 ID 指定的装置目录，装置列表直接引用会话内容目录；运行会话深拷贝后仍共享该会话的一份目录，避免两份数据不同步。
 - 直接编辑 `Resources/GameContent.json` 中的属性和内容规则。装置通过修改制作源并重新打包更新。保存后重新进入 Play 生效。
-- 当前 35 种装置位于 `Resources/Devices/<id>/`。Prefab 提供外观和碰撞体，Lua 文件提供玩法。详见 [装置资源](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
+- 当前 40 种装置位于 `Resources/Devices/<id>/`。Prefab 提供外观和碰撞体，Lua 文件提供玩法。详见 [装置资源](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
 - 传送门按一对购买，两门分别放置并共享配对 ID；两门都放置后才可传送。
 
-每日玩法的安装价读取 `metadata.biomassScrapPrice`，工票解锁价由当天的 `shopDrawCost` 决定。库存商店按 `metadata.rarity` 取购买基价，出售返还按库存记录的购入金额乘以 `Campaign.SellRatio` 后向下取整。耐久读取 `metadata.durability`（默认 20，-1 无限），开局赠送套数读取 `device.json.StartingCount`。
+每日玩法的安装价读取 `metadata.biomassScrapPrice`，工票解锁价由当天的 `shopDrawCost` 决定。允许出售时，按装置实付的血肉残料乘以 `Campaign.SellRatio` 后向下取整并返还。耐久读取 `metadata.durability`（默认 20，-1 无限），开局赠送套数读取 `device.json.StartingCount`。
 
 `Multi Ding` 的定义 ID 为 113，行为通过 Lua 实现；当前包的 `StartingCount` 为 1，没有额外的 C# 开局赠送规则。Rush Ding 已移出当前装置目录。`SourceId` 继续记录原始来源编号。
 
-`Multi Ding` 对每颗球乘以 1.85 一次。猪猪存钱罐每次有效撞击按钱包提供 `1 + 0.1 × floor(金币/10)`，同一颗球连续获得两次 ×1.2 后得到 ×1.44。得分区使用累计乘积。旧 `Rush Ding` 的概率字段仅为兼容。
+`Multi Ding` 对每颗球乘以 1.85 一次。猪猪存钱罐每次有效撞击按钱包提供 `1 + 0.1 × floor(血肉残料余额 / 10)`，同一颗球连续获得两次 ×1.2 后得到 ×1.44。得分区使用累计乘积。旧 `Rush Ding` 的概率字段仅为兼容。
 
 ## 属性规则
 
@@ -31,9 +31,8 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 | 属性 | 生效位置 |
 |---|---|
 | BLOOD_COST | 出生前计算，每颗球收费；批量生成全部成功才一起扣血 |
-| BLOOD_DIVIDEND_RATE | 主动提现的每单位剩余血量兑换金币数；再应用阶段倍率和金币获取倍率 |
 | BALL_SPAWN_COUNT | 一次发射生成一排互不重叠的球；不足容量／余额／空间则整批回滚 |
-| BALL_BASE_VALUE | 出生、增值装置、银行和最终计分 |
+| BALL_BASE_VALUE | 出生、价值装置及最终计分 |
 | BALL_GAMBLE_VALUE_MOD | 旧兼容属性，保留字典 ID |
 | BALL_RUSH_GAIN | 旧兼容属性；当前球贡献从 2 开始，每次有效装置作用 +5，通过 RushContribution API 累积 |
 | BALL_RADIUS | 独立球体半径，乘 0.16 换算为世界单位；不随抽血档位变化 |
@@ -51,7 +50,6 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 | MACHINE_MULT | 单球机器乘区，与既有装置／区域倍率合并后按字典 MaxValue 封顶，当前 100 |
 | GLOBAL_MULT | 结算时读取。RUSH 独立提供临时价值 +1 |
 | SCORE_BY_SPEED | 入区速度 / 最大速度得到 0～1 权重，对球价值加成 |
-| SCORE_OVERKILL_RATE | 本轮新获得的超额分数 × 0.01 金币/分 × 此倍率；不重复兑换旧累计分 |
 | RUSH_DURATION | 旧兼容属性；当前满 666 条值后固定 6 秒，再加触发球的 RushDurationBonus；结束后冷却 3 秒 |
 | RUSH_MULT | 旧兼容属性；不再自动乘入 RUSH 得分 |
 | RUSH_DECAY | 旧兼容属性；当前条值不衰减，RUSH 每模拟秒倒计时 1 秒 |
@@ -59,8 +57,6 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 | GAMBLE_POT_VALUE | 旧兼容属性，保留字典 ID |
 | DEVICE_TRIGGER_RATE | 机关有效冷却除以触发率，0 禁止触发 |
 | DEVICE_COOLDOWN | 装置基础冷却的秒数修正；最低有效间隔为一个玩法 tick |
-| SHOP_PRICE_MOD | 商品和刷新价格，最低 1 金币；出售仍按原购买价格计算 |
-| COIN_GAIN_RATE | 银行、提现、阶段／超额奖励各计算一次；出售退款不放大 |
 
 当前赌博转盘固定为八个等概率档位，奖池按入球得分累计。玩法见 [赌博转盘](Balance.md#赌博转盘)。
 
@@ -70,7 +66,6 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 
 | 运行 ID | 装置 | 行为 |
 |---|---|---|
-| 100 | 银行 | 消耗球，当前价值 × 0.12 换金币，不再得分／入池 |
 | 101 | 增幅塔 | 0.2 世界单位内连线；球从线一侧穿到另一侧才 ×1.2；无总次数上限 |
 | 102 | 离心机 | 沿盘面向下输出，速度 +5；每球每装置最多两次 |
 | 103 | 传送门 | 成对购买；保留速度大小并按出口朝向出射，每对每球两次，球级共享 0.5 秒锁 |

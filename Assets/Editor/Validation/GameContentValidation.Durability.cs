@@ -12,7 +12,7 @@ namespace MarblesECS.Editor
             var defaults = DeviceMetadata.Read("{\"name\":\"Test\",\"description\":\"Test\",\"type\":\"device\"}", "fixture");
             Near(20, defaults.durability, "missing metadata durability defaults to 20");
             var legacy = new DeviceDefinition { BiomassScrapPrice = defaults.biomassScrapPrice, Rarity = DeviceRarity.Rare };
-            Near(23, legacy.InstallPrice, "a legacy package without an installation price uses its rarity price");
+            Near(23, legacy.InstallPrice, "an older package without a scrap price uses its tier default");
             foreach (var definition in DeviceResourceCatalog.Current.Definitions())
             {
                 var metadata = DeviceResourceCatalog.Current.Get(definition.Id).Metadata;
@@ -52,27 +52,8 @@ namespace MarblesECS.Editor
                 Check(snapshot.RemainingDurability == -1 && !snapshot.Exhausted, "minus one represents infinite remaining uses");
                 Check(Presentation.DeviceDisplayText.Durability(snapshot) == "无限耐久", "unlimited display is explicit");
             }
-            using (var f = new Fixture())
-            {
-                var definition = f.C.Balance.Devices.Single(d => d.Id == 113);
-                var round = f.C.Round; round.Phase = (byte)RoundPhase.Build; f.C.Round = round;
-                var campaign = f.C.Campaign; campaign.Coins = 1000; f.C.Campaign = campaign;
-                var offers = f.C.Manager.GetBuffer<ShopOfferData>(f.C.RoundEntity); offers.Clear();
-                offers.Add(new ShopOfferData { Kind = ShopItemKind.Device, DefinitionId = definition.Id, Price = 999 });
-                Near(9, f.Simulation.GetShopOffers()[0].Price, "display replaces stale price with the common tier price");
-                Check(f.Simulation.ApplyGlobalAttribute(77, GameAttribute.SHOP_PRICE_MOD, AttributeOperation.Set, .6),
-                    "legacy shop still accepts price modifiers");
-                Near(5, f.Simulation.GetShopOffers()[0].Price, "display applies the shop modifier to the rarity price");
-                Check(CampaignShopSystem.Buy(f.C, 0), "real shop buys the device");
-                Near(995, f.C.Campaign.Coins, "real purchase deducts the displayed price");
-                f.C.Balance.Campaign.SellRatio = .5;
-                var owned = f.Simulation.GetOwnedDevices().Single();
-                Near(2, owned.SellPrice, "inventory quotes the rounded refund from the discounted purchase");
-                Check(f.Simulation.SellDevice(owned.InstanceId), "real inventory can sell the device");
-                Near(997, f.C.Campaign.Coins, "sale credits the quoted refund");
-            }
             DeferredDurabilityApi();
-            Debug.Log("METADATA_DURABILITY_VALIDATION_PASSED: " + (assertions - start) + " assertions; metadata authority, exact wear, deferred batch uses, unlimited use and real purchase/sale.");
+            Debug.Log("METADATA_DURABILITY_VALIDATION_PASSED: " + (assertions - start) + " assertions; metadata authority, exact wear, deferred batch uses, and unlimited use.");
         }
 
         private static void DeferredDurabilityApi()

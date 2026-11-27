@@ -100,7 +100,7 @@ namespace MarblesECS.Editor.Diegetic
             report.Add("Settlement text enabled="+result.ResultText.enabled+" raycastTarget="+result.ResultText.raycastTarget+" rect="+result.ResultText.rectTransform.rect);
             Check(!result.ResultText.raycastTarget,"Result is visible after reveal, without intercepting mouse input");
             var magnet=context.Balance.Devices.Single(d=>d.SourceId=="Reflector");
-            CampaignStateUtility.CreateDevice(context,magnet,magnet.Price);
+            CampaignStateUtility.CreateDevice(context,magnet,magnet.InstallPrice);
             int id=rig.Controller.GetOwnedDevices().First(d=>d.DefinitionId==magnet.Id&&!d.Placed).InstanceId;
             wait=Wait(.85f);while(wait.MoveNext())yield return null;
             Check(rig.IsBoardOpen && rig.ItemGroup.interactable,"Sliding board is open and interactive");

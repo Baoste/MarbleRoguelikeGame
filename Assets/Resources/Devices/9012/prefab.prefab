@@ -510,7 +510,7 @@ GameObject:
   - component: {fileID: 3536814814126522986}
   - component: {fileID: 6443806376411735682}
   m_Layer: 0
-  m_Name: CoinSlot
+  m_Name: ScrapSlot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -49,8 +49,7 @@ public sealed class DeviceSellAreaUI : MonoBehaviour, IPointerClickHandler
             ? new Color32(186, 44, 53, 248) : new Color32(104, 27, 35, 240);
         if (dragging)
         {
-            if (Title) Title.text = "售出" + DeviceDisplayText.SaleTarget(device) + "  +" + device.SellPrice +
-                " " + DeviceDisplayText.CurrencyName(Placement.Controller.Session.Production.Currency);
+            if (Title) Title.text = "售出" + DeviceDisplayText.SaleTarget(device) + "  +" + device.SellPrice + " 血肉残料";
             if (Hint) Hint.text = "拖到这里松开出售  ·  右键取消";
         }
         else

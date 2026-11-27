@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using UnityEngine;
 
 namespace MarblesECS.Editor
@@ -32,23 +31,7 @@ namespace MarblesECS.Editor
                 Near(13, f.Simulation.GetMarbleAttribute(fresh, GameAttribute.BALL_BASE_VALUE), "generic spawn attribute API remains available");
                 Near(10, f.Simulation.GetMarbleAttribute(first, GameAttribute.BALL_BASE_VALUE), "existing balls retain their original snapshot");
             }
-            using (var f = new Fixture())
-            {
-                var campaign = f.C.Campaign; campaign.Coins = 1000; f.C.Campaign = campaign;
-                CampaignShopSystem.Generate(f.C);
-                Check(f.Simulation.GetShopOffers().All(o => o.Kind == ShopItemKind.Device), "shop exposes only device offers");
-                var offers = f.C.Manager.GetBuffer<ShopOfferData>(f.C.RoundEntity);
-                var valid = offers[0]; var obsolete = valid; obsolete.Kind = (ShopItemKind)1; offers[0] = obsolete;
-                Check(!CampaignShopSystem.Buy(f.C, 0), "obsolete drug-kind offer is rejected safely");
-                Near(1000, f.C.Campaign.Coins, "rejected obsolete offer cannot consume coins");
-                offers[0] = valid; int before = f.Simulation.GetOwnedDevices().Length;
-                var definition = f.C.Balance.Devices.Single(d => d.Id == valid.DefinitionId);
-                Check(CampaignShopSystem.Buy(f.C, 0), "real device purchase still succeeds");
-                Near(before + definition.PurchaseQuantity, f.Simulation.GetOwnedDevices().Length, "purchase grants complete device quantity");
-                Near(1000 - valid.Price, f.C.Campaign.Coins, "device purchase charges correct price");
-                Check(!CampaignShopSystem.Buy(f.C, 0), "sold offer cannot be purchased twice");
-            }
-            Debug.Log("DRUG_REMOVAL_VALIDATION_PASSED: " + (assertions - start) + " assertions; obsolete input, spawn, settlement, generic attributes and device-only shop.");
+            Debug.Log("DRUG_REMOVAL_VALIDATION_PASSED: " + (assertions - start) + " assertions; obsolete input, spawn, settlement and generic attributes.");
         }
     }
 }

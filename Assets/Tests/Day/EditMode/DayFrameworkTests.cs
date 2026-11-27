@@ -13,10 +13,10 @@ namespace MarblesECS.Tests
 {
     public sealed class DayFrameworkTests
     {
-        private const string Features = ",\"productionFeatures\":[\"Shop\",\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]";
+        private const string Features = ",\"productionFeatures\":[\"DevicePlacement\",\"Rush\",\"GamblingWheel\"]";
         private const int FirstTarget = 150, SecondTarget = 450;
-        private const string First = "{\"dayId\":\"fixture-first\",\"order\":1,\"targetScore\":150,\"rewardCoins\":35" + Features + "}";
-        private const string Second = "{\"dayId\":\"fixture-second\",\"order\":2,\"targetScore\":450,\"rewardCoins\":45" + Features + "}";
+        private const string First = "{\"dayId\":\"fixture-first\",\"order\":1,\"targetScore\":150,\"clearCompanyScripReward\":35" + Features + "}";
+        private const string Second = "{\"dayId\":\"fixture-second\",\"order\":2,\"targetScore\":450,\"clearCompanyScripReward\":45" + Features + "}";
 
         [Test]
         public void SelectedDevicePacksUseTheSameWalletAndCompleteSafelyDuringProduction()
@@ -32,15 +32,25 @@ namespace MarblesECS.Tests
             var physics = new PhysicsStub();
             Start(simulation, source.WithDays(day), physics);
             Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.Production));
-            Assert.That(simulation.Session.ProductionBalance, Is.EqualTo(pair.InstallPrice));
+            Assert.That(simulation.Session.BiomassScrapBalance, Is.EqualTo(pair.InstallPrice));
+            CampaignWalletSystem.Set(simulation.Context, GameCurrency.BiomassScrap, pair.InstallPrice - 1);
+            Assert.That(simulation.TryInstallDevice(pair.Id, -4, 0, .15f, 0, out _), Is.False);
+            Assert.That(simulation.GetOwnedDevices(), Is.Empty);
+            CampaignWalletSystem.Set(simulation.Context, GameCurrency.BiomassScrap, pair.InstallPrice);
+            int capacity = simulation.Context.Balance.Campaign.MaxOwnedDevices;
+            simulation.Context.Balance.Campaign.MaxOwnedDevices = 1;
+            Assert.That(simulation.TryInstallDevice(pair.Id, -4, 0, .15f, 0, out _), Is.False);
+            Assert.That(simulation.GetOwnedDevices(), Is.Empty);
+            Assert.That(simulation.Session.BiomassScrapBalance, Is.EqualTo(pair.InstallPrice));
+            simulation.Context.Balance.Campaign.MaxOwnedDevices = capacity;
             Assert.Throws<InvalidOperationException>(() => simulation.TryInstallDevice(pair.Id, -4, 0, .15f, 0, out _,
                 () => throw new InvalidOperationException("projection failed")));
             Assert.That(simulation.GetOwnedDevices(), Is.Empty);
-            Assert.That(simulation.Session.ProductionBalance, Is.EqualTo(pair.InstallPrice));
+            Assert.That(simulation.Session.BiomassScrapBalance, Is.EqualTo(pair.InstallPrice));
 
             Assert.That(simulation.TryInstallDevice(pair.Id, -4, 0, .15f, 0, out int first), Is.True);
             Assert.That(simulation.GetOwnedDevices().Count(device => device.Placed), Is.EqualTo(1));
-            Assert.That(simulation.Session.ProductionBalance, Is.Zero);
+            Assert.That(simulation.Session.BiomassScrapBalance, Is.Zero);
             Assert.That(simulation.GetDailyPegs().Single().InstallPrice, Is.Zero);
             Assert.That(simulation.BeginRound(), Is.True);
             Assert.That(simulation.TryInstallDevice(pair.Id, -4, 0, .15f, 0, out _), Is.False);
@@ -49,7 +59,7 @@ namespace MarblesECS.Tests
             var installed = simulation.GetOwnedDevices();
             Assert.That(installed, Has.Length.EqualTo(2));
             Assert.That(installed.All(device => device.Placed && device.PairId > 0 && device.PairId == installed[0].PairId), Is.True);
-            Assert.That(simulation.Session.ProductionBalance, Is.Zero);
+            Assert.That(simulation.Session.BiomassScrapBalance, Is.Zero);
 
             var context = simulation.Context;
             Assert.That(CampaignStateUtility.FindDevice(context, first, out var firstEntity), Is.True);
@@ -80,7 +90,7 @@ namespace MarblesECS.Tests
             Assert.That(definition.Days[0].DayId, Is.EqualTo("fixture-first"));
             Assert.That(definition.Days[1].DayId, Is.EqualTo("fixture-second"));
             Assert.That(definition.Days[1].TargetScore, Is.EqualTo(SecondTarget));
-            Assert.That(definition.Days[1].RewardCoins, Is.EqualTo(45));
+            Assert.That(definition.Days[1].ClearCompanyScripReward, Is.EqualTo(45));
             Assert.Throws<NotSupportedException>(() => ((IList<DayDefinition>)definition.Days)[0] = null);
 
             var empty = GameDaysLoader.Parse(Json(string.Empty), balance);
@@ -168,7 +178,7 @@ namespace MarblesECS.Tests
             long reward = day0.ClearCompanyScripReward;
             Assert.That(simulation.CashOut(), Is.True);
             Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.DaySettlement));
-            Assert.That(simulation.Session.LastCashoutCoins, Is.Zero);
+            Assert.That(simulation.Session.BiomassScrapBalance, Is.Zero);
             Assert.That(simulation.Session.LastCompanyScripReward, Is.EqualTo(reward));
             Assert.That(simulation.Session.CompanyScripBalance, Is.EqualTo(reward));
             Assert.That(simulation.Session.BiomassScrapBalance, Is.Zero);
@@ -421,8 +431,8 @@ namespace MarblesECS.Tests
                     {""spentBlood"":6,""baseValue"":2}
                 ]},
                 ""days"":[
-                    {""dayId"":""first"",""order"":1,""targetScore"":20,""rewardCoins"":0},
-                    {""dayId"":""second"",""order"":2,""targetScore"":20,""rewardCoins"":0,
+                    {""dayId"":""first"",""order"":1,""targetScore"":20,""clearCompanyScripReward"":0},
+                    {""dayId"":""second"",""order"":2,""targetScore"":20,""clearCompanyScripReward"":0,
                      ""bloodProgression"":{""initialBlood"":45,""stages"":[{""spentBlood"":0,""baseValue"":0.75}]}}
                 ]
             }", balance);
@@ -787,8 +797,8 @@ namespace MarblesECS.Tests
             ExpectInvalid(Json(Refs(First, "eventIds", "missing")), balance, behaviors, "fixture-first').eventIds[0]: unknown reference 'missing'");
             ExpectInvalid(Json(Refs(First, "ruleIds", "missing")), balance, behaviors, "fixture-first').ruleIds[0]: unknown reference 'missing'");
             ExpectInvalid(Json(First.Replace("\"targetScore\":150,", "")), balance, behaviors, "invalid/missing targetScore");
-            ExpectInvalid(Json(First.Replace("\"rewardCoins\":35", "\"rewardCoins\":-1")), balance, behaviors, "invalid/missing rewardCoins");
-            ExpectInvalid(Json(First.Replace("\"rewardCoins\":35", "\"rewardCoins\":0.5")), balance, behaviors, "invalid/missing rewardCoins");
+            ExpectInvalid(Json(First.Replace("\"clearCompanyScripReward\":35", "\"clearCompanyScripReward\":-1")), balance, behaviors, "invalid/missing clearCompanyScripReward");
+            ExpectInvalid(Json(First.Replace("\"clearCompanyScripReward\":35", "\"clearCompanyScripReward\":0.5")), balance, behaviors, "invalid/missing clearCompanyScripReward");
             ExpectInvalid(Json(First.Insert(First.Length - 1, ",\"boardLayout\":\"missing.json\"")),
                 balance, behaviors, "boardLayout: Board layout 'missing.json' was not found");
             ExpectInvalid(Json(First.Insert(First.Length - 1, ",\"boardLayout\":\"../Day0.json\"")),
@@ -837,7 +847,7 @@ namespace MarblesECS.Tests
             Assert.Throws<InvalidOperationException>(() => simulation.StartSession(physics));
             ScoreRound(simulation, physics, FirstTarget);
             Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Won));
-            Assert.That(simulation.Session.LastRewardCoins, Is.EqualTo(35));
+            Assert.That(simulation.Session.LastCompanyScripReward, Is.EqualTo(35));
             Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.DaySettlement));
             Assert.That(simulation.Day.CompletedDays, Is.Zero);
             Assert.That(simulation.Day.SettlementCommitted, Is.False);
@@ -851,7 +861,7 @@ namespace MarblesECS.Tests
             Assert.That(simulation.Snapshot.TargetScore, Is.EqualTo(SecondTarget));
             ScoreRound(simulation, physics, SecondTarget);
             Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Won));
-            Assert.That(simulation.Session.LastRewardCoins, Is.EqualTo(45));
+            Assert.That(simulation.Session.LastCompanyScripReward, Is.EqualTo(45));
             Assert.That(simulation.Day.Phase, Is.EqualTo(DayPhase.DaySettlement));
             Assert.That(simulation.TryOpenShop(simulation.Day.Version), Is.False);
             Assert.That(simulation.Day.SettledRounds, Is.EqualTo(1));
@@ -892,7 +902,7 @@ namespace MarblesECS.Tests
             ScoreRound(simulation, physics, FirstTarget);
             Assert.That(simulation.TryCompleteRest(CompleteSettlement(simulation), out _), Is.True);
             var baseline = simulation.Day;
-            long coins = simulation.Session.Coins;
+            long scrip = simulation.Session.CompanyScripBalance;
             Assert.That(simulation.TryCompleteWakeUp(baseline.Version, out _), Is.True);
             Assert.That(simulation.BeginRound(), Is.True);
             var round = simulation.Context.Round;
@@ -914,7 +924,7 @@ namespace MarblesECS.Tests
             Assert.That(day.SettledRounds, Is.Zero);
             Assert.That(day.RandomState, Is.EqualTo(injectSeed ? 83u : baseline.RandomState));
             Assert.That(day.AttemptStartRandomState, Is.EqualTo(day.RandomState));
-            Assert.That(simulation.Session.Coins, Is.EqualTo(coins));
+            Assert.That(simulation.Session.CompanyScripBalance, Is.EqualTo(scrip));
             Assert.That(simulation.Snapshot.RoundId, Is.GreaterThan(round.RoundId));
             Assert.That(simulation.Snapshot.Phase, Is.EqualTo(RoundPhase.Build));
             Assert.That(simulation.Snapshot.Blood, Is.EqualTo(balance.Marble.BloodCapacity));

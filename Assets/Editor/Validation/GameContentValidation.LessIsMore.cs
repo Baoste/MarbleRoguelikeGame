@@ -26,14 +26,14 @@ namespace MarblesECS.Editor
                 var d = AddLessIsMore(f); var key = f.Launch();
                 for (int n = 0; n < count; n++) MoreCompanion(f.C, true, n % 2 == 0);
                 for (int n = 0; n < 3; n++) MoreCompanion(f.C, false);
-                var before = f.Physics.States[key]; double blood = f.C.Player.Blood, coins = f.C.Campaign.Coins;
+                var before = f.Physics.States[key]; double blood = f.C.Player.Blood, scrap = f.C.Player.BiomassScrapBalance;
                 var hit = PiggyHit(f, key, d); f.Step(hit, hit);
                 double bonus = Math.Max(0, 20 - count * 2);
                 Near(1 + bonus, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "inverse count: zero companions gives plus twenty, ten or more gives zero");
                 Near(bonus == 0 ? 20 : 19, f.Simulation.GetOwnedDevices().Single(x => x.InstanceId == d.InstanceId).RemainingDurability, "same tick duplicate spends once, zero bonus is free");
                 Near(10, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "less is more leaves base value intact");
                 VectorNear(before.LinearVelocity, f.Physics.States[key].LinearVelocity, "normal bounce velocity is preserved");
-                Near(blood, f.C.Player.Blood, "count bonus does not spend blood"); Near(coins, f.C.Campaign.Coins, "count bonus does not spend coins");
+                Near(blood, f.C.Player.Blood, "count bonus does not spend blood"); Near(scrap, f.C.Player.BiomassScrapBalance, "count bonus does not spend scrap");
                 Near(0, f.C.Round.Score, "bonus waits for score area");
                 Check(f.Simulation.GetDeviceStatus(d.InstanceId).Contains("其他装置 " + count + " · 碰撞倍率 ×" + (1 + bonus)), "display reflects current count and factor");
                 var flags = f.C.Manager.GetComponentData<BallFeatures>(f.Ball(key));
@@ -122,7 +122,7 @@ namespace MarblesECS.Editor
                 simulation.ApplyGlobalAttribute(993, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
                 simulation.ApplyGlobalAttribute(994, GameAttribute.BALL_BOUNCE, AttributeOperation.Set, 1);
                 simulation.ApplyGlobalAttribute(995, GameAttribute.BALL_FRICTION, AttributeOperation.Set, 0);
-                var def = c.Balance.Devices.Single(d => d.Id == 9024); CampaignStateUtility.CreateDevice(c, def, def.Price);
+                var def = c.Balance.Devices.Single(d => d.Id == 9024); CampaignStateUtility.CreateDevice(c, def, def.InstallPrice);
                 var owned = simulation.GetOwnedDevices().Single(); CampaignStateUtility.FindDevice(c, owned.InstanceId, out var entity);
                 var data = c.Manager.GetComponentData<OwnedDeviceData>(entity); data.Placed = true; c.Manager.SetComponentData(entity, data);
                 board.transform.SetPositionAndRotation(new Vector3(0, 3, 0), Quaternion.Euler(60, 127, 0));

@@ -63,11 +63,11 @@ namespace MarblesECS.Editor
             using (var f = new Fixture())
             {
                 var round = f.C.Round; round.Score = 3; round.FractionalScore = .5; round.RandomState = WheelSeed(0); f.C.Round = round;
-                long coins = f.C.Campaign.Coins; float blood = f.C.Player.Blood;
+                long scrap = f.C.Player.BiomassScrapBalance; float blood = f.C.Player.Blood;
                 GamblingWheelSystem.Deposit(f.C, 10); GamblingWheelSystem.Draw(f.C);
                 Near(0, f.C.Round.Score + f.C.Round.FractionalScore, "loss floors current round score at zero");
                 Near(-3, f.C.Round.WheelLastScoreChange, "display reports actual integer deduction");
-                Near(coins, f.C.Campaign.Coins, "loss does not spend coins");
+                Near(scrap, f.C.Player.BiomassScrapBalance, "loss does not spend scrap");
                 Near(blood, f.C.Player.Blood, "loss does not spend blood");
                 Near(0, f.C.Campaign.TotalScore, "loss does not touch campaign total");
                 GamblingWheelSystem.Deposit(f.C, 0); GamblingWheelSystem.Draw(f.C);

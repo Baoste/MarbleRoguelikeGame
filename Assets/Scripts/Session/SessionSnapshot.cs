@@ -10,11 +10,7 @@ namespace MarblesECS
         public long RoundScore;
         public long TargetScore;
         public ProductionSettings Production;
-        public long ProductionBalance;
         public long CompanyScripBalance, BiomassScrapBalance, LastCompanyScripReward;
-        public long Coins;
-        public long LastRewardCoins;
-        public long LastCashoutCoins;
         public int ShopRefreshCount;
         public int LayoutRevision;
         public bool CanCashOut;

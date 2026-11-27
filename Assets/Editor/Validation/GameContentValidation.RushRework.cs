@@ -66,8 +66,8 @@ namespace MarblesECS.Editor
             using(var f=new Fixture())
             {
                 var d=AddWok(f);var key=f.Launch();var round=f.C.Round;round.RushRemaining=5;f.C.Round=round;
-                var api=CashApi(f,key,d);double coins=api.Coins;api.AddCoins(4);api.AddScoreMultiplier(3);
-                Near(coins+4,api.Coins,"device coin reward is not doubled during Rush");Near(3,api.DeviceScoreMultiplier,"device multiplier is not doubled during Rush");
+                var api=CashApi(f,key,d);double scrap=api.BiomassScrapBalance;api.AddBiomassScrap(4);api.AddScoreMultiplier(3);
+                Near(scrap+4,api.BiomassScrapBalance,"device scrap reward is not doubled during Rush");Near(3,api.DeviceScoreMultiplier,"device multiplier is not doubled during Rush");
                 Near(10,api.Value,"device intrinsic value remains independent of temporary Rush bonus");Near(11,api.EffectiveValue,"effective value includes temporary bonus");
                 api.SetScoreRushContribution(30);api.SetAppearance("3",1,0,0);api.Close();
                 var copyDevice=f.Add(f.C.Balance.Devices.Single(x=>x.Id==9018));var copyApi=CashApi(f,key,copyDevice);

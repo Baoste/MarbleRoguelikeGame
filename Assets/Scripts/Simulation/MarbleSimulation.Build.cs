@@ -37,14 +37,11 @@ namespace MarblesECS
             if (definition == null) return false;
             reserved = UnplacedInstallation(definition);
             if (reserved != Entity.Null) return true;
-            price = InstallationPrice(definition);
+            price = definition.InstallPrice;
             return context.Campaign.NextDeviceId <= int.MaxValue - 100000 - definition.PurchaseQuantity &&
                 context.DeviceQuery.CalculateEntityCount() + definition.PurchaseQuantity <= context.Balance.Campaign.MaxOwnedDevices &&
-                CampaignWalletSystem.CanSpend(context, context.Campaign.Production.Currency, price);
+                CampaignWalletSystem.CanSpend(context, GameCurrency.BiomassScrap, price);
         }
-
-        private long InstallationPrice(DeviceDefinition definition) =>
-            context.Campaign.Production.Currency == GameCurrency.BiomassScrap ? definition.InstallPrice : definition.Price;
 
         private Entity UnplacedInstallation(DeviceDefinition definition)
         {
@@ -86,7 +83,7 @@ namespace MarblesECS
                 int installed = context.Manager.GetComponentData<OwnedDeviceData>(entity).InstanceId;
                 if (context.IsRunning) DeviceScriptSystem.InstanceEvent(context, installed, "OnRoundStart");
                 if (!context.Manager.Exists(entity) ||
-                    !CampaignWalletSystem.TrySpend(context, context.Campaign.Production.Currency, price)) return false;
+                    !CampaignWalletSystem.TrySpend(context, GameCurrency.BiomassScrap, price)) return false;
                 instanceId = installed;
                 committed = true;
                 return true;
