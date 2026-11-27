@@ -47,6 +47,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     private DailyPegSnapshot[] dailyDevices = Array.Empty<DailyPegSnapshot>();
     readonly int[] deviceIds = new int[6];
     private readonly uint[] installIds = new uint[6];
+    private RectTransform walletPanel;
     private TMP_Text walletBalance;
     private RawImage[] installIcons;
     Quaternion leverOnRotation;
@@ -187,7 +188,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
             RefreshInstallTypes(session);
             return;
         }
-        if (walletBalance) walletBalance.gameObject.SetActive(false);
+        if (walletPanel) walletPanel.gameObject.SetActive(false);
         if (installIcons != null)
             foreach (var icon in installIcons) icon.enabled = false;
         dailyDevices = Array.Empty<DailyPegSnapshot>();
@@ -215,7 +216,7 @@ public sealed class DiegeticMachineUI : MonoBehaviour
     {
         if (!ItemGroup || DeviceButtons == null) return;
         if (installIcons == null) CreateInstallIcons();
-        ShowWalletBalance($"♦  血肉残料 {session.BiomassScrapBalance}  ·  用于安装");
+        ShowWalletBalance(session.BiomassScrapBalance);
         unplacedDevices.Clear();
         Array.Clear(deviceIds, 0, deviceIds.Length);
         dailyDevices = Controller.GetDailyPegs().Where(peg => peg.Selected).ToArray();
@@ -245,14 +246,34 @@ public sealed class DiegeticMachineUI : MonoBehaviour
         if (DevicePageLabel) DevicePageLabel.text = $"{devicePage + 1} / {pages}";
     }
 
-    private void ShowWalletBalance(string text)
+    private void ShowWalletBalance(long balance)
     {
-        if (!ItemGroup) return;
-        if (!walletBalance)
-            walletBalance = Label(ItemGroup.transform, "钱包余额", "", 24, new Vector2(0, 456),
-                new Vector2(550, 31), TextAlignmentOptions.Center, new Color(.95f, .57f, .59f));
-        walletBalance.gameObject.SetActive(true);
-        walletBalance.text = text;
+        if (!walletPanel) CreateWalletPanel();
+        walletPanel.gameObject.SetActive(true);
+        walletBalance.text = balance.ToString();
+    }
+
+    private void CreateWalletPanel()
+    {
+        var plate = Panel(ItemGroup.transform, "钱包余额", new Color(.19f, .065f, .075f, .98f),
+            new Vector2(0, 468), new Vector2(544, 46));
+        walletPanel = plate.rectTransform;
+        plate.raycastTarget = false;
+        var border = plate.gameObject.AddComponent<Outline>();
+        border.effectColor = new Color(.55f, .32f, .23f);
+        border.effectDistance = new Vector2(2, -2);
+
+        Panel(walletPanel, "饰边", new Color(.80f, .42f, .30f),
+            new Vector2(-253, 0), new Vector2(5, 27)).raycastTarget = false;
+        Label(walletPanel, "货币名称", "血肉残料", 30, new Vector2(-235, 0), new Vector2(150, 42),
+            TextAlignmentOptions.MidlineLeft, new Color(.98f, .79f, .70f));
+        walletBalance = Label(walletPanel, "数值", "", 38, new Vector2(250, 0), new Vector2(330, 46),
+            TextAlignmentOptions.MidlineRight, new Color(1f, .93f, .78f));
+        walletBalance.fontStyle = FontStyles.Bold;
+        walletBalance.enableWordWrapping = false;
+        walletBalance.enableAutoSizing = true;
+        walletBalance.fontSizeMin = 22;
+        walletBalance.fontSizeMax = 38;
     }
 
     private void CreateInstallIcons()

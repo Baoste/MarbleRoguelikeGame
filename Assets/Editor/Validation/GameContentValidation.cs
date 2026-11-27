@@ -141,10 +141,17 @@ namespace MarblesECS.Editor
 
         private static void RuntimeContentSources()
         {
+            var balanceSource = Resources.Load<TextAsset>("GameBalance");
+            Check(balanceSource != null, "runtime balance JSON is available");
+            var authoredBalance = JsonUtility.FromJson<GameBalance>(balanceSource.text);
+            var balance = GameBalanceLoader.Load();
+            Check(JsonUtility.ToJson(balance.Marble) == JsonUtility.ToJson(authoredBalance.Marble), "runtime reads the authored marble tuning");
+            Check(JsonUtility.ToJson(balance.Campaign) == JsonUtility.ToJson(authoredBalance.Campaign), "runtime reads the authored campaign tuning");
+
             var source = Resources.Load<TextAsset>("GameContent");
             Check(source != null, "runtime content JSON is available");
             var authored = JsonUtility.FromJson<GameContent>(source.text);
-            var loaded = GameBalanceLoader.Load().Content;
+            var loaded = balance.Content;
             Check(loaded.Attributes.Length == (int)GameAttribute.Count, "runtime has a complete attribute dictionary");
             foreach (var attribute in authored.Attributes)
             {
@@ -211,12 +218,7 @@ namespace MarblesECS.Editor
                 standalone.FireOnce(); standalone.BeforePhysics(.1f, standalonePhysics, Vector3.up * 2, Quaternion.identity); standalone.AfterPhysics(standalonePhysics);
                 Near(3, standalonePhysics.Spawns.Single().Value.LinearVelocity.magnitude, "standalone launch reads content");
             }
-            string output = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "MarbleBalanceAuthority.json");
-            GameBalanceImporter.Import(GameBalanceImporter.WorkbookPath, output);
-            string exported = System.IO.File.ReadAllText(output);
-            foreach (string field in new[] { "MinRadius", "MaxRadius", "MassPerBlood", "BaseScore", "BloodCostMultiplier", "LaunchSpeed", "LauncherScoreMultiplier", "MaxLifeSeconds", "BaseRestitution", "RushDurationSeconds", "GamblingWinChance", "GamblingWinMultiplier", "Devices", "Drugs", "Board", "Zones", "Stages", "CashoutRate" })
-                Check(!exported.Contains("\"" + field + "\""), "base import cannot restore " + field);
-            var legacyJson = new TextAsset(exported.Replace("\"Marble\": {", "\"Marble\": {\"MinRadius\":9,\"BaseScore\":999,"));
+            var legacyJson = new TextAsset(@"{""Marble"":{""MinRadius"":9,""BaseScore"":999},""Campaign"":{}}");
             try
             {
                 var loaded = GameBalanceLoader.Load(legacyJson);

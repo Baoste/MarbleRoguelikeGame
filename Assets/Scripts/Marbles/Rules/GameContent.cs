@@ -4,9 +4,6 @@ using System.Collections.Generic;
 namespace MarblesECS
 {
     public enum DeviceKind { LegacyPin, Bank, Amplifier, Centrifuge, Portal, Clover, Splitter, Paddle, Lens, Capital, BloodCannon, Slow, Revive, Magnet }
-    [AttributeUsage(AttributeTargets.Field)]
-    public sealed class OptionalBalanceFieldAttribute : Attribute { }
-
     [Serializable]
     public sealed class GameContent
     {

@@ -8,11 +8,11 @@ namespace MarblesECS
     {
         public uint Id;
         public string Name;
-        [OptionalBalanceField] public long BiomassScrapPrice;
+        public long BiomassScrapPrice;
         public long InstallPrice => BiomassScrapPrice > 0 ? BiomassScrapPrice : DeviceRarityRules.DefaultScrapInstallPrice(Rarity);
-        [OptionalBalanceField] public DeviceRarity Rarity;
-        [OptionalBalanceField] public int Durability = 20;
-        [OptionalBalanceField] public float Bounce;
+        public DeviceRarity Rarity;
+        public int Durability = 20;
+        public float Bounce;
         public double ScoreMultiplier = 1;
         public double RushChanceAdd;
         // Runtime-only geometry from the package's placement SphereCollider; never serialized as business data.
@@ -21,21 +21,21 @@ namespace MarblesECS
         public float PlacementOffsetY { get; private set; }
         public float PlacementOffsetZ { get; private set; }
         public int StartingCount;
-        [OptionalBalanceField] public int PurchaseQuantity = 1;
-        [OptionalBalanceField] public bool RushCategory;
-        [OptionalBalanceField] public string LinkGroup;
-        [OptionalBalanceField] public float GroupClearance = .01f;
+        public int PurchaseQuantity = 1;
+        public bool RushCategory;
+        public string LinkGroup;
+        public float GroupClearance = .01f;
         // Historical category retained for offline balance reports; never dispatches device behaviour.
-        [OptionalBalanceField] public DeviceKind Kind;
-        [OptionalBalanceField] public string SourceId;
-        [OptionalBalanceField] public string Description;
-        [OptionalBalanceField] public float Cooldown = 0.1f;
-        [OptionalBalanceField] public int MaxTriggersPerBall;
-        [OptionalBalanceField] public float Range = 0.2f;
-        [OptionalBalanceField] public float Strength = 2;
-        [OptionalBalanceField] public double Value = 1;
-        [OptionalBalanceField] public bool RotationLocked;
-        [OptionalBalanceField] public bool AcceptsPlacedOffers;
+        public DeviceKind Kind;
+        public string SourceId;
+        public string Description;
+        public float Cooldown = 0.1f;
+        public int MaxTriggersPerBall;
+        public float Range = 0.2f;
+        public float Strength = 2;
+        public double Value = 1;
+        public bool RotationLocked;
+        public bool AcceptsPlacedOffers;
 
         public DeviceDefinition Copy() { return (DeviceDefinition)MemberwiseClone(); }
 

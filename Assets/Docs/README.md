@@ -13,7 +13,7 @@ Unity **2022.3.62f3c1 + Entities 1.0.11 + URP 14.0.12** 的三维弹珠游戏，
 5. Day1 和 Day2 的目标分别是 500 和 1000 分。Day2 开放工票权限抽取，已选装置可用血肉残料安装。
 
 
-本地 Windows 试玩程序在项目根目录 **`Builds/BloodMarble/BloodMarble.exe`**。复制给其他人时需要复制整个 `BloodMarble` 文件夹。菜单 **Marbles ECS → Build Windows Player** 可更新程序；修改 Excel 后需要重新构建才能更新试玩程序。
+在 Unity 中使用 **File → Build Settings → Build** 打包 Windows 版。输出位置可选在项目根目录的 `Builds/BloodMarble/BloodMarble.exe`。分享试玩版时，复制整个 `BloodMarble` 文件夹。修改游戏配置 JSON 后，重新构建即可更新试玩程序。
 
 | 操作 | 作用 |
 |---|---|
@@ -40,9 +40,7 @@ Unity **2022.3.62f3c1 + Entities 1.0.11 + URP 14.0.12** 的三维弹珠游戏，
 
 ## 策划调数值
 
-编辑 **[Config/GameBalance.xlsx](../Config/GameBalance.xlsx)**。Unity 导入后生成 **`Resources/GameBalance.json`**；也可用 **Marbles ECS → Import Game Balance Excel** 手动导入。校验失败保留上一次有效配置。
-
-Excel 配置发射参数、血量、库存和战役基础规则。每日目标分、通关奖励和盘面在 `Resources/GameDays.json` 配置。重新进入 Play 应用新配置，运行中的模拟持有独立配置副本。
+直接编辑 [Resources/GameBalance.json](../Resources/GameBalance.json) 中的 `Marble` 和 `Campaign`，调整基础发射参数、血量、库存上限和通用战役规则。每日目标分、通关奖励和盘面选择在 [Resources/GameDays.json](../Resources/GameDays.json) 配置。保存后重新进入 Play 以加载新数值。
 
 字段说明见 [数值表说明](Balance.md) 和 [每日内容制作指南](DayFramework_Content_Guide.md)。
 
@@ -57,7 +55,7 @@ Excel 配置发射参数、血量、库存和战役基础规则。每日目标�
 | `Scripts/Physics/PhysX/` | Rigidbody、对象池、碰撞上报、触发区扫掠补检 |
 | `Scripts/Presentation/` | 场景构造、盘面投影、相机、分文件 HUD 和交互 |
 | `Scripts/Simulation/MarbleGameController.*` | Unity 生命周期和唯一物理驱动 |
-| `Editor/Balance/` | `.xlsx` 解析、验证、导入和自动更新 |
+| `Scripts/Configuration/` | 游戏 JSON 加载、校验和装置资源目录 |
 | `Tests/Day/EditMode/`、`Tests/Day/PlayMode/` | 真实 Entities 规则测试、真实 PhysX 和场景集成测试 |
 
 ECS 组件和 Buffer 持有玩法状态。MonoBehaviour 采集输入、展示快照和桥接 PhysX，物理姿态由 PhysX 更新。系统由独立 World 的编排器显式调度，以确保物理前后事务顺序。

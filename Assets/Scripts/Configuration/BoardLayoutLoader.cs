@@ -6,8 +6,8 @@ namespace MarblesECS
 {
     public static class BoardLayoutLoader
     {
-        internal const string AssetFolder = "Assets/Config/Resources/BoardLayouts";
         private const string ResourceFolder = "BoardLayouts";
+        internal const string AssetFolder = "Assets/Resources/" + ResourceFolder;
         private const int SchemaVersion = 1;
 
         [Serializable]

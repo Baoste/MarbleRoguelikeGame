@@ -8,7 +8,8 @@ namespace MarblesECS
         public static GameBalance Load(TextAsset source = null)
         {
             source = source != null ? source : Resources.Load<TextAsset>("GameBalance");
-            var balance = source != null ? JsonUtility.FromJson<GameBalance>(source.text) : GameBalance.Default();
+            if (source == null) throw new ArgumentException("Resources/GameBalance.json is required.");
+            var balance = JsonUtility.FromJson<GameBalance>(source.text);
             if (balance == null) throw new ArgumentException("Game balance JSON is empty: " + source.name);
             var contentAsset = DeviceResourceCatalog.LoadContentAsset();
             balance.Content = JsonUtility.FromJson<GameContent>(contentAsset.text);

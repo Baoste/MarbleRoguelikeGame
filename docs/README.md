@@ -1,6 +1,6 @@
 # MarbleRoguelikeGame 接手文档
 
-本目录归档 2026-10-02 版本的玩法、数值和模拟结果。现行双货币与每日玩法见 [游戏文档](../Assets/Docs/README.md)。
+本目录归档 2026-10-02 版本的玩法、数值和模拟结果。现行双货币与每日玩法见 [游戏文档](../Assets/Docs/README.md)。 基础数值直接编辑 [GameBalance.json](../Assets/Resources/GameBalance.json)。
 
 2026-10-02 已整合 Balance V6：当前项目的合并范围、验证结果及 Unity 菜单入口见 [Unity 整合记录](Balance/integration_2026-10-02.md)。
 
@@ -22,7 +22,7 @@
 
 ## 历史调优基线
 
-`Assets/Config/GameBalance.xlsx` 与 `Assets/Resources/GameBalance.json` 已同步。该版本每回合 100 血，正式阶段目标为 `120/380/815/1410/2200/3145`，商店刷新基础价为 `2`。阶段目标采用 Recommended V5：首回合降至 120，并以该点为锚将后续曲线斜率降低约 10%；商品价格沿用 Recommended V3（约下调 15%）。
+该版本发布时，工作簿与运行时 JSON 已同步。该版本每回合 100 血，正式阶段目标为 `120/380/815/1410/2200/3145`，商店刷新基础价为 `2`。阶段目标采用 Recommended V5：首回合降至 120，并以该点为锚将后续曲线斜率降低约 10%；商品价格沿用 Recommended V3（约下调 15%）。
 
-旧经济模拟的报告与配置快照仍可在此查阅。Unity 的 Tools → Pachinko → Balance Dashboard 提供当前场景的真实物理采样。
+该版本的数值报告、物理采样结果和配置快照可在此查阅。
 

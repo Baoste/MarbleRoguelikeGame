@@ -193,18 +193,21 @@ namespace MarblesECS.Editor
                 try { tuning.Validate(); } catch (ArgumentOutOfRangeException) { rejected = true; }
                 Check(rejected, "invalid tap interval is rejected: " + invalid);
             }
-            var rows = XlsxWorkbookReader.Read(GameBalanceImporter.WorkbookPath)["Marble"];
-            // JSON can be tuned directly between Excel imports; test import semantics without imposing equality.
-            rows.Find(row => row[0] == nameof(MarbleTuning.FireIntervalSeconds))[1] = "0.4";
-            rows.Find(row => row[0] == nameof(MarbleTuning.MaxFireIntervalSeconds))[1] = "0.1";
-            var imported = BalanceTableParser.Singleton<MarbleTuning>(rows, "Marble");
-            Near(.4, imported.FireIntervalSeconds, "Excel imports the authored held interval");
-            Near(.1, imported.MaxFireIntervalSeconds, "Excel imports the independent tap interval");
-            rows.RemoveAll(row => row[0] == nameof(MarbleTuning.MaxFireIntervalSeconds));
-            Near(.15, BalanceTableParser.Singleton<MarbleTuning>(rows, "Marble").MaxFireIntervalSeconds,
-                "older workbooks default the optional tap interval to 0.15 seconds");
-            Near(.15, JsonUtility.FromJson<MarbleTuning>("{\"FireIntervalSeconds\":0.4}").MaxFireIntervalSeconds,
-                "older JSON defaults the tap interval independently of the hold interval");
+            var source = new TextAsset(@"{""Marble"":{""FireIntervalSeconds"":0.4,""MaxFireIntervalSeconds"":0.1},""Campaign"":{}}");
+            var olderSource = new TextAsset(@"{""Marble"":{""FireIntervalSeconds"":0.4},""Campaign"":{}}");
+            try
+            {
+                var authored = GameBalanceLoader.Load(source).Marble;
+                Near(.4, authored.FireIntervalSeconds, "GameBalance JSON controls the held interval");
+                Near(.1, authored.MaxFireIntervalSeconds, "GameBalance JSON controls the tap interval independently");
+                Near(.15, GameBalanceLoader.Load(olderSource).Marble.MaxFireIntervalSeconds,
+                    "older JSON defaults the tap interval independently of the hold interval");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(source);
+                UnityEngine.Object.DestroyImmediate(olderSource);
+            }
             Debug.Log("LAUNCHER_CADENCE_VALIDATION_PASSED: " + (assertions - start) + " assertions.");
         }
 

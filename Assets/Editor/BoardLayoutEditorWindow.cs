@@ -11,6 +11,7 @@ namespace MarblesECS.Editor
     {
         private enum Tool { Select, Pin, ScoreZone, RandomZone, CollisionPin }
 
+        private const string LegacyAssetFolder = "Assets/Config/Resources/BoardLayouts/";
         private static readonly string[] Tools = { "Select", "Pin", "Score Zone", "Random Zone", "Collision Pin" };
         private static readonly string[] ZoneTypes = { nameof(MarbleContactKind.Score), nameof(MarbleContactKind.RandomScore) };
         private static readonly Color PinColor = new Color(.96f, .69f, .29f);
@@ -37,6 +38,8 @@ namespace MarblesECS.Editor
             titleContent = new GUIContent("Board Layout");
             minSize = new Vector2(660, 420);
             saveChangesMessage = "Save your changes to this board layout?";
+            if (assetPath?.StartsWith(LegacyAssetFolder, StringComparison.OrdinalIgnoreCase) == true)
+                assetPath = BoardLayoutLoader.AssetFolder + "/" + assetPath.Substring(LegacyAssetFolder.Length);
             if (!surface) surface = FindObjectOfType<BoardPlacementSurface>();
         }
 
@@ -369,7 +372,7 @@ namespace MarblesECS.Editor
             if (saveAs || string.IsNullOrEmpty(path))
             {
                 path = EditorUtility.SaveFilePanelInProject("Save Board Layout", Path.GetFileNameWithoutExtension(assetPath) ?? "NewBoard",
-                    "json", "Save under Config/Resources/BoardLayouts.", BoardLayoutLoader.AssetFolder);
+                    "json", $"Save under {BoardLayoutLoader.AssetFolder}.", BoardLayoutLoader.AssetFolder);
                 if (string.IsNullOrEmpty(path)) return false;
             }
             try

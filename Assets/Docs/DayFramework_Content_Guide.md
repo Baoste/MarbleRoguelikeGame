@@ -1,6 +1,6 @@
 # 每日内容制作指南
 
-`Assets/Resources/GameDays.json` 配置每日目标分、通关奖励和每日内容。基础发射和战役参数从 `GameBalance.xlsx` 导入。测试用日期、分数和行为保存在 `Assets/Tests/Day` 的夹具中。
+`Assets/Resources/GameDays.json` 配置每日目标分、通关奖励和每日内容。基础发射和战役参数直接在 [GameBalance.json](../Resources/GameBalance.json) 中编辑。测试用日期、分数和行为保存在 `Assets/Tests/Day` 的夹具中。
 
 ## 增加 Day
 
@@ -61,7 +61,7 @@ IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白�
 
 在 Unity 打开 **Marbles ECS → Board Layout Editor**。选 `Pin`、`Collision Pin`、`Score Zone` 或 `Random Zone` 后在 2D 盘面上点击放置。`Collision Pin` 以浅蓝色显示，只参与物理碰撞和装置占位检查。用 `Select` 点击或拖动对象，在右侧面板修改属性或删除。`Board Surface` 可引用待使用的 `BoardPlacementSurface`。未选择时预览采用 TestScene 的默认尺寸。
 
-`Save` 或 `Save As` 将 `.json` 存到 `Assets/Config/Resources/BoardLayouts/`。在 `GameDays.json` 的日期条目填写例如 `"boardLayout": "Day0.json"`。子目录可用相对路径。重新进入 Play 时会加载新配置。省略 `boardLayout` 的日期使用场景自带的盘面。
+`Save` 或 `Save As` 将 `.json` 存到 `Assets/Resources/BoardLayouts/`。在 `GameDays.json` 的日期条目填写例如 `"boardLayout": "Day0.json"`。子目录可用相对路径。重新进入 Play 时会加载新配置。省略 `boardLayout` 的日期使用场景自带的盘面。
 
 `(0, 0)` 是左上角，`(1, 1)` 是右下角。`y` 沿斜面向下，`x` 是该行从左至右的宽度比例。`radius`、`width`、`depth` 和 `triggerHeight` 用 Unity 单位，触发区从盘面沿法线向上延伸。保存和每日启动时会检查对象的整个轮廓是否位于盘面内。
 

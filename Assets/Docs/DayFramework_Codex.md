@@ -945,7 +945,7 @@ Index。`DaySettlement` 只处理 Day 级结算，内层 `RoundSettlement`
 - 配置与 Runtime State 分离。
 - Day / Event / Rule 引用必须校验。
 - 不要让某个 Day 的运行时状态污染其他 Day 的配置资产。
-- 保持现有 Balance Excel -\> JSON 的工作流不变。
+- 基础数值直接在 `Resources/GameBalance.json` 中维护。
 - 不要为了 Day 框架修改现有 GameBalance 数值或 GameContent 条目。
 
 如果新增 `GameDays.json`，请增加对应的解析、校验和 Editor
@@ -1006,7 +1006,6 @@ Day。
 
 - 不改变现有 GameBalance 数值。
 - 不改变 GameContent 中既有装置、药物和属性定义。
-- 不破坏现有 Balance Simulator / Balance Dashboard 工作流。
 - 不改变现有 PhysX 权威边界。
 - 不引入第二套弹珠运动模拟。
 - 不让 UI 直接修改 ECS 玩法数据。

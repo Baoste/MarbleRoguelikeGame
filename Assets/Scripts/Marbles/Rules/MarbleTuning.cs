@@ -11,7 +11,7 @@ namespace MarblesECS
         public float MinInvestment = 1f;
         public float MaxInvestment = 5f;
         // Compatibility values for the explicit content-free simulation API only.
-        // Scene gameplay reads GameContent; JSON/Excel cannot author these fields.
+        // Scene gameplay uses the matching attributes in GameContent.json.
         [NonSerialized] public float MinRadius = 0.12f;
         [NonSerialized] public float MaxRadius = 0.22f;
         [NonSerialized] public float MassPerBlood = 0.1f;
@@ -21,11 +21,11 @@ namespace MarblesECS
         // Interval between held repeats once the acceleration ramp reaches full speed.
         public float FireIntervalSeconds = 0.15f;
         // Minimum separation for a tap (including the initial press of a hold).
-        [OptionalBalanceField] public float MaxFireIntervalSeconds = 0.15f;
-        [OptionalBalanceField] public float HoldAccelerationSeconds = 2f;
-        [OptionalBalanceField] public double ScoreStackIncrement = 0.05;
-        [OptionalBalanceField] public float ScoreStackInitialSeconds = 1f;
-        [OptionalBalanceField] public float ScoreStackMinimumSeconds = 0.1f;
+        public float MaxFireIntervalSeconds = 0.15f;
+        public float HoldAccelerationSeconds = 2f;
+        public double ScoreStackIncrement = 0.05;
+        public float ScoreStackInitialSeconds = 1f;
+        public float ScoreStackMinimumSeconds = 0.1f;
         [NonSerialized] public float LaunchSpeed = 12f;
         [NonSerialized] public float LauncherScoreMultiplier = 1f;
         public int MaxActiveMarbles = 256;
