@@ -2,9 +2,9 @@ using Unity.Entities;
 
 namespace MarblesECS
 {
-    // Each marble can gain a given device's multiplier only once in its lifetime.
+    // Board pin and zone effects apply once per marble.
     internal struct VisitedDeviceData : IBufferElementData
     {
-        public int DeviceId;
+        public ContactTargetKey Key;
     }
 }

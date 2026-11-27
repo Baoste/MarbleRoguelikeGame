@@ -29,6 +29,17 @@ namespace MarblesECS.Editor
                     var scale = volume.lossyScale;
                     Near(sphere.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z)), radius,
                         "serialized hierarchy gives the real scaled sphere radius");
+                    if (definition.Id == 113 || definition.Id == 9033 || definition.Id == 9034)
+                    {
+                        Physics.SyncTransforms();
+                        var colliderBounds = root.GetComponent<CapsuleCollider>().bounds;
+                        Near(.4, colliderBounds.extents.x, "large peg has the authored board-plane collision radius");
+                        Near(.4, colliderBounds.extents.z, "large peg keeps its collision radius along both board axes");
+                        var modelBounds = root.GetComponentsInChildren<Renderer>().Select(renderer => renderer.bounds)
+                            .Aggregate((bounds, part) => { bounds.Encapsulate(part); return bounds; });
+                        Check(Math.Abs(Mathf.Max(modelBounds.extents.x, modelBounds.extents.z) - .4f) < .01f &&
+                            radius >= .4f, "the model matches the collision radius and fits inside the placement volume");
+                    }
                     root.SetActive(true); Check(!sphere.enabled, "activation never enables placement collisions");
                     root.SetActive(false); root.SetActive(true); Check(!sphere.enabled, "reenabling the device keeps placement nonphysical");
                 }

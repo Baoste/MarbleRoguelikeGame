@@ -73,6 +73,7 @@ namespace MarblesECS.PhysX
                 view.PrepareForSpawn();
                 ConfigureMaterial(view, collider, data);
                 bodies.Add(data.Key, view);
+                bodyMembershipVersion++;
                 if (data.HasSettings) SetProperties(data.Key, data.Settings);
                 instance.SetActive(true);
                 body.position = data.Position;
@@ -84,7 +85,7 @@ namespace MarblesECS.PhysX
             }
             catch (Exception error)
             {
-                bodies.Remove(data.Key);
+                UnregisterBody(data.Key);
                 if (view != null) view.Bridge = null;
                 if (instance != null) { instance.SetActive(false); UnityEngine.Object.Destroy(instance); }
                 Debug.LogException(error);

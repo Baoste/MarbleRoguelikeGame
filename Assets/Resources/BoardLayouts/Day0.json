@@ -2,8 +2,8 @@
     "schemaVersion": 1,
     "pins": [
         {
-            "x": 0.09100966900587082,
-            "y": 0.10113108158111572,
+            "x": 0.10393315553665161,
+            "y": 0.09939718246459961,
             "radius": 0.10000000149011612,
             "collisionOnly": true,
             "scoreMultiplier": 1.0,
@@ -18,16 +18,16 @@
             "rushChanceAdd": 0.0
         },
         {
-            "x": 0.30030113458633425,
-            "y": 0.10113108903169632,
+            "x": 0.3052740693092346,
+            "y": 0.10113108158111572,
             "radius": 0.10000000149011612,
             "collisionOnly": true,
             "scoreMultiplier": 1.0,
             "rushChanceAdd": 0.0
         },
         {
-            "x": 0.19973500072956086,
-            "y": 0.19960083067417146,
+            "x": 0.19937150180339814,
+            "y": 0.25572967529296877,
             "radius": 0.10000000149011612,
             "collisionOnly": true,
             "scoreMultiplier": 1.0,
@@ -50,64 +50,24 @@
             "rushChanceAdd": 0.0
         },
         {
-            "x": 0.3925689458847046,
-            "y": 0.19693946838378907,
+            "x": 0.4056185185909271,
+            "y": 0.24960049986839295,
             "radius": 0.10000000149011612,
             "collisionOnly": true,
             "scoreMultiplier": 1.0,
             "rushChanceAdd": 0.0
         },
         {
-            "x": 0.5922101140022278,
-            "y": 0.20226216316223145,
+            "x": 0.6068956255912781,
+            "y": 0.253189355134964,
             "radius": 0.10000000149011612,
             "collisionOnly": true,
             "scoreMultiplier": 1.0,
             "rushChanceAdd": 0.0
         },
         {
-            "x": 0.8002650141716003,
-            "y": 0.19960083067417146,
-            "radius": 0.10000000149011612,
-            "collisionOnly": true,
-            "scoreMultiplier": 1.0,
-            "rushChanceAdd": 0.0
-        },
-        {
-            "x": 0.09557179361581803,
-            "y": 0.29940125346183779,
-            "radius": 0.10000000149011612,
-            "collisionOnly": true,
-            "scoreMultiplier": 1.0,
-            "rushChanceAdd": 0.0
-        },
-        {
-            "x": 0.3005668520927429,
-            "y": 0.29940125346183779,
-            "radius": 0.10000000149011612,
-            "collisionOnly": true,
-            "scoreMultiplier": 1.0,
-            "rushChanceAdd": 0.0
-        },
-        {
-            "x": 0.502382218837738,
-            "y": 0.300731897354126,
-            "radius": 0.10000000149011612,
-            "collisionOnly": true,
-            "scoreMultiplier": 1.0,
-            "rushChanceAdd": 0.0
-        },
-        {
-            "x": 0.700029730796814,
-            "y": 0.2927478551864624,
-            "radius": 0.10000000149011612,
-            "collisionOnly": true,
-            "scoreMultiplier": 1.0,
-            "rushChanceAdd": 0.0
-        },
-        {
-            "x": 0.8948936462402344,
-            "y": 0.299401193857193,
+            "x": 0.8039504289627075,
+            "y": 0.25399574637413027,
             "radius": 0.10000000149011612,
             "collisionOnly": true,
             "scoreMultiplier": 1.0,
@@ -118,7 +78,7 @@
         {
             "type": "Score",
             "x": 0.5,
-            "y": 0.95,
+            "y": 0.949999988079071,
             "width": 8.300000190734864,
             "depth": 0.550000011920929,
             "triggerHeight": 2.200000047683716,

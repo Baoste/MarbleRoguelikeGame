@@ -26,6 +26,53 @@ namespace MarblesECS.Tests
         }
 
         [UnityTest]
+        public IEnumerator FieldDispatchHandlesRebindingAndRemovalDuringABallPass()
+        {
+            using var simulation = new MarbleSimulation(Balance());
+            using var bridge = new MarblePhysicsBridge(CreateScene(), null, null, simulation.EnqueueContact, createVisuals: false);
+            simulation.StartSession(bridge);
+            var context = simulation.Context;
+            var definition = CampaignStateUtility.Device(context, 9001);
+            var resource = DeviceResourceCatalog.Current.Get(definition.Id);
+            const string field = "function OnField(api) if api:TryUse() then api:AddRadialForce(0.01) end end";
+            int first = AddInventory(simulation, definition.Id);
+            int removed = AddInventory(simulation, definition.Id);
+            Assert.That(simulation.PlaceDevice(first, 4, 0), Is.True);
+            Assert.That(simulation.PlaceDevice(removed, 8, 0), Is.True);
+            Assert.That(CampaignStateUtility.FindDevice(context, removed, out var target), Is.True);
+            var previous = context.DeviceScripts.Get(first, definition.Id);
+            context.DeviceScripts.Bind(first, resource.CreateScript(field));
+            context.DeviceScripts.Bind(removed, resource.CreateScript(field));
+            Assert.That(previous.IsDisposed, Is.True);
+            Assert.That(simulation.BeginRound(), Is.True);
+            simulation.ApplyGlobalAttribute(1, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
+            Step(simulation, bridge, Vector3.zero);
+
+            var spawn = AttributeRuntime.Prepare(context, 0);
+            Assert.That(ContentSpawnSystem.Create(context, spawn, new Vector3(-3, 3, 0), Quaternion.identity, Vector3.zero, out _), Is.True);
+            Assert.That(ContentSpawnSystem.Create(context, spawn, new Vector3(-6, 3, 0), Quaternion.identity, Vector3.zero, out _), Is.True);
+            var calls = new List<int>();
+            int added = 0;
+            bridge.BindDeviceUsage(id => DeviceDurabilitySystem.CanRun(context, id), id =>
+            {
+                calls.Add(id);
+                if (id != first || added != 0) return true;
+                CampaignStateUtility.DestroyDevice(context, target);
+                var created = CampaignStateUtility.CreateSingleDevice(context, definition, new OwnedDeviceData { Placed = true, X = 12 });
+                var data = context.Manager.GetComponentData<OwnedDeviceData>(created);
+                added = data.InstanceId;
+                context.DeviceScripts.Bind(added, resource.CreateScript(field));
+                Assert.That(DevicePlacementSystem.TrySetPhysicsPlacement(context, added, definition, data), Is.True);
+                return true;
+            });
+            Step(simulation, bridge, Vector3.zero);
+            CollectionAssert.AreEqual(new[] { first, first, added }, calls);
+            Assert.That(CampaignStateUtility.FindDevice(context, removed, out _), Is.False);
+            Assert.That(bridge.TryGetDevicePose(removed, out _), Is.False);
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator InventoryPlacementCreatesPhysXBodyWithoutAPlacementView()
         {
             var scene = CreateScene();
@@ -92,6 +139,63 @@ namespace MarblesECS.Tests
             Assert.That(bridge.PlacedDeviceBodies, Is.Empty);
             yield return null;
             Assert.That(original == null && body == null, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator ARealFixedPinHitDoesNotBlockMultiDingWithTheSameTargetId()
+        {
+            var scene = CreateScene();
+            var pinNode = CreateNode(scene, "Fixed pin", new Vector3(-2, .25f, 0));
+            var pinCollider = pinNode.AddComponent<SphereCollider>();
+            pinCollider.radius = .18f;
+            var pin = pinNode.AddComponent<MarblePin>();
+            pin.TargetId = 100001;
+            pin.ScoreMultiplier = 1;
+            var contacts = new List<MarbleContact>();
+            using var simulation = new MarbleSimulation(Balance());
+            using var bridge = new MarblePhysicsBridge(scene, null, null, contact =>
+            {
+                contacts.Add(contact);
+                simulation.EnqueueContact(contact);
+            }, createVisuals: false);
+            simulation.StartSession(bridge);
+            int id = AddInventory(simulation, 113);
+            Assert.That(id, Is.EqualTo(1));
+            Assert.That(simulation.PlaceDevice(id, 0, 0), Is.True);
+            Assert.That(bridge.TryGetDeviceBody(id, out var device), Is.True);
+            var pegCollider = device.GetComponentsInChildren<Collider>().Single(collider => collider.enabled && !collider.isTrigger);
+            int durability = simulation.GetOwnedDevices().Single().RemainingDurability;
+            Assert.That(simulation.BeginRound(), Is.True);
+            simulation.ApplyGlobalAttribute(1, GameAttribute.BALL_GRAVITY_MOD, AttributeOperation.Set, 0);
+            var launch = pinCollider.bounds.center + Vector3.up;
+            var key = Fire(simulation, bridge, launch);
+            var context = simulation.Context;
+
+            Impact(pinCollider, MarbleContactKind.Pin);
+            Assert.That(context.Marbles.Count, Is.EqualTo(1));
+            var ball = context.Marbles[key];
+            Assert.That(context.Manager.GetBuffer<DeviceVisit>(ball).Length, Is.EqualTo(1));
+
+            Impact(pegCollider, MarbleContactKind.Device);
+            Assert.That(context.Manager.GetComponentData<MarbleScore>(ball).DeviceMultiplier.Value,
+                Is.EqualTo(1.5), "the fixed pin and Multi Ding report the same numeric target ID");
+            Assert.That(simulation.GetOwnedDevices().Single().RemainingDurability, Is.EqualTo(durability - 1));
+
+            Impact(pegCollider, MarbleContactKind.Device);
+            Assert.That(context.Manager.GetComponentData<MarbleScore>(ball).DeviceMultiplier.Value,
+                Is.EqualTo(1.5), "a later impact still respects Visit(0, 1)");
+            Assert.That(simulation.GetOwnedDevices().Single().RemainingDurability, Is.EqualTo(durability - 1));
+            yield return null;
+
+            void Impact(Collider collider, MarbleContactKind kind)
+            {
+                contacts.Clear();
+                Assert.That(bridge.TryMove(key, collider.bounds.center + Vector3.up, Vector3.down * 4), Is.True);
+                bool Hit(MarbleContact contact) => contact.Key.Equals(key) && contact.Kind == kind &&
+                    contact.TargetId == pin.TargetId && (kind != MarbleContactKind.Device || contact.HasImpact);
+                for (int i = 0; i < 50 && !contacts.Any(Hit); i++) Step(simulation, bridge, launch);
+                Assert.That(contacts.Any(Hit), Is.True, $"PhysX reports {kind} with target ID {pin.TargetId}");
+            }
         }
 
         [UnityTest]

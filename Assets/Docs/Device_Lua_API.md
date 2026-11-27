@@ -42,7 +42,7 @@ end
 | `参数 = 默认值` | 可以省略该参数；默认值由引擎提供。 |
 | 只读 / 读写 | 公开属性的访问方式；配置字段按只读数据使用。 |
 
-位置、距离和半径使用世界单位，线速度使用世界单位/秒，角度使用度。力使用牛顿；`Hold.EntryAngularVelocity` 使用 Unity 刚体角速度单位（弧度/秒）。`api.Radius` 已换算为世界半径，`Get("BALL_RADIUS")` 仍使用属性配置单位。
+位置、距离和半径使用 Unity 世界单位，线速度使用世界单位/秒，角度使用度。力使用牛顿。`Hold.EntryAngularVelocity` 使用 Unity 刚体角速度单位（弧度/秒）。`api.Radius` 和 `Get("BALL_RADIUS")` 都读取世界半径。调整 `BALL_RADIUS` 时，`ADD` 和 `SET` 填写世界单位，`MUL` 填写倍率。
 
 回调上下文及其派生对象仅在本次回调内有效。跨回调保存 ID、字符串、数值和向量值；下一次回调重新取得 API 对象。失效上下文会引发异常，不能把 `Try*` 的失败返回值视为对失效上下文的保护。
 
@@ -363,6 +363,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 | [Trigger(visitKey = 0)](#trigger) | `boolean` | 检查访问和冷却，登记耐久及通用修正。 |
 | [TryPrepareTrigger(visitKey = 0)](#trypreparetrigger) | `boolean` | 同类触发准备，不扣耐久。 |
 | [Visit(visitKey, maximum, inheritOnCopy = false)](#visit) | `boolean` | 访问去重，不使用公共冷却。 |
+| [VisitShared(visitKey, maximum, inheritOnCopy = false)](#visitshared) | `boolean` | 显式使用跨实例共享的 Lua 访问键。 |
 | [MarkTriggered()](#marktriggered) | `void` | 登记纯 Lua 效果的成功作用。 |
 | [Get(attribute)](#get) / [Global(attribute)](#global) | `number` | 读取球属性 / 全局属性。 |
 | [Set(attribute, value)](#set) / [AddBase(attribute, amount)](#addbase) / [SetCurrent(attribute, value)](#setcurrent) | `void` | 修改基础属性或替换当前属性。 |
@@ -384,7 +385,7 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 ### Trigger(visitKey = 0) → boolean
 
-参数：`visitKey: integer`，对应 C# long。0 使用当前装置的接触目标键；连接线可传 `LinkKey`，配对装置可传 `-PairId`。
+`visitKey` 的取值规则与 [Visit](#visit) 相同。连接线可传当前的 `LinkKey`，配对装置可传 `-PairId`。
 
 成功返回 `true`，并执行以下操作：
 
@@ -409,11 +410,19 @@ C 与 `Trigger`、旧 `Consume`、旧 `TrySettle` 共用登记；在 `OnHoldEnd`
 
 | 参数 | 类型 | 说明 |
 | --- | --- | --- |
-| `visitKey` | `integer`（C# long） | 0 使用当前接触目标键，其他值作为共享访问键。 |
+| `visitKey` | `integer`（C# long） | 0 按当前装置的实例 ID 计数，即使从连线回调调用也是如此。当前非零 `LinkKey` 按连线计数，当前非零 `PairId` 的相反数按整对计数。其他值按相同整数在 Lua 装置间共享。 |
 | `maximum` | `integer` | 正数限制每球总访问次数；0 表示不限次数。 |
 | `inheritOnCopy` | `boolean` | 默认 false；true 允许该条记录随 `CreateCopy` 继承。 |
 
 登记成功返回 `true`；同球同键同一步重复访问或达到次数上限返回 `false`。不扣耐久、不施加倍率、不设置公共冷却。等分默认继承全部访问记录，可用 `CreateSplitBatch(count, false)` 让子球独立计数。按价值分出继承全部访问记录，普通复制继承显式标记的记录。
+
+固定钉、区域、装置实例、Lua 自定义键、装置对与连线各自计数。传送门（103）用 `Trigger(-api.PairId)` 让一对传送门共用访问上限。
+
+<a id="visitshared"></a>
+
+### VisitShared(visitKey, maximum, inheritOnCopy = false) → boolean
+
+同 `Visit` 的次数、步内去重和继承规则。整数始终按 Lua 自定义键处理，包括 0 和恰好等于当前连线键或配对别名的值。降降火（9030）用 `VisitShared(api.DefinitionId, 1, true)`，让所有该类型的实例共用每球一次的上限，并让复制的弹珠继承这条记录。
 
 <a id="marktriggered"></a>
 
@@ -1093,7 +1102,7 @@ destination.Position
 
 ### TrySetSize(worldRadius, mass) → boolean
 
-参数：`worldRadius: number`、`mass: number`，有限且满足对应属性上下限；半径在校验时换算为属性单位。
+`worldRadius` 使用 Unity 世界单位，`mass` 使用千克。两个参数都必须是有限数值，并满足对应属性的上下限。
 
 配置新球尺寸和质量，成功返回 true；非法值或已提交返回 false。不缩放原球，也不按价值自动计算体积/质量。
 
@@ -1153,7 +1162,7 @@ Generation 加 1，SpawnSourceId 改为本实例，等分祖先加入本实例�
 
 | 属性 | 类型 | 访问 | 说明 |
 | --- | --- | --- | --- |
-| `Radius` | `number` | 只读 | 内容默认 BALL_RADIUS 换算后的世界半径。 |
+| `Radius` | `number` | 只读 | `GameContent.json` 中 `BALL_RADIUS` 的默认世界半径。 |
 | `Count` | `integer` | 只读 | 已接纳请求数，每批最多 256。 |
 
 <a id="devicespawnbatch-tryadd"></a>

@@ -44,7 +44,8 @@ namespace MarblesECS.Editor
                     f.Step(); var childKey = f.C.Marbles.Keys.OrderBy(k => k.Sequence).Last(); var child = f.Ball(childKey);
                     Near(i + 1, f.C.Marbles.Keys.Count(k => !k.Equals(key)), "exactly one new ball per interval");
                     Near(1, f.Simulation.GetMarbleAttribute(childKey, GameAttribute.BALL_BASE_VALUE), "every output is worth one");
-                    Near(.04, f.Physics.Spawns[childKey].Quote.Radius, "small output world radius"); Near(.1, f.Physics.Spawns[childKey].Quote.Mass, "small output mass");
+                    Near(.08, f.Physics.Spawns[childKey].Quote.Radius, "small output world radius"); Near(.1, f.Physics.Spawns[childKey].Quote.Mass, "small output mass");
+                    Near(.08, f.Simulation.GetMarbleAttribute(childKey, GameAttribute.BALL_RADIUS), "the portion stores its world radius in the attribute");
                     Near(6, f.Physics.States[childKey].LinearVelocity.magnitude, "configured output speed");
                     VectorNear(f.Physics.Poses[device.InstanceId].Forward * 6, f.Physics.States[childKey].LinearVelocity, "visible muzzle matches shot direction");
                     float angle = Vector3.SignedAngle(Vector3.forward, f.Physics.States[childKey].LinearVelocity, Vector3.up); angles.Add(angle);
@@ -111,7 +112,7 @@ namespace MarblesECS.Editor
             using (var f = new Fixture())
             {
                 var device = AddMachineGun(f); var key = f.Launch();
-                AttributeRuntime.SetBase(f.C, f.Ball(key), GameAttribute.BALL_RADIUS, 3);
+                AttributeRuntime.SetBase(f.C, f.Ball(key), GameAttribute.BALL_RADIUS, .96);
                 var state = f.Physics.States[key]; state.Position = f.Physics.Poses[device.InstanceId].Position + Vector3.forward * .68f;
                 f.Physics.States[key] = state; f.Step(f.Hit(key, device)); f.Step();
                 var child = f.C.Marbles.Keys.OrderBy(k => k.Sequence).Last();
@@ -125,9 +126,13 @@ namespace MarblesECS.Editor
             using (var f = new Fixture())
             {
                 var device = AddMachineGun(f); var key = f.Launch(); var api = CashApi(f, key, device);
+                Near(.1, api.Get("BALL_RADIUS"), "the Lua attribute reads the default world radius");
+                Near(api.Get("BALL_RADIUS"), api.Radius, "both Lua radius reads use world units");
                 ExpectArgument(() => api.CreatePortion(0)); ExpectArgument(() => api.CreatePortion(double.NaN));
                 var part = api.CreatePortion(11); Check(!part.CanSplit, "cannot transfer more value than parent holds");
                 part = api.CreatePortion(2.5); Check(!part.TrySetSize(float.NaN, 1) && !part.TrySetSize(.04f, .001f), "invalid physical sizes are rejected");
+                Check(!part.TrySetSize(.019f, .1f) && !part.TrySetSize(.961f, .1f), "portion enforces the world-radius limits");
+                Check(part.TrySetSize(.02f, .1f) && part.TrySetSize(.96f, .1f), "portion accepts both radius limits");
                 Check(part.TrySetSize(.04f, .1f), "independent configurable portion size");
                 f.Physics.FailSpawnAt = f.Physics.Attempts + 1; Check(!part.TrySpawn(Vector3.one * 3, Vector3.forward), "spawn failure is atomic");
                 Near(10, api.Value, "spawn failure preserves parent"); Check(!part.TrySpawn(Vector3.one, Vector3.forward), "request submits only once");

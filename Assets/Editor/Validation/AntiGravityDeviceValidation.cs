@@ -26,17 +26,18 @@ namespace MarblesECS.Editor
                     var initial = -r.Pose.Down() * 3;
                     Near(initial, body.velocity, "launch preserves speed and chooses uphill direction");
                     Near(new Vector3(1, 2, 3), body.angularVelocity, "spin preserved");
-                    Check(r.Active(key) && r.Gravity(key) == -1, "Lua applies reverse gravity immediately");
+                    Check(r.Active(key) && r.Gravity(key) == -r.DefaultGravity, "Lua applies reverse gravity immediately");
                     Check(r.Simulation.GetOwnedDevices().Single().RemainingDurability == 19, "one use for launch plus gravity");
+                    var gravity = Physics.gravity * r.DefaultGravity;
                     int count = Mathf.RoundToInt(2 / dt);
                     for (int i = 0; i < count - 1; i++) r.Step();
                     Check(r.Active(key), "effect survives until full duration");
-                    Near(initial - Physics.gravity * (dt * (count - 1)), body.velocity, "real upward acceleration during effect", .01f);
+                    Near(initial - gravity * (dt * (count - 1)), body.velocity, "real upward acceleration during effect", .01f);
                     r.Step();
-                    Check(!r.Active(key) && r.Gravity(key) == 1, "restored at two seconds");
-                    Near(initial - Physics.gravity * 2, body.velocity, "last step still receives reverse gravity", .01f);
+                    Check(!r.Active(key) && r.Gravity(key) == r.DefaultGravity, "restored at two seconds");
+                    Near(initial - gravity * 2, body.velocity, "last step still receives reverse gravity", .01f);
                     var last = body.velocity; r.Step();
-                    Near(last + Physics.gravity * dt, body.velocity, "ordinary gravity resumes next step", .01f);
+                    Near(last + gravity * dt, body.velocity, "ordinary gravity resumes next step", .01f);
                 }
             foreach (uint otherId in new uint[] { 113, 9001, 9004, 9006 })
                 using (var r = new Rig())
@@ -50,7 +51,7 @@ namespace MarblesECS.Editor
                         Check(effect.SourceId == other.InstanceId && effect.EndsAt > r.C.Round.Time,
                             "another instance ends previous gravity then starts a new effect");
                     }
-                    else Check(!r.Active(key) && r.Gravity(key) == 1, "other device resets before its Lua, including field-only devices");
+                    else Check(!r.Active(key) && r.Gravity(key) == r.DefaultGravity, "other device resets before its Lua, including field-only devices");
                     if (otherId == 9001) Check(r.C.Manager.HasComponent<HeldMotion>(r.Ball(key)), "sticky still applies its hold after gravity reset");
                 }
             using (var r = new Rig())
@@ -79,14 +80,14 @@ namespace MarblesECS.Editor
                 Check(m.TrySetGravityScale(0, 1, false), "zero gravity is reusable independently of launch");
                 Near(position, r.Body(key).position, "gravity API does not move");
                 Near(velocity, r.Body(key).velocity, "gravity API does not launch");
-                Check(m.TrySetGravityScale(.5f, 3, false) && r.Gravity(key) == .5f, "new scale replaces previous effect");
+                Check(m.TrySetGravityScale(.5f, 3, false) && r.Gravity(key) == r.DefaultGravity * .5f, "new scale replaces previous effect");
                 api.Close();
                 bool closed = false; try { m.TryClearGravityScale(); } catch (InvalidOperationException) { closed = true; }
                 Check(closed, "gravity API cannot escape callback lifetime");
                 r.Hit(key, r.Add(113, Vector3.right * 5));
-                Check(r.Active(key) && r.Gravity(key) == .5f, "contact reset is optional");
+                Check(r.Active(key) && r.Gravity(key) == r.DefaultGravity * .5f, "contact reset is optional");
                 api = r.Api(key);
-                Check(api.Motion.TryClearGravityScale() && !api.Motion.TryClearGravityScale() && r.Gravity(key) == 1, "explicit clear only removes temporary gravity");
+                Check(api.Motion.TryClearGravityScale() && !api.Motion.TryClearGravityScale() && r.Gravity(key) == r.DefaultGravity, "explicit clear only removes temporary gravity");
                 api.Close();
             }
             using (var r = new Rig())
@@ -104,18 +105,18 @@ namespace MarblesECS.Editor
                     var key = r.Launch(); r.Contact(key, 2);
                     if (remove) r.C.Manager.DestroyEntity(r.Device);
                     else { var d = r.C.Manager.GetComponentData<OwnedDeviceData>(r.Device); d.Placed = false; r.C.Manager.SetComponentData(r.Device, d); }
-                    r.Step(); Check(!r.Active(key) && r.Gravity(key) == 1, "source removed or recalled restores gravity");
+                    r.Step(); Check(!r.Active(key) && r.Gravity(key) == r.DefaultGravity, "source removed or recalled restores gravity");
                 }
             using (var r = new Rig())
             {
                 var first = r.Launch(); r.Contact(first, 2); var pooled = r.Body(first);
                 var second = r.Launch();
-                Check(r.Active(first) && !r.Active(second) && r.Gravity(second) == 1, "per-ball isolation");
+                Check(r.Active(first) && !r.Active(second) && r.Gravity(second) == r.DefaultGravity, "per-ball isolation");
                 var f = r.C.Manager.GetComponentData<BallFeatures>(r.Ball(first)); f.BirthTick = r.C.Round.Tick - 599;
                 r.C.Manager.SetComponentData(r.Ball(first), f); r.Step();
                 Check(!r.C.Marbles.ContainsKey(first), "lifetime removes ball with active effect");
                 var next = r.Launch();
-                Check(r.Body(next) == pooled && !r.Active(next) && r.Gravity(next) == 1, "pool reuse has normal gravity");
+                Check(r.Body(next) == pooled && !r.Active(next) && r.Gravity(next) == r.DefaultGravity, "pool reuse has normal gravity");
                 r.Contact(next, 2); r.Simulation.StartSession(r.Bridge);
                 Check(r.C.Marbles.Count == 0 && r.Bridge.ActiveBodyCount == 0, "session reset clears timed effects");
             }
@@ -126,7 +127,7 @@ namespace MarblesECS.Editor
                 obstacle.transform.position = r.Pose.Position + r.Pose.Up * (radius + .005f) - r.Pose.Down() * (r.Pose.Radius + radius + .02f);
                 obstacle.AddComponent<BoxCollider>().size = Vector3.one * .3f; Physics.SyncTransforms();
                 try { var before = r.Body(key).position; r.Contact(key, 2);
-                    Check(!r.Active(key) && r.Gravity(key) == 1, "blocked launch does not grant gravity effect");
+                    Check(!r.Active(key) && r.Gravity(key) == r.DefaultGravity, "blocked launch does not grant gravity effect");
                     Near(before, r.Body(key).position, "blocked launch does not embed ball in geometry"); }
                 finally { UnityEngine.Object.DestroyImmediate(obstacle); }
             }
@@ -155,7 +156,7 @@ namespace MarblesECS.Editor
                 Check(!field.Script.HasFunction("OnContact"), "field only has a force callback");
                 Check(r.Bridge.TryMove(key, field.GetComponentInChildren<BoxCollider>().bounds.center, Vector3.zero), "move into actual field sensor");
                 r.Step();
-                Check(!r.Active(key) && r.Gravity(key) == 1, "real trigger contact resets even without OnContact handler");
+                Check(!r.Active(key) && r.Gravity(key) == r.DefaultGravity, "real trigger contact resets even without OnContact handler");
             }
             Debug.Log("ANTI_GRAVITY_VALIDATION_PASSED: " + assertions + " assertions; packaged Lua, real gravity, duration, contacts and lifecycle.");
         }
@@ -175,6 +176,7 @@ namespace MarblesECS.Editor
             internal readonly Entity Device;
             internal readonly DeviceBody Source;
             internal SimulationContext C => Simulation.Context;
+            internal float DefaultGravity => (float)C.Content.Definition(GameAttribute.BALL_GRAVITY_MOD).DefaultValue;
             internal DevicePose Pose { get { Bridge.TryGetDevicePose(Source.InstanceId, out var pose); return pose; } }
             private readonly List<DevicePhysicsFixture> views = new List<DevicePhysicsFixture>();
             private readonly float dt;

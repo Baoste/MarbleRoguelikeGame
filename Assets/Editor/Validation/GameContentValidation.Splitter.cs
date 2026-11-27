@@ -143,7 +143,7 @@ namespace MarblesECS.Editor
                     void Step() { simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); bridge.Simulate(dt); simulation.AfterPhysics(bridge); }
                     simulation.FireOnce(); simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge);
                     var key = c.Marbles.Keys.Single();
-                    float radius = (float)(c.Content.Definition(GameAttribute.BALL_RADIUS).DefaultValue * Math.Pow(1d / 3, 1d / 3) * AttributeRuntime.RadiusToWorld);
+                    float radius = (float)(c.Content.Definition(GameAttribute.BALL_RADIUS).DefaultValue * Math.Pow(1d / 3, 1d / 3));
                     var center = pose.Position + pose.Up * (radius + .005f);
                     float distance = pose.Radius + radius + .02f;
                     obstacle = new GameObject("BlockedMiddleOutlet"); SceneManager.MoveGameObjectToScene(obstacle, scene);

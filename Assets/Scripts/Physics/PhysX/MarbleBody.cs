@@ -55,7 +55,8 @@ namespace MarblesECS.PhysX
                 float incoming = Mathf.Max(0, -Vector3.Dot(BeforeVelocity - surfaceVelocity, normal));
                 if (incoming > 0)
                 {
-                    float bounce = device != null ? Mathf.Max(Settings.Bounce, device.Bounce) : Settings.Bounce;
+                    float surfaceBounce = device != null ? device.Bounce : Bridge.GetCollisionPinBounce(collision.collider);
+                    float bounce = Mathf.Max(Settings.Bounce, surfaceBounce);
                     float outgoing = Vector3.Dot(Body.velocity - surfaceVelocity, normal);
                     Body.velocity = Vector3.ClampMagnitude(Body.velocity + normal * (incoming * bounce - outgoing), Settings.MaxSpeed);
                 }

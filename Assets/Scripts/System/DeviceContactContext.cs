@@ -13,7 +13,7 @@ namespace MarblesECS
         private readonly Entity ball, deviceEntity;
         private readonly MarbleContact contact;
         private readonly DevicePose pose;
-        private readonly int sourceId;
+        private readonly int sourceId, pairId;
         private readonly DeviceDefinition definition;
         private readonly DeviceHoldInfo hold;
         private readonly DeviceImpactInfo impact;
@@ -28,6 +28,7 @@ namespace MarblesECS
             var owned = c.Manager.GetComponentData<OwnedDeviceData>(device);
             definition = CampaignStateUtility.Device(c, owned.DefinitionId);
             sourceId = owned.InstanceId;
+            pairId = owned.PairId;
             Motion = new DeviceMotionApi(this, ball, device, sourceId, pose);
             Vectors = new DeviceVectorApi(this);
             Board = new DeviceBoardApi(() => C, sourceId);
@@ -96,7 +97,7 @@ namespace MarblesECS
         private void RecordRushTrigger()
         {
             if (allowRushContribution && !rushGranted)
-            { RushSystem.RecordTrigger(C, ball, InstanceId); rushGranted = true; }
+            { RushSystem.RecordTrigger(C, ball, ContactTargetKey.ForDevice(sourceId)); rushGranted = true; }
         }
         internal bool RecordEffect(bool success) { if (success) MarkTriggered(); return success; }
         /// <summary>Current wallet balance as a Lua number; read only and exact through the wallet cap.</summary>
@@ -166,7 +167,7 @@ namespace MarblesECS
             }
         }
         public float DeltaTime => C.StepSeconds;
-        public float Radius => (float)Get("BALL_RADIUS") * AttributeRuntime.RadiusToWorld;
+        public float Radius => (float)Get("BALL_RADIUS");
         public float Range { get { _ = C; return definition.Range; } }
         public int RemainingDurability => DeviceDurabilitySystem.Remaining(C, Device);
         public int HeldCount => HeldMotionSystem.Count(C, Device.InstanceId);
@@ -250,9 +251,16 @@ namespace MarblesECS
         /// <summary>Per-ball visit tracking without a device-wide cooldown.</summary>
         public bool Visit(long visitKey, int maximum) => Visit(visitKey, maximum, false);
         /// <summary>Opt in to retaining this record on copied balls, for effects whose state is also inherited.</summary>
-        public bool Visit(long visitKey, int maximum, bool inheritOnCopy)
+        public bool Visit(long visitKey, int maximum, bool inheritOnCopy) =>
+            MarkVisit(DeviceVisitKey.FromLuaArgument(visitKey, sourceId, pairId, contact.LinkKey), maximum, inheritOnCopy);
+
+        /// <summary>Use a shared Lua key even when its value matches the current pair or link alias.</summary>
+        public bool VisitShared(long visitKey, int maximum, bool inheritOnCopy = false) =>
+            MarkVisit(DeviceVisitKey.ForSharedLua(visitKey), maximum, inheritOnCopy);
+
+        private bool MarkVisit(DeviceVisitKey key, int maximum, bool inheritOnCopy)
         {
-            bool success = BallInteractionSystem.MarkVisit(C, ball, visitKey == 0 ? contact.TargetId : visitKey, maximum, inheritOnCopy);
+            bool success = BallInteractionSystem.MarkVisit(C, ball, key, maximum, inheritOnCopy);
             if (success && hold == null) allowRushContribution = true;
             return success;
         }

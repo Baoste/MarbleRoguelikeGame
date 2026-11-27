@@ -19,6 +19,151 @@ namespace MarblesECS.Tests
         private const string Second = "{\"dayId\":\"fixture-second\",\"order\":2,\"targetScore\":450,\"clearCompanyScripReward\":45" + Features + "}";
 
         [Test]
+        public void DeviceIndexRejectsDuplicatesAndDoesNotResolveRetiredEntities()
+        {
+            var balance = GameBalanceLoader.Load();
+            foreach (var device in balance.Devices) device.StartingCount = 0;
+            using var simulation = new MarbleSimulation(balance);
+            var physics = new PhysicsStub();
+            simulation.StartSession(physics);
+            var context = simulation.Context;
+            var definition = CampaignStateUtility.Device(context, 9001);
+            var original = CampaignStateUtility.CreateSingleDevice(context, definition, default);
+            var data = context.Manager.GetComponentData<OwnedDeviceData>(original);
+            int id = data.InstanceId;
+            var originalScript = context.DeviceScripts.Get(id, definition.Id);
+
+            context.Manager.SetEnabled(original, false);
+            Assert.That(CampaignStateUtility.FindDevice(context, id, out _), Is.False);
+            Assert.Throws<InvalidOperationException>(() => CampaignStateUtility.CreateDeviceEntity(context, data, default));
+            context.Manager.SetEnabled(original, true);
+            Assert.That(CampaignStateUtility.FindDevice(context, id, out var found), Is.True);
+            Assert.That(found, Is.EqualTo(original));
+
+            // Simulate an invalid handle arriving from an ECS-side teardown.
+            context.Manager.DestroyEntity(original);
+            Assert.That(CampaignStateUtility.FindDevice(context, id, out _), Is.False);
+            Assert.That(originalScript.IsDisposed, Is.True);
+            var restored = CampaignStateUtility.CreateDeviceEntity(context, data, default);
+            Assert.That(CampaignStateUtility.FindDevice(context, id, out found), Is.True);
+            Assert.That(found, Is.EqualTo(restored));
+            Assert.That(found, Is.Not.EqualTo(original));
+
+            simulation.StartSession(physics);
+            Assert.That(CampaignStateUtility.FindDevice(context, id, out _), Is.False);
+            var next = CampaignStateUtility.CreateSingleDevice(context, definition, default);
+            Assert.That(CampaignStateUtility.FindDevice(context, id, out found), Is.True);
+            Assert.That(found, Is.EqualTo(next));
+        }
+
+        [Test]
+        public void TickFreezesItsMembersAndRechecksWearAndScriptBinding()
+        {
+            var balance = GameBalanceLoader.Load();
+            foreach (var device in balance.Devices) device.StartingCount = 0;
+            using var simulation = new MarbleSimulation(balance);
+            var physics = new PhysicsStub();
+            const uint seed = 83;
+            simulation.StartSession(physics, seed);
+            var context = simulation.Context;
+            var definition = CampaignStateUtility.Device(context, 9001);
+            const string tick = "function OnTick(api) api:TrySetYaw(api:RandomRange(0, 1)) end";
+            context.DeviceScripts.CreateScript = resource => resource.CreateScript(tick);
+
+            var first = AddPlaced(1);
+            var removed = AddPlaced(2);
+            var dormant = AddPlaced(3);
+            var noTick = AddPlaced(4);
+            var resource = DeviceResourceCatalog.Current.Get(definition.Id);
+            context.DeviceScripts.Bind(noTick.id, resource.CreateScript("local unused = 0"));
+            DeviceDurabilitySystem.SetLimit(context, dormant.entity, 0);
+            Assert.That(simulation.BeginRound(), Is.True);
+
+            var calls = new List<int>();
+            var poses = new List<int>();
+            int added = 0;
+            physics.DevicePoseRead = id => poses.Add(id);
+            physics.DeviceYaw = id =>
+            {
+                calls.Add(id);
+                if (id != first.id || added != 0) return;
+                CampaignStateUtility.DestroyDevice(context, removed.entity);
+                DeviceDurabilitySystem.SetLimit(context, dormant.entity, -1);
+                added = AddPlaced(5).id;
+            };
+            DeviceScriptSystem.Tick(context);
+            CollectionAssert.AreEqual(new[] { first.id, dormant.id }, calls);
+            CollectionAssert.AreEqual(calls, poses);
+            Assert.That(CampaignStateUtility.FindDevice(context, removed.id, out _), Is.False);
+
+            calls.Clear(); poses.Clear();
+            context.DeviceScripts.Bind(dormant.id, resource.CreateScript("local unused = 0"));
+            context.DeviceScripts.Bind(noTick.id, resource.CreateScript(tick));
+            DeviceScriptSystem.Tick(context);
+            CollectionAssert.AreEqual(new[] { first.id, noTick.id, added }, calls);
+            CollectionAssert.AreEqual(calls, poses);
+
+            calls.Clear(); poses.Clear();
+            context.DeviceScripts.Get(noTick.id, definition.Id).Dispose();
+            DeviceScriptSystem.Tick(context);
+            CollectionAssert.AreEqual(new[] { first.id, added }, calls);
+            CollectionAssert.AreEqual(calls, poses);
+
+            uint expected = seed;
+            for (int i = 0; i < 7; i++) MarbleRules.NextRandom(ref expected);
+            Assert.That(context.Round.RandomState, Is.EqualTo(expected));
+
+            (int id, Unity.Entities.Entity entity) AddPlaced(int index)
+            {
+                var entity = CampaignStateUtility.CreateSingleDevice(context, definition,
+                    new OwnedDeviceData { Placed = true, X = index * 3 });
+                var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+                Assert.That(DevicePlacementSystem.TrySetPhysicsPlacement(context, device.InstanceId, definition, device), Is.True);
+                return (device.InstanceId, entity);
+            }
+        }
+
+        [Test]
+        public void BallUpdateKeepsMarblesCreatedInACallbackForTheNextPass()
+        {
+            var balance = GameBalanceLoader.Load();
+            foreach (var device in balance.Devices) device.StartingCount = 0;
+            using var simulation = new MarbleSimulation(balance);
+            var physics = new PhysicsStub();
+            simulation.StartSession(physics);
+            var context = simulation.Context;
+            context.DeviceScripts.CreateScript = resource => resource.CreateScript(@"
+function OnRoundStart(api)
+    OnBallUpdate = function(ball) ball.Motion:TrySetVelocity(ball.Motion.Velocity) end
+end");
+            var definition = CampaignStateUtility.Device(context, 9001);
+            CampaignStateUtility.CreateDevice(context, definition, 0);
+            Assert.That(simulation.PlaceDevice(context.Campaign.NextDeviceId, 4, 0), Is.True);
+            Assert.That(simulation.BeginRound(), Is.True);
+            Step(simulation, physics);
+            var spawn = AttributeRuntime.Prepare(context, 0);
+            Assert.That(ContentSpawnSystem.Create(context, spawn, Vector3.one, Quaternion.identity, Vector3.zero, out _), Is.True);
+            var original = physics.Last;
+            var calls = new List<MarbleKey>();
+            MarbleKey added = default;
+            physics.BallVelocity = key =>
+            {
+                calls.Add(key);
+                if (added.Sequence != 0) return;
+                Assert.That(ContentSpawnSystem.Create(context, spawn, Vector3.right * 2, Quaternion.identity, Vector3.zero, out _), Is.True);
+                added = physics.Last;
+            };
+
+            Step(simulation, physics);
+            Assert.That(added.Sequence, Is.GreaterThan(original.Sequence));
+            CollectionAssert.AreEqual(new[] { original }, calls);
+
+            calls.Clear();
+            Step(simulation, physics);
+            CollectionAssert.AreEqual(new[] { original, added }, calls);
+        }
+
+        [Test]
         public void RejectedPhysicsUpdateKeepsInventoryPlacementAndPose()
         {
             using var simulation = new MarbleSimulation(GameBalanceLoader.Load());
@@ -164,7 +309,7 @@ namespace MarblesECS.Tests
             StringAssert.Contains("loadout", error);
             Assert.That(simulation.TryOpenShop(wake), Is.True);
             Assert.That(simulation.TryConfirmLoadout(wake), Is.False);
-            Assert.That(simulation.TryToggleLoadoutPeg(wake, 9035), Is.False);
+            Assert.That(simulation.TryToggleLoadoutPeg(wake, 113), Is.False);
             Assert.That(simulation.TryToggleLoadoutPeg(wake, 9033), Is.True);
             Assert.That(simulation.TryConfirmLoadout(wake), Is.True);
             Assert.That(simulation.TryCloseShop(wake), Is.True);
@@ -231,18 +376,18 @@ namespace MarblesECS.Tests
             ConfirmLoadout(simulation, 9033, 9034);
             ScoreRound(simulation, physics, simulation.Session.TargetScore);
             Assert.That(simulation.TryCompleteRest(CompleteSettlement(simulation), out _), Is.True);
-            Assert.That(simulation.GetDailyPegs().Count(peg => peg.Permitted), Is.EqualTo(5));
+            Assert.That(simulation.GetDailyPegs().Count(peg => peg.Permitted), Is.EqualTo(4));
             Assert.That(simulation.DailyLoadout.Capacity, Is.EqualTo(3));
             long version = simulation.Day.Version;
             Assert.That(simulation.TryOpenShop(version), Is.True);
             Assert.That(simulation.GetShopOffers(), Is.Empty);
-            foreach (uint id in new uint[] { 9035, 9036, 9037 })
+            foreach (uint id in new uint[] { 113, 9034, 9018 })
                 Assert.That(simulation.TryToggleLoadoutPeg(version, id), Is.True);
             Assert.That(simulation.TryToggleLoadoutPeg(version, 9033), Is.False);
-            Assert.That(simulation.TryToggleLoadoutPeg(version, 9036), Is.True);
+            Assert.That(simulation.TryToggleLoadoutPeg(version, 9034), Is.True);
             Assert.That(simulation.TryToggleLoadoutPeg(version, 9033), Is.True);
             FinishLoadout(simulation);
-            Assert.That(simulation.TryInstallDevice(9036, 0, 0, .1f, 0, out _), Is.False);
+            Assert.That(simulation.TryInstallDevice(9034, 0, 0, .1f, 0, out _), Is.False);
             ScoreRound(simulation, physics, simulation.Session.TargetScore);
             Assert.That(simulation.TryCompleteRest(CompleteSettlement(simulation), out _), Is.True);
 
@@ -255,7 +400,7 @@ namespace MarblesECS.Tests
             version = simulation.Day.Version;
             Assert.That(simulation.TryOpenShop(version), Is.True);
             var offers = simulation.GetShopOffers();
-            Assert.That(offers.Select(offer => offer.DefinitionId), Is.EquivalentTo(new uint[] { 9034, 9035, 9036, 9037 }));
+            Assert.That(offers.Select(offer => offer.DefinitionId), Is.EquivalentTo(new uint[] { 9034, 113, 9018 }));
             foreach (var _ in offers) MarbleRules.NextRandom(ref expectedRandom);
             Assert.That(simulation.Day.RandomState, Is.EqualTo(expectedRandom));
             uint acquired = offers[0].DefinitionId;
@@ -312,20 +457,20 @@ namespace MarblesECS.Tests
         {
             var balance = GameBalanceLoader.Load();
             string json = @"{""schemaVersion"":3,""sequenceId"":""permissions"",""startingCompanyScrip"":8,""days"":[
-                {""dayId"":""first"",""order"":1,""targetScore"":20,""unlockedPegIds"":[9033,9034,9035,9036,9037],
+                {""dayId"":""first"",""order"":1,""targetScore"":20,""unlockedPegIds"":[9033,9034,113,9018],
                 ""defaultPegIds"":[9033],""requiredPegIds"":[9033],""maxLoadoutTypeCount"":3,
                 ""initialBiomassScrap"":4,""clearCompanyScripReward"":0,""shopEnabled"":true,""shopDrawCost"":2,
-                ""shopRefreshCost"":1,""shopOfferCount"":2,""shopGuaranteedPegIds"":[9037],""shopSelectionLimit"":2,
+                ""shopRefreshCost"":1,""shopOfferCount"":2,""shopGuaranteedPegIds"":[9018],""shopSelectionLimit"":2,
                 ""pegPermissionScope"":""" + scope + @"""},
-                {""dayId"":""next"",""order"":2,""targetScore"":20,""unlockedPegIds"":[9033,9037],
+                {""dayId"":""next"",""order"":2,""targetScore"":20,""unlockedPegIds"":[9033,9018],
                 ""defaultPegIds"":[9033],""maxLoadoutTypeCount"":2,""initialBiomassScrap"":3,""clearCompanyScripReward"":0}]}";
             var definition = GameDaysLoader.Parse(json, balance);
             foreach (var invalid in new[]
             {
                 json.Replace("\"shopDrawCost\":2", "\"shopDrawCost\":-2"),
                 json.Replace("\"shopDrawCost\":2", "\"shopDrawCost\":2,\"shopCurrencyType\":\"BiomassScrap\""),
-                json.Replace("\"shopGuaranteedPegIds\":[9037]", "\"shopGuaranteedPegIds\":[9037,9037]"),
-                json.Replace("\"requiredPegIds\":[9033]", "\"requiredPegIds\":[9036]")
+                json.Replace("\"shopGuaranteedPegIds\":[9018]", "\"shopGuaranteedPegIds\":[9018,9018]"),
+                json.Replace("\"requiredPegIds\":[9033]", "\"requiredPegIds\":[9034]")
             })
                 Assert.Throws<ArgumentException>(() => GameDaysLoader.Parse(invalid, balance));
             using var simulation = new MarbleSimulation(balance);
@@ -333,19 +478,19 @@ namespace MarblesECS.Tests
             Start(simulation, definition, physics);
             Assert.That(simulation.TryOpenShop(simulation.Day.Version), Is.True);
             Assert.That(simulation.TryToggleLoadoutPeg(simulation.Day.Version, 9033), Is.False);
-            Assert.That(simulation.GetShopOffers()[0].DefinitionId, Is.EqualTo(9037));
+            Assert.That(simulation.GetShopOffers()[0].DefinitionId, Is.EqualTo(9018));
             Assert.That(simulation.BuyOffer(0), Is.True);
             Assert.That(simulation.RefreshShop(), Is.True);
             Assert.That(simulation.GetShopOffers().Select(offer => offer.DefinitionId).Distinct().Count(), Is.EqualTo(2));
-            Assert.That(simulation.GetShopOffers().Any(offer => offer.DefinitionId == 9037), Is.False);
+            Assert.That(simulation.GetShopOffers().Any(offer => offer.DefinitionId == 9018), Is.False);
             Assert.That(simulation.Session.CompanyScripBalance, Is.EqualTo(5));
             Assert.That(simulation.Session.BiomassScrapBalance, Is.EqualTo(4));
             FinishLoadout(simulation);
             ScoreRound(simulation, physics, simulation.Session.TargetScore);
-            Assert.That(simulation.GetDailyPegs().Single(peg => peg.DefinitionId == 9037).Permitted,
+            Assert.That(simulation.GetDailyPegs().Single(peg => peg.DefinitionId == 9018).Permitted,
                 Is.EqualTo(scope != PegPermissionScope.RunOnly));
             Assert.That(simulation.TryCompleteRest(CompleteSettlement(simulation), out _), Is.True);
-            Assert.That(simulation.GetDailyPegs().Single(peg => peg.DefinitionId == 9037).Permitted,
+            Assert.That(simulation.GetDailyPegs().Single(peg => peg.DefinitionId == 9018).Permitted,
                 Is.EqualTo(scope == PegPermissionScope.CampaignPermanent));
         }
 
@@ -366,10 +511,11 @@ namespace MarblesECS.Tests
             Assert.That(simulation.TryCompleteWakeUp(version, out string error), Is.True, error);
         }
 
-        [TestCase(9036u, 1)]
-        [TestCase(9037u, 2)]
-        public void BloodValueIsFixedAtLaunchAndCopiedFromTheCurrentParent(uint splitId, int copies)
+        [TestCase(1)]
+        [TestCase(2)]
+        public void BloodValueIsFixedAtLaunchAndCopiedFromTheCurrentParent(int copies)
         {
+            const uint copyId = 9018;
             var balance = GameBalanceLoader.Load();
             balance.Marble.MinInvestment = 1;
             balance.Marble.MaxFireIntervalSeconds = .005f;
@@ -385,18 +531,21 @@ namespace MarblesECS.Tests
                 }},
                 ""days"":[{{
                     ""dayId"":""first"",""order"":1,""targetScore"":20,
-                    ""unlockedPegIds"":[9033,{splitId}],""defaultPegIds"":[9033,{splitId}],
+                    ""unlockedPegIds"":[9033,{copyId}],""defaultPegIds"":[9033,{copyId}],
                     ""maxLoadoutTypeCount"":2,""initialBiomassScrap"":30,""clearCompanyScripReward"":0
                 }}]
             }}", balance);
             using var simulation = new MarbleSimulation(balance);
             var physics = new PhysicsStub();
             Start(simulation, definition, physics);
-            ConfirmLoadout(simulation, 9033, splitId);
+            ConfirmLoadout(simulation, 9033, copyId);
             Assert.That(simulation.BeginRound(), Is.True);
             simulation.SetFlow(0);
+            simulation.Context.DeviceScripts.CreateScript = resource => resource.Definition.Id == copyId
+                ? resource.CreateScript(CopyCurrentBallScript(copies))
+                : resource.CreateScript();
             Assert.That(simulation.TryInstallDevice(9033, -1, 0, .1f, 0, out int economy), Is.True);
-            Assert.That(simulation.TryInstallDevice(splitId, 1, 0, .1f, 0, out int split), Is.True);
+            Assert.That(simulation.TryInstallDevice(copyId, 1, 0, .1f, 0, out int copier), Is.True);
 
             var first = Launch(.5);
             for (int shot = 2; shot <= 30; shot++) Launch(.5);
@@ -416,7 +565,7 @@ namespace MarblesECS.Tests
 
             var knownBalls = new HashSet<MarbleKey>(simulation.Context.Marbles.Keys);
             simulation.BeforePhysics(.01f, physics, Vector3.zero, Quaternion.identity);
-            simulation.EnqueueContact(DeviceHit(first, split));
+            simulation.EnqueueContact(DeviceHit(first, copier));
             simulation.AfterPhysics(physics);
             var children = simulation.Context.Marbles.Keys.Where(ball => !knownBalls.Contains(ball)).ToArray();
             Assert.That(children, Has.Length.EqualTo(copies));
@@ -533,12 +682,10 @@ namespace MarblesECS.Tests
             StringAssert.Contains(error, exception.Message);
         }
 
-        [TestCase(9033u, 0)]
-        [TestCase(9034u, 0)]
-        [TestCase(9035u, 0)]
-        [TestCase(9036u, 1)]
-        [TestCase(9037u, 2)]
-        public void DailyPegLuaAppliesTheLastUseBeforeBreaking(uint id, int copies)
+        [TestCase(9033u)]
+        [TestCase(9034u)]
+        [TestCase(113u)]
+        public void DailyPegLuaAppliesTheLastUseBeforeBreaking(uint id)
         {
             var balance = GameBalanceLoader.Load();
             balance.Devices.Single(peg => peg.Id == id).Durability = 1;
@@ -555,7 +702,7 @@ namespace MarblesECS.Tests
             simulation.BeforePhysics(.01f, physics, Vector3.zero, Quaternion.identity);
             var ball = physics.Last;
             double value = AttributeRuntime.Get(simulation.Context, simulation.Context.Marbles[ball], GameAttribute.BALL_BASE_VALUE);
-            simulation.EnqueueContact(DeviceHit(ball, installed, impact: false));
+            if (id != 113) simulation.EnqueueContact(DeviceHit(ball, installed, impact: false));
             simulation.AfterPhysics(physics);
             Assert.That(broken, Is.Empty);
             Assert.That(simulation.GetOwnedDevices().Single().RemainingDurability, Is.EqualTo(1));
@@ -571,28 +718,27 @@ namespace MarblesECS.Tests
             Assert.That(simulation.Session.BiomassScrapBalance, Is.EqualTo(scrap + (id == 9033 ? 1 : 0)));
             var context = simulation.Context;
             var parent = context.Marbles[ball];
-            Assert.That(context.Marbles.Count, Is.EqualTo(1 + copies));
+            Assert.That(context.Marbles.Count, Is.EqualTo(1));
             double expectedValue = id == 9033 ? value / 2 : id == 9034 ? value + 3 : value;
             Assert.That(AttributeRuntime.Get(context, parent, GameAttribute.BALL_BASE_VALUE), Is.EqualTo(expectedValue).Within(1e-6));
-            foreach (var child in context.Marbles.Where(pair => !pair.Key.Equals(ball)))
-                Assert.That(AttributeRuntime.Get(context, child.Value, GameAttribute.BALL_BASE_VALUE), Is.EqualTo(value));
-            Assert.That(context.Manager.GetComponentData<MarbleScore>(parent).DeviceMultiplier.Value, Is.EqualTo(id == 9035 ? 2 : 1));
+            Assert.That(context.Manager.GetComponentData<MarbleScore>(parent).DeviceMultiplier.Value, Is.EqualTo(id == 113 ? 1.5 : 1));
         }
 
-        [TestCase(2d)]
+        [TestCase(1.5d)]
         [TestCase(.5d)]
         public void FixedPinsAndInstalledPegsCompoundUntilSettlement(double factor)
         {
-            const uint pegId = 9035;
+            const uint pegId = 113;
             var balance = GameBalanceLoader.Load();
             var peg = balance.Devices.Single(device => device.Id == pegId);
             peg.ScoreMultiplier = factor;
             using var simulation = new MarbleSimulation(balance);
             var physics = new PhysicsStub();
-            Start(simulation, SinglePegDay(pegId, balance), physics);
+            Start(simulation, SinglePegDay(pegId, balance, initialScrap: 20), physics);
             ConfirmLoadout(simulation, pegId);
             Assert.That(simulation.BeginRound(), Is.True);
-            Assert.That(simulation.TryInstallDevice(pegId, 0, 0, .1f, 0, out int installed), Is.True);
+            Assert.That(simulation.TryInstallDevice(pegId, 0, 0, .1f, 0, out int first), Is.True);
+            Assert.That(simulation.TryInstallDevice(pegId, 2, 0, .1f, 0, out int second), Is.True);
             simulation.FireOnce();
             simulation.BeforePhysics(.01f, physics, Vector3.zero, Quaternion.identity);
             var ball = physics.Last;
@@ -605,17 +751,18 @@ namespace MarblesECS.Tests
             };
 
             simulation.EnqueueContact(pin);
-            simulation.EnqueueContact(DeviceHit(ball, installed));
+            simulation.EnqueueContact(DeviceHit(ball, first));
             simulation.AfterPhysics(physics);
             Assert.That(context.Manager.GetComponentData<MarbleScore>(entity).ScoreMultiplier, Is.EqualTo(factor * factor));
 
             simulation.BeforePhysics(.01f, physics, Vector3.zero, Quaternion.identity);
             simulation.EnqueueContact(pin);
-            simulation.EnqueueContact(DeviceHit(ball, installed));
+            simulation.EnqueueContact(DeviceHit(ball, first));
+            simulation.EnqueueContact(DeviceHit(ball, second));
             simulation.AfterPhysics(physics);
             double product = factor * factor * factor;
             Assert.That(context.Manager.GetComponentData<MarbleScore>(entity).ScoreMultiplier, Is.EqualTo(product));
-            Assert.That(simulation.GetOwnedDevices().Single().RemainingDurability, Is.EqualTo(peg.Durability - 2));
+            Assert.That(simulation.GetOwnedDevices().Select(device => device.RemainingDurability), Is.All.EqualTo(peg.Durability - 1));
 
             simulation.BeforePhysics(.01f, physics, Vector3.zero, Quaternion.identity);
             simulation.EnqueueContact(new MarbleContact
@@ -653,15 +800,17 @@ namespace MarblesECS.Tests
         }
 
         [Test]
-        public void TripleSplitRollsBackTheFirstChildWhenTheSecondSpawnFails()
+        public void CopyBatchRollsBackTheFirstChildWhenTheSecondSpawnFails()
         {
+            const uint copyId = 9018;
             var balance = GameBalanceLoader.Load();
             using var simulation = new MarbleSimulation(balance);
             var physics = new PhysicsStub { RejectSpawnNumber = 3 };
-            Start(simulation, SinglePegDay(9037, balance), physics);
-            ConfirmLoadout(simulation, 9037);
+            Start(simulation, SinglePegDay(copyId, balance, initialScrap: 25), physics);
+            ConfirmLoadout(simulation, copyId);
             Assert.That(simulation.BeginRound(), Is.True);
-            Assert.That(simulation.TryInstallDevice(9037, 0, 0, .1f, 0, out int installed), Is.True);
+            simulation.Context.DeviceScripts.CreateScript = resource => resource.CreateScript(CopyCurrentBallScript(2));
+            Assert.That(simulation.TryInstallDevice(copyId, 0, 0, .1f, 0, out int installed), Is.True);
             simulation.FireOnce();
             simulation.BeforePhysics(.01f, physics, Vector3.zero, Quaternion.identity);
             var parent = physics.Last;
@@ -669,7 +818,7 @@ namespace MarblesECS.Tests
             simulation.AfterPhysics(physics);
             Assert.That(simulation.Context.Marbles.Keys, Is.EqualTo(new[] { parent }));
             Assert.That(simulation.GetOwnedDevices().Single().RemainingDurability,
-                Is.EqualTo(balance.Devices.Single(peg => peg.Id == 9037).Durability));
+                Is.EqualTo(balance.Devices.Single(peg => peg.Id == copyId).Durability));
         }
 
         [TestCase(false)]
@@ -716,16 +865,170 @@ namespace MarblesECS.Tests
                 Assert.That(AttributeRuntime.Get(context, context.Marbles[key], GameAttribute.BALL_BASE_VALUE), Is.EqualTo(20));
         }
 
-        private static DayCampaignDefinition SinglePegDay(uint id, GameBalance balance) => GameDaysLoader.Parse(
+        private static DayCampaignDefinition SinglePegDay(uint id, GameBalance balance, int initialScrap = 10) => GameDaysLoader.Parse(
             "{\"schemaVersion\":3,\"sequenceId\":\"peg-test\",\"days\":[{\"dayId\":\"first\",\"order\":1,\"targetScore\":20," +
             $"\"unlockedPegIds\":[{id}],\"defaultPegIds\":[{id}]," +
-            "\"maxLoadoutTypeCount\":1,\"initialBiomassScrap\":10,\"clearCompanyScripReward\":0}]}", balance);
+            $"\"maxLoadoutTypeCount\":1,\"initialBiomassScrap\":{initialScrap}," +
+            "\"clearCompanyScripReward\":0}]}", balance);
 
-        private static MarbleContact DeviceHit(MarbleKey ball, int installed, bool impact = true) => new MarbleContact
+        private static string CopyCurrentBallScript(int count) => $@"
+            function OnContact(api)
+                local copy = api:CreateCopy({count})
+                if not copy.CanCopy then return end
+                local source = api.Motion.Source
+                for i = 1, {count} do
+                    local heading = source:Rotate(source.Down, (i - ({count} + 1) / 2) * 50)
+                    if not copy:TryAddSpawn(source.Position + heading * 0.5, heading * 3) then return end
+                end
+                if copy:TryCommit() then api:TryUse() end
+            end";
+
+        private static MarbleContact DeviceHit(MarbleKey ball, int installed, bool impact = true)
         {
-            Key = ball, TargetId = 100000 + installed, Kind = MarbleContactKind.Device, Multiplier = 1,
-            HasImpact = impact, IncomingVelocity = Vector3.down * 3, Normal = Vector3.up
-        };
+            var contact = MarbleContact.ForDevice(ball, installed, Vector3.zero);
+            contact.HasImpact = impact;
+            contact.IncomingVelocity = Vector3.down * 3;
+            contact.Normal = Vector3.up;
+            return contact;
+        }
+
+        [TestCase(0, 3)]
+        [TestCase(1, 1)]
+        [TestCase(2, 2)]
+        public void FixedPinAndTwoInstancesOfOneDefinitionKeepIndependentVisitLimits(int maximum, int accepted)
+        {
+            const uint definition = 9033;
+            var balance = GameBalanceLoader.Load();
+            using var simulation = new MarbleSimulation(balance);
+            var physics = new PhysicsStub();
+            Start(simulation, SinglePegDay(definition, balance), physics);
+            ConfirmLoadout(simulation, definition);
+            Assert.That(simulation.BeginRound(), Is.True);
+            simulation.Context.DeviceScripts.CreateScript = resource => resource.CreateScript($@"
+                function OnContact(api)
+                    if api:Visit(0, {maximum}) then api:TryUse() end
+                end");
+            Assert.That(simulation.TryInstallDevice(definition, 0, 0, .1f, 0, out int first), Is.True);
+            Assert.That(simulation.TryInstallDevice(definition, 2, 0, .1f, 0, out int second), Is.True);
+            Assert.That(first, Is.EqualTo(1));
+            Assert.That(second, Is.Not.EqualTo(first));
+            int durability = balance.Devices.Single(peg => peg.Id == definition).Durability;
+
+            simulation.FireOnce();
+            for (int tick = 1; tick <= 3; tick++)
+            {
+                simulation.BeforePhysics(.01f, physics, Vector3.zero, Quaternion.identity);
+                var ball = physics.Last;
+                var pin = new MarbleContact
+                {
+                    Key = ball, Kind = MarbleContactKind.Pin, TargetId = 100001, Priority = 1, Multiplier = 1
+                };
+                var firstHit = DeviceHit(ball, first);
+                Assert.That(firstHit.TargetId, Is.EqualTo(pin.TargetId));
+                simulation.EnqueueContact(pin);
+                simulation.EnqueueContact(pin);
+                simulation.EnqueueContact(firstHit);
+                simulation.EnqueueContact(firstHit);
+                simulation.EnqueueContact(DeviceHit(ball, second));
+                simulation.EnqueueContact(DeviceHit(ball, second));
+                simulation.AfterPhysics(physics);
+
+                int spent = Math.Min(tick, accepted);
+                var devices = simulation.GetOwnedDevices();
+                Assert.That(devices.Select(item => item.RemainingDurability),
+                    Is.EqualTo(new[] { durability - spent, durability - spent }));
+                var context = simulation.Context;
+                var visits = context.Manager.GetBuffer<DeviceVisit>(context.Marbles[ball]);
+                Assert.That(visits.Length, Is.EqualTo(3));
+                Assert.That(visits[0].Key, Is.EqualTo(DeviceVisitKey.ForTarget(ContactTargetKey.FromContact(pin))));
+                Assert.That(visits[0].Count, Is.EqualTo(tick));
+                Assert.That(visits[1].Key, Is.EqualTo(DeviceVisitKey.ForDevice(first)));
+                Assert.That(visits[2].Key, Is.EqualTo(DeviceVisitKey.ForDevice(second)));
+                Assert.That(visits[1].Count, Is.EqualTo(spent));
+                Assert.That(visits[2].Count, Is.EqualTo(spent));
+            }
+        }
+
+        [Test]
+        public void LuaVisitsSeparateNumericCustomKeysFromPairAndLinkAliases()
+        {
+            const uint portal = 103;
+            using var simulation = new MarbleSimulation(GameBalanceLoader.Load());
+            var physics = new PhysicsStub();
+            simulation.StartSession(physics);
+            var context = simulation.Context;
+            context.DeviceScripts.CreateScript = resource => resource.CreateScript(@"
+                function OnContact(api)
+                    local key = api.LinkKey
+                    if key == 0 then key = -api.PairId end
+                    if api:Visit(key, 1) then api:AddBase('BALL_BASE_VALUE', 1) end
+                    if api:VisitShared(key, 1) then api:AddBase('BALL_BASE_VALUE', 2) end
+                    if api:Visit(100001, 1) then api:AddBase('BALL_BASE_VALUE', 4) end
+                end");
+            var definition = CampaignStateUtility.Device(context, portal);
+            CampaignStateUtility.CreateDevice(context, definition, definition.InstallPrice);
+            var endpoints = simulation.GetOwnedDevices().Where(item => item.DefinitionId == portal).ToArray();
+            int first = endpoints[0].InstanceId, second = endpoints[1].InstanceId;
+            Assert.That(endpoints[0].PairId, Is.EqualTo(endpoints[1].PairId).And.GreaterThan(0));
+            Assert.That(simulation.PlaceDevice(first, 0, 0), Is.True);
+            Assert.That(simulation.PlaceDevice(second, 2, 0), Is.True);
+            Assert.That(simulation.BeginRound(), Is.True);
+            simulation.FireOnce();
+            Step(simulation, physics);
+            var ball = physics.Last;
+            double initial = simulation.GetMarbleAttribute(ball, GameAttribute.BALL_BASE_VALUE);
+
+            var firstHit = DeviceHit(ball, first);
+            var secondHit = DeviceHit(ball, second);
+            var pin = new MarbleContact { Key = ball, Kind = MarbleContactKind.Pin, TargetId = 100001, Multiplier = 1, Priority = 1 };
+            Step(simulation, physics, pin, firstHit);
+            Assert.That(simulation.GetMarbleAttribute(ball, GameAttribute.BALL_BASE_VALUE), Is.EqualTo(initial + 7));
+            Step(simulation, physics, secondHit);
+            Assert.That(simulation.GetMarbleAttribute(ball, GameAttribute.BALL_BASE_VALUE), Is.EqualTo(initial + 7));
+
+            firstHit.LinkKey = MarbleContact.LinkId(first, second);
+            secondHit.LinkKey = MarbleContact.LinkId(second, first);
+            Step(simulation, physics, firstHit, secondHit);
+            Assert.That(simulation.GetMarbleAttribute(ball, GameAttribute.BALL_BASE_VALUE), Is.EqualTo(initial + 10));
+            Step(simulation, physics, secondHit);
+            Assert.That(simulation.GetMarbleAttribute(ball, GameAttribute.BALL_BASE_VALUE), Is.EqualTo(initial + 10));
+        }
+
+        [Test]
+        public void RushAndFixedMultipliersTrackPinZoneAndDeviceSourcesIndependently()
+        {
+            const uint definition = 9033;
+            using var simulation = new MarbleSimulation(GameBalanceLoader.Load());
+            var physics = new PhysicsStub();
+            simulation.StartSession(physics);
+            var context = simulation.Context;
+            context.DeviceScripts.CreateScript = resource =>
+                resource.CreateScript("function OnContact(api) api:TryUse() end");
+            var device = CampaignStateUtility.Device(context, definition);
+            CampaignStateUtility.CreateDevice(context, device, device.InstallPrice);
+            int instance = context.Campaign.NextDeviceId;
+            Assert.That(simulation.PlaceDevice(instance, 0, 0), Is.True);
+            Assert.That(simulation.BeginRound(), Is.True);
+            simulation.FireOnce();
+            Step(simulation, physics);
+            var ball = physics.Last;
+            var entity = context.Marbles[ball];
+            var pin = new MarbleContact { Key = ball, TargetId = instance, Kind = MarbleContactKind.Multiplier, IsPin = true, Multiplier = 2 };
+            var zone = pin;
+            zone.IsPin = false;
+            zone.Multiplier = 3;
+            var deviceHit = DeviceHit(ball, instance);
+            double initial = context.Manager.GetComponentData<MarbleRush>(entity).Contribution;
+
+            Step(simulation, physics, pin, pin, zone, zone, deviceHit);
+            Assert.That(context.Manager.GetComponentData<MarbleScore>(entity).DeviceMultiplier.Value, Is.EqualTo(6));
+            Assert.That(context.Manager.GetComponentData<MarbleRush>(entity).Contribution,
+                Is.EqualTo(initial + 3 * RushSystem.DeviceContribution));
+            Step(simulation, physics, pin, zone, deviceHit, deviceHit);
+            Assert.That(context.Manager.GetComponentData<MarbleScore>(entity).DeviceMultiplier.Value, Is.EqualTo(6));
+            Assert.That(context.Manager.GetComponentData<MarbleRush>(entity).Contribution,
+                Is.EqualTo(initial + 4 * RushSystem.DeviceContribution));
+        }
 
         [Test]
         public void BoardLayoutJsonRoundTripsBothPinAndZoneTypesAndProjectsFromTopLeft()
@@ -1221,14 +1524,15 @@ namespace MarblesECS.Tests
             Assert.That(simulation.CashOut(), Is.True);
         }
 
-        private static void Step(MarbleSimulation simulation, PhysicsStub physics)
+        private static void Step(MarbleSimulation simulation, PhysicsStub physics, params MarbleContact[] contacts)
         {
             simulation.BeforePhysics(.01f, physics, Vector3.zero, Quaternion.identity);
+            foreach (var contact in contacts) simulation.EnqueueContact(contact);
             simulation.AfterPhysics(physics);
         }
 
         private sealed class PhysicsStub : IMarbleDayPhysics, IMarbleDayPhysicsCheckpoint, IMarbleBoardLayoutPhysics,
-            IMarblePhysicsCommands, IMarblePhysicsSuspension, IMarbleDevicePhysics
+            IMarblePhysicsCommands, IMarblePhysicsSuspension, IMarbleDevicePhysics, IMarbleDeviceRotation
         {
             private readonly Dictionary<MarbleKey, Vector3> live = new Dictionary<MarbleKey, Vector3>();
             private readonly Dictionary<int, DevicePose> devices = new Dictionary<int, DevicePose>();
@@ -1238,6 +1542,9 @@ namespace MarblesECS.Tests
             internal MarbleKey Last { get; private set; }
             internal BoardLayoutDefinition CurrentLayout { get; private set; }
             internal int LayoutChanges { get; private set; }
+            internal Action<int> DevicePoseRead { get; set; }
+            internal Action<int> DeviceYaw { get; set; }
+            internal Action<MarbleKey> BallVelocity { get; set; }
             public void ValidateBoardLayout(BoardLayoutDefinition layout) => BoardPlacementSurface.DefaultLayoutProjection.Validate(layout);
             public void ApplyBoardLayout(BoardLayoutDefinition layout) { CurrentLayout = layout; LayoutChanges++; }
             public bool TrySpawn(MarbleSpawnData data)
@@ -1258,7 +1565,12 @@ namespace MarblesECS.Tests
                 live[key] = position;
                 return true;
             }
-            public bool TrySetVelocity(MarbleKey key, Vector3 velocity) => live.ContainsKey(key);
+            public bool TrySetVelocity(MarbleKey key, Vector3 velocity)
+            {
+                if (!live.ContainsKey(key)) return false;
+                BallVelocity?.Invoke(key);
+                return true;
+            }
             public bool TrySetSuspended(MarbleKey key, bool suspended) => live.ContainsKey(key);
             public void SetProperties(MarbleKey key, MarblePhysicalSettings settings) { }
             public bool CanPlaceDevice(DevicePlacement placement, float clearance, bool avoidMarbles) => true;
@@ -1283,7 +1595,17 @@ namespace MarblesECS.Tests
             }
             public void RemoveDevice(int id) => devices.Remove(id);
             public void ClearDevices() => devices.Clear();
-            public bool TryGetDevicePose(int instanceId, out DevicePose pose) => devices.TryGetValue(instanceId, out pose);
+            public bool TryGetDevicePose(int instanceId, out DevicePose pose)
+            {
+                DevicePoseRead?.Invoke(instanceId);
+                return devices.TryGetValue(instanceId, out pose);
+            }
+            public bool TrySetDeviceYaw(int instanceId, float degrees)
+            {
+                if (!devices.ContainsKey(instanceId)) return false;
+                DeviceYaw?.Invoke(instanceId);
+                return true;
+            }
             public void BreakPinsOnCross(int instanceId) { }
         }
 

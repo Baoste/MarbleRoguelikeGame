@@ -57,7 +57,10 @@ namespace MarblesECS
             int newRoundId = checked(context.Round.RoundId + 1);
             context.RemoveAllMarbles();
             if (!ReferenceEquals(context.Physics, physics))
+            {
                 (context.Physics as IMarbleDevicePhysics)?.ClearDevices();
+                (context.Physics as IMarbleDeviceScriptBinding)?.BindDeviceCallbacks(null);
+            }
             context.Physics = physics;
             context.Contacts.Clear();
             context.ScoreEvents.Clear();
@@ -68,8 +71,8 @@ namespace MarblesECS
             {
                 var globalEffects = context.Manager.GetBuffer<AttributeModifierData>(context.PlayerEntity);
                 for (int i = globalEffects.Length - 1; i >= 0; i--) if (globalEffects[i].ExpireTick != 0) globalEffects.RemoveAt(i);
-                using (var devices = context.DeviceQuery.ToEntityArray(Unity.Collections.Allocator.Temp))
-                    foreach (var entity in devices)
+                using (var devices = context.SnapshotDevices())
+                    foreach (var entity in devices.Items)
                     {
                         var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
                         device.NextTriggerAt = 0; device.StoredValue = 0; context.Manager.SetComponentData(entity, device);
@@ -89,6 +92,7 @@ namespace MarblesECS
             context.Launcher = new LauncherData();
             LauncherMovementSystem.Reset(context);
             context.StepSeconds = 0;
+            if (physics is IMarbleDeviceScriptBinding binding) binding.BindDeviceCallbacks(context.DeviceScripts);
             if (physics is IMarbleDeviceUsageSink usage)
                 usage.BindDeviceUsage(id => DeviceDurabilitySystem.CanRun(context, id), id => DeviceDurabilitySystem.TryUse(context, id));
             if (physics is IMarbleDeviceInteractionSink interaction)
@@ -97,7 +101,7 @@ namespace MarblesECS
                 effects.BindDeviceEffect((key, id) =>
                 {
                     if (IsAlive && context.TryGetFlying(key, out var ball))
-                    { BallInteractionSystem.RecordDeviceEffect(context, ball, id); RushSystem.RecordTrigger(context, ball, id); }
+                    { BallInteractionSystem.RecordDeviceEffect(context, ball, id); RushSystem.RecordTrigger(context, ball, ContactTargetKey.ForDevice(id)); }
                 });
             started = true;
         }
@@ -196,13 +200,15 @@ namespace MarblesECS
             context.FloatingText = null;
             dayFlow?.Dispose();
             (context.Physics as IMarbleDevicePhysics)?.ClearDevices();
+            (context.Physics as IMarbleDeviceScriptBinding)?.BindDeviceCallbacks(null);
             context.Transients.Clear();
             context.DeviceScripts.Clear();
+            context.ClearDeviceIndex();
             // Entities' global shutdown also disposes manually owned worlds before some MB callbacks.
             if (!context.World.IsCreated)
             {
-                foreach (var key in context.Marbles.Keys) context.Physics?.Remove(key);
-                context.Marbles.Clear();
+                foreach (var key in context.MarbleKeys) context.Physics?.Remove(key);
+                context.ClearMarbleIndex();
                 context.Contacts.Clear();
                 context.ScoreEvents.Clear();
                 return;

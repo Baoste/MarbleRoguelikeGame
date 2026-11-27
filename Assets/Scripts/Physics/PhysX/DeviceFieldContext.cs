@@ -12,12 +12,13 @@ namespace MarblesECS.PhysX
         private readonly float response, magneticRadius, range, strength, distance, forwardOffset, radius, deltaTime;
         private readonly Vector3 position;
         private readonly Vector3 toward;
-        private readonly Func<bool> tryUse;
+        private MarblePhysicsBridge bridge;
+        private MarbleBody ball;
         private bool usageGranted;
         internal Vector3 Force { get; private set; }
         private void RequireOpen()
         { if (device == null) throw new InvalidOperationException("The Lua field callback has ended."); }
-        internal void Close() { device = null; }
+        internal void Close() { device = null; bridge = null; ball = null; }
         public bool Magnetic { get { RequireOpen(); return magnetic; } }
         public float Response { get { RequireOpen(); return response; } }
         public float MagneticRadius { get { RequireOpen(); return magneticRadius; } }
@@ -28,9 +29,9 @@ namespace MarblesECS.PhysX
         public Vector3 Forward { get { RequireOpen(); return device.Forward; } }
         public Vector3 Up { get { RequireOpen(); return device.Up; } }
         public float DeltaTime { get { RequireOpen(); return deltaTime; } }
-        internal DeviceFieldContext(DeviceBody device, MarbleBody ball, float deltaTime, Func<bool> tryUse = null)
+        internal DeviceFieldContext(DeviceBody device, MarbleBody ball, float deltaTime, MarblePhysicsBridge bridge = null)
         {
-            this.tryUse = tryUse;
+            this.bridge = bridge; this.ball = ball;
             this.device = device; this.deltaTime = deltaTime;
             magnetic = ball.Settings.Magnetic; response = ball.Settings.MagnetResponse; magneticRadius = ball.Settings.MagneticRadius;
             range = device.Range; strength = device.Strength; radius = ball.Radius; position = ball.Body.position;
@@ -40,7 +41,7 @@ namespace MarblesECS.PhysX
         }
         /// <summary>One use for this ball's continuous stay. Leaving the Lua-selected region permits another use.</summary>
         public bool TryUse()
-        { RequireOpen(); return usageGranted || (usageGranted = tryUse?.Invoke() ?? true); }
+        { RequireOpen(); return usageGranted || (usageGranted = bridge?.TryUseField(device, ball) ?? true); }
         /// <summary>Tests the current ball sphere against a named child box, including its actual pose and scale.</summary>
         public bool OverlapsBox(string nodePath)
         {

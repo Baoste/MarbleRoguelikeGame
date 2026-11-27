@@ -23,7 +23,7 @@ namespace MarblesECS
             var c = context();
             defaults = new double[(int)GameAttribute.Count];
             for (int i = 0; i < defaults.Length; i++) defaults[i] = c.Content.Definition((GameAttribute)i).DefaultValue;
-            radius = (float)defaults[(int)GameAttribute.BALL_RADIUS] * AttributeRuntime.RadiusToWorld;
+            radius = (float)defaults[(int)GameAttribute.BALL_RADIUS];
             mass = (float)defaults[(int)GameAttribute.BALL_MASS];
         }
         public float Radius { get { _ = context(); return radius; } }

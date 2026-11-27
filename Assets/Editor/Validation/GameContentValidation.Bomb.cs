@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
@@ -50,7 +49,7 @@ namespace MarblesECS.Editor
                 for (int i = 0; i < children.Length; i++)
                 {
                     var k = children[i]; Near(1.25, f.Simulation.GetMarbleAttribute(k, GameAttribute.BALL_BASE_VALUE), "one eighth value");
-                    Near(.25, f.Simulation.GetMarbleAttribute(k, GameAttribute.BALL_RADIUS), "one eighth volume");
+                    Near(.05, f.Simulation.GetMarbleAttribute(k, GameAttribute.BALL_RADIUS), "one eighth volume");
                     Near(.125, f.Simulation.GetMarbleAttribute(k, GameAttribute.BALL_MASS), "one eighth mass");
                     Near(6, f.Physics.States[k].LinearVelocity.magnitude, "blast gives configured scatter speed");
                     Near(i < 8 ? 2.25 : 1, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(k)).ScoreMultiplier, "each parent's own multiplier inherited");
@@ -123,8 +122,7 @@ namespace MarblesECS.Editor
                 var probe = resource.CreateScript(@"local saved, info, calls = nil, nil, 0
 function Done(a) saved, info, calls = a, a.Transient, calls+1; if calls==1 then error('EXPECTED_TRANSIENT_FAILURE') end end
 function Verify() assert(calls==2); assert(not pcall(function() return saved.Time end)); assert(not pcall(function() return info.Position end)) end");
-                var scripts = (Dictionary<int, DeviceLuaScript>)typeof(DeviceScriptSystem).GetField("scripts", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(f.C.DeviceScripts);
-                f.C.DeviceScripts.Remove(device.InstanceId); scripts.Add(device.InstanceId, probe);
+                f.C.DeviceScripts.Bind(device.InstanceId, probe);
                 api = new DeviceEventContext(f.C, entity);
                 api.TrySpawnVisual("x", Vector3.zero, Vector3.zero, .1f, "Done"); api.TrySpawnVisual("x", Vector3.one, Vector3.zero, .1f, "Done"); api.Close();
                 f.Step(); Near(0, f.C.Transients.Count, "throwing completion does not strand another visual"); probe.Invoke("Verify");

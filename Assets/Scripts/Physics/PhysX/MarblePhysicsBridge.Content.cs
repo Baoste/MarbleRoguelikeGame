@@ -7,8 +7,12 @@ namespace MarblesECS.PhysX
     public sealed partial class MarblePhysicsBridge : IMarblePhysicsCommands, IMarbleDeviceUsageSink, IMarbleDeviceInteractionSink, IMarbleDeviceRotation, IMarbleDeviceEffectSink
     {
         private RaycastHit[] pinHits = new RaycastHit[64];
+        private readonly IComparer<RaycastHit> pinHitOrder = Comparer<RaycastHit>.Create((a, b) => a.distance.CompareTo(b.distance));
+        private readonly HashSet<int> nearbyPiercePins = new HashSet<int>();
+        private readonly Collider[] moveOverlaps = new Collider[32];
         private readonly Dictionary<Collider, Renderer[]> brokenPins = new Dictionary<Collider, Renderer[]>();
-        private readonly List<MarbleBody> orderedFieldBodies = new List<MarbleBody>();
+        private readonly IterationBuffer<KeyValuePair<MarbleKey, MarbleBody>> orderedFieldBodies = new IterationBuffer<KeyValuePair<MarbleKey, MarbleBody>>();
+        private readonly IterationBuffer<DeviceBody> fieldDevices = new IterationBuffer<DeviceBody>();
         private Func<int, bool> deviceAvailable, useDevice;
         private Action<MarbleKey, int> recordDeviceEffect;
 
@@ -50,11 +54,10 @@ namespace MarblesECS.PhysX
         {
             if (!bodies.TryGetValue(key, out var view) || view == null || view.Suspended || !Finite(position) || !Finite(velocity)) return false;
             // Reject an obstructed exit; never teleport inside solid geometry.
-            var candidates = new Collider[32];
-            int count = physicsScene.OverlapSphere(position, view.Radius, candidates, ~0, QueryTriggerInteraction.Ignore);
-            if (count == candidates.Length) return false;
-            foreach (var candidate in candidates)
-                if (candidate != null && candidate.attachedRigidbody != view.Body) return false;
+            int count = physicsScene.OverlapSphere(position, view.Radius, moveOverlaps, ~0, QueryTriggerInteraction.Ignore);
+            if (count == moveOverlaps.Length) return false;
+            for (int i = 0; i < count; i++)
+                if (moveOverlaps[i] != null && moveOverlaps[i].attachedRigidbody != view.Body) return false;
             view.Body.position = position;
             view.Body.velocity = Vector3.ClampMagnitude(velocity, view.Settings.MaxSpeed > 0 ? view.Settings.MaxSpeed : 100);
             view.PreviousPosition = position;
@@ -84,29 +87,36 @@ namespace MarblesECS.PhysX
         }
         private void BeforeContentSubstep(float dt)
         {
-            orderedFieldBodies.Clear();
-            foreach (var body in bodies.Values) if (body != null) orderedFieldBodies.Add(body);
-            orderedFieldBodies.Sort((a, b) => a.Key.Sequence.CompareTo(b.Key.Sequence));
-            foreach (var view in orderedFieldBodies)
+            using var ordered = orderedFieldBodies.Read(bodyMembershipVersion, bodies, static (source, items) =>
             {
-                if (view == null) continue;
-                if (view.Suspended) continue;
+                foreach (var pair in source) items.Add(pair);
+                if (items.Count > 1) items.Sort((a, b) => a.Key.Sequence.CompareTo(b.Key.Sequence));
+            });
+            foreach (var member in ordered.Items)
+            {
+                var view = member.Value;
+                if (view == null || view.Suspended || view.Bridge != this || !view.Key.Equals(member.Key)) continue;
                 view.StepDevices.Clear();
                 view.StepFields.Clear();
                 view.BeforeVelocity = view.Body.velocity;
                 if (!view.HasSettings) continue;
                 Vector3 acceleration = Physics.gravity * view.Settings.Gravity;
                 Vector3 fieldForce = Vector3.zero;
-                foreach (var device in contentDevices)
+                // The current ball keeps its field membership. Later balls see placement changes.
+                using var fields = fieldDevices.Read(fieldMembershipVersion, contentDevices, static (source, items) =>
                 {
-                    if (device == null || !device.isActiveAndEnabled || !device.GameplayEnabled || device.Script == null || !device.Script.HasFunction("OnField")) continue;
-                    var api = new DeviceFieldContext(device, view, dt, () =>
-                    {
-                        bool accepted = view.ActiveFields.Contains(device.InstanceId) || (useDevice?.Invoke(device.InstanceId) ?? true);
-                        if (accepted) view.StepFields.Add(device.InstanceId);
-                        return accepted;
-                    });
-                    try { device.Script.Invoke("OnField", api); }
+                    foreach (var device in source)
+                        if (device != null && device.Script != null && (device.Script.Callbacks & DeviceLuaCallbacks.Field) != 0)
+                            items.Add(device);
+                });
+                foreach (var device in fields.Items)
+                {
+                    if (device == null || device.Bridge != this || !device.isActiveAndEnabled || !device.GameplayEnabled) continue;
+                    var script = device.Script;
+                    if (script == null || script.IsDisposed || (script.Callbacks & DeviceLuaCallbacks.Field) == 0) continue;
+                    var api = new DeviceFieldContext(device, view, dt, this);
+                    using var scope = deviceCallbacks?.BeginCallback();
+                    try { script.Invoke("OnField", api); }
                     catch (DeviceLuaException error) { Debug.LogException(error); }
                     finally { api.Close(); }
                     if (api.Force.sqrMagnitude > 0)
@@ -121,6 +131,13 @@ namespace MarblesECS.PhysX
                 view.Body.AddForce(Vector3.ClampMagnitude(fieldForce, 100) * dt, ForceMode.Impulse);
                 PreparePiercing(view, dt);
             }
+        }
+
+        internal bool TryUseField(DeviceBody device, MarbleBody view)
+        {
+            bool accepted = view.ActiveFields.Contains(device.InstanceId) || (useDevice?.Invoke(device.InstanceId) ?? true);
+            if (accepted) view.StepFields.Add(device.InstanceId);
+            return accepted;
         }
         private void AfterContentSubstep()
         {
@@ -153,14 +170,14 @@ namespace MarblesECS.PhysX
                 if (count < pinHits.Length) break;
                 Array.Resize(ref pinHits, pinHits.Length * 2);
             } while (true);
-            Array.Sort(pinHits, 0, count, Comparer<RaycastHit>.Create((a,b) => a.distance.CompareTo(b.distance)));
-            var nearby = new HashSet<int>();
+            if (count > 1) Array.Sort(pinHits, 0, count, pinHitOrder);
+            nearbyPiercePins.Clear();
             for (int i = 0; i < count; i++)
             {
                 var collider = pinHits[i].collider;
                 var pin = collider.GetComponentInParent<MarblePin>();
                 if (pin == null || !pin.enabled || pin.ScoreMultiplier != 1 || pin.RushChanceAdd != 0 || collider.GetComponentInParent<DeviceBody>() != null) continue;
-                int id = collider.GetInstanceID(); nearby.Add(id);
+                int id = collider.GetInstanceID(); nearbyPiercePins.Add(id);
                 if (!view.PierceAttempts.Add(id) || view.IgnoredPins.Contains(collider)) continue;
                 bool useCount = view.Settings.PierceCount > 0;
                 if (!useCount && !MarbleRules.Roll(ref view.PhysicsRandom, view.Settings.PierceChance)) continue;
@@ -172,7 +189,7 @@ namespace MarblesECS.PhysX
                 }
                 Report(new MarbleContact { Key = view.Key, TargetId = pin.TargetId, Kind = MarbleContactKind.Pin, Multiplier = 1, Position = view.Body.position });
             }
-            view.PierceAttempts.IntersectWith(nearby);
+            view.PierceAttempts.IntersectWith(nearbyPiercePins);
         }
         internal void ReportDevice(MarbleBody view, DeviceBody device, ContactPoint? impact = null)
         {
@@ -211,7 +228,7 @@ namespace MarblesECS.PhysX
                     float along = Vector3.Dot(crossing - a.transform.position, line / length);
                     if (along < 0 || along > length || Math.Abs(Vector3.Dot(crossing - a.transform.position, a.Up)) > view.Radius + .5f) continue;
                     var contact = a.Contact(view.Key, crossing, view.Body.velocity.magnitude);
-                    contact.LinkKey = ((long)a.InstanceId << 32) | (uint)b.InstanceId;
+                    contact.LinkKey = MarbleContact.LinkId(a.InstanceId, b.InstanceId);
                     Report(contact);
                 }
             }

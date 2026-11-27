@@ -7352,7 +7352,7 @@ MonoBehaviour:
   StartingBlood: 1000
   BallsPerSecond: 6.666667
   LaunchPoint: {fileID: 643977288}
-  LaunchOffset: {x: 0, y: 0, z: 0}
+  LaunchOffset: {x: 0, y: 0.114363, z: -0.164077}
   ShowLaunchGizmos: 1
   PhysicsRoot: {fileID: 157134045}
   MarblePrefab: {fileID: 1268772750461538145, guid: 4e0ada6c2c873674797dee37f3a4cd80,
@@ -91457,7 +91457,7 @@ BoxCollider:
   m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 8.379034, y: 0.1, z: 9.179388}
-  m_Center: {x: 0, y: 0.61, z: 0}
+  m_Center: {x: 0, y: 0.95, z: 0}
 --- !u!1 &1729312597
 GameObject:
   m_ObjectHideFlags: 0

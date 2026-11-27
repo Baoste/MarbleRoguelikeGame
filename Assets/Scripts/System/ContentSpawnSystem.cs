@@ -63,7 +63,7 @@ namespace MarblesECS
                     HasSettings = true, Settings = settings })) return false;
                 c.Manager.SetComponentData(candidate, new Transform3D { Position = position, Rotation = rotation });
                 c.Manager.SetComponentData(candidate, new Motion3D { LinearVelocity = velocity });
-                c.Marbles.Add(key, candidate);
+                c.RegisterMarble(key, candidate);
                 var round = c.Round; round.ActiveMarbleCount++; c.Round = round;
                 entity = candidate;
                 committed = true;
@@ -71,7 +71,12 @@ namespace MarblesECS
             }
             finally
             {
-                if (!committed) { c.Physics.Remove(key); c.Manager.DestroyEntity(candidate); }
+                if (!committed)
+                {
+                    c.UnregisterMarble(key, candidate);
+                    try { c.Physics.Remove(key); }
+                    finally { c.Manager.DestroyEntity(candidate); }
+                }
             }
         }
 
@@ -80,7 +85,7 @@ namespace MarblesECS
         internal static int PendingCount(SimulationContext c)
         {
             int result = 0;
-            foreach (var entity in c.Marbles.Values)
+            foreach (var entity in c.MarbleEntities)
                 if (c.Manager.GetComponentData<SettlementState>(entity).IsSettled || c.Manager.GetComponentData<DespawnState>(entity).PendingDespawn) result++;
             return result;
         }
@@ -88,7 +93,7 @@ namespace MarblesECS
         {
             var shot = c.Manager.GetComponentData<ShotOrigin>(entity);
             var key = new MarbleKey(shot.RoundId, shot.SpawnSequence);
-            c.Physics.Remove(key); c.Marbles.Remove(key); c.Manager.DestroyEntity(entity);
+            c.Physics.Remove(key); c.UnregisterMarble(key, entity); c.Manager.DestroyEntity(entity);
             var round = c.Round; round.ActiveMarbleCount--; c.Round = round;
         }
 
@@ -111,7 +116,7 @@ namespace MarblesECS
                 features.Generation++;
                 features.SplitConsumed = true;
             }
-            float radius = (float)values[(int)GameAttribute.BALL_RADIUS] * AttributeRuntime.RadiusToWorld;
+            float radius = (float)values[(int)GameAttribute.BALL_RADIUS];
             var origin = c.Manager.GetComponentData<ShotOrigin>(parent);
             var quote = new ShotQuote(origin.BloodInvestment, 0, radius, (float)values[(int)GameAttribute.BALL_MASS],
                 values[(int)GameAttribute.BALL_BASE_VALUE], c.Manager.GetComponentData<MarbleScore>(parent).ScoreMultiplier);
@@ -134,7 +139,8 @@ namespace MarblesECS
                 {
                     float angle = count == 1 ? 55 : Mathf.Lerp(-45, 45, (float)i / Math.Max(1, count - 1));
                     Vector3 output = Quaternion.AngleAxis(angle, normal) * direction.normalized;
-                    Vector3 position = state.Position + output * (radius + (float)AttributeRuntime.Get(c, parent, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld + .02f);
+                    float parentRadius = (float)AttributeRuntime.Get(c, parent, GameAttribute.BALL_RADIUS);
+                    Vector3 position = state.Position + output * (radius + parentRadius + .02f);
                     if (!Create(c, spawn, position, state.Rotation, output * Mathf.Max(1, motion.LinearVelocity.magnitude), out var child)) return false;
                     children.Add(child);
                     c.Manager.GetBuffer<DeviceVisit>(child).CopyFrom(visits);

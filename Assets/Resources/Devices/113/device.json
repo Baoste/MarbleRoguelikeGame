@@ -1,8 +1,8 @@
 {
   "Id": 113,
   "SourceId": "LEGACY_DEVICE_1",
-  "Bounce": 0.6,
-  "ScoreMultiplier": 1.85,
+  "Bounce": 0.8,
+  "ScoreMultiplier": 1.5,
   "StartingCount": 0,
   "PurchaseQuantity": 1,
   "Cooldown": 0.10000000149011612,

@@ -51,7 +51,7 @@ namespace MarblesECS.Editor
                 finally { Object.DestroyImmediate(pinObject); }
 
                 f.Step(f.Hit(key, mult));
-                if (visible) CheckText(events, FloatingTextType.Multiplier, FloatingTextSource.Device, mult.InstanceId, 1.85, Vector3.zero);
+                if (visible) CheckText(events, FloatingTextType.Multiplier, FloatingTextSource.Device, mult.InstanceId, 1.5, Vector3.zero);
                 f.Step(f.Hit(key, mult));
                 Check(events == null || events.First < 0, "a repeated per-ball Lua trigger does not publish again");
 

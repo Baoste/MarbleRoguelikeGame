@@ -125,10 +125,10 @@ namespace MarblesECS.Editor
                 var pig = AddPiggyBank(f); var multi = f.Add(f.C.Balance.Devices.Single(d => d.Id == 113));
                 var key = f.Launch(); SetScrap(f, 25);
                 f.Step(PiggyHit(f, key, pig)); f.Step(f.Hit(key, multi)); f.Step(PiggyHit(f, key, pig));
-                Near(2.664, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "pig and Multi Ding give 1.2 * 1.85 * 1.2");
+                Near(2.16, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "pig and Multi Ding give 1.2 * 1.5 * 1.2");
                 Near(0, f.C.Round.Score, "all device contributions wait for settlement");
                 f.Step(new MarbleContact { Key = key, Kind = MarbleContactKind.Score, TargetId = 10, Multiplier = 1, RushDisabled = true });
-                Near(26.64, f.C.Round.Score + f.C.Round.FractionalScore, "score area multiplies value by the combined factor");
+                Near(21.6, f.C.Round.Score + f.C.Round.FractionalScore, "score area multiplies value by the combined factor");
             }
             using (var f = new Fixture())
             {
@@ -161,8 +161,8 @@ namespace MarblesECS.Editor
                 var key = f.Launch(); SetScrap(f, 25); f.Step(PiggyHit(f, key, pig)); f.Step(f.Hit(key, multi));
                 Check(ContentSpawnSystem.Children(f.C, f.Ball(key), 1, false, Vector3.forward, Vector3.up), "create a child after multiple device contributions");
                 var child = f.C.Marbles.Keys.Single(k => !k.Equals(key)); f.Step(PiggyHit(f, child, pig));
-                Near(2.664, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(child)).ScoreMultiplier, "child inherits the product and multiplies it again");
-                Near(2.22, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "the parent keeps its own product");
+                Near(2.16, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(child)).ScoreMultiplier, "child inherits the product and multiplies it again");
+                Near(1.8, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(key)).ScoreMultiplier, "the parent keeps its own product");
             }
             var standalone = new MarbleScore { BaseMultiplier = 2 };
             standalone.MultiplyDeviceMultiplier(2); standalone.MultiplyDeviceMultiplier(3);

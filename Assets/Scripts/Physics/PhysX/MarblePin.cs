@@ -6,7 +6,7 @@ namespace MarblesECS.PhysX
     [DisallowMultipleComponent]
     public sealed class MarblePin : MonoBehaviour
     {
-        [Min(1)] public int TargetId = 100000;
+        [Min(1)] public int TargetId = TargetIdAllocator.FirstPinId;
         [Range(0f, 1000f)] public float ScoreMultiplier = 2f;
         [Range(0f, 1f)] public float RushChanceAdd;
 

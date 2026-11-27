@@ -18,8 +18,9 @@ namespace MarblesECS.PhysX
             if (disposed) throw new ObjectDisposedException(nameof(MarblePhysicsBridge));
             RetireBodies();
             RestorePins();
-            orderedFieldBodies.Clear();
+            orderedFieldBodies.Invalidate();
             Array.Clear(overlap, 0, overlap.Length);
+            Array.Clear(moveOverlaps, 0, moveOverlaps.Length);
             Array.Clear(pinHits, 0, pinHits.Length);
             Array.Clear(sweepHits, 0, sweepHits.Length);
             Array.Clear(sensorOverlaps, 0, sensorOverlaps.Length);

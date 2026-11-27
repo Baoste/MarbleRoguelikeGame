@@ -20,6 +20,7 @@ namespace MarblesECS.PhysX
         public float Strength => definition.Strength;
         public string LinkGroup { get; private set; }
         public DeviceLuaScript Script { get; private set; }
+        private DeviceLuaBehaviour scriptBehaviour;
         public bool GameplayEnabled { get; private set; } = true;
         private float? configuredBounce;
         internal float Bounce => configuredBounce.GetValueOrDefault();
@@ -75,15 +76,30 @@ namespace MarblesECS.PhysX
             this.definition = definition;
             InstanceId = instanceId; placementRadius = definition.PlacementRadius; Range = definition.Range;
             placementOffset = new Vector3(definition.PlacementOffsetX, definition.PlacementOffsetY, definition.PlacementOffsetZ);
-            LinkGroup = definition.LinkGroup; Script = script;
+            LinkGroup = definition.LinkGroup;
             configuredBounce = definition.Bounce;
             colliders = GetComponentsInChildren<Collider>(true);
             if (configuredBounce.HasValue) ApplyBounce();
-            if (script == null) return;
-            var behaviour = gameObject.AddComponent<DeviceLuaBehaviour>();
-            behaviour.Initialize(script, resource.Prefab.transform);
-            DeviceLuaPhysicsRelay.Attach(GetComponentsInChildren<Transform>(true), behaviour);
+            BindScript(script);
         }
+
+        internal void BindScript(DeviceLuaScript script)
+        {
+            if (ReferenceEquals(Script, script)) return;
+            if (Script != null) Script.CallbacksChanged -= FieldCallbacksChanged;
+            scriptBehaviour?.Release();
+            Script = script;
+            if (script == null) return;
+            script.CallbacksChanged += FieldCallbacksChanged;
+            if (scriptBehaviour == null)
+            {
+                scriptBehaviour = gameObject.AddComponent<DeviceLuaBehaviour>();
+                DeviceLuaPhysicsRelay.Attach(GetComponentsInChildren<Transform>(true), scriptBehaviour);
+            }
+            scriptBehaviour.enabled = true;
+            scriptBehaviour.Initialize(script, Resource.Prefab.transform);
+        }
+        private void FieldCallbacksChanged() => Bridge?.InvalidateFieldDevices();
         private void ApplyBounce()
         {
             if (runtimeMaterials == null)
@@ -101,10 +117,15 @@ namespace MarblesECS.PhysX
             }
             foreach (var material in runtimeMaterials) material.bounciness = Bounce;
         }
-        private void OnDestroy() => Release();
+        private void OnDestroy()
+        {
+            Bridge?.NotifyDeviceDestroyed(this);
+            Release();
+        }
         internal void Release()
         {
-            GetComponent<DeviceLuaBehaviour>()?.Release();
+            if (Script != null) Script.CallbacksChanged -= FieldCallbacksChanged;
+            scriptBehaviour?.Release();
             Bridge = null;
             if (runtimeMaterials == null) return;
             foreach (var material in runtimeMaterials)
@@ -114,7 +135,7 @@ namespace MarblesECS.PhysX
             }
             runtimeMaterials = null;
         }
-        public MarbleContact Contact(MarbleKey key, Vector3 position, float speed = 0) => new MarbleContact
-        { Key = key, TargetId = checked(100000 + InstanceId), Kind = MarbleContactKind.Device, Multiplier = 1, Position = position, Speed = speed, RushDisabled = true };
+        public MarbleContact Contact(MarbleKey key, Vector3 position, float speed = 0) =>
+            MarbleContact.ForDevice(key, InstanceId, position, speed);
     }
 }

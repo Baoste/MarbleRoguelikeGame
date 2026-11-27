@@ -67,9 +67,9 @@
             "Operators": "ADD,MUL,SET",
             "StackRule": "ADD→MUL→CLAMP",
             "AppliesTo": "Ball,Drug,Item",
-            "DefaultValue": 0.5,
-            "MinValue": 0.1,
-            "MaxValue": 3.0,
+            "DefaultValue": 0.1,
+            "MinValue": 0.02,
+            "MaxValue": 0.96,
             "StackOrder": 10
         },
         {
@@ -115,7 +115,7 @@
             "Operators": "ADD,MUL,SET",
             "StackRule": "ADD→MUL→CLAMP",
             "AppliesTo": "Ball,Drug,Item",
-            "DefaultValue": 1.0,
+            "DefaultValue": 1.5,
             "MinValue": 0.0,
             "MaxValue": 5.0,
             "StackOrder": 10
@@ -398,10 +398,7 @@
         9031,
         9032,
         9033,
-        9034,
-        9035,
-        9036,
-        9037
+        9034
     ],
     "RushThreshold": 100.0,
     "FlowValueExponent": 1.15,

@@ -1,6 +1,6 @@
 -- 弹珠机关枪：计时、扫射、单发价值和整批耐久均由 Lua 组合。
 -- Value: shot interval; Strength: speed; Range: total fan angle.
-local radius, mass, period = 0.04, 0.1, 1
+local radius, mass, period = 0.08, 0.1, 1
 local round, active, batch, started = -1, nil, 0, 0
 local heading, shotDirection = nil, nil
 

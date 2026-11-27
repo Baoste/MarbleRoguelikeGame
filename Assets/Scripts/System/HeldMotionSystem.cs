@@ -1,4 +1,3 @@
-using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 
@@ -44,8 +43,8 @@ namespace MarblesECS
         internal static int Count(SimulationContext c, int sourceId, bool manualOnly = false)
         {
             int count = 0;
-            using (var balls = c.MarbleQuery.ToEntityArray(Allocator.Temp))
-                foreach (var ball in balls)
+            using (var balls = c.SnapshotMarbles())
+                foreach (var ball in balls.Items)
                     if (c.Manager.HasComponent<HeldMotion>(ball))
                     {
                         var hold = c.Manager.GetComponentData<HeldMotion>(ball);
@@ -58,15 +57,15 @@ namespace MarblesECS
         internal static int Release(SimulationContext c, int sourceId)
         {
             if (!Placed(c, sourceId)) return 0;
-            var balls = new System.Collections.Generic.List<Entity>();
-            using (var entities = c.MarbleQuery.ToEntityArray(Allocator.Temp))
-                foreach (var ball in entities)
-                    if (c.Manager.HasComponent<HeldMotion>(ball) && c.Manager.GetComponentData<HeldMotion>(ball).SourceId == sourceId && Live(c, ball)) balls.Add(ball);
-            balls.Sort((a, b) => c.Manager.GetComponentData<ShotOrigin>(a).SpawnSequence.CompareTo(c.Manager.GetComponentData<ShotOrigin>(b).SpawnSequence));
+            using var balls = c.BallDispatch.Rent();
+            using (var keys = c.OrderedMarbleKeys())
+                foreach (var key in keys.Items)
+                    if (c.Marbles.TryGetValue(key, out var ball) && c.Manager.HasComponent<HeldMotion>(ball) &&
+                        c.Manager.GetComponentData<HeldMotion>(ball).SourceId == sourceId && Live(c, ball)) balls.Items.Add(key);
             int released = 0;
-            foreach (var ball in balls)
+            foreach (var key in balls.Items)
             {
-                if (!c.Manager.Exists(ball) || !c.Manager.HasComponent<HeldMotion>(ball)) continue;
+                if (!c.Marbles.TryGetValue(key, out var ball) || !c.Manager.HasComponent<HeldMotion>(ball)) continue;
                 var hold = c.Manager.GetComponentData<HeldMotion>(ball);
                 if (hold.SourceId != sourceId) continue;
                 Finish(c, ball, hold, !Placed(c, sourceId)); released++;
@@ -77,8 +76,8 @@ namespace MarblesECS
         // Runs after readback so one second of holding includes a full second of frozen physics.
         internal static void Execute(SimulationContext c)
         {
-            using (var balls = c.MarbleQuery.ToEntityArray(Allocator.Temp))
-                foreach (var ball in balls)
+            using (var balls = c.SnapshotMarbles())
+                foreach (var ball in balls.Items)
                 {
                     if (!c.Manager.HasComponent<HeldMotion>(ball)) continue;
                     var hold = c.Manager.GetComponentData<HeldMotion>(ball);
@@ -114,8 +113,7 @@ namespace MarblesECS
         }
 
         private static bool Placed(SimulationContext c, int id) =>
-            CampaignStateUtility.FindDevice(c, id, out var device) &&
-            c.Manager.GetComponentData<OwnedDeviceData>(device).Placed &&
+            c.TryGetDevice(id, out _, out var device) && device.Placed &&
             c.Physics is IMarblePhysicsCommands commands && commands.TryGetDevicePose(id, out _);
 
         private static void MarkMoved(SimulationContext c, Entity ball)

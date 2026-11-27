@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace MarblesECS
 {
-    internal sealed class SimulationContext
+    internal sealed partial class SimulationContext
     {
         internal readonly World World;
         internal EntityManager Manager => World.EntityManager;
@@ -18,7 +18,6 @@ namespace MarblesECS
         internal readonly Entity RoundEntity, PlayerEntity, LauncherEntity, BoardEntity;
         internal readonly EntityQuery MarbleQuery;
         internal readonly EntityQuery DeviceQuery;
-        internal readonly Dictionary<MarbleKey, Entity> Marbles = new Dictionary<MarbleKey, Entity>();
         internal readonly List<MarbleContact> Contacts = new List<MarbleContact>();
         internal readonly Queue<MarbleScoreEvent> ScoreEvents = new Queue<MarbleScoreEvent>();
         internal FloatingTextEventBuffer FloatingText;
@@ -28,7 +27,7 @@ namespace MarblesECS
         internal float StepSeconds;
         internal readonly HashSet<ulong> CloverFamilies = new HashSet<ulong>();
         internal readonly HashSet<ulong> RefundedFamilies = new HashSet<ulong>();
-        internal readonly DeviceScriptSystem DeviceScripts = new DeviceScriptSystem();
+        internal readonly DeviceScriptSystem DeviceScripts;
         internal readonly DeviceTransientSystem Transients = new DeviceTransientSystem();
         internal readonly BoardScoreEffectSystem BoardScores = new BoardScoreEffectSystem();
         internal readonly BoardRushEffectSystem BoardRush = new BoardRushEffectSystem();
@@ -52,6 +51,8 @@ namespace MarblesECS
             Manager.AddBuffer<ShopOfferData>(RoundEntity);
             MarbleQuery = Manager.CreateEntityQuery(typeof(MarbleTag), typeof(ShotOrigin), typeof(DespawnState));
             DeviceQuery = Manager.CreateEntityQuery(typeof(OwnedDeviceData));
+            deviceQueryMask = DeviceQuery.GetEntityQueryMask();
+            DeviceScripts = new DeviceScriptSystem(this);
             Round = new RoundData { Phase = (byte)RoundPhase.Lost, TargetScore = tuning.TargetScore };
             Player = new PlayerData();
             if (Content != null) AttributeRuntime.Initialize(this, PlayerEntity);
@@ -71,7 +72,7 @@ namespace MarblesECS
             bool fromDevice = contact.Kind == MarbleContactKind.Device;
             FloatingText.Enqueue(FloatingTextEvent.FromInteger(score.Position,
                 fromDevice ? FloatingTextSource.Device : FloatingTextSource.Zone,
-                fromDevice ? score.ZoneId - 100000 : score.ZoneId, FloatingTextType.Score, creditedScore, score.Key));
+                fromDevice ? contact.DeviceInstanceId : score.ZoneId, FloatingTextType.Score, creditedScore, score.Key));
         }
 
         internal void ClearFireInput()
@@ -106,7 +107,7 @@ namespace MarblesECS
                     Manager.DestroyEntity(entities[i]);
                 }
             }
-            Marbles.Clear();
+            ClearMarbleIndex();
             var round = Round;
             round.ActiveMarbleCount = 0;
             round.ScoreStackCount = 0;
@@ -117,7 +118,7 @@ namespace MarblesECS
 
         internal bool TryGetFlying(MarbleKey key, out Entity entity)
         {
-            if (key.RoundId == Round.RoundId && Marbles.TryGetValue(key, out entity) && Manager.Exists(entity) &&
+            if (key.RoundId == Round.RoundId && marbles.TryGetValue(key, out entity) && Manager.Exists(entity) &&
                 !Manager.GetComponentData<DespawnState>(entity).PendingDespawn &&
                 !Manager.GetComponentData<SettlementState>(entity).IsSettled) return true;
             entity = Entity.Null;

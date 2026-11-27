@@ -2,7 +2,7 @@
 
 `Resources/GameContent.json` 配置属性、内容规则和启用装置的数字 ID 列表。装置在 `Resources/Devices/<id>/` 下配置。`Resources/GameBalance.json` 配置血量、抽血档位、发射间隔、库存容量和战役规则。每日目标分、通关奖励和盘面引用配置在 `Resources/GameDays.json`。
 
-`TestScene` 的 `PhysicsRoot/新盘面_局部X上坡_Z横向/玻璃罩碰撞_不遮挡操作` 限制弹珠飞离盘面。罩面平行盘面，内侧距离盘面 1.5 个世界单位、厚度 0.1，三个子对象补齐左右侧和上沿的碰撞边界，底部得分出口保持开放。罩体仅含静态 BoxCollider，不渲染；使用 Ignore Raycast 层，保留弹珠碰撞和装置操作。可在该对象的 BoxCollider 调整尺寸；若调整罩面高度，同时调整侧面子碰撞体，避免留下空隙。
+`TestScene` 的 `PhysicsRoot/新盘面_局部X上坡_Z横向/玻璃罩碰撞_不遮挡操作` 限制弹珠飞离盘面。罩面平行盘面，内侧距离盘面 0.9 个世界单位、厚度 0.1，三个子对象补齐左右侧和上沿的碰撞边界，底部得分出口保持开放。罩体由不可见的静态 BoxCollider 构成，使用 Ignore Raycast 层，保留弹珠碰撞和装置操作。调整罩面高度时检查它与侧面子碰撞体的衔接。
 
 布置阶段按住左键从盘面或背包拖动装置。拖到空位松开即可摆放，拖到左侧背包松开即可收回，拖到可接收装置上松开即可投入。拖动时按 `R` 旋转预览，右键或 `Esc` 取消。位置必须通过盘面边界、障碍物和装置间距检查，松在无效位置会退回原处。移动保留耐久、配对和 Lua 状态。即使没有待放置的新装置，只要仍拥有装置，商店结束后也会进入布置阶段。
 
@@ -31,9 +31,9 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 | RUSH 条值及持续时间 | `RushSystem`：上限 666，6 秒 + 触发球额外时长，结束后冷却 3 秒；条值不衰减 | 旧概率、时长和衰减字段仅兼容 |
 | 赌博转盘 | `GamblingWheelRules`：八档等概率，2 秒起步、最短 0.2 秒 | 旧输/返还/双倍/四倍规则、概率和赌池修正均停用 |
 
-半径按现有单位转换：**实际世界半径 = 最终 BALL_RADIUS × 0.16**。最低档默认属性值 `0.5` 对应半径 `0.08`、直径 `0.16`。高档位以 `Investment / MinInvestment` 为投入倍率：半径按立方根增长，质量线性增长，基础价值按 `FlowValueExponent` 次方增长；当前指数为 `1.15`。每日曲线先提供最低发射档的基础价值，再应用投入倍率和属性修正。阈值与初始血量见[每日内容制作指南](DayFramework_Content_Guide.md#血量与血珠升值)。通用体积缩放按体积倍率的立方根换算半径。旧药物不再影响发射参数。
+最终 `BALL_RADIUS` 直接作为世界半径。最低档默认半径为 `0.10`，直径为 `0.20`。高档位以 `Investment / MinInvestment` 为投入倍率：半径按立方根增长，质量线性增长，基础价值按 `FlowValueExponent` 次方增长；当前指数为 `1.15`。每日曲线先提供最低发射档的基础价值，再应用投入倍率和属性修正。阈值与初始血量见[每日内容制作指南](DayFramework_Content_Guide.md#血量与血珠升值)。通用体积缩放按体积倍率的立方根换算半径。旧药物不再影响发射参数。
 
-发射速度直接采用 `BALL_LAUNCH_SPEED`，单位为 m/s，最终仍受 `BALL_MAX_SPEED` 限制。静态或运动学棋盘障碍按 `BALL_BOUNCE` 校正反弹，实体装置取该值与自身 `device.json.Bounce` 的较大值。超过 `1` 的弹珠属性值提供额外反弹增益。各装置的 `Bounce` 见 [装置一览](Device_Overview.md)。
+发射速度直接采用 `BALL_LAUNCH_SPEED`，单位为 m/s，最终仍受 `BALL_MAX_SPEED` 限制。边墙等静态或运动学障碍按 `BALL_BOUNCE` 校正反弹。实体装置取该值与自身 `device.json.Bounce` 的较大值，纯碰撞钉取该值与 `0.8` 的较大值。超过 `1` 的弹珠属性值提供额外反弹增益。各装置的 `Bounce` 见 [装置一览](Device_Overview.md)。
 
 抽血档位仍在 `MinInvestment/MaxInvestment` 间选择投入量。基础耗血为「投入量 × BLOOD_COST」，随后应用属性 ADD/MUL/SET 和上下限。批量发射按球数收费。低档位用于增加携带 RUSH 贡献的球数，高档位用于 Rush 窗口内快速兑现价值。达标后可关闭供血并按场内弹珠排空的结果结算。
 
@@ -124,7 +124,7 @@ RUSH 当前参数统一位于 `Scripts/System/RushSystem.cs` 的 `Threshold = 66
 
 程序不生成盘面、墙体、固定钉和终点；这些均在场景中手工制作。发射滑条使用发射点启动时的局部 Z 坐标为中心，与实际移动轴一致。
 
-发射中心为 `LaunchPoint.TransformPoint(LaunchOffset)`，偏移随发射点的移动、旋转和缩放变化，默认 `(0, 0, 0)`。编辑和运行时均可通过 Scene 视图的 Gizmos 预览；标记大小只用于定位，不代表弹珠半径。多球发射以此中心排列。
+发射中心为 `LaunchPoint.TransformPoint(LaunchOffset)`，偏移随发射点的移动、旋转和缩放变化，默认 `(0, 0, 0)`。`TestScene` 的偏移将发射中心沿盘面向上坡移 0.2 个世界单位，为前排固定钉留出出球净空。编辑和运行时均可通过 Scene 视图的 Gizmos 查看发射中心，标记大小用于定位。多球发射以此中心排列。
 
 ## 验证
 

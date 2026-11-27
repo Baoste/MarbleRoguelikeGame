@@ -36,7 +36,7 @@ namespace MarblesECS
                 context.Manager.SetComponentData(entity, new Transform3D { Position = position, Rotation = launchRotation });
                 context.Manager.SetComponentData(entity, new Motion3D { LinearVelocity = launchVelocity });
                 // Publish the mapping before committing resources. A failed bridge never consumes blood or cooldown.
-                context.Marbles.Add(key, entity);
+                context.RegisterMarble(key, entity);
                 PlayerBloodSystem.SpendOnLaunch(context, cost);
                 round.ActiveMarbleCount++;
                 LauncherFireSystem.RecordShot(context);
@@ -48,7 +48,7 @@ namespace MarblesECS
             {
                 if (!committed)
                 {
-                    context.Marbles.Remove(key);
+                    context.UnregisterMarble(key, entity);
                     try { physics.Remove(key); }
                     finally
                     {

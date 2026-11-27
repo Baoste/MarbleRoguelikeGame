@@ -1,8 +1,8 @@
 {
   "name": "Multi Ding",
-  "description": "每球首次撞击时提高得分倍率。",
-  "biomassScrapPrice": 9,
+  "description": "每颗弹珠首次撞击本装置时，得分倍率乘以 1.5。",
+  "biomassScrapPrice": 4,
   "rarity": "common",
-  "durability": 20,
+  "durability": 14,
   "type": "device"
 }

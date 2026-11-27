@@ -36,7 +36,7 @@ namespace MarblesECS
             values[(int)GameAttribute.BALL_BASE_VALUE] /= count;
             values[(int)GameAttribute.BALL_RADIUS] *= Math.Pow(1d / count, 1d / 3d);
             values[(int)GameAttribute.BALL_MASS] /= count;
-            radius = (float)values[(int)GameAttribute.BALL_RADIUS] * AttributeRuntime.RadiusToWorld;
+            radius = (float)values[(int)GameAttribute.BALL_RADIUS];
         }
         public int Count { get { _ = context(); return items.Count; } }
         public int TargetCount { get { _ = context(); return targetCount; } }

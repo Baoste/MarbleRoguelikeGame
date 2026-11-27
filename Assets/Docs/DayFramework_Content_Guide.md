@@ -67,10 +67,10 @@ IDs 区分大小写，允许 1 至 120 个 UTF-8 字节并要求首尾无空白�
 
 | JSON 条目 | 属性 |
 | --- | --- |
-| `pins[]` | `x`、`y`、`radius`。效果钉可配置 `scoreMultiplier` 和 `rushChanceAdd`。设 `collisionOnly: true` 创建纯碰撞钉，其效果字段会被忽略。RUSH 概率加值用 `0` 到 `1`，例如 `0.1` 对应 10 个百分点。 |
+| `pins[]` | `x`、`y`、`radius`。效果钉可配置 `scoreMultiplier` 和 `rushChanceAdd`。设 `collisionOnly: true` 创建纯碰撞钉，其效果字段会被忽略。纯碰撞钉的反弹取 `0.8` 和弹珠当前 `BALL_BOUNCE` 的较大值。RUSH 概率加值用 `0` 到 `1`，例如 `0.1` 对应 10 个百分点。 |
 | `zones[]` | `type` 为 `Score` 或 `RandomScore`，另有 `x`、`y`、`width`、`depth`、`triggerHeight`、`multiplier`、`flatScore`、`priority`、`rushEnabled`、`scoreStackEnabled`。开启 Gambling Wheel 时，`RandomScore` 把分数存入转盘。关闭时直接结算。 |
 
-每份布局的 `schemaVersion` 为 `1`，`pins` 和 `zones` 可为空数组。Day0 示例包含三枚钉子和底部一个普通得分区。配置布局会替换场景原有钉子与得分区，使用原有斜面、边墙和排球区。
+每份布局的 `schemaVersion` 为 `1`，`pins` 和 `zones` 可为空数组。Day0 布局包含 14 枚半径为 `0.10` 的纯碰撞钉和底部一个普通得分区。三排钉的行距为最高发射档的弹珠留出通道。配置布局会替换场景原有钉子与得分区，使用原有斜面、边墙和排球区。
 
 ### Morning Prep
 

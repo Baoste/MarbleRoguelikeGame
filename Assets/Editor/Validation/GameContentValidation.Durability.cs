@@ -24,6 +24,7 @@ namespace MarblesECS.Editor
             using (var f = new Fixture())
             {
                 var definition = f.C.Balance.Devices.Single(d => d.Id == 113);
+                definition.Durability = 20;
                 var device = f.Add(definition);
                 var second = f.Add(f.C.Balance.Devices.Single(d => d.Id == 9000));
                 for (int i = 0; i < 21; i++)

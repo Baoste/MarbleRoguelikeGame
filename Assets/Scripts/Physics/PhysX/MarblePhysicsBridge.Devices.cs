@@ -6,10 +6,12 @@ using Object = UnityEngine.Object;
 
 namespace MarblesECS.PhysX
 {
-    public sealed partial class MarblePhysicsBridge : IMarbleDevicePhysics
+    public sealed partial class MarblePhysicsBridge : IMarbleDevicePhysics, IMarbleDeviceScriptBinding
     {
         private readonly Dictionary<int, DeviceBody> devices = new Dictionary<int, DeviceBody>();
         private readonly List<DeviceBody> contentDevices = new List<DeviceBody>();
+        private int fieldMembershipVersion;
+        private DeviceScriptSystem deviceCallbacks;
         private readonly DevicePlacementObstacles placementObstacles = new DevicePlacementObstacles();
         private Transform deviceOrigin, devicePlane;
         private BoardPlacementSurface deviceSurface;
@@ -159,6 +161,7 @@ namespace MarblesECS.PhysX
             devices.Add(body.InstanceId, body);
             contentDevices.Add(body);
             contentDevices.Sort((a, b) => a.InstanceId.CompareTo(b.InstanceId));
+            fieldMembershipVersion++;
             body.gameObject.SetActive(true);
             DeviceRevision++;
         }
@@ -167,6 +170,7 @@ namespace MarblesECS.PhysX
         {
             if (!devices.Remove(id, out var body)) return;
             contentDevices.Remove(body);
+            fieldMembershipVersion++;
             if (body != null) DestroyDeviceObject(body.gameObject);
             DeviceRevision++;
         }
@@ -178,7 +182,28 @@ namespace MarblesECS.PhysX
                 if (body != null) DestroyDeviceObject(body.gameObject);
             contentDevices.Clear();
             devices.Clear();
+            fieldDevices.Invalidate();
             DeviceRevision++;
+        }
+
+        internal void NotifyDeviceDestroyed(DeviceBody body)
+        {
+            if (!devices.TryGetValue(body.InstanceId, out var registered) || !ReferenceEquals(registered, body)) return;
+            devices.Remove(body.InstanceId);
+            contentDevices.Remove(body);
+            fieldMembershipVersion++;
+            DeviceRevision++;
+        }
+
+        void IMarbleDeviceScriptBinding.BindDeviceCallbacks(DeviceScriptSystem callbacks) => deviceCallbacks = callbacks;
+
+        internal void InvalidateFieldDevices() => fieldMembershipVersion++;
+
+        void IMarbleDeviceScriptBinding.BindDeviceScript(int instanceId, DeviceLuaScript script)
+        {
+            if (!devices.TryGetValue(instanceId, out var body) || body == null || ReferenceEquals(body.Script, script)) return;
+            body.BindScript(script);
+            fieldMembershipVersion++;
         }
 
         private static void DestroyDeviceObject(GameObject root)

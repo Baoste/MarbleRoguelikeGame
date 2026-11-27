@@ -37,7 +37,7 @@ namespace MarblesECS
             reserved = UnplacedInstallation(definition);
             if (reserved != Entity.Null) return true;
             price = definition.InstallPrice;
-            return context.Campaign.NextDeviceId <= int.MaxValue - 100000 - definition.PurchaseQuantity &&
+            return context.Campaign.NextDeviceId <= MarbleContact.MaxDeviceInstanceId - definition.PurchaseQuantity &&
                 context.DeviceQuery.CalculateEntityCount() + definition.PurchaseQuantity <= context.Balance.Campaign.MaxOwnedDevices &&
                 CampaignWalletSystem.CanSpend(context, GameCurrency.BiomassScrap, price);
         }
@@ -68,6 +68,7 @@ namespace MarblesECS
             placed.Z = z;
             placed.Angle = definition.ResolvePlacementAngle(angle % 360);
             int installed = createPack ? checked(context.Campaign.NextDeviceId + 1) : before.InstanceId;
+            if (createPack) context.CheckDeviceIdAvailable(installed);
             int previousRevision = context.Campaign.LayoutRevision;
             ulong previousStableId = context.NextStableId;
             bool committed = false;
@@ -128,8 +129,8 @@ namespace MarblesECS
 
         private bool CanPlaceInstance(int instanceId)
         {
-            if (!CanInstallDevices || !CampaignStateUtility.FindDevice(context, instanceId, out var entity)) return false;
-            return context.Manager.GetComponentData<OwnedDeviceData>(entity).Placed
+            if (!CanInstallDevices || !context.TryGetDevice(instanceId, out _, out var device)) return false;
+            return device.Placed
                 ? CanEditDevices : context.Campaign.Production.Supply == DeviceSupply.OwnedInventory;
         }
 

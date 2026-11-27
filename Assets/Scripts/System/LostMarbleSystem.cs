@@ -1,5 +1,4 @@
 using System;
-using Unity.Collections;
 
 namespace MarblesECS
 {
@@ -10,11 +9,10 @@ namespace MarblesECS
             var round = context.Round;
             bool drainTimedOut = round.Phase == (byte)RoundPhase.Draining &&
                 round.Time - round.DrainStartedAt >= context.Tuning.DrainTimeoutSeconds;
-            using (var entities = context.MarbleQuery.ToEntityArray(Allocator.Temp))
+            using (var entities = context.SnapshotMarbles())
             {
-                for (int i = 0; i < entities.Length; i++)
+                foreach (var entity in entities.Items)
                 {
-                    var entity = entities[i];
                     var runtime = context.Manager.GetComponentData<DespawnState>(entity);
                     if (runtime.PendingDespawn) continue;
                     var id = context.Manager.GetComponentData<ShotOrigin>(entity);

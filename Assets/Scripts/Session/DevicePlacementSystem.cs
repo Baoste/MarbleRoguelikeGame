@@ -36,8 +36,7 @@ namespace MarblesECS
 
         internal static bool Rotate(SimulationContext context, int id, float degrees, float clearance)
         {
-            if (!CampaignStateUtility.FindDevice(context, id, out var entity)) return false;
-            var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+            if (!context.TryGetDevice(id, out var entity, out var device)) return false;
             var definition = CampaignStateUtility.Device(context, device.DefinitionId);
             if (definition.RotationLocked) return false;
             float angle = (device.Angle + degrees) % 360;
@@ -91,10 +90,7 @@ namespace MarblesECS
         private static bool TryValidatePlacement(SimulationContext context, int instanceId, float x, float z, float clearance,
             float? angle, out Entity entity, out OwnedDeviceData device)
         {
-            entity = Entity.Null;
-            device = default;
-            if (!CampaignStateUtility.FindDevice(context, instanceId, out entity)) return false;
-            device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+            if (!context.TryGetDevice(instanceId, out entity, out device)) return false;
             var definition = CampaignStateUtility.Device(context, device.DefinitionId);
             float proposed = angle ?? device.Angle;
             if (!CanPlaceDefinition(context, definition, x, z, clearance, proposed, instanceId)) return false;

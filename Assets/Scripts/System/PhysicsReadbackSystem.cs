@@ -1,5 +1,3 @@
-using Unity.Collections;
-
 namespace MarblesECS
 {
     internal static class PhysicsReadbackSystem
@@ -8,11 +6,10 @@ namespace MarblesECS
         {
             var provider = physics as IMarblePhysicsStateProvider;
             if (provider == null) return;
-            using (var entities = context.MarbleQuery.ToEntityArray(Allocator.Temp))
+            using (var entities = context.SnapshotMarbles())
             {
-                for (int i = 0; i < entities.Length; i++)
+                foreach (var entity in entities.Items)
                 {
-                    var entity = entities[i];
                     var shot = context.Manager.GetComponentData<ShotOrigin>(entity);
                     if (!provider.TryGetState(new MarbleKey(shot.RoundId, shot.SpawnSequence), out var state)) continue;
                     context.Manager.SetComponentData(entity, new Transform3D { Position = state.Position, Rotation = state.Rotation });

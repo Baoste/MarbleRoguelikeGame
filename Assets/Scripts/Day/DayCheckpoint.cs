@@ -98,8 +98,7 @@ namespace MarblesECS
             physics.Restore();
             context.DeviceScripts.Clear();
             context.DeviceScripts.AdoptPreparedScripts(prepared);
-            using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
-                manager.DestroyEntity(entities);
+            context.DestroyAllDeviceEntities();
 
             var restored = round;
             restored.RoundId = nextRoundId;

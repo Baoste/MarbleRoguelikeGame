@@ -60,12 +60,13 @@ namespace MarblesECS.Editor
                 Near(85, score.Score, "direct settlement includes the temporary Rush value");
                 Near(85, r.C.Round.Score, "score reaches the actual round account");
                 Check(!score.IsPending && !r.Simulation.TryDequeueScore(out _), "one immediate settlement only");
-                Check(score.Key.Equals(ball) && score.ZoneId == 100000 + r.Id, "event keeps ball and device identities");
+                Check(score.Key.Equals(ball) && score.ZoneId == MarbleContact.TargetIdForDevice(r.Id), "event keeps ball and device identities");
             }
             using (var r = new Rig())
             {
                 var keys = new List<MarbleKey>();
-                // Distinct, non-overlapping spheres all touch the sensor in the same physical step.
+                // Smaller fixture balls let eleven distinct spheres touch the packaged sensor in one step.
+                r.Simulation.ApplyGlobalAttribute(964, GameAttribute.BALL_RADIUS, AttributeOperation.Set, .08);
                 for (int z = -1; z <= 1; z++)
                     for (int x = -1; x <= 1; x++) keys.Add(r.Launch(new Vector3(x * .17f, -.025f, z * .17f)));
                 keys.Add(r.Launch(new Vector3(-.085f, .145f, 0)));

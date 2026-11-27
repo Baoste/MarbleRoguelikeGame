@@ -6,37 +6,31 @@ namespace MarblesECS.PhysX
     /// <summary>Assigns stable, scene-unique gameplay IDs while authoring zones and pins.</summary>
     internal static class TargetIdAllocator
     {
+        internal const int FirstPinId = 100000;
+        internal const int FirstZoneId = 1;
         private static bool assigning;
 
-        internal static int ForZone(MarbleZone owner, int current) => Assign(owner, current, 1);
-        internal static int ForPin(MarblePin owner, int current) => Assign(owner, current, 100000);
+        internal static int ForZone(MarbleZone owner, int current) => Assign(owner, current, FirstZoneId);
+        internal static int ForPin(MarblePin owner, int current) => Assign(owner, current, FirstPinId);
 
         internal static void EnsureUniqueUnder(Transform root)
         {
             var used = new HashSet<int>();
-            int nextZone = 1;
+            int nextZone = FirstZoneId;
             foreach (var zone in root.GetComponentsInChildren<MarbleZone>(true))
-            {
                 if (zone.TargetId <= 0 || !used.Add(zone.TargetId))
-                {
-                    while (used.Contains(nextZone))
-                        nextZone = checked(nextZone + 1);
-                    zone.TargetId = nextZone;
-                    used.Add(nextZone);
-                }
-            }
+                    zone.TargetId = TakeNext(used, ref nextZone);
 
-            int nextPin = 100000;
+            int nextPin = FirstPinId;
             foreach (var pin in root.GetComponentsInChildren<MarblePin>(true))
-            {
                 if (pin.TargetId <= 0 || !used.Add(pin.TargetId))
-                {
-                    while (used.Contains(nextPin))
-                        nextPin = checked(nextPin + 1);
-                    pin.TargetId = nextPin;
-                    used.Add(nextPin);
-                }
-            }
+                    pin.TargetId = TakeNext(used, ref nextPin);
+        }
+
+        internal static int TakeNext(HashSet<int> used, ref int candidate)
+        {
+            while (!used.Add(candidate)) candidate = checked(candidate + 1);
+            return candidate;
         }
 
         private static int Assign(Component owner, int current, int firstCandidate)
@@ -58,10 +52,7 @@ namespace MarblesECS.PhysX
                 if (current > 0 && !used.Contains(current))
                     return current;
 
-                int candidate = firstCandidate;
-                while (used.Contains(candidate))
-                    candidate = checked(candidate + 1);
-                return candidate;
+                return TakeNext(used, ref firstCandidate);
             }
             finally
             {

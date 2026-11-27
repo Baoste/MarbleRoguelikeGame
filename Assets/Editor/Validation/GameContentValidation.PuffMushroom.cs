@@ -33,7 +33,7 @@ namespace MarblesECS.Editor
                     for (int i = 0; i < 8; i++)
                     {
                         Near(1.25, f.Simulation.GetMarbleAttribute(keys[i], GameAttribute.BALL_BASE_VALUE), "eighth of value");
-                        Near(.25, f.Simulation.GetMarbleAttribute(keys[i], GameAttribute.BALL_RADIUS), "eighth of volume halves radius");
+                        Near(.05, f.Simulation.GetMarbleAttribute(keys[i], GameAttribute.BALL_RADIUS), "eighth of volume halves radius");
                         Near(.125, f.Simulation.GetMarbleAttribute(keys[i], GameAttribute.BALL_MASS), "eighth of mass");
                         Near(2.25, f.C.Manager.GetComponentData<MarbleScore>(f.Ball(keys[i])).ScoreMultiplier, "accumulated multiplier inherited without division");
                         VectorNear(Quaternion.AngleAxis(-60 + i * (120f / 7), Vector3.up) * Vector3.back * speed, f.Physics.States[keys[i]].LinearVelocity, "eight evenly spaced uphill directions retain input speed");
@@ -151,7 +151,10 @@ namespace MarblesECS.Editor
                     }
 
                     simulation.FireOnce(); simulation.BeforePhysics(dt, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge);
-                    var key = c.Marbles.Keys.Single(); const float radius = .04f; float distance = pose.Radius + radius + .02f;
+                    var key = c.Marbles.Keys.Single();
+                    float radius = AttributeRuntime.Properties(c, c.Marbles[key]).Radius * .5f;
+                    float mouthSpacing = (radius * 2 + .02f) / (2 * Mathf.Sin(120f / 14f * Mathf.Deg2Rad));
+                    float distance = Mathf.Max(pose.Radius + radius + .02f, mouthSpacing);
                     HitMultiplier(key);
                     Near(multiplier.ScoreMultiplier, c.Manager.GetComponentData<MarbleScore>(c.Marbles[key]).ScoreMultiplier,
                         "parent activates the once-per-ball multiplier");

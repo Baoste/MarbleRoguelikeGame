@@ -29,7 +29,7 @@ namespace MarblesECS.Editor
                 var keys = new[] { r.Launch(), r.Launch(), r.Launch() };
                 Check(keys.Distinct().Count() == keys.Length, "fixture spawns distinct balls");
                 var speeds = new[] { 0f, .03f, 5f };
-                r.Simulation.ApplyAttribute(keys[2], 997, GameAttribute.BALL_RADIUS, AttributeOperation.Set, .75);
+                r.Simulation.ApplyAttribute(keys[2], 997, GameAttribute.BALL_RADIUS, AttributeOperation.Set, .24);
                 for (int i = 0; i < keys.Length; i++) r.Place(keys[i], .8f, i * 120, speeds[i]);
                 var initial = keys.Select(k => r.Body(k).position).ToArray();
                 r.Step(false);
@@ -242,7 +242,7 @@ namespace MarblesECS.Editor
             internal Entity Ball(MarbleKey key) => C.Marbles[key];
             internal bool Held(MarbleKey key) => C.Marbles.TryGetValue(key, out var entity) && C.Manager.HasComponent<HeldMotion>(entity);
             internal Rigidbody Body(MarbleKey key) => Scene.GetRootGameObjects().Select(go => go.GetComponent<MarbleBody>()).Single(b => b != null && b.Key.Equals(key)).Body;
-            internal float Radius(MarbleKey key) => (float)AttributeRuntime.Get(C, Ball(key), GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
+            internal float Radius(MarbleKey key) => (float)AttributeRuntime.Get(C, Ball(key), GameAttribute.BALL_RADIUS);
             internal MarbleKey Launch()
             {
                 Simulation.FireOnce(); Simulation.BeforePhysics(StepSeconds, Bridge, new Vector3(4 + launches++ * .6f, 5, 0), Quaternion.identity);
@@ -261,7 +261,8 @@ namespace MarblesECS.Editor
             internal int VisitCount(MarbleKey key)
             {
                 var visits = C.Manager.GetBuffer<DeviceVisit>(Ball(key));
-                for (int i = 0; i < visits.Length; i++) if (visits[i].Key == 100000 + Owned.InstanceId) return visits[i].Count;
+                var visitKey = DeviceVisitKey.ForDevice(Owned.InstanceId);
+                for (int i = 0; i < visits.Length; i++) if (visits[i].Key.Equals(visitKey)) return visits[i].Count;
                 return 0;
             }
             internal void Step(bool simulate = true)

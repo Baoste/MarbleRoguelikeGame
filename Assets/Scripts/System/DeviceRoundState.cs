@@ -53,8 +53,8 @@ namespace MarblesECS
             if (definitionId == 0) throw new ArgumentOutOfRangeException(nameof(definitionId));
             ValidateKey(key); ValidateValue(value);
             int count = 0, round = Round(c); var fixedKey = new FixedString128Bytes(key);
-            using (var entities = c.DeviceQuery.ToEntityArray(Allocator.Temp))
-                foreach (var entity in entities)
+            using (var entities = c.SnapshotDevices())
+                foreach (var entity in entities.Items)
                 {
                     var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
                     if (device.Placed && device.DefinitionId == definitionId && Get(c, entity, round, fixedKey) == value) count++;

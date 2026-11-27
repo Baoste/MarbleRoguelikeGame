@@ -30,21 +30,20 @@ namespace MarblesECS
             return System.Math.Max(0, limit - (device.DurabilityRound == c.Round.RoundId ? device.UsesThisRound : 0));
         }
         internal static bool Available(SimulationContext c, int instanceId) =>
-            CampaignStateUtility.FindDevice(c, instanceId, out var entity) &&
-            Available(c, c.Manager.GetComponentData<OwnedDeviceData>(entity));
+            c.TryGetDevice(instanceId, out _, out var device) && Available(c, device);
         internal static bool Available(SimulationContext c, OwnedDeviceData device) => device.Placed && Remaining(c, device) != 0;
         internal static bool Continuing(SimulationContext c, Entity entity) => c.Manager.HasComponent<DeviceEffectContinuation>(entity) &&
             c.Manager.GetComponentData<DeviceEffectContinuation>(entity).Round == c.Round.RoundId &&
             c.Round.Time <= c.Manager.GetComponentData<DeviceEffectContinuation>(entity).Until + 1e-7;
         internal static bool HasPendingEffect(SimulationContext context, Entity entity, int instanceId) =>
             context.IsRunning && (Continuing(context, entity) || HeldMotionSystem.Count(context, instanceId) != 0);
-        internal static bool CanRun(SimulationContext c, int id) => CampaignStateUtility.FindDevice(c, id, out var entity) && CanRun(c, entity);
-        internal static bool CanRun(SimulationContext c, Entity entity)
-        {
-            if (!c.HasProductionFeature(ProductionFeature.DevicePlacement)) return false;
-            var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
-            return device.Placed && (Remaining(c, device) != 0 || Continuing(c, entity));
-        }
+        internal static bool CanRun(SimulationContext c, int id) =>
+            c.TryGetDevice(id, out var entity, out var device) && CanRun(c, entity, device);
+        internal static bool CanRun(SimulationContext c, Entity entity) =>
+            c.IsDeviceEntity(entity) && CanRun(c, entity, c.Manager.GetComponentData<OwnedDeviceData>(entity));
+        internal static bool CanRun(SimulationContext c, Entity entity, OwnedDeviceData device) =>
+            device.Placed && c.HasProductionFeature(ProductionFeature.DevicePlacement) &&
+            (Remaining(c, device) != 0 || Continuing(c, entity));
         internal static bool KeepActive(SimulationContext c, Entity entity, float seconds)
         {
             if (!BallInteractionSystem.Finite(seconds) || seconds <= 0 || seconds > 60 || !c.Manager.Exists(entity) ||
@@ -77,11 +76,13 @@ namespace MarblesECS
             return true;
         }
         internal static bool TryUse(SimulationContext c, int instanceId) =>
-            CampaignStateUtility.FindDevice(c, instanceId, out var entity) && TryUse(c, entity);
+            c.TryGetDevice(instanceId, out var entity, out var device) && TryUse(c, entity, device);
         internal static bool TryUse(SimulationContext c, Entity entity)
         {
-            if (!c.Manager.Exists(entity)) return false;
-            var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
+            return c.IsDeviceEntity(entity) && TryUse(c, entity, c.Manager.GetComponentData<OwnedDeviceData>(entity));
+        }
+        private static bool TryUse(SimulationContext c, Entity entity, OwnedDeviceData device)
+        {
             if (!Available(c, device)) return false;
             if (Remaining(c, device) == -1) return true;
             if (device.DurabilityRound != c.Round.RoundId) { device.DurabilityRound = c.Round.RoundId; device.UsesThisRound = 0; }
@@ -94,25 +95,25 @@ namespace MarblesECS
         internal static void RemoveExhausted(SimulationContext context, List<DeviceBrokenEvent> broken)
         {
             if (!context.Campaign.Production.DestroyExhaustedDevices) return;
-            using var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp);
-            foreach (var entity in entities)
+            using var entities = context.SnapshotDevices();
+            foreach (var entity in entities.Items)
             {
-                if (!context.Manager.Exists(entity)) continue;
+                if (!context.IsDeviceEntity(entity)) continue;
                 var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
                 if (!device.Placed || Remaining(context, device) != 0 ||
                     HasPendingEffect(context, entity, device.InstanceId) ||
-                    (device.PairId != 0 && PairHasPendingEffect(context, device.PairId, entities))) continue;
+                    (device.PairId != 0 && PairHasPendingEffect(context, device.PairId, entities.Items))) continue;
                 CampaignStateUtility.DestroyDevice(context, entity);
                 broken.Add(new DeviceBrokenEvent(context.Round.RoundId, device.InstanceId, device.DefinitionId));
             }
-            broken.Sort((a, b) => a.InstanceId.CompareTo(b.InstanceId));
+            if (broken.Count > 1) broken.Sort((a, b) => a.InstanceId.CompareTo(b.InstanceId));
         }
 
-        private static bool PairHasPendingEffect(SimulationContext context, int pairId, NativeArray<Entity> devices)
+        private static bool PairHasPendingEffect(SimulationContext context, int pairId, List<Entity> devices)
         {
             foreach (var entity in devices)
             {
-                if (!context.Manager.Exists(entity)) continue;
+                if (!context.IsDeviceEntity(entity)) continue;
                 var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
                 if (device.PairId == pairId && HasPendingEffect(context, entity, device.InstanceId)) return true;
             }

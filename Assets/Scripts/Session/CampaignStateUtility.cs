@@ -15,15 +15,8 @@ namespace MarblesECS
 
 
 
-        internal static bool FindDevice(SimulationContext context, int instanceId, out Entity entity)
-        {
-            using (var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp))
-                for (int i = 0; i < entities.Length; i++)
-                    if (context.Manager.GetComponentData<OwnedDeviceData>(entities[i]).InstanceId == instanceId)
-                    { entity = entities[i]; return true; }
-            entity = Entity.Null;
-            return false;
-        }
+        internal static bool FindDevice(SimulationContext context, int instanceId, out Entity entity) =>
+            context.TryGetDevice(instanceId, out entity, out _);
 
         internal static Entity CreateDevice(SimulationContext context, DeviceDefinition definition, long price,
             OwnedDeviceData firstPlacement = default)
@@ -66,25 +59,26 @@ namespace MarblesECS
         internal static void DestroyDevice(SimulationContext context, Entity entity)
         {
             var manager = context.Manager;
-            if (!manager.Exists(entity)) return;
+            if (!manager.HasComponent<OwnedDeviceData>(entity)) return;
             var device = manager.GetComponentData<OwnedDeviceData>(entity);
-            using var removed = new NativeList<int>(2, Allocator.Temp);
+            using var snapshot = context.DeviceRemoval.Rent();
+            var removed = snapshot.Items;
             if (device.PairId == 0)
             {
                 removed.Add(device.InstanceId);
-                manager.DestroyEntity(entity);
+                context.DestroyDeviceEntity(device.InstanceId, entity);
             }
             else
             {
-                using var entities = context.DeviceQuery.ToEntityArray(Allocator.Temp);
-                foreach (var member in entities)
+                using var devices = context.SnapshotDevices();
+                foreach (var member in devices.Items)
                 {
                     var data = manager.GetComponentData<OwnedDeviceData>(member);
                     if (data.PairId != device.PairId) continue;
                     removed.Add(data.InstanceId);
-                    manager.DestroyEntity(member);
+                    context.DestroyDeviceEntity(data.InstanceId, member);
                 }
-                removed.AsArray().Sort();
+                if (removed.Count > 1) removed.Sort();
             }
 
             var campaign = context.Campaign;
@@ -100,11 +94,7 @@ namespace MarblesECS
         {
             (context.Physics as IMarbleDevicePhysics)?.ClearDevices();
             context.Transients.Clear();
-            if (!context.DeviceQuery.IsEmptyIgnoreFilter)
-            {
-                context.Manager.DestroyEntity(context.DeviceQuery);
-                DevicePlacementSystem.MarkLayoutChanged(context);
-            }
+            if (context.DestroyAllDeviceEntities()) DevicePlacementSystem.MarkLayoutChanged(context);
             context.DeviceScripts.Clear();
         }
 
@@ -112,9 +102,12 @@ namespace MarblesECS
         {
             if (excludedInstanceId < 0) throw new System.ArgumentOutOfRangeException(nameof(excludedInstanceId));
             int count = 0;
-            using (var devices = context.DeviceQuery.ToComponentDataArray<OwnedDeviceData>(Allocator.Temp))
-                foreach (var device in devices)
-                    if (device.Placed && device.InstanceId != excludedInstanceId) count++;
+            using var devices = context.SnapshotDevices();
+            foreach (var entity in devices.Items)
+            {
+                var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+                if (device.Placed && device.InstanceId != excludedInstanceId) count++;
+            }
             return count;
         }
 
@@ -122,9 +115,12 @@ namespace MarblesECS
         {
             if (definitionId == 0) throw new System.ArgumentOutOfRangeException(nameof(definitionId));
             int count = 0;
-            using (var devices = context.DeviceQuery.ToComponentDataArray<OwnedDeviceData>(Allocator.Temp))
-                foreach (var device in devices)
-                    if (device.Placed && device.DefinitionId == definitionId) count++;
+            using var devices = context.SnapshotDevices();
+            foreach (var entity in devices.Items)
+            {
+                var device = context.Manager.GetComponentData<OwnedDeviceData>(entity);
+                if (device.Placed && device.DefinitionId == definitionId) count++;
+            }
             return count;
         }
 
@@ -158,15 +154,25 @@ namespace MarblesECS
 
         internal static Entity CreateDeviceEntity(SimulationContext context, OwnedDeviceData device, StableIdentity identity)
         {
+            context.CheckDeviceIdAvailable(device.InstanceId);
             var manager = context.Manager;
             var entity = manager.CreateEntity(typeof(OwnedDeviceData), typeof(StableIdentity),
                 typeof(Owner), typeof(OnBoard), typeof(DefinitionRef));
-            manager.SetComponentData(entity, device);
-            manager.SetComponentData(entity, identity);
-            manager.SetComponentData(entity, new Owner { Player = context.PlayerEntity });
-            manager.SetComponentData(entity, new OnBoard { Board = context.BoardEntity });
-            manager.SetComponentData(entity, new DefinitionRef { DefinitionId = device.DefinitionId });
-            return entity;
+            try
+            {
+                manager.SetComponentData(entity, device);
+                manager.SetComponentData(entity, identity);
+                manager.SetComponentData(entity, new Owner { Player = context.PlayerEntity });
+                manager.SetComponentData(entity, new OnBoard { Board = context.BoardEntity });
+                manager.SetComponentData(entity, new DefinitionRef { DefinitionId = device.DefinitionId });
+                context.RegisterDevice(device.InstanceId, entity);
+                return entity;
+            }
+            catch
+            {
+                manager.DestroyEntity(entity);
+                throw;
+            }
         }
 
         internal static bool CanCashOut(SimulationContext context)

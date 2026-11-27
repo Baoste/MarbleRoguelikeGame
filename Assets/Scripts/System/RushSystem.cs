@@ -5,7 +5,7 @@ namespace MarblesECS
 {
     internal struct RushTriggerVisit : IBufferElementData
     {
-        public int Source;
+        public ContactTargetKey Source;
         public long Tick;
     }
 
@@ -47,7 +47,7 @@ namespace MarblesECS
             rush.Contribution = Math.Min(1000000, rush.Contribution + amount);
             c.Manager.SetComponentData(ball, rush);
         }
-        internal static void RecordTrigger(SimulationContext c, Entity ball, int source)
+        internal static void RecordTrigger(SimulationContext c, Entity ball, ContactTargetKey source)
         {
             if (!c.HasProductionFeature(ProductionFeature.Rush) ||
                 !c.Manager.Exists(ball) || !c.Manager.HasComponent<MarbleRush>(ball)) return;
@@ -55,16 +55,17 @@ namespace MarblesECS
             for (int i = 0; i < visits.Length; i++)
             {
                 var visit = visits[i];
-                if (visit.Source != source) continue;
+                if (!visit.Source.Equals(source)) continue;
                 if (visit.Tick == c.Round.Tick) return;
                 visit.Tick = c.Round.Tick; visits[i] = visit; AddContribution(c, ball, DeviceContribution); return;
             }
             visits.Add(new RushTriggerVisit { Source = source, Tick = c.Round.Tick });
             AddContribution(c, ball, DeviceContribution);
         }
-        internal static void RecordSpawn(SimulationContext c, Entity parent, System.Collections.Generic.IEnumerable<Entity> children, int source, bool accepted)
+        internal static void RecordSpawn(SimulationContext c, Entity parent, System.Collections.Generic.IEnumerable<Entity> children, int instanceId, bool accepted)
         {
             if (!accepted || !c.HasProductionFeature(ProductionFeature.Rush)) return;
+            var source = ContactTargetKey.ForDevice(instanceId);
             double before = c.Manager.GetComponentData<MarbleRush>(parent).Contribution;
             RecordTrigger(c, parent, source);
             double delta = c.Manager.GetComponentData<MarbleRush>(parent).Contribution - before;

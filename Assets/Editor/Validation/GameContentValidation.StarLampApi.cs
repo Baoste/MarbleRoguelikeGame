@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 
 namespace MarblesECS.Editor
 {
@@ -61,7 +60,6 @@ namespace MarblesECS.Editor
             {
                 var a = AddStarLamp(f); var b = AddStarLamp(f); var inventory = AddStarLamp(f); MorePlace(f.C, inventory.InstanceId, false);
                 int other = MoreCompanion(f.C, true); var key = f.Launch();
-                var scripts = (Dictionary<int, DeviceLuaScript>)typeof(DeviceScriptSystem).GetField("scripts", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(f.C.DeviceScripts);
                 foreach (var owned in new[] { a, b })
                 {
                     var resource = DeviceResourceCatalog.Current.Get(9027);
@@ -73,7 +71,7 @@ function Receive(api, value)
 end
 function Fail(api, value) if api.InstanceId == " + a.InstanceId + @" then error('EXPECTED_DEVICE_EVENT_FAILURE') end; Receive(api, value) end
 function Verify() assert(not pcall(function() return saved.Time end)) end");
-                    f.C.DeviceScripts.Remove(owned.InstanceId); scripts.Add(owned.InstanceId, probe);
+                    f.C.DeviceScripts.Bind(owned.InstanceId, probe);
                 }
                 var api = CashApi(f, key, a);
                 Near(2, api.CountPlacedDevicesOfDefinition(9027), "definition count includes own placed instances only");
@@ -83,7 +81,8 @@ function Verify() assert(not pcall(function() return saved.Time end)) end");
                 Near(1, DeviceRoundState.Get(f.C, ae, "order"), "dispatch order is stable instance order");
                 Near(2, DeviceRoundState.Get(f.C, be, "order"), "later callback sees earlier writes");
                 Near(4.25, DeviceRoundState.Get(f.C, be, "received"), "numeric payload arrives unchanged");
-                scripts[a.InstanceId].Invoke("Verify"); scripts[b.InstanceId].Invoke("Verify");
+                f.C.DeviceScripts.Get(a.InstanceId, a.DefinitionId).Invoke("Verify");
+                f.C.DeviceScripts.Get(b.InstanceId, b.DefinitionId).Invoke("Verify");
                 Near(1, api.ForEachPlacedDevice(9027, "Fail", 9), "recipient exception does not prevent other recipients");
                 Near(9, DeviceRoundState.Get(f.C, be, "received"), "remaining recipient completes after failure");
                 Near(0, api.ForEachPlacedDevice(9027, "Missing", 1), "missing callbacks skipped");

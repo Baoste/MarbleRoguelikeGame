@@ -15,6 +15,7 @@ namespace MarblesECS.PhysX
         private readonly Action<MarbleContact> onContact;
         private readonly bool createVisuals;
         private readonly Dictionary<MarbleKey, MarbleBody> bodies = new Dictionary<MarbleKey, MarbleBody>();
+        private int bodyMembershipVersion;
         private readonly Stack<MarbleBody> pool = new Stack<MarbleBody>();
         private readonly Collider[] overlap = new Collider[1];
         private bool disposed;
@@ -68,13 +69,18 @@ namespace MarblesECS.PhysX
 
         internal void NotifyDestroyed(MarbleKey key, MarbleBody view)
         {
-            if (bodies.TryGetValue(key, out var current) && ReferenceEquals(current, view)) bodies.Remove(key);
+            if (bodies.TryGetValue(key, out var current) && ReferenceEquals(current, view)) UnregisterBody(key);
+        }
+
+        private void UnregisterBody(MarbleKey key)
+        {
+            if (bodies.Remove(key)) bodyMembershipVersion++;
         }
 
         public void Remove(MarbleKey key)
         {
             if (!bodies.TryGetValue(key, out var view)) return;
-            bodies.Remove(key);
+            UnregisterBody(key);
             if (view == null) return;
             ReturnToPool(view);
         }
@@ -86,8 +92,12 @@ namespace MarblesECS.PhysX
             RestorePins();
             RetireBodies();
             if (hiddenBoardObjects.Count > 0 || boardLayoutRoot != null) RemoveBoardLayout();
+            if (collisionPinPhysicsMaterial) DestroyLayoutObject(collisionPinPhysicsMaterial);
+            collisionPinPhysicsMaterial = null;
             deviceAvailable = useDevice = canCompleteDevice = null;
             recordDeviceEffect = null;
+            deviceCallbacks = null;
+            orderedFieldBodies.Invalidate();
             disposed = true;
         }
 

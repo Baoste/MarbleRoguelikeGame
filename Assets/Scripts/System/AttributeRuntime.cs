@@ -6,21 +6,24 @@ namespace MarblesECS
 {
     internal static class AttributeRuntime
     {
-        internal const float RadiusToWorld = 0.16f;
         internal static bool Enabled(SimulationContext c) => c.Content != null;
         internal static double Get(SimulationContext c, Entity entity, GameAttribute id) =>
             c.Manager.GetBuffer<AttributeValue>(entity)[(int)id].Current;
         internal static double Global(SimulationContext c, GameAttribute id) => Get(c, c.PlayerEntity, id);
         internal static double Device(SimulationContext c, Entity device, GameAttribute id)
         {
-            var effects = new List<AttributeEffect>();
-            foreach (var entity in new[] { c.PlayerEntity, device })
-            {
-                var source = c.Manager.GetBuffer<AttributeModifierData>(entity);
-                for (int i = 0; i < source.Length; i++)
-                    if (source[i].ExpireTick == 0 || source[i].ExpireTick > c.Round.Tick) effects.Add(source[i].Effect);
-            }
-            return AttributeMath.Evaluate(c.Content.Definition(id), c.Manager.GetBuffer<AttributeValue>(device)[(int)id].Base, effects);
+            using var effects = c.AttributeEffects.Rent();
+            long tick = c.Round.Tick;
+            CollectEffects(c, c.PlayerEntity, tick, effects.Items);
+            CollectEffects(c, device, tick, effects.Items);
+            return AttributeMath.Evaluate(c.Content.Definition(id), c.Manager.GetBuffer<AttributeValue>(device)[(int)id].Base, effects.Items);
+        }
+
+        private static void CollectEffects(SimulationContext c, Entity entity, long tick, List<AttributeEffect> effects)
+        {
+            var source = c.Manager.GetBuffer<AttributeModifierData>(entity);
+            for (int i = 0; i < source.Length; i++)
+                if (source[i].ExpireTick == 0 || source[i].ExpireTick > tick) effects.Add(source[i].Effect);
         }
 
         internal static void Initialize(SimulationContext c, Entity entity, double[] values = null)
@@ -47,15 +50,16 @@ namespace MarblesECS
                 }
                 return;
             }
-            var list = new List<AttributeEffect>(effects.Length);
+            using var list = c.AttributeEffects.Rent();
+            long tick = c.Round.Tick;
             for (int i = effects.Length - 1; i >= 0; i--)
-                if (effects[i].ExpireTick != 0 && effects[i].ExpireTick <= c.Round.Tick) effects.RemoveAt(i);
-            for (int i = 0; i < effects.Length; i++) list.Add(effects[i].Effect);
+                if (effects[i].ExpireTick != 0 && effects[i].ExpireTick <= tick) effects.RemoveAt(i);
+            for (int i = 0; i < effects.Length; i++) list.Items.Add(effects[i].Effect);
             var values = c.Manager.GetBuffer<AttributeValue>(entity);
             for (int i = 0; i < values.Length; i++)
             {
                 var value = values[i];
-                value.Current = AttributeMath.Evaluate(c.Content.Definition((GameAttribute)i), value.Base, list);
+                value.Current = AttributeMath.Evaluate(c.Content.Definition((GameAttribute)i), value.Base, list.Items);
                 values[i] = value;
             }
         }
@@ -95,16 +99,14 @@ namespace MarblesECS
             values[(int)GameAttribute.BALL_RADIUS] *= Math.Pow(investmentScale, 1d / 3d);
             values[(int)GameAttribute.BALL_MASS] *= investmentScale;
             var features = new BallFeatures();
-            var effects = new List<AttributeEffect>();
-            var globalEffects = c.Manager.GetBuffer<AttributeModifierData>(c.PlayerEntity);
-            for (int i = 0; i < globalEffects.Length; i++)
-                if (globalEffects[i].ExpireTick == 0 || globalEffects[i].ExpireTick > c.Round.Tick) effects.Add(globalEffects[i].Effect);
-            for (int i = 0; i < values.Length; i++) values[i] = AttributeMath.Evaluate(c.Content.Definition((GameAttribute)i), values[i], effects);
+            using var effects = c.AttributeEffects.Rent();
+            CollectEffects(c, c.PlayerEntity, c.Round.Tick, effects.Items);
+            for (int i = 0; i < values.Length; i++) values[i] = AttributeMath.Evaluate(c.Content.Definition((GameAttribute)i), values[i], effects.Items);
             return new Spawn
             {
                 Values = values, Features = features, Count = (int)values[(int)GameAttribute.BALL_SPAWN_COUNT], BloodValueStage = stage,
                 Quote = new ShotQuote(investment, (float)values[(int)GameAttribute.BLOOD_COST],
-                    (float)values[(int)GameAttribute.BALL_RADIUS] * RadiusToWorld,
+                    (float)values[(int)GameAttribute.BALL_RADIUS],
                     (float)values[(int)GameAttribute.BALL_MASS], values[(int)GameAttribute.BALL_BASE_VALUE], 1)
             };
         }
@@ -113,8 +115,8 @@ namespace MarblesECS
         {
             if (!Enabled(c)) return;
             Recompute(c, c.PlayerEntity);
-            using (var entities = c.MarbleQuery.ToEntityArray(Unity.Collections.Allocator.Temp))
-                foreach (var entity in entities)
+            using (var entities = c.SnapshotMarbles())
+                foreach (var entity in entities.Items)
                 {
                     Recompute(c, entity);
                     var lifeFeatures = c.Manager.GetComponentData<BallFeatures>(entity);
@@ -133,7 +135,7 @@ namespace MarblesECS
             var f = c.Manager.GetComponentData<BallFeatures>(entity);
             return new MarblePhysicalSettings
             {
-                Radius = (float)Get(c, entity, GameAttribute.BALL_RADIUS) * RadiusToWorld,
+                Radius = (float)Get(c, entity, GameAttribute.BALL_RADIUS),
                 Mass = (float)Get(c, entity, GameAttribute.BALL_MASS), Bounce = (float)Get(c, entity, GameAttribute.BALL_BOUNCE),
                 Friction = (float)Get(c, entity, GameAttribute.BALL_FRICTION),
                 Gravity = (float)Get(c, entity, GameAttribute.BALL_GRAVITY_MOD) * TimedGravitySystem.Scale(c, entity),

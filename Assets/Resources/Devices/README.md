@@ -1,19 +1,19 @@
 # 装置资源
 
-当前共 40 种装置。[GameContent.json](../GameContent.json) 的 `Devices` 列出游戏启用的装置 ID。每个 ID 是唯一正整数，与子目录名称和 `device.json.Id` 一致。
+当前共 37 种装置。[GameContent.json](../GameContent.json) 的 `Devices` 列出游戏启用的装置 ID。每个 ID 是唯一正整数，与子目录名称和 `device.json.Id` 一致。
 
 ## 添加或更新装置
 
-以 [9037 三重分裂钉子](9037/manifest.json) 为模板。资源放在 `Assets/Resources/Devices/<id>/`，并提交 Unity 生成的资源和目录 `.meta` 文件。
+以 [9033 经济钉子](9033/manifest.json) 为模板。资源放在 `Assets/Resources/Devices/<id>/`，并提交 Unity 生成的资源和目录 `.meta` 文件。
 
 | 文件 | 用途 |
 | --- | --- |
-| [`manifest.json`](9037/manifest.json) | 版本 `1`，`name` 为包名，`metadata`、`device`、`prefab`、`lua` 填写同目录的文件名。配有图标时填写 `"icon": "icon.png"`。 |
-| [`metadata.json`](9037/metadata.json) | 界面文案、残料安装价、稀有度、耐久和资源类型。 |
-| [`device.json`](9037/device.json) | 装置 ID、物理参数、库存套数、摆放规则及 Lua 参数。 |
-| [`prefab.prefab`](9037/prefab.prefab) | 原生 Unity Prefab 或 Prefab 变体，持有模型、材质和实体碰撞体引用。根节点的直接子节点 `PlacementVolume` 使用一个禁用的 SphereCollider 定义摆放占地。 |
-| [`main.lua`](9037/main.lua) | 以 UTF-8 保存的玩法脚本，由 Unity 导入为 TextAsset。 |
-| [`icon.png`](9037/icon.png) | 选配的界面图标。当前 `9033` 至 `9037` 提供图标。 |
+| [`manifest.json`](9033/manifest.json) | 版本 `1`，`name` 为包名，`metadata`、`device`、`prefab`、`lua` 填写同目录的文件名。配有图标时填写 `"icon": "icon.png"`。 |
+| [`metadata.json`](9033/metadata.json) | 界面文案、残料安装价、稀有度、耐久和资源类型。 |
+| [`device.json`](9033/device.json) | 装置 ID、物理参数、库存套数、摆放规则及 Lua 参数。 |
+| [`prefab.prefab`](9033/prefab.prefab) | 原生 Unity Prefab 或 Prefab 变体，持有模型、材质和实体碰撞体引用。根节点的直接子节点 `PlacementVolume` 使用一个禁用的 SphereCollider 定义摆放占地。 |
+| [`main.lua`](9033/main.lua) | 以 UTF-8 保存的玩法脚本，由 Unity 导入为 TextAsset。 |
+| [`icon.png`](9033/icon.png) | 选配的界面图标。当前 `9033` 和 `9034` 提供图标。 |
 
 模型、材质、贴图和装置预览场景存放在 `Assets/Art/Devices`。库存 UI 卡片使用 [DeviceItem.prefab](../../Prefabs/DeviceItem.prefab)。
 
@@ -46,14 +46,14 @@
 | `AcceptsPlacedOffers` | 允许 Lua 的 `OnOffer` 接收盘面上的装置。 |
 | `Kind`、`RushChanceAdd`、`RushCategory` | 旧装置沿用的分类和兼容字段。 |
 
-例如 9037 的 `Value = 2` 是复制数量，`Strength = 42` 是出射角间隔，`biomassScrapPrice = 6` 是安装价。具体实现见 [三重分裂钉子 Lua](9037/main.lua)。
+例如 9033 的 `Value = 0.5` 是保留的价值比例，`Strength = 1` 是每次回收的残料数量，`biomassScrapPrice = 2` 是安装价。具体实现见 [经济钉子 Lua](9033/main.lua)。
 
 ## 装置一览
 
 | ID | 装置 | 默认效果 |
 | ---: | --- | --- |
 | 103 | [传送门](103/manifest.json) | 购买一对门，双向传送。保持世界运动方向、速度和自身重力等属性，区域力按出口环境计算。 |
-| 113 | [Multi Ding](113/manifest.json) | 每颗弹珠对本装置生效一次，将弹珠当前得分倍率乘以1.85，到得分区统一结算。 |
+| 113 | [Multi Ding](113/manifest.json) | 每颗弹珠对本装置生效一次，将弹珠当前得分倍率乘以 1.5，到得分区统一结算。 |
 | 9000 | [示例弹射台](9000/manifest.json) | 保持或提高速度，并沿装置出口朝向弹出。 |
 | 9001 | [黏黏](9001/manifest.json) | 弹珠滞留 1 秒，然后保留速度大小沿棋盘向下释放。 |
 | 9002 | [弹弹](9002/manifest.json) | 保留入射速度大小，在镜面反射方向的 ±30° 范围内随机弹出。 |
@@ -89,9 +89,6 @@
 | 9032 | [超大杯全冰美式](9032/manifest.json) | 弹珠碰撞后，额外增加20点RUSH积累贡献，当前基础价值减半（保留小数）。每次有效碰撞扣1耐久，可重复触发。通用触发的5点贡献照常计入，到底部或得分区才向RUSH条入账。 |
 | 9033 | [经济钉子](9033/manifest.json) | 碰撞使弹珠当前基础价值减半，回收 1 份血肉残料。 |
 | 9034 | [+3 价值钉子](9034/manifest.json) | 碰撞使弹珠当前基础价值增加 3。 |
-| 9035 | [倍率钉子](9035/manifest.json) | 每次有效碰撞将当前得分倍率乘以装置配置的倍率，到得分区结算。 |
-| 9036 | [双生分裂钉子](9036/manifest.json) | 保留原球，额外弹出 1 颗同价值弹珠。同一颗球对每台装置最多成功复制一次。 |
-| 9037 | [三重分裂钉子](9037/manifest.json) | 保留原球，同时弹出 2 颗同价值弹珠。两颗均能生成时才消耗耐久。 |
 
 ## Lua 事件与耐久
 

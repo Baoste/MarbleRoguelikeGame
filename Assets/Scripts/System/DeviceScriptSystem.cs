@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 
@@ -11,8 +10,16 @@ namespace MarblesECS
         private readonly Dictionary<int, DeviceLuaScript> scripts = new Dictionary<int, DeviceLuaScript>();
         private readonly Dictionary<int, (int round, string text)> statuses = new Dictionary<int, (int, string)>();
         private readonly List<DeviceLuaScript> deferredDisposals = new List<DeviceLuaScript>();
+        private readonly SimulationContext context;
+        private readonly IterationBuffer<KeyValuePair<int, Entity>> tickDevices = new IterationBuffer<KeyValuePair<int, Entity>>();
+        private readonly IterationBuffer<KeyValuePair<int, Entity>> ballUpdateDevices = new IterationBuffer<KeyValuePair<int, Entity>>();
+        private readonly IterationBuffer<KeyValuePair<int, Entity>> placedDeviceDispatch = new IterationBuffer<KeyValuePair<int, Entity>>();
         internal Func<DeviceResource, DeviceLuaScript> CreateScript { get; set; } = resource => resource.CreateScript();
-        private int deviceDispatchDepth, callbackDepth;
+        private int deviceDispatchDepth, callbackDepth, dispatchVersion;
+
+        internal DeviceScriptSystem(SimulationContext context = null) => this.context = context;
+
+        internal void InvalidateDispatch() => dispatchVersion++;
         internal void SetStatus(int instanceId, int round, string text)
         {
             text = text ?? string.Empty;
@@ -25,31 +32,57 @@ namespace MarblesECS
             if (!scripts.TryGetValue(instanceId, out var script))
             {
                 script = CreateScript(DeviceResourceCatalog.Current.Get(definitionId));
-                scripts.Add(instanceId, script);
+                Bind(instanceId, script);
             }
             return script;
         }
+
+        internal void Bind(int instanceId, DeviceLuaScript script)
+        {
+            if (scripts.TryGetValue(instanceId, out var previous) && ReferenceEquals(previous, script)) return;
+            scripts[instanceId] = script;
+            if (context != null) script.CallbacksChanged += InvalidateDispatch;
+            InvalidateDispatch();
+            if (previous != null) ReleaseScript(previous);
+            (context?.Physics as IMarbleDeviceScriptBinding)?.BindDeviceScript(instanceId, script);
+        }
+
         internal void Clear()
         {
             foreach (var script in scripts.Values) ReleaseScript(script);
             scripts.Clear();
             statuses.Clear();
+            tickDevices.Invalidate();
+            ballUpdateDevices.Invalidate();
+            InvalidateDispatch();
         }
 
         internal void AdoptPreparedScripts(DeviceScriptSystem prepared)
         {
-            foreach (var pair in prepared.scripts) scripts.Add(pair.Key, pair.Value);
+            foreach (var pair in prepared.scripts)
+            {
+                scripts.Add(pair.Key, pair.Value);
+                pair.Value.CallbacksChanged += InvalidateDispatch;
+            }
             prepared.scripts.Clear();
+            InvalidateDispatch();
         }
 
         internal void Remove(int instanceId)
         {
             statuses.Remove(instanceId);
-            if (scripts.Remove(instanceId, out var script)) ReleaseScript(script);
+            if (scripts.Remove(instanceId, out var script))
+            {
+                InvalidateDispatch();
+                ReleaseScript(script);
+                if (!scripts.ContainsKey(instanceId))
+                    (context?.Physics as IMarbleDeviceScriptBinding)?.BindDeviceScript(instanceId, null);
+            }
         }
 
         private void ReleaseScript(DeviceLuaScript script)
         {
+            if (context != null) script.CallbacksChanged -= InvalidateDispatch;
             if (callbackDepth == 0) script.Dispose();
             else deferredDisposals.Add(script);
         }
@@ -78,40 +111,70 @@ namespace MarblesECS
         // Lifecycle callbacks also reach inventory and dormant instances; they do not imply a gameplay trigger.
         internal static bool InstanceEvent(SimulationContext c, int instanceId, string callback)
         {
-            if (!AttributeRuntime.Enabled(c) || !CampaignStateUtility.FindDevice(c, instanceId, out var entity)) return false;
-            var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
+            if (!AttributeRuntime.Enabled(c) || !c.TryGetDevice(instanceId, out var entity, out var device)) return false;
+            return InstanceEvent(c, entity, device, callback);
+        }
+
+        private static bool InstanceEvent(SimulationContext c, Entity entity, OwnedDeviceData device, string callback)
+        {
+            int instanceId = device.InstanceId;
             var script = c.DeviceScripts.Get(instanceId, device.DefinitionId);
             if (!script.HasFunction(callback)) return false;
             var api = new DeviceEventContext(c, entity);
             using var scope = c.DeviceScripts.BeginCallback();
             try { script.Invoke(callback, api); return true; }
             catch (DeviceLuaException error) { Debug.LogException(error); return false; }
-            finally { api.Close(); }
+            finally
+            {
+                api.Close();
+                script.RefreshScheduledCallbacks();
+            }
         }
         internal static void RoundStart(SimulationContext c)
         {
-            var ids = new List<int>();
-            using (var devices = c.DeviceQuery.ToComponentDataArray<OwnedDeviceData>(Allocator.Temp))
-                foreach (var device in devices) ids.Add(device.InstanceId);
-            ids.Sort();
-            foreach (int id in ids) InstanceEvent(c, id, "OnRoundStart");
+            if (!AttributeRuntime.Enabled(c)) return;
+            using var devices = c.OrderedDevices();
+            foreach (var member in devices.Items)
+                if (TryGetMember(c, member, out var device)) InstanceEvent(c, member.Value, device, "OnRoundStart");
         }
+
+        private static bool TryGetMember(SimulationContext c, KeyValuePair<int, Entity> member, out OwnedDeviceData device) =>
+            c.TryGetDevice(member.Key, out var current, out device) && current == member.Value;
+
+        private void CollectCallbacks(List<KeyValuePair<int, Entity>> members, DeviceLuaCallbacks callback)
+        {
+            using var devices = context.OrderedDevices();
+            foreach (var member in devices.Items)
+                if (context.HasDeviceIdentity(member.Value, member.Key, out var device) &&
+                    (Get(member.Key, device.DefinitionId).Callbacks & callback) != 0)
+                    members.Add(member);
+        }
+
         // Runs once at the START of a simulation step, including when no marbles exist.
         internal static void Tick(SimulationContext c)
         {
-            if (!AttributeRuntime.Enabled(c)) return;
-            var ids = new List<int>();
-            using (var entities = c.DeviceQuery.ToEntityArray(Allocator.Temp))
-                foreach (var entity in entities) ids.Add(c.Manager.GetComponentData<OwnedDeviceData>(entity).InstanceId);
-            ids.Sort();
-            foreach (int id in ids) DeviceEvent(c, id, "OnTick");
+            if (!AttributeRuntime.Enabled(c) || !(c.Physics is IMarblePhysicsCommands commands)) return;
+            var system = c.DeviceScripts;
+            using var devices = system.tickDevices.Read(system.dispatchVersion, system,
+                static (owner, members) => owner.CollectCallbacks(members, DeviceLuaCallbacks.Tick));
+            // Placement, wear, and pending effects may change during the pass. Recheck them at each turn.
+            foreach (var member in devices.Items)
+                if (c.IsRunning && TryGetMember(c, member, out var device))
+                    DeviceEvent(c, member.Value, device, commands, "OnTick");
         }
+
         internal static bool DeviceEvent(SimulationContext c, int instanceId, string callback, DeviceTransientSystem.Item ended = null, double? value = null)
         {
             if (!c.IsRunning || !AttributeRuntime.Enabled(c) ||
-                !CampaignStateUtility.FindDevice(c, instanceId, out var entity)) return false;
-            var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
-            if (!device.Placed || (!DeviceDurabilitySystem.CanRun(c, entity) && !CanComplete(c, instanceId)) || !(c.Physics is IMarblePhysicsCommands commands) ||
+                !c.TryGetDevice(instanceId, out var entity, out var device) || !(c.Physics is IMarblePhysicsCommands commands)) return false;
+            return DeviceEvent(c, entity, device, commands, callback, ended, value);
+        }
+
+        private static bool DeviceEvent(SimulationContext c, Entity entity, OwnedDeviceData device, IMarblePhysicsCommands commands,
+            string callback, DeviceTransientSystem.Item ended = null, double? value = null)
+        {
+            int instanceId = device.InstanceId;
+            if (!device.Placed || (!DeviceDurabilitySystem.CanRun(c, entity, device) && !CanComplete(c, entity, instanceId)) ||
                 !commands.TryGetDevicePose(instanceId, out _)) return false;
             var script = c.DeviceScripts.Get(instanceId, device.DefinitionId);
             if (!script.HasFunction(callback)) return false;
@@ -132,52 +195,54 @@ namespace MarblesECS
                 throw new System.ArgumentException("Invalid device event query.");
             if (!c.IsRunning || !AttributeRuntime.Enabled(c) || !DeviceDurabilitySystem.CanRun(c, sourceId)) return 0;
             if (c.DeviceScripts.deviceDispatchDepth >= 8) throw new System.InvalidOperationException("Device event nesting exceeds eight levels.");
-            var ids = new List<int>();
-            using (var devices = c.DeviceQuery.ToComponentDataArray<OwnedDeviceData>(Allocator.Temp))
-                foreach (var device in devices)
-                    if (device.Placed && device.DefinitionId == definitionId) ids.Add(device.InstanceId);
-            ids.Sort();
+            using var snapshot = c.DeviceScripts.placedDeviceDispatch.Rent();
+            using (var devices = c.OrderedDevices())
+                foreach (var member in devices.Items)
+                    if (TryGetMember(c, member, out var device) && device.Placed && device.DefinitionId == definitionId)
+                        snapshot.Items.Add(member);
             int invoked = 0; c.DeviceScripts.deviceDispatchDepth++;
             try
             {
-                foreach (int id in ids)
-                    if (DeviceEvent(c, id, callback, value: value)) invoked++;
+                foreach (var member in snapshot.Items)
+                    if (c.IsRunning && TryGetMember(c, member, out var device) && c.Physics is IMarblePhysicsCommands commands &&
+                        DeviceEvent(c, member.Value, device, commands, callback, value: value)) invoked++;
             }
             finally { c.DeviceScripts.deviceDispatchDepth--; }
             return invoked;
         }
         internal static bool CanComplete(SimulationContext c, int instanceId) =>
-            c.IsRunning && CampaignStateUtility.FindDevice(c, instanceId, out var entity) &&
-            c.Manager.GetComponentData<OwnedDeviceData>(entity).Placed &&
-            (DeviceDurabilitySystem.Continuing(c, entity) || HeldMotionSystem.Count(c, instanceId, true) > 0);
+            c.IsRunning && c.TryGetDevice(instanceId, out var entity, out var device) && device.Placed && CanComplete(c, entity, instanceId);
+
+        private static bool CanComplete(SimulationContext c, Entity entity, int instanceId) =>
+            DeviceDurabilitySystem.Continuing(c, entity) || HeldMotionSystem.Count(c, instanceId, true) > 0;
         internal static int ForEachBallInRadius(SimulationContext c, int instanceId, Vector3 center, float radius, string callback)
         {
             if (!SimulationContext.IsFinite(center) || !BallInteractionSystem.Finite(radius) || radius < 0 || radius > 100 ||
                 string.IsNullOrEmpty(callback) || callback.Length > 64) throw new System.ArgumentException("Invalid ball query.");
-            if (!c.IsRunning || !CampaignStateUtility.FindDevice(c, instanceId, out var entity) ||
-                !DeviceDurabilitySystem.CanRun(c, entity) || !(c.Physics is IMarblePhysicsCommands commands) ||
+            if (!c.IsRunning || !c.TryGetDevice(instanceId, out var entity, out var device) ||
+                !DeviceDurabilitySystem.CanRun(c, entity, device) || !(c.Physics is IMarblePhysicsCommands commands) ||
                 !commands.TryGetDevicePose(instanceId, out var pose)) return 0;
-            var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
             if (!c.DeviceScripts.Get(instanceId, device.DefinitionId).HasFunction(callback)) return 0;
             // Freeze membership before invoking any Lua: new descendants cannot enter the current query.
-            var keys = new List<MarbleKey>();
-            foreach (var pair in c.Marbles)
+            using var keys = c.BallDispatch.Rent();
+            using (var orderedKeys = c.OrderedMarbleKeys())
             {
-                if (!c.TryGetFlying(pair.Key, out var ball) || c.Manager.HasComponent<HeldMotion>(ball)) continue;
-                long expiry = c.Manager.GetComponentData<Lifetime>(ball).ExpireTick;
-                if (expiry != 0 && expiry <= c.Round.Tick) continue;
-                var position = c.Manager.GetComponentData<Transform3D>(ball).Position;
-                float reach = radius + (float)AttributeRuntime.Get(c, ball, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
-                if ((position - center).sqrMagnitude <= reach * reach) keys.Add(pair.Key);
+                foreach (var key in orderedKeys.Items)
+                {
+                    if (!c.TryGetFlying(key, out var ball) || c.Manager.HasComponent<HeldMotion>(ball)) continue;
+                    long expiry = c.Manager.GetComponentData<Lifetime>(ball).ExpireTick;
+                    if (expiry != 0 && expiry <= c.Round.Tick) continue;
+                    var position = c.Manager.GetComponentData<Transform3D>(ball).Position;
+                    float reach = radius + (float)AttributeRuntime.Get(c, ball, GameAttribute.BALL_RADIUS);
+                    if ((position - center).sqrMagnitude <= reach * reach) keys.Items.Add(key);
+                }
             }
-            keys.Sort((a, b) => a.Sequence.CompareTo(b.Sequence));
             int visited = 0;
-            foreach (var key in keys)
+            foreach (var key in keys.Items)
             {
-                if (!c.Manager.Exists(entity) || !DeviceDurabilitySystem.CanRun(c, entity)) break;
+                if (!DeviceDurabilitySystem.CanRun(c, entity)) break;
                 if (!c.TryGetFlying(key, out var ball) || c.Manager.HasComponent<HeldMotion>(ball)) continue;
-                var contact = new MarbleContact { Key = key, Kind = MarbleContactKind.Device, TargetId = checked(100000 + instanceId),
-                    Multiplier = 1, RushDisabled = true, Position = c.Manager.GetComponentData<Transform3D>(ball).Position };
+                var contact = MarbleContact.ForDevice(key, instanceId, c.Manager.GetComponentData<Transform3D>(ball).Position);
                 try { Invoke(c, ball, entity, device, contact, pose, callback); visited++; }
                 catch (DeviceLuaException error) { Debug.LogException(error); }
             }
@@ -189,61 +254,55 @@ namespace MarblesECS
             if (!AttributeRuntime.Enabled(c) || !(c.Physics is IMarblePhysicsCommands commands)) return;
             if (c.Round.Phase == (byte)RoundPhase.Draining &&
                 c.Round.Time - c.Round.DrainStartedAt >= c.Tuning.DrainTimeoutSeconds) return;
-            var devices = new List<Entity>();
-            using (var entities = c.DeviceQuery.ToEntityArray(Allocator.Temp))
-                foreach (var entity in entities) devices.Add(entity);
-            devices.Sort((a, b) => c.Manager.GetComponentData<OwnedDeviceData>(a).InstanceId.CompareTo(
-                c.Manager.GetComponentData<OwnedDeviceData>(b).InstanceId));
-            var keys = new List<MarbleKey>(c.Marbles.Keys);
-            keys.Sort((a, b) => a.Sequence.CompareTo(b.Sequence));
-            foreach (var entity in devices)
+            var system = c.DeviceScripts;
+            using var devices = system.ballUpdateDevices.Read(system.dispatchVersion, system,
+                static (owner, members) => owner.CollectCallbacks(members, DeviceLuaCallbacks.BallUpdate));
+            if (devices.Items.Count == 0 || c.Marbles.Count == 0) return;
+            using var keys = c.OrderedMarbleKeys();
+            foreach (var member in devices.Items)
             {
-                if (!c.Manager.Exists(entity)) continue;
-                var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
-                if (!DeviceDurabilitySystem.CanRun(c, entity) || !commands.TryGetDevicePose(device.InstanceId, out var pose)) continue;
-                var script = c.DeviceScripts.Get(device.InstanceId, device.DefinitionId);
-                if (!script.HasFunction("OnBallUpdate")) continue;
-                foreach (var key in keys)
+                var entity = member.Value;
+                if (!TryGetMember(c, member, out var device) || !DeviceDurabilitySystem.CanRun(c, entity, device) ||
+                    !commands.TryGetDevicePose(device.InstanceId, out var pose)) continue;
+                foreach (var key in keys.Items)
                 {
-                    if (!c.Manager.Exists(entity)) break;
                     if (!DeviceDurabilitySystem.CanRun(c, entity)) break;
                     if (!c.TryGetFlying(key, out var ball) || c.Manager.HasComponent<HeldMotion>(ball) ||
                         c.Manager.GetComponentData<BallFeatures>(ball).MovedTick == c.Round.Tick) continue;
                     long expiry = c.Manager.GetComponentData<Lifetime>(ball).ExpireTick;
                     if (expiry != 0 && c.Round.Tick >= expiry) continue;
-                    var contact = new MarbleContact { Key = key, Kind = MarbleContactKind.Device,
-                        TargetId = checked(100000 + device.InstanceId), Multiplier = 1, RushDisabled = true,
-                        Position = c.Manager.GetComponentData<Transform3D>(ball).Position,
-                        Speed = c.Manager.GetComponentData<Motion3D>(ball).LinearVelocity.magnitude };
-                    try { Invoke(c, ball, entity, device, contact, pose, "OnBallUpdate"); }
+                    var script = system.Get(device.InstanceId, device.DefinitionId);
+                    if ((script.Callbacks & DeviceLuaCallbacks.BallUpdate) == 0) break;
+                    var contact = MarbleContact.ForDevice(key, device.InstanceId,
+                        c.Manager.GetComponentData<Transform3D>(ball).Position,
+                        c.Manager.GetComponentData<Motion3D>(ball).LinearVelocity.magnitude);
+                    try { Invoke(c, ball, entity, device, contact, pose, "OnBallUpdate", script: script); }
                     catch (DeviceLuaException error) { Debug.LogException(error); }
                 }
             }
         }
         internal static void Contact(SimulationContext c, Entity ball, MarbleContact contact)
         {
-            int id = contact.TargetId - 100000;
-            if (!CampaignStateUtility.FindDevice(c, id, out var entity)) return;
-            var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
-            if (!DeviceDurabilitySystem.CanRun(c, entity) || !(c.Physics is IMarblePhysicsCommands commands) || !commands.TryGetDevicePose(id, out var pose)) return;
+            int id = contact.DeviceInstanceId;
+            if (!c.TryGetDevice(id, out var entity, out var device)) return;
+            if (!DeviceDurabilitySystem.CanRun(c, entity, device) || !(c.Physics is IMarblePhysicsCommands commands) || !commands.TryGetDevicePose(id, out var pose)) return;
             if (contact.LinkKey == 0) TimedGravitySystem.Contact(c, ball, id);
             Invoke(c, ball, entity, device, contact, pose, "OnContact");
         }
         internal static void HoldEnd(SimulationContext c, Entity ball, HeldMotion hold)
         {
-            if (!CampaignStateUtility.FindDevice(c, hold.SourceId, out var entity)) return;
-            var device = c.Manager.GetComponentData<OwnedDeviceData>(entity);
+            if (!c.TryGetDevice(hold.SourceId, out var entity, out var device)) return;
             if (!device.Placed || !(c.Physics is IMarblePhysicsCommands commands) ||
                 !commands.TryGetDevicePose(hold.SourceId, out var pose)) return;
             // Resolve the live pose and construct a fresh context, never retain the contact's Lua API.
             Invoke(c, ball, entity, device, hold.Contact, pose, "OnHoldEnd", hold);
         }
         private static void Invoke(SimulationContext c, Entity ball, Entity entity, OwnedDeviceData device,
-            MarbleContact contact, DevicePose pose, string callback, HeldMotion? hold = null)
+            MarbleContact contact, DevicePose pose, string callback, HeldMotion? hold = null, DeviceLuaScript script = null)
         {
             var api = new DeviceContactContext(c, ball, entity, contact, pose, hold, callback != "OnBallUpdate");
             using var scope = c.DeviceScripts.BeginCallback();
-            try { c.DeviceScripts.Get(device.InstanceId, device.DefinitionId).Invoke(callback, api); }
+            try { (script ?? c.DeviceScripts.Get(device.InstanceId, device.DefinitionId)).Invoke(callback, api); }
             finally { api.Close(); }
         }
     }

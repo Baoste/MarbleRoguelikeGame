@@ -67,9 +67,16 @@ namespace MarblesECS.Editor
             using (var r = new Rig())
             {
                 var key = r.Launch(new Vector3(0, .14f, 0), Vector3.zero, 1);
-                var points = new[] { new Vector3(0, .14f, 0), new Vector3(.25f, .14f, 0), new Vector3(.29f, .14f, 0),
-                    new Vector3(0, .14f, .65f), new Vector3(0, .14f, .69f), new Vector3(0, .35f, 0),
-                    new Vector3(0, -.07f, 0), new Vector3(.26f, .14f, .66f), new Vector3(.25f, .14f, .65f) };
+                float radius = r.Marble(key).Radius;
+                var points = new[]
+                {
+                    new Vector3(0, .14f, 0),
+                    new Vector3(.2f + radius - .03f, .14f, 0), new Vector3(.2f + radius + .01f, .14f, 0),
+                    new Vector3(0, .14f, .6f + radius - .03f), new Vector3(0, .14f, .6f + radius + .01f),
+                    new Vector3(0, .26f + radius + .01f, 0), new Vector3(0, .02f - radius - .01f, 0),
+                    new Vector3(.2f + .8f * radius, .14f, .6f + .8f * radius),
+                    new Vector3(.2f + .6f * radius, .14f, .6f + .6f * radius)
+                };
                 var expected = new[] { true, true, false, true, false, false, false, false, true };
                 for (int i = 0; i < points.Length; i++)
                 {

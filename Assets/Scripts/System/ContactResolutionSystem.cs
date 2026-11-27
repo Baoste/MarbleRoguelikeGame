@@ -4,12 +4,13 @@ namespace MarblesECS
     {
         internal static void Execute(SimulationContext context)
         {
-            context.Contacts.Sort((a, b) =>
-            {
-                int order = a.Key.Sequence.CompareTo(b.Key.Sequence);
-                if (order == 0) order = b.Priority.CompareTo(a.Priority);
-                return order != 0 ? order : a.TargetId.CompareTo(b.TargetId);
-            });
+            if (context.Contacts.Count > 1)
+                context.Contacts.Sort((a, b) =>
+                {
+                    int order = a.Key.Sequence.CompareTo(b.Key.Sequence);
+                    if (order == 0) order = b.Priority.CompareTo(a.Priority);
+                    return order != 0 ? order : a.TargetId.CompareTo(b.TargetId);
+                });
             // All non-terminal effects finish before any terminal settles.
             foreach (var contact in context.Contacts)
             {
@@ -19,10 +20,11 @@ namespace MarblesECS
                     contact.Kind == MarbleContactKind.Pin || contact.Kind == MarbleContactKind.Pierced))
                 { BallInteractionSystem.Execute(context, entity, contact); continue; }
                 if (contact.Kind == MarbleContactKind.Device || contact.Kind == MarbleContactKind.Pin || contact.Kind == MarbleContactKind.Pierced) continue;
+                var target = ContactTargetKey.FromContact(contact);
                 var visits = context.Manager.GetBuffer<VisitedDeviceData>(entity);
                 bool visited = false;
                 for (int i = 0; i < visits.Length; i++)
-                    if (visits[i].DeviceId == contact.TargetId) { visited = true; break; }
+                    if (visits[i].Key.Equals(target)) { visited = true; break; }
                 if (visited) continue;
                 var score = context.Manager.GetComponentData<MarbleScore>(entity);
                 bool multiplierApplied = contact.Kind == MarbleContactKind.Multiplier &&
@@ -31,8 +33,8 @@ namespace MarblesECS
                 var rush = context.Manager.GetComponentData<MarbleRush>(entity);
                 rush.RushChanceBonus = System.Math.Min(1, rush.RushChanceBonus + contact.RushChanceAdd);
                 context.Manager.SetComponentData(entity, rush);
-                visits.Add(new VisitedDeviceData { DeviceId = contact.TargetId });
-                RushSystem.RecordTrigger(context, entity, contact.TargetId);
+                visits.Add(new VisitedDeviceData { Key = target });
+                RushSystem.RecordTrigger(context, entity, target);
                 if (context.FloatingText == null) continue;
                 var source = contact.IsPin ? FloatingTextSource.Pin : FloatingTextSource.Zone;
                 if (multiplierApplied)

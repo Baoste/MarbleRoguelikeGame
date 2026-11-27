@@ -1,7 +1,7 @@
 {
   "Id": 9021,
   "SourceId": "Turf",
-  "Bounce": 0.6,
+  "Bounce": 0.8,
   "ScoreMultiplier": 1.0,
   "StartingCount": 0,
   "PurchaseQuantity": 1,

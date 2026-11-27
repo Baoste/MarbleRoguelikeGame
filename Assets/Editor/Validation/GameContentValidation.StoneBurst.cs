@@ -88,7 +88,7 @@ namespace MarblesECS.Editor
                 Near(0, c.Manager.GetComponentData<ShotOrigin>(entity).BloodInvestment, "new ball has no invested blood");
                 var features = c.Manager.GetComponentData<BallFeatures>(entity);
                 Near(0, features.RefundBlood, "free ball cannot create blood through refund");
-                float radius = (float)AttributeRuntime.Get(c, entity, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
+                float radius = (float)AttributeRuntime.Get(c, entity, GameAttribute.BALL_RADIUS);
                 Near(radius + .005f, Vector3.Dot(position - pose.Position, pose.Up), "spawn height clears board surface");
                 Check(Vector3.ProjectOnPlane(position - pose.Position, pose.Up).magnitude > pose.Radius + radius, "each position clears the source");
                 for (int j = 0; j < i; j++)
@@ -184,7 +184,7 @@ namespace MarblesECS.Editor
                 simulation.FireOnce(); simulation.BeforePhysics(.02f, bridge, spawn, Quaternion.identity); simulation.AfterPhysics(bridge);
                 var key = c.Marbles.Keys.Single();
                 bridge.TryGetDevicePose(owned.InstanceId, out var pose);
-                float radius = (float)c.Content.Definition(GameAttribute.BALL_RADIUS).DefaultValue * AttributeRuntime.RadiusToWorld;
+                float radius = (float)c.Content.Definition(GameAttribute.BALL_RADIUS).DefaultValue;
                 float distance = (radius * 2 + .02f) / (2 * Mathf.Sin(Mathf.PI / 16));
                 obstacle = new GameObject("BlockedBurstSlot"); SceneManager.MoveGameObjectToScene(obstacle, scene);
                 obstacle.transform.position = pose.Position + pose.Up * (radius + .005f) + pose.Forward * distance;

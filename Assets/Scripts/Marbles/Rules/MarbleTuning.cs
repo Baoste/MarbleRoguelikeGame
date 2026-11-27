@@ -12,8 +12,8 @@ namespace MarblesECS
         public float MaxInvestment = 5f;
         // Compatibility values for the explicit content-free simulation API only.
         // Scene gameplay uses the matching attributes in GameContent.json.
-        [NonSerialized] public float MinRadius = 0.12f;
-        [NonSerialized] public float MaxRadius = 0.22f;
+        [NonSerialized] public float MinRadius = 0.24f;
+        [NonSerialized] public float MaxRadius = 0.44f;
         [NonSerialized] public float MassPerBlood = 0.1f;
         public uint MarbleDefinitionId = 1;
         [NonSerialized] public double BaseScore = 10d;

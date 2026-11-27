@@ -35,7 +35,7 @@ namespace MarblesECS.Editor
                 VectorNear(before.LinearVelocity, after.LinearVelocity, "Lua portal preserves world direction despite rotated exit facing");
                 VectorNear(after.LinearVelocity, f.C.Manager.GetComponentData<Motion3D>(ball).LinearVelocity, "portal synchronizes ECS velocity");
                 VectorNear(before.AngularVelocity, f.C.Manager.GetComponentData<Motion3D>(ball).AngularVelocity, "portal preserves spin");
-                float radius = (float)f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
+                float radius = (float)f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_RADIUS);
                 VectorNear(PortalExitPosition(exit, before.LinearVelocity, radius),
                     after.Position, "portal clears the exit and board surface");
                 f.Step(f.Hit(key, entry));
@@ -164,7 +164,7 @@ namespace MarblesECS.Editor
                 bridge.TryGetState(key, out var before);
                 if (obstructed)
                 {
-                    float radius = (float)simulation.GetMarbleAttribute(key, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
+                    float radius = (float)simulation.GetMarbleAttribute(key, GameAttribute.BALL_RADIUS);
                     obstacle = new GameObject("BlockedExit");
                     SceneManager.MoveGameObjectToScene(obstacle, scene);
                     obstacle.transform.position = PortalExitPosition(exit, before.LinearVelocity, radius);

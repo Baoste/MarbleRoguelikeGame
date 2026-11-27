@@ -28,7 +28,7 @@ namespace MarblesECS
             outputs = new List<(Vector3, Vector3)>(count);
         }
         public double Value { get { var c = context(); return valueOverride ?? AttributeRuntime.Get(c, parent, GameAttribute.BALL_BASE_VALUE); } }
-        public float Radius => (float)AttributeRuntime.Get(context(), parent, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
+        public float Radius => (float)AttributeRuntime.Get(context(), parent, GameAttribute.BALL_RADIUS);
         public bool CanCopy
         {
             get

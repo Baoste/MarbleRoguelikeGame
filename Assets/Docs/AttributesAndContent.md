@@ -10,14 +10,14 @@
 - `Resources/GameContent.json` 保存 30 个属性定义和内容规则；其中 `Devices` 是游戏加载的数字 ID 列表。添加或停用装置时编辑此列表。
 - `GameBalanceLoader` 加载基础配置、属性配置和 ID 指定的装置目录，装置列表直接引用会话内容目录；运行会话深拷贝后仍共享该会话的一份目录，避免两份数据不同步。
 - 直接编辑 `Resources/GameContent.json` 中的属性和内容规则。装置通过修改制作源并重新打包更新。保存后重新进入 Play 生效。
-- 当前 40 种装置位于 `Resources/Devices/<id>/`。Prefab 提供外观和碰撞体，Lua 文件提供玩法。详见 [装置资源](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
+- 当前 37 种装置位于 `Resources/Devices/<id>/`。Prefab 提供外观和碰撞体，Lua 文件提供玩法。详见 [装置资源](../Resources/Devices/README.md)。放置时按 R 旋转 45°。
 - 传送门按一对购买，两门分别放置并共享配对 ID；两门都放置后才可传送。
 
 每日玩法的安装价读取 `metadata.biomassScrapPrice`，工票解锁价由当天的 `shopDrawCost` 决定。允许出售时，按装置实付的血肉残料乘以 `Campaign.SellRatio` 后向下取整并返还。耐久读取 `metadata.durability`（默认 20，-1 无限），开局赠送套数读取 `device.json.StartingCount`。
 
-`Multi Ding` 的定义 ID 为 113，行为通过 Lua 实现；当前包的 `StartingCount` 为 1，没有额外的 C# 开局赠送规则。Rush Ding 已移出当前装置目录。`SourceId` 继续记录原始来源编号。
+`Multi Ding` 的定义 ID 为 113，行为通过 Lua 实现，包内 `StartingCount` 为 0。Rush Ding 已移出当前装置目录。`SourceId` 继续记录原始来源编号。
 
-`Multi Ding` 对每颗球乘以 1.85 一次。猪猪存钱罐每次有效撞击按钱包提供 `1 + 0.1 × floor(血肉残料余额 / 10)`，同一颗球连续获得两次 ×1.2 后得到 ×1.44。得分区使用累计乘积。旧 `Rush Ding` 的概率字段仅为兼容。
+每台 `Multi Ding` 对每颗球乘以 1.5 一次。猪猪存钱罐每次有效撞击按钱包提供 `1 + 0.1 × floor(血肉残料余额 / 10)`，同一颗球连续获得两次 ×1.2 后得到 ×1.44。得分区使用累计乘积。旧 `Rush Ding` 的概率字段仅为兼容。
 
 ## 属性规则
 
@@ -35,9 +35,9 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 | BALL_BASE_VALUE | 出生、价值装置及最终计分 |
 | BALL_GAMBLE_VALUE_MOD | 旧兼容属性，保留字典 ID |
 | BALL_RUSH_GAIN | 旧兼容属性；当前球贡献从 2 开始，每次有效装置作用 +5，通过 RushContribution API 累积 |
-| BALL_RADIUS | 独立球体半径，乘 0.16 换算为世界单位；不随抽血档位变化 |
+| BALL_RADIUS | 球体半径，使用 Unity 世界单位。发射时按投入倍率的立方根缩放 |
 | BALL_MASS | 直接设置实际刚体质量，不再乘抽血量 |
-| BALL_BOUNCE | 独立物理材质，支持 0～2。棋盘障碍按球属性校正反弹，静态或运动学实体装置取球属性和 `device.json.Bounce` 中的较大值 |
+| BALL_BOUNCE | 独立物理材质，支持 0～2。静态或运动学实体装置取球属性和 `device.json.Bounce` 中的较大值。纯碰撞钉取球属性和 `0.8` 中的较大值。边墙等障碍按球属性校正反弹 |
 | BALL_FRICTION | 独立材质的静摩擦和动摩擦 |
 | BALL_GRAVITY_MOD | 每个 PhysX 子步按该球倍率施加重力 |
 | BALL_LAUNCH_SPEED | 直接设置发射速度（m/s），生成后不持续加速 |
@@ -60,7 +60,7 @@ BLOOD_COST 是先乘后加；其他可乘属性为先加后乘；分裂数量和
 
 当前赌博转盘固定为八个等概率档位，奖池按入球得分累计。玩法见 [赌博转盘](Balance.md#赌博转盘)。
 
-空间口径：总表 cm 换算为 0.01 世界单位。BALL_RADIUS 使用 1 属性单位 = 0.16 世界单位，默认 0.5 对应 0.08 世界半径。尺寸、质量、基础价值和发射速度都直接使用内容属性；不再乘旧发射配置，也不随抽血档位隐式改变大小或质量。发射速度采用 m/s；装置仍能通过属性效果修改这些数值。
+总表中的 1 cm 对应 0.01 个 Unity 世界单位。`BALL_RADIUS` 直接填写世界半径，最低发射档默认为 `0.10`，属性下限为 `0.02`。发射档位按投入倍率调整尺寸、质量和基础价值。发射速度使用 m/s。装置可以通过属性效果修改这些数值。
 
 ## 装置
 

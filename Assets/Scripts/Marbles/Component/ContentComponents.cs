@@ -29,9 +29,9 @@ namespace MarblesECS
     }
     internal struct DeviceVisit : IBufferElementData
     {
-        public long Key;
-        public int Count;
+        public DeviceVisitKey Key;
         public long LastTick;
+        public int Count;
         public bool InheritOnCopy;
     }
     internal struct DeviceSplitSource : IBufferElementData { public int InstanceId; }

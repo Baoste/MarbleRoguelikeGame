@@ -170,7 +170,7 @@ namespace MarblesECS.Editor
         private static void ContentAuthority()
         {
             var balance = Balance();
-            balance.Content.Definition(GameAttribute.BALL_RADIUS).DefaultValue = .75;
+            balance.Content.Definition(GameAttribute.BALL_RADIUS).DefaultValue = .24;
             balance.Content.Definition(GameAttribute.BALL_MASS).DefaultValue = 2;
             balance.Content.Definition(GameAttribute.BALL_BASE_VALUE).DefaultValue = 23;
             balance.Content.Definition(GameAttribute.BALL_BOUNCE).DefaultValue = .4;
@@ -179,7 +179,7 @@ namespace MarblesECS.Editor
             balance.Content.Definition(GameAttribute.BLOOD_COST).DefaultValue = 1.5;
             balance.Marble.MinInvestment = 1; balance.Marble.MaxInvestment = 5;
             // Deliberately disagree with every obsolete tuning input.
-            balance.Marble.MinRadius = .24f; balance.Marble.MaxRadius = .36f;
+            balance.Marble.MinRadius = .3f; balance.Marble.MaxRadius = .45f;
             balance.Marble.MassPerBlood = 7; balance.Marble.BaseScore = 999;
             balance.Marble.BloodCostMultiplier = 4; balance.Marble.LaunchSpeed = 8;
             balance.Marble.LauncherScoreMultiplier = 6; balance.Marble.BaseRestitution = .9f;
@@ -192,8 +192,8 @@ namespace MarblesECS.Editor
             {
                 simulation.StartSession(physics); simulation.BeginRound();
                 var low = simulation.QuoteShot(0); var high = simulation.QuoteShot(1);
-                Near(.12, low.Radius, "minimum flow uses content radius and unit conversion");
-                Near(.12 * Math.Pow(5, 1d / 3d), high.Radius, "flow scales radius by invested volume");
+                Near(.24, low.Radius, "minimum flow uses the world radius from content");
+                Near(.24 * Math.Pow(5, 1d / 3d), high.Radius, "flow scales radius by invested volume");
                 Near(10, high.Mass, "flow scales content mass with investment");
                 Near(23 * Math.Pow(5, balance.Content.FlowValueExponent), high.BaseValue,
                     "flow grants the authored burst-value curve");
@@ -202,6 +202,7 @@ namespace MarblesECS.Editor
                 Near(7.5, high.Cost, "investment remains the explicit player input");
                 simulation.FireOnce(); simulation.BeforePhysics(.1f, physics, Vector3.up * 2, Quaternion.identity); simulation.AfterPhysics(physics);
                 var spawn = physics.Spawns.Single().Value;
+                Near(low.Radius, spawn.Settings.Radius, "the physical radius matches the shot quote");
                 Near(3, spawn.LinearVelocity.magnitude, "launch speed is absolute content speed");
                 Near(.4, spawn.Settings.Bounce, "content bounce overrides obsolete restitution");
                 Near(4, simulation.GetMarbleAttribute(spawn.Key, GameAttribute.BALL_LIFETIME), "content lifetime");
@@ -214,7 +215,7 @@ namespace MarblesECS.Editor
             using (var standalone = new MarbleSimulation(balance.Marble, balance.Content))
             {
                 var standalonePhysics = new FakePhysics(); standalone.StartRound(standalonePhysics);
-                Near(.12, standalone.QuoteShot(0).Radius, "standalone scenes use content radius too");
+                Near(.24, standalone.QuoteShot(0).Radius, "standalone scenes use content radius too");
                 standalone.FireOnce(); standalone.BeforePhysics(.1f, standalonePhysics, Vector3.up * 2, Quaternion.identity); standalone.AfterPhysics(standalonePhysics);
                 Near(3, standalonePhysics.Spawns.Single().Value.LinearVelocity.magnitude, "standalone launch reads content");
             }
@@ -226,7 +227,7 @@ namespace MarblesECS.Editor
                 {
                     Near(loaded.Content.Definition(GameAttribute.BALL_BASE_VALUE).DefaultValue, fromJson.QuoteShot(0).BaseValue,
                         "obsolete JSON base score cannot change the quote");
-                    Near(loaded.Content.Definition(GameAttribute.BALL_RADIUS).DefaultValue * AttributeRuntime.RadiusToWorld, fromJson.QuoteShot(0).Radius,
+                    Near(loaded.Content.Definition(GameAttribute.BALL_RADIUS).DefaultValue, fromJson.QuoteShot(0).Radius,
                         "obsolete JSON radius cannot change the quote");
                 }
                 Check(loaded.Marble.MinRadius != 9 && loaded.Marble.BaseScore != 999, "obsolete JSON fields are ignored");
@@ -373,8 +374,7 @@ namespace MarblesECS.Editor
                 CampaignStateUtility.FindDevice(C,snapshots[0].InstanceId,out var entity);
                 return C.Manager.GetComponentData<OwnedDeviceData>(entity);
             }
-            internal MarbleContact Hit(MarbleKey key, OwnedDeviceData d) => new MarbleContact {
-                Key=key,TargetId=100000+d.InstanceId,Kind=MarbleContactKind.Device,Multiplier=1,Position=Vector3.zero };
+            internal MarbleContact Hit(MarbleKey key, OwnedDeviceData d) => MarbleContact.ForDevice(key, d.InstanceId, Vector3.zero);
             internal Entity Ball(MarbleKey key) => C.Marbles[key];
             public void Dispose() { Simulation.Dispose(); }
         }

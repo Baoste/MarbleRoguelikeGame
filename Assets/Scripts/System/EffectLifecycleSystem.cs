@@ -1,6 +1,4 @@
 using System;
-using Unity.Collections;
-
 namespace MarblesECS
 {
     // These are explicitly invoked, main-thread ECS systems, not auto-created SystemBase systems.
@@ -9,10 +7,10 @@ namespace MarblesECS
     {
         internal static void Execute(SimulationContext context)
         {
-            using (var entities = context.MarbleQuery.ToEntityArray(Allocator.Temp))
-                for (int i = 0; i < entities.Length; i++)
-                    if (!context.Manager.GetComponentData<DespawnState>(entities[i]).PendingDespawn)
-                        MarbleModifierSystem.Aggregate(context, entities[i]);
+            using var entities = context.SnapshotMarbles();
+            foreach (var entity in entities.Items)
+                if (!context.Manager.GetComponentData<DespawnState>(entity).PendingDespawn)
+                    MarbleModifierSystem.Aggregate(context, entity);
         }
     }
 }

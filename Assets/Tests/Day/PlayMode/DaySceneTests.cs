@@ -88,6 +88,20 @@ namespace MarblesECS.Tests
             Assert.That(game.Snapshot.NextMarbleBaseValue, Is.EqualTo(.5));
             Assert.That(game.Session.BiomassScrapBalance, Is.EqualTo(initialScrap));
             Assert.That(game.GetOwnedDevices(), Is.Empty);
+            Assert.That(game.QuoteShot(0).Radius, Is.EqualTo(.1f).Within(.0001f));
+            var launcher = game.LaunchPoint;
+            var physicsScene = localScene.GetPhysicsScene();
+            var launchHits = new Collider[1];
+            float radius = game.QuoteShot(1).Radius;
+            Physics.SyncTransforms();
+            for (int sample = 0; sample <= 40; sample++)
+            {
+                float z = game.LauncherCenterZ + Mathf.Lerp(-game.LauncherMoveHalfWidth, game.LauncherMoveHalfWidth, sample / 40f);
+                Vector3 center = launcher.TransformPoint(game.LaunchOffset) +
+                    launcher.parent.TransformVector(Vector3.forward * (z - launcher.localPosition.z));
+                Assert.That(physicsScene.OverlapSphere(center, radius, launchHits, ~0, QueryTriggerInteraction.Ignore),
+                    Is.Zero, $"maximum-flow shot clears fixed geometry at launcher Z {z:F2}");
+            }
             var brain = InTestScene<CinemachineBrain>();
             var rig = InTestScene<DiegeticMachineUI>();
             yield return Until(() => brain.ActiveVirtualCamera?.Name == "VCamera_Machine" && rig.IsBoardOpen,
@@ -355,8 +369,8 @@ namespace MarblesECS.Tests
             Assert.That(prep.TryInteract(), Is.True);
             yield return Until(() => shop.ShopCanvasGroup.interactable, "Day1 shop opens at the terminal");
             Assert.That(game.GetShopOffers(), Is.Empty);
-            Assert.That(daily.Find("可选装置").GetComponentsInChildren<Button>(), Has.Length.EqualTo(5));
-            Assert.That(game.TryToggleLoadoutPeg(game.Day.Version, 9035), Is.True);
+            Assert.That(daily.Find("可选装置").GetComponentsInChildren<Button>(), Has.Length.EqualTo(4));
+            Assert.That(game.TryToggleLoadoutPeg(game.Day.Version, 113), Is.True);
             daily.Find("确认背包").GetComponent<Button>().onClick.Invoke();
             yield return Until(() => walker.CanMove, "Day1 loadout returns to the room");
 
@@ -367,6 +381,7 @@ namespace MarblesECS.Tests
             yield return Until(() => game.Day.Phase == DayPhase.Production && rig.IsBoardOpen, "Day1 opens device placement");
             Assert.That(game.Snapshot.Phase, Is.EqualTo(RoundPhase.Build));
             Assert.That(rig.TryContinue(), Is.True);
+            game.AutoMoveLauncher = true;
             game.SetLauncherPosition(game.LauncherCenterZ);
             game.SetFlow(1f);
             game.PhysicsRoot.GetComponentsInChildren<MarbleZone>().Single().FlatScore = game.Session.TargetScore;
@@ -385,7 +400,7 @@ namespace MarblesECS.Tests
             WalkTo(walker, terminal.position.x - 5, terminal.position.z);
             Assert.That(prep.TryInteract(), Is.True);
             yield return Until(() => shop.ShopCanvasGroup.interactable, "Day2 permission shop opens");
-            Assert.That(game.GetShopOffers(), Has.Length.EqualTo(4));
+            Assert.That(game.GetShopOffers(), Has.Length.EqualTo(3));
             long scrip = game.Session.CompanyScripBalance;
             var first = game.GetShopOffers()[0];
             daily.Find("商店抽取").GetComponentsInChildren<Button>().First(button => button.interactable).onClick.Invoke();
@@ -527,6 +542,7 @@ namespace MarblesECS.Tests
             var pin = layout.GetComponentInChildren<CapsuleCollider>();
             Assert.That(pin.enabled && !pin.isTrigger, Is.True);
             Assert.That(pin.GetComponent<MarblePin>(), Is.Null);
+            Assert.That(pin.sharedMaterial.bounciness, Is.EqualTo(.8f));
             Vector3 center = pin.bounds.center;
             var obstacles = new DevicePlacementObstacles();
             Assert.That(obstacles.IsClear(localScene.GetPhysicsScene(), null, center, .08f, layout), Is.False);
@@ -537,12 +553,13 @@ namespace MarblesECS.Tests
                 Key = key, Position = center - Vector3.right * .55f, Rotation = Quaternion.identity,
                 Quote = new ShotQuote(0, 0, .08f, .1f, 1, 1), LinearVelocity = Vector3.right * 3,
                 HasSettings = true,
-                Settings = new MarblePhysicalSettings { Radius = .08f, Mass = .1f, Bounce = .6f, MaxSpeed = 12, PierceCount = 1 }
+                Settings = new MarblePhysicalSettings { Radius = .08f, Mass = .1f, Bounce = 0, MaxSpeed = 12, PierceCount = 1 }
             }), Is.True);
 
             for (int step = 0; step < 20; step++) bridge.Simulate(.02f);
             Assert.That(bridge.TryGetState(key, out var state), Is.True);
-            Assert.That(state.LinearVelocity.x, Is.LessThan(0), "even a marble with a pierce charge hits the collider");
+            Assert.That(state.LinearVelocity.x, Is.EqualTo(-2.4f).Within(.15f),
+                "the pin rebounds a marble with zero bounce and a pierce charge at 80% of the incoming speed");
             Assert.That(contacts, Is.Empty);
             yield return null;
         }
@@ -591,7 +608,11 @@ namespace MarblesECS.Tests
                 Assert.That(pins, Has.Length.EqualTo(day0.Pins.Count));
                 var obstacles = new DevicePlacementObstacles();
                 foreach (var pin in pins)
-                    Assert.That(obstacles.IsClear(localScene.GetPhysicsScene(), null, pin.transform.position, .08f, first), Is.False);
+                {
+                    Assert.That(pin.bounds.extents.x, Is.EqualTo(.1f).Within(.0001f));
+                    Vector3 probe = pin.bounds.center + Vector3.right * .09f;
+                    Assert.That(obstacles.IsClear(localScene.GetPhysicsScene(), null, probe, .01f, first), Is.False);
+                }
             }
         }
 
@@ -615,7 +636,7 @@ namespace MarblesECS.Tests
             Assert.That(terminalAnchor.childCount, Is.EqualTo(1));
             var enabled = GameDaysLoader.Parse(@"{""schemaVersion"":3,""sequenceId"":""shop-test"",""startingCompanyScrip"":100,""days"":[
                 {""dayId"":""fixture-shop"",""order"":1,""targetScore"":50,""initialBiomassScrap"":8,""clearCompanyScripReward"":0,
-                ""unlockedPegIds"":[9033,9034,9035],""defaultPegIds"":[9033],""requiredPegIds"":[9033],""maxLoadoutTypeCount"":2,
+                ""unlockedPegIds"":[9033,9034,113],""defaultPegIds"":[9033],""requiredPegIds"":[9033],""maxLoadoutTypeCount"":2,
                 ""shopEnabled"":true,""shopDrawCost"":2,""shopOfferCount"":2,
                 ""morningPrep"":[{""objectiveId"":""read-note"",""type"":""ReadNote"",""anchorId"":""desk"",""text"":""fixture note""}]}]}", balance);
             var closed = GameDaysLoader.Parse(@"{""schemaVersion"":2,""sequenceId"":""closed-test"",""days"":[

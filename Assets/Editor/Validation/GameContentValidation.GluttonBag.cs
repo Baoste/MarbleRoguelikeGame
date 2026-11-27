@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using MarblesECS.PhysX;
 using MarblesECS.Presentation;
 using UnityEngine;
@@ -133,8 +132,7 @@ function OnOffer(a)
  if calls == 2 then error('EXPECTED_OFFER_FAILURE') end
 end
 function Verify() assert(not pcall(function() return saved.RoundId end)) end");
-                var scripts = (Dictionary<int, DeviceLuaScript>)typeof(DeviceScriptSystem).GetField("scripts", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(f.C.DeviceScripts);
-                f.C.DeviceScripts.Remove(d.InstanceId); scripts.Add(d.InstanceId, probe);
+                f.C.DeviceScripts.Bind(d.InstanceId, probe);
                 int revision = f.C.Campaign.LayoutRevision;
                 for (int n = 0; n < 2; n++)
                 {

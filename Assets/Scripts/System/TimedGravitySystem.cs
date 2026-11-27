@@ -1,4 +1,3 @@
-using Unity.Collections;
 using Unity.Entities;
 
 namespace MarblesECS
@@ -55,8 +54,8 @@ namespace MarblesECS
         internal static void Tick(SimulationContext c, bool afterPhysics)
         {
             if (!AttributeRuntime.Enabled(c)) return;
-            using (var balls = c.MarbleQuery.ToEntityArray(Allocator.Temp))
-                foreach (var ball in balls)
+            using (var balls = c.SnapshotMarbles())
+                foreach (var ball in balls.Items)
                 {
                     if (!c.Manager.HasComponent<TimedGravity>(ball)) continue;
                     var effect = c.Manager.GetComponentData<TimedGravity>(ball);
@@ -65,8 +64,7 @@ namespace MarblesECS
         }
 
         private static bool Placed(SimulationContext c, int id) =>
-            CampaignStateUtility.FindDevice(c, id, out var device) &&
-            c.Manager.GetComponentData<OwnedDeviceData>(device).Placed &&
+            c.TryGetDevice(id, out _, out var device) && device.Placed &&
             c.Physics is IMarblePhysicsCommands commands && commands.TryGetDevicePose(id, out _);
 
         private static void Apply(SimulationContext c, Entity ball)

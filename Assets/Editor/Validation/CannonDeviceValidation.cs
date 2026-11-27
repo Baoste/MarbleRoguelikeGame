@@ -98,7 +98,9 @@ namespace MarblesECS.Editor
             {
                 var keys = Enumerable.Range(0, 5).Select(_ => r.Launch()).ToArray(); r.Contact(keys);
                 var obstacle = new GameObject("BlockedCannonMuzzle"); SceneManager.MoveGameObjectToScene(obstacle, r.Scene);
-                obstacle.transform.position = r.Pose.Position + r.Pose.Up * .085f + r.Pose.Forward * .35f;
+                float radius = r.Marble(keys[0]).Radius;
+                obstacle.transform.position = r.Pose.Position + r.Pose.Up * (radius + .005f)
+                    + r.Pose.Forward * (r.Pose.Radius + radius + .02f);
                 obstacle.AddComponent<BoxCollider>().size = Vector3.one * .2f; Physics.SyncTransforms();
                 try { Check(r.Click() && r.HeldCount == 5 && r.Uses == 0, "fully blocked volley stays held and costs nothing"); }
                 finally { UnityEngine.Object.DestroyImmediate(obstacle); Physics.SyncTransforms(); }
@@ -109,7 +111,9 @@ namespace MarblesECS.Editor
                 r.C.Balance.Devices.Single(d => d.Id == 9007).Durability = 1;
                 var keys = Enumerable.Range(0, 5).Select(_ => r.Launch()).ToArray(); r.Contact(keys);
                 var obstacle = new GameObject("BlockedSecondShot"); SceneManager.MoveGameObjectToScene(obstacle, r.Scene);
-                obstacle.transform.position = r.Pose.Position + r.Pose.Up * .085f + r.Pose.Forward * .53f;
+                float radius = r.Marble(keys[0]).Radius;
+                obstacle.transform.position = r.Pose.Position + r.Pose.Up * (radius + .005f)
+                    + r.Pose.Forward * (r.Pose.Radius + 3 * radius + .04f);
                 obstacle.AddComponent<SphereCollider>().radius = .01f; Physics.SyncTransforms();
                 try { Check(r.Click() && r.HeldCount == 4 && r.Uses == 1, "partial volley spends the final use but retains blocked shots"); }
                 finally { UnityEngine.Object.DestroyImmediate(obstacle); Physics.SyncTransforms(); }

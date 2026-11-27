@@ -1,7 +1,7 @@
 {
   "Id": 9022,
   "SourceId": "Malfunction",
-  "Bounce": 0.6,
+  "Bounce": 0.8,
   "ScoreMultiplier": 1,
   "StartingCount": 0,
   "PurchaseQuantity": 1,

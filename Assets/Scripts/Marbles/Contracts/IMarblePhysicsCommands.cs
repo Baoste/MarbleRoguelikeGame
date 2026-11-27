@@ -40,6 +40,11 @@ namespace MarblesECS
     {
         void BindDeviceInteraction(System.Func<int, bool> canComplete);
     }
+    internal interface IMarbleDeviceScriptBinding
+    {
+        void BindDeviceCallbacks(DeviceScriptSystem callbacks);
+        void BindDeviceScript(int instanceId, DeviceLuaScript script);
+    }
     public interface IMarbleDeviceRotation
     {
         bool TrySetDeviceYaw(int instanceId, float degrees);

@@ -31,7 +31,7 @@ namespace MarblesECS.Editor
                 f.C.Balance.Devices.Single(d => d.Id == 9018).Durability = wear;
                 var device = AddDuplicator(f); var key = f.Launch(); var parent = f.Ball(key);
                 f.Simulation.ApplyAttribute(key, 980, GameAttribute.BALL_BASE_VALUE, AttributeOperation.Add, 3);
-                f.Simulation.ApplyAttribute(key, 981, GameAttribute.BALL_RADIUS, AttributeOperation.Set, .7);
+                f.Simulation.ApplyAttribute(key, 981, GameAttribute.BALL_RADIUS, AttributeOperation.Set, .224);
                 f.Simulation.ApplyAttribute(key, 982, GameAttribute.BALL_MASS, AttributeOperation.Set, 2);
                 var api = CashApi(f, key, device); api.AddScoreMultiplier(1.5); api.AddScoreMultiplier(1.5); api.Close();
                 var score = f.C.Manager.GetComponentData<MarbleScore>(parent); score.ScoreBonus = 7; f.C.Manager.SetComponentData(parent, score);
@@ -47,7 +47,7 @@ namespace MarblesECS.Editor
                 VectorNear(new Vector3(3, 0, -4), f.Physics.States[copyKey].LinearVelocity, "copy mirrors entry direction and retains entry speed");
                 Near(0, f.Simulation.GetMarbleAttribute(copyKey, GameAttribute.BALL_BASE_VALUE), "copy begins at zero value");
                 Near(13, f.Simulation.GetMarbleAttribute(key, GameAttribute.BALL_BASE_VALUE), "original value is unchanged");
-                Near(.7, f.Simulation.GetMarbleAttribute(copyKey, GameAttribute.BALL_RADIUS), "copy keeps modified size");
+                Near(.224, f.Simulation.GetMarbleAttribute(copyKey, GameAttribute.BALL_RADIUS), "copy keeps modified size");
                 Near(2, f.Simulation.GetMarbleAttribute(copyKey, GameAttribute.BALL_MASS), "copy keeps modified mass");
                 Near(2.25, f.C.Manager.GetComponentData<MarbleScore>(copy).ScoreMultiplier, "copy inherits the multiplier product");
                 Near(0, f.C.Manager.GetComponentData<MarbleScore>(copy).ScoreBonus, "zero override removes flat score");

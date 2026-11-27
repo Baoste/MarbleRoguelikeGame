@@ -9,6 +9,7 @@ namespace MarblesECS.PhysX
     public sealed partial class MarblePhysicsBridge : IMarbleBoardLayoutPhysics
     {
         private const string BoardLayoutName = "Day Board Layout";
+        private const float CollisionPinBounce = .8f;
         private static readonly int ColorProperty = Shader.PropertyToID("_Color");
         private static readonly int BaseColorProperty = Shader.PropertyToID("_BaseColor");
         private BoardPlacementSurface layoutSurface;
@@ -18,6 +19,7 @@ namespace MarblesECS.PhysX
         private MarbleZone[] sceneZones;
         private Material pinVisualMaterial;
         private PhysicMaterial pinPhysicsMaterial;
+        private PhysicMaterial collisionPinPhysicsMaterial;
         private Material zoneVisualMaterial;
         private readonly List<GameObject> hiddenBoardObjects = new List<GameObject>();
 
@@ -62,11 +64,12 @@ namespace MarblesECS.PhysX
             group.transform.SetParent(layoutSurface.transform, false);
             try
             {
-                int pinId = 100000;
-                int zoneId = 1;
+                int pinId = TargetIdAllocator.FirstPinId;
+                int zoneId = TargetIdAllocator.FirstZoneId;
                 var projection = layoutSurface.LayoutProjection;
                 foreach (var pin in layout.Pins) AddLayoutPin(group.transform, projection, pin, ids, ref pinId);
-                foreach (var zone in layout.Zones) AddLayoutZone(group.transform, projection, zone, NextLayoutId(ids, ref zoneId));
+                foreach (var zone in layout.Zones)
+                    AddLayoutZone(group.transform, projection, zone, TargetIdAllocator.TakeNext(ids, ref zoneId));
             }
             catch
             {
@@ -123,13 +126,32 @@ namespace MarblesECS.PhysX
             node.transform.localPosition = projection.ToSurfaceLocal(data.x, data.y, data.radius * 2);
             node.transform.localScale = Vector3.one * (data.radius * 2);
             if (createVisuals && pinVisualMaterial) node.GetComponent<Renderer>().sharedMaterial = pinVisualMaterial;
-            if (pinPhysicsMaterial) node.GetComponent<CapsuleCollider>().sharedMaterial = pinPhysicsMaterial;
-            if (data.collisionOnly) return;
+            var collider = node.GetComponent<CapsuleCollider>();
+            if (data.collisionOnly)
+            {
+                collider.sharedMaterial = GetCollisionPinMaterial();
+                return;
+            }
+            if (pinPhysicsMaterial) collider.sharedMaterial = pinPhysicsMaterial;
             var pin = node.AddComponent<MarblePin>();
-            pin.TargetId = NextLayoutId(ids, ref nextPinId);
+            pin.TargetId = TargetIdAllocator.TakeNext(ids, ref nextPinId);
             pin.ScoreMultiplier = data.scoreMultiplier;
             pin.RushChanceAdd = data.rushChanceAdd;
         }
+
+        private PhysicMaterial GetCollisionPinMaterial()
+        {
+            if (collisionPinPhysicsMaterial) return collisionPinPhysicsMaterial;
+            collisionPinPhysicsMaterial = pinPhysicsMaterial ? Object.Instantiate(pinPhysicsMaterial) : new PhysicMaterial();
+            collisionPinPhysicsMaterial.name = "Collision Pin";
+            collisionPinPhysicsMaterial.bounciness = CollisionPinBounce;
+            collisionPinPhysicsMaterial.bounceCombine = PhysicMaterialCombine.Maximum;
+            return collisionPinPhysicsMaterial;
+        }
+
+        internal float GetCollisionPinBounce(Collider collider) =>
+            collisionPinPhysicsMaterial && collider.sharedMaterial == collisionPinPhysicsMaterial
+                ? collisionPinPhysicsMaterial.bounciness : 0f;
 
         private void AddLayoutZone(Transform parent, BoardLayoutProjection projection, BoardLayoutZone data, int targetId)
         {
@@ -190,12 +212,6 @@ namespace MarblesECS.PhysX
         {
             if (Application.isPlaying) Object.Destroy(target);
             else Object.DestroyImmediate(target);
-        }
-
-        private static int NextLayoutId(HashSet<int> ids, ref int candidate)
-        {
-            while (!ids.Add(candidate)) candidate++;
-            return candidate++;
         }
     }
 }

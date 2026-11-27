@@ -35,8 +35,8 @@ namespace MarblesECS
         private static void Record(SimulationContext c, Effect effect)
         {
             if (effect.Factor == 1) return;
-            foreach (var pair in c.Marbles)
-                if (c.TryGetFlying(pair.Key, out var ball)) BallInteractionSystem.RecordDeviceEffect(c, ball, effect.Source);
+            foreach (var key in c.MarbleKeys)
+                if (c.TryGetFlying(key, out var ball)) BallInteractionSystem.RecordDeviceEffect(c, ball, effect.Source);
         }
         private ScoreMultiplierProduct WithBoardFactors(SimulationContext context, ScoreMultiplierProduct product)
         {

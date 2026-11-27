@@ -22,7 +22,11 @@ namespace MarblesECS
             catch (Exception e) { enabled = false; Debug.LogException(e, this); }
         }
         internal void PhysicsEvent(int index, GameObject other) => Invoke(index, DeviceLuaObject.Other(other));
-        private void Start() => Invoke(0);
+        private void Start()
+        {
+            Invoke(0);
+            script?.RefreshScheduledCallbacks();
+        }
         private void Update() => Invoke(1, Time.deltaTime);
         private void FixedUpdate() => Invoke(2, Time.fixedDeltaTime);
         private void OnCollisionEnter(Collision c) => PhysicsEvent(3, c.gameObject);

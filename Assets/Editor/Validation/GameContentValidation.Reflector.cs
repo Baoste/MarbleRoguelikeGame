@@ -151,9 +151,10 @@ namespace MarblesECS.Editor
                 VectorNear(body.velocity, c.Manager.GetComponentData<Motion3D>(c.Marbles[key]).LinearVelocity, "real reflection matches ECS velocity");
                 VectorNear(body.angularVelocity, c.Manager.GetComponentData<Motion3D>(c.Marbles[key]).AngularVelocity, "reflection keeps physics spin and ECS in sync");
                 var visits = c.Manager.GetBuffer<DeviceVisit>(c.Marbles[key]);
+                var visitKey = DeviceVisitKey.ForDevice(owned.InstanceId);
                 int entries = 0, count = 0;
                 for (int i = 0; i < visits.Length; i++)
-                    if (visits[i].Key == 100000 + owned.InstanceId) { entries++; count += visits[i].Count; }
+                    if (visits[i].Key.Equals(visitKey)) { entries++; count += visits[i].Count; }
                 Check(entries == 1 && count == 1, "multiple substeps do not duplicate the same impact trigger");
             }
             finally

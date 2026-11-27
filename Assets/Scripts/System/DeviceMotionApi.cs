@@ -1,4 +1,3 @@
-using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.Scripting;
@@ -27,28 +26,28 @@ namespace MarblesECS
         public DeviceEndpoint FindDevice(int instanceId)
         {
             var c = Context;
-            if (!CampaignStateUtility.FindDevice(c, instanceId, out var entity) ||
-                !DeviceDurabilitySystem.Available(c, c.Manager.GetComponentData<OwnedDeviceData>(entity)) ||
-                !(c.Physics is IMarblePhysicsCommands commands) || !commands.TryGetDevicePose(instanceId, out var pose)) return null;
-            return new DeviceEndpoint(this, instanceId, pose);
+            return c.TryGetDevice(instanceId, out _, out var device) ? FindEndpoint(c, device) : null;
         }
         public DeviceEndpoint FindPartner()
         {
             var c = Context;
             var current = c.Manager.GetComponentData<OwnedDeviceData>(device);
             if (current.PairId == 0) return null;
-            DeviceEndpoint result = null;
-            using (var entities = c.DeviceQuery.ToEntityArray(Allocator.Temp))
-                foreach (var entity in entities)
-                {
-                    var other = c.Manager.GetComponentData<OwnedDeviceData>(entity);
-                    if (other.InstanceId == current.InstanceId || other.PairId != current.PairId || !other.Placed ||
-                        (result != null && other.InstanceId >= result.InstanceId)) continue;
-                    var endpoint = FindDevice(other.InstanceId);
-                    if (endpoint != null) result = endpoint;
-                }
-            return result;
+            using var devices = c.OrderedDevices();
+            foreach (var member in devices.Items)
+            {
+                if (member.Key == current.InstanceId || !c.IsDeviceEntity(member.Value)) continue;
+                var other = c.Manager.GetComponentData<OwnedDeviceData>(member.Value);
+                if (other.InstanceId != member.Key || other.PairId != current.PairId) continue;
+                var endpoint = FindEndpoint(c, other);
+                if (endpoint != null) return endpoint;
+            }
+            return null;
         }
+
+        private DeviceEndpoint FindEndpoint(SimulationContext c, OwnedDeviceData device) =>
+            DeviceDurabilitySystem.Available(c, device) && c.Physics is IMarblePhysicsCommands commands &&
+            commands.TryGetDevicePose(device.InstanceId, out var pose) ? new DeviceEndpoint(this, device.InstanceId, pose) : null;
         /// <summary>Preserves linear speed (including zero) and uses the destination's facing.</summary>
         public bool TryTeleport(DeviceEndpoint destination)
         {

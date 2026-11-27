@@ -7,7 +7,7 @@ namespace MarblesECS.PhysX
     public sealed class MarbleZone : MonoBehaviour
     {
         public MarbleContactKind Kind = MarbleContactKind.Score;
-        [Min(1)] public int TargetId = 1;
+        [Min(1)] public int TargetId = TargetIdAllocator.FirstZoneId;
         public int Priority;
         [Range(0f, 50f)] public float Multiplier = 1f;
 

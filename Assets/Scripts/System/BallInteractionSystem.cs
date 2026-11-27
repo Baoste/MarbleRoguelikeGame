@@ -28,7 +28,7 @@ namespace MarblesECS
             }
             if (contact.Kind == MarbleContactKind.Pin)
             {
-                if (!MarkVisit(c, ball, contact.TargetId, 0)) return;
+                if (!MarkVisit(c, ball, DeviceVisitKey.ForTarget(ContactTargetKey.FromContact(contact)), 0)) return;
                 int splits = (int)AttributeRuntime.Get(c, ball, GameAttribute.BALL_SPLIT_COUNT);
                 if (splits > 0 && !features.SplitConsumed)
                     ContentSpawnSystem.Children(c, ball, splits, true, Direction(c, ball), Vector3.up);
@@ -37,18 +37,19 @@ namespace MarblesECS
             DeviceScriptSystem.Contact(c, ball, contact);
         }
 
-        internal static bool MarkVisit(SimulationContext c, Entity ball, long key, int maximum, bool inheritOnCopy = false)
+        internal static bool MarkVisit(SimulationContext c, Entity ball, DeviceVisitKey key, int maximum, bool inheritOnCopy = false)
         {
             var visits = c.Manager.GetBuffer<DeviceVisit>(ball);
+            long tick = c.Round.Tick;
             for (int i = 0; i < visits.Length; i++)
             {
                 var visit = visits[i];
-                if (visit.Key != key) continue;
-                if (visit.LastTick == c.Round.Tick || (maximum > 0 && visit.Count >= maximum)) return false;
-                visit.Count++; visit.LastTick = c.Round.Tick; visit.InheritOnCopy |= inheritOnCopy;
+                if (!visit.Key.Equals(key)) continue;
+                if (visit.LastTick == tick || (maximum > 0 && visit.Count >= maximum)) return false;
+                visit.Count++; visit.LastTick = tick; visit.InheritOnCopy |= inheritOnCopy;
                 visits[i] = visit; return true;
             }
-            visits.Add(new DeviceVisit { Key = key, Count = 1, LastTick = c.Round.Tick, InheritOnCopy = inheritOnCopy }); return true;
+            visits.Add(new DeviceVisit { Key = key, Count = 1, LastTick = tick, InheritOnCopy = inheritOnCopy }); return true;
         }
         internal static Vector3 Down(DevicePose pose)
         {
@@ -64,7 +65,7 @@ namespace MarblesECS
         internal static bool Exit(SimulationContext c, Entity ball, DevicePose pose, Vector3 direction, float speed)
         {
             if (!ValidExit(pose, direction, speed)) return false;
-            float radius = (float)AttributeRuntime.Get(c, ball, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
+            float radius = (float)AttributeRuntime.Get(c, ball, GameAttribute.BALL_RADIUS);
             return Move(c, ball, pose.Position + pose.Up.normalized * (radius + .005f) + direction.normalized * (pose.Radius + radius + .02f), direction.normalized * speed);
         }
         internal static bool ValidExit(DevicePose pose, Vector3 direction, float speed) =>

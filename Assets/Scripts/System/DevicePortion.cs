@@ -24,7 +24,7 @@ namespace MarblesECS
             var c = context();
             if (!MarbleRules.IsFinite(value) || value <= 0) throw new ArgumentOutOfRangeException(nameof(value));
             this.value = value;
-            radius = (float)AttributeRuntime.Get(c, parent, GameAttribute.BALL_RADIUS) * AttributeRuntime.RadiusToWorld;
+            radius = (float)AttributeRuntime.Get(c, parent, GameAttribute.BALL_RADIUS);
             mass = (float)AttributeRuntime.Get(c, parent, GameAttribute.BALL_MASS);
         }
         public double Value { get { _ = context(); return value; } }
@@ -33,8 +33,9 @@ namespace MarblesECS
         public bool TrySetSize(float worldRadius, float mass)
         {
             var c = context();
+            var radiusDefinition = c.Content.Definition(GameAttribute.BALL_RADIUS);
             if (submitted || !BallInteractionSystem.Finite(worldRadius) || !BallInteractionSystem.Finite(mass) ||
-                !InRange(c, GameAttribute.BALL_RADIUS, worldRadius / AttributeRuntime.RadiusToWorld) ||
+                worldRadius < (float)radiusDefinition.MinValue || worldRadius > (float)radiusDefinition.MaxValue ||
                 !InRange(c, GameAttribute.BALL_MASS, mass)) return false;
             radius = worldRadius; this.mass = mass; return true;
         }
@@ -76,7 +77,7 @@ namespace MarblesECS
             var values = new double[attributes.Length];
             for (int i = 0; i < values.Length; i++) values[i] = attributes[i].Current;
             values[(int)GameAttribute.BALL_BASE_VALUE] = value;
-            values[(int)GameAttribute.BALL_RADIUS] = radius / AttributeRuntime.RadiusToWorld;
+            values[(int)GameAttribute.BALL_RADIUS] = radius;
             values[(int)GameAttribute.BALL_MASS] = mass;
             var parentScore = c.Manager.GetComponentData<MarbleScore>(parent); var childScore = parentScore;
             childScore.BaseScore = value; childScore.ScoreBonus *= fraction;
